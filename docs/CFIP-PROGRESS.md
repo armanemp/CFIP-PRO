@@ -90,8 +90,25 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 ## Operational rule for the next session
 Do not generate another parallel architecture, progress file, duplicate prompt, or duplicate workflow. Continue from this repository state and append to this file.
 
-## 2026-09-17 — CI/verification foundation added
+## 2026-09-17 — CI/verification and packaging correction
 
-- Added `.github/workflows/ci.yml` for Python 3.14 backend lint/test and Node 24 frontend typecheck/lint/build.
-- Corrected the Alembic environment formatting before CI so repository linting does not fail on avoidable line-length violations.
-- CI has not yet been executed by this assistant against a local runtime; the first local verification remains the next operational step.
+- Native Windows verification completed successfully after installing the project itself in editable mode with `pip --no-deps -e .`; no third-party dependency download was required for that correction.
+- `python -m pytest`: **1 passed**, with two upstream deprecation warnings only.
+- `python -m ruff check .`: **All checks passed**.
+- `python -m mypy apps/api/src`: **0 issues across 18 source files**.
+- The first GitHub Actions CI run for commit `6be5d83` failed for two concrete reasons, both diagnosed from the workflow logs: backend used obsolete `uv sync --locked=false` syntax with the runner's uv version, and frontend TypeScript rejected numeric chart timestamps because Lightweight Charts requires its branded `Time` type.
+- Corrected `.github/workflows/ci.yml` to use `uv sync` without the obsolete flag.
+- Corrected `apps/web/src/components/market-chart.tsx` to type timestamps as `UTCTimestamp`.
+- The frontend chart remains intentionally synthetic/demo data at this stage; this type correction does not claim real market-data integration.
+
+## Current execution checkpoint — 2026-09-17
+
+**Local backend verification:** PASS
+
+**Local frontend verification:** pending local execution after CI fixes
+
+**GitHub CI:** rerun triggered by the fixes; final result pending
+
+**Current implementation stage:** Foundation / executable skeleton
+
+**Next slice:** define and implement the first real market-data domain contract, then persistence/API/chart integration without introducing fake business data.
