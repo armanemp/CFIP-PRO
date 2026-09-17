@@ -115,31 +115,66 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 - During the same CI sequence, the market route dependency signature was corrected to use an explicit `Annotated[..., Depends(...)]` dependency boundary and then adjusted so the dependency parameter remains valid after default-valued query parameters.
 - The latest `main` ref now contains those corrections; a fresh CI run is required before treating the vertical slice as green.
 
-## Verification state after the vertical-slice implementation
+## 2026-09-17 — Clean native PostgreSQL runtime verification
 
-**Repository implementation:** pushed to `main`
+- The local PostgreSQL 18.6 service was verified running natively on Windows at `127.0.0.1:5432`.
+- The development `cfip` database was explicitly deleted and recreated as a clean database at the user's request. This reset is now complete; do not reset the database again unless the user explicitly requests it.
+- Database ownership and the `public` schema ownership were aligned with the `cfip` role so Alembic can manage the schema without elevated privileges.
+- Alembic `upgrade head` completed successfully and applied migration `0001_market_data`.
+- Direct PostgreSQL verification confirmed `alembic_version=0001_market_data` and the expected `instruments`, `market_observations`, and `outbox_events` tables.
+- Column verification confirmed UUID identifiers, timezone-aware timestamps, high-precision numeric market values, source-event fields and outbox publication state.
+- The repository contains only `.env.example`; there is intentionally no committed `.env` or credential-bearing configuration file.
 
-**Local execution of new slice:** pending user-side pull and native Windows verification
+## 2026-09-17 — Real PostgreSQL integration proof added
 
-**PostgreSQL integration migration:** pending a reachable local PostgreSQL instance
+- Added `tests/integration/test_market_postgres.py` as the first real database integration test.
+- The test uses `CFIP_TEST_DATABASE_URL` supplied by the local environment and never embeds a database password in source code.
+- The test creates a unique instrument, ingests a real normalized observation through `MarketService`, then verifies the persisted observation and the corresponding `market.observation.recorded` outbox event in PostgreSQL.
+- Cleanup removes the test outbox event, observation and instrument after successful verification, preventing test records from accumulating in the development database.
+- Registered the `integration` pytest marker in `pyproject.toml`.
+- The integration test is intentionally explicit rather than silently falling back to SQLite or mocks; when `CFIP_TEST_DATABASE_URL` is absent, pytest reports the integration test as skipped with a clear reason.
 
-**NATS JetStream runtime integration:** pending a reachable local NATS JetStream instance
+## Verification state after the current native work
 
-**Frontend typecheck/lint/build after new changes:** pending user-side execution
+**Python 3.14.7:** PASS
 
-**Fresh GitHub CI after latest lint correction:** pending
+**Backend import/boot:** PASS
+
+**Mypy:** PASS — no issues found in 26 source files
+
+**Ruff:** PASS — all checks passed
+
+**Unit test suite:** PASS — 6 passed, 2 deprecation warnings
+
+**PostgreSQL service:** PASS — PostgreSQL 18.6 running natively
+
+**Alembic migration:** PASS — `0001_market_data`
+
+**PostgreSQL schema verification:** PASS
+
+**Real PostgreSQL integration test:** added; local execution requires `CFIP_TEST_DATABASE_URL`
+
+**NATS JetStream runtime integration:** not yet executed against a live local NATS instance
+
+**Frontend verification after the latest backend commits:** not yet re-run after the latest repository changes
+
+**Fresh GitHub CI after the latest integration commits:** not yet verified
+
+**Production readiness:** not claimed
 
 ## Next execution order
 
 1. Pull the latest `main` state locally.
-2. Run backend `.venv` tests, Ruff and mypy.
-3. Run frontend `npm install`, typecheck, lint and build; do not run forced audit remediation.
-4. Verify the Alembic migration against a reachable PostgreSQL instance.
-5. Verify the outbox relay and JetStream stream/consumer against a reachable NATS JetStream instance.
-6. Exercise the API with an explicitly submitted real observation, then confirm the frontend renders the persisted observation rather than synthetic data.
-7. Only after this slice is green, add provider adapters and candle aggregation semantics; do not infer OHLC candles from arbitrary sparse observations.
-8. Continue capability-by-capability OSS evaluation before adding specialized libraries.
-9. Keep this file updated after every meaningful step.
+2. Set `CFIP_TEST_DATABASE_URL` only in the local PowerShell session using the user's existing PostgreSQL credentials; never commit it.
+3. Run the real PostgreSQL integration test and confirm it passes against the clean `cfip` database.
+4. Run the complete backend verification again: pytest, Ruff and mypy.
+5. Verify the outbox relay and JetStream stream/consumer against a reachable native NATS JetStream instance.
+6. Re-run the frontend typecheck/lint/build after the current repository state is pulled.
+7. Check fresh GitHub Actions status for the resulting commits before declaring the vertical slice green.
+8. Exercise the API with an explicitly submitted real observation, then confirm the frontend renders persisted observation data rather than synthetic values.
+9. Only after this slice is green, add provider adapters and candle aggregation semantics; do not infer OHLC candles from arbitrary sparse observations.
+10. Continue capability-by-capability OSS evaluation before adding specialized libraries.
+11. Keep this file updated after every meaningful step.
 
 ## Operational rule for the next session
 Do not generate another parallel architecture, progress file, duplicate prompt, or duplicate workflow. Continue from this repository state and append to this file.
