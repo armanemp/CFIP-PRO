@@ -45,7 +45,7 @@
 - pytest 9.1.1 is the latest release identified during this work.
 - Next.js 16.3.3 is the active-LTS patch level identified from the August 2026 security release.
 - React 19.3 is stable as of 2026-09-09.
-- TypeScript 7.0.2 is the current npm latest stable release identified during this work.
+- TypeScript 7.0.2 was initially selected, then changed to stable TypeScript 6.0.3 because the current eslint-config-next/typescript-eslint toolchain supports TypeScript <6.1.0.
 - Tailwind CSS 4.3 is the current major/minor stable line identified from the official Tailwind release notes.
 - TanStack Query 5.103.1 and Lightweight Charts 5.2.1 were current stable npm releases identified during this work.
 
@@ -54,76 +54,87 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 ## Current stage
 
-**Stage:** Foundation / executable skeleton
+**Stage:** First market-data vertical slice / implementation
 
 **Contract:** established by Master Prompt + Development Workflow
 
-**Implementation:** foundation started
+**Foundation:** implemented and locally verified
 
-**Backend:** scaffolded
+**Market domain contract:** implemented
 
-**Frontend:** scaffolded
+**PostgreSQL schema/migration:** implemented; runtime migration verification pending local PostgreSQL
 
-**Persistence boundary:** established
+**Transactional outbox:** implemented
 
-**Event boundary:** established
+**NATS JetStream publisher boundary:** implemented with message-id deduplication
 
-**Realtime chart shell:** established
+**JetStream consumer boundary:** implemented with explicit acknowledgements and bounded redelivery
+
+**Market API:** implemented
+
+**Frontend market-data API client:** implemented with Zod validation
+
+**Chart integration:** switched from synthetic candles to real observation-derived line data; no synthetic market values are generated
 
 **Production readiness:** not claimed
 
-**CI verification:** configured; first run pending
+**GitHub CI baseline:** PASS for commit `2a42e0d`; the new vertical-slice commits require a fresh CI run
 
-**Database/NATS/Redis runtime integration:** pending first infrastructure-backed vertical slice
+## 2026-09-17 — Native verification and CI baseline
+
+- Native Windows backend verification passed using the project `.venv`: pytest passed, Ruff passed, and mypy reported no issues across the backend source.
+- Native Windows frontend verification passed after the TypeScript compatibility correction: typecheck passed, lint passed with one non-blocking existing PostCSS anonymous-default-export warning, and Next build completed successfully.
+- Next.js generated local changes to `next-env.d.ts` and `tsconfig.json`; those generated changes were restored and were not committed.
+- `npm install` created `apps/web/package-lock.json`; it was intentionally removed because the repository has not established a lockfile policy and CI currently uses `npm install`.
+- GitHub Actions run `35260452595` for commit `2a42e0d` completed successfully.
+- No `npm audit fix --force` action was taken despite npm reporting two vulnerabilities; dependency changes require explicit compatibility/security analysis rather than forced remediation.
+- Docker and WSL remain outside the current native Windows development workflow.
+
+## 2026-09-17 — First market-data vertical slice implementation
+
+- Added framework-independent contracts for instruments, normalized market observations and observation queries in `apps/api/src/cfip/domain/market.py`.
+- Added PostgreSQL persistence models for `instruments`, `market_observations`, and `outbox_events`.
+- Added the first Alembic migration `0001_market_data` with UUID identifiers, timezone-aware timestamps, high-precision numeric market values, instrument/venue uniqueness, observation indexing, source-event uniqueness boundary and transactional outbox state.
+- Updated Alembic to use the async PostgreSQL driver and the SQLAlchemy metadata for online migrations.
+- Added repository and application-service boundaries. Observation ingestion writes the observation and its `market.observation.recorded` outbox event in the same database transaction.
+- Added FastAPI routes for instrument creation/listing, observation ingestion and observation queries by symbol/venue/time window.
+- Added a JetStream stream boundary for `market.>` subjects and message-id based publish deduplication.
+- Added a durable pull consumer boundary with explicit acknowledgement, negative acknowledgement on handler failure and `max_deliver=5` redelivery protection.
+- Added a transactional outbox relay worker that claims pending rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, publishes them using the outbox UUID as the NATS message id, records attempts/errors and marks successful publication.
+- Replaced the frontend synthetic candle dataset with API-backed normalized market observations. The chart now renders a line series from real `last`/`bid`/`ask` observations and never fabricates OHLC values from sparse ticks.
+- Added Zod validation for the market observation response shape.
+- Added unit coverage for market contracts and event serialization.
+- Corrected README frontend version documentation from TypeScript 7 to TypeScript 6.0.3.
+- NATS JetStream consumer semantics were checked against current nats.py documentation before adding the consumer boundary; the repository remains on its existing `nats-py` dependency line and no new specialized dependency was introduced.
+
+## Verification state after the vertical-slice implementation
+
+**Repository implementation:** pushed to `main`
+
+**Local execution of new slice:** pending user-side pull and native Windows verification
+
+**PostgreSQL integration migration:** pending a reachable local PostgreSQL instance
+
+**NATS JetStream runtime integration:** pending a reachable local NATS JetStream instance
+
+**Frontend typecheck/lint/build after new changes:** pending user-side execution
+
+**Fresh GitHub CI after new changes:** pending
 
 ## Next execution order
 
-1. Pull this commit locally and run the backend test/lint/type checks.
-2. Install frontend dependencies once and run TypeScript/lint/build checks.
-3. Establish Alembic environment and the first real PostgreSQL schema only when the first persistent domain contract is defined.
-4. Build the first true vertical slice: market instrument → normalized market observation contract → PostgreSQL persistence → event publication → frontend query → chart data.
-5. Add NATS JetStream stream/consumer/idempotency/retry evidence as part of that slice.
-6. Add Redis only where the slice demonstrates a real cache/coordination requirement.
-7. Continue capability-by-capability OSS evaluation before adding specialized libraries.
-8. Keep this file updated after every meaningful step.
+1. Pull the new `main` state locally.
+2. Run backend `.venv` tests, Ruff and mypy.
+3. Run frontend `npm install`, typecheck, lint and build; do not run forced audit remediation.
+4. Verify the Alembic migration against a reachable PostgreSQL instance.
+5. Verify the outbox relay and JetStream stream/consumer against a reachable NATS JetStream instance.
+6. Exercise the API with an explicitly submitted real observation, then confirm the frontend renders the persisted observation rather than synthetic data.
+7. Only after this slice is green, add provider adapters and candle aggregation semantics; do not infer OHLC candles from arbitrary sparse observations.
+8. Continue capability-by-capability OSS evaluation before adding specialized libraries.
+9. Keep this file updated after every meaningful step.
 
 ## Operational rule for the next session
 Do not generate another parallel architecture, progress file, duplicate prompt, or duplicate workflow. Continue from this repository state and append to this file.
-
-## 2026-09-17 — CI/verification and packaging correction
-
-- Native Windows verification completed successfully after installing the project itself in editable mode with `pip --no-deps -e .`; no third-party dependency download was required for that correction.
-- `python -m pytest`: **1 passed**, with two upstream deprecation warnings only.
-- `python -m ruff check .`: **All checks passed**.
-- `python -m mypy apps/api/src`: **0 issues across 18 source files**.
-- The first GitHub Actions CI run for commit `6be5d83` failed for two concrete reasons, both diagnosed from the workflow logs: backend used obsolete `uv sync --locked=false` syntax with the runner's uv version, and frontend TypeScript rejected numeric chart timestamps because Lightweight Charts requires its branded `Time` type.
-- Corrected `.github/workflows/ci.yml` to use `uv sync` without the obsolete flag.
-- Corrected `apps/web/src/components/market-chart.tsx` to type timestamps as `UTCTimestamp`.
-- The frontend chart remains intentionally synthetic/demo data at this stage; this type correction does not claim real market-data integration.
-
-## Current execution checkpoint — 2026-09-17
-
-**Local backend verification:** PASS
-
-**Local frontend verification:** pending local execution after CI fixes
-
-**GitHub CI:** rerun triggered by the fixes; final result pending
-
-**Current implementation stage:** Foundation / executable skeleton
-
-**Next slice:** define and implement the first real market-data domain contract, then persistence/API/chart integration without introducing fake business data.
-
-## 2026-09-17 — CI follow-up: TypeScript/tooling compatibility
-
-- GitHub Actions run `35255078180` on commit `194e590` was inspected at job/step/log level.
-- Backend job: **PASS** (`uv sync`, Ruff, pytest).
-- Frontend typecheck: **PASS**.
-- Frontend lint: **FAIL** because `eslint-config-next` loads `typescript-eslint`, whose current supported TypeScript range is `>=4.8.4 <6.1.0`; the repository had pinned TypeScript `7.0.2`.
-- This is a tooling compatibility issue, not an application-code lint failure.
-- Verified against the current typescript-eslint dependency documentation before changing the pin. TypeScript 6.0.3 is a stable release and is inside the supported range.
-- Updated `apps/web/package.json` from TypeScript `7.0.2` to stable TypeScript `6.0.3` in commit `305282b`.
-- No canary/nightly TypeScript version was introduced. No forced audit remediation was performed.
-- The next local action is to refresh frontend dependencies from the changed manifest and run typecheck/lint/build. After that, GitHub CI should be rechecked before starting the first real market-data vertical slice.
 
 ## Environment rule — mandatory
 - All Python execution for CFIP-PRO development is performed inside the project `.venv`.
