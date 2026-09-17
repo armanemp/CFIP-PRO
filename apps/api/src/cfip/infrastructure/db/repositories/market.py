@@ -1,6 +1,7 @@
 """Persistence operations for instruments, observations and the outbox."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -65,7 +66,7 @@ class MarketRepository:
         event_version: int,
         subject: str,
         occurred_at: datetime,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> OutboxEventModel:
         model = OutboxEventModel(
             id=event_id,
