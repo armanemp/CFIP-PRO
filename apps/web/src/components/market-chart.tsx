@@ -272,7 +272,8 @@ export function MarketChart({ observations }: MarketChartProps) {
     }
 
     if (showVolume && candles.length) {
-      const volume = nextChart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume", scaleMargins: { top: 0.82, bottom: 0 } });
+      const volume = nextChart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" });
+      volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       volume.setData(candles.map((candle) => ({ time: candle.time, value: candle.volume, color: candle.close >= candle.open ? "rgba(54,201,143,0.38)" : "rgba(240,93,94,0.38)" })));
     }
 
