@@ -17,27 +17,38 @@ The repository is a modular monolith with explicit boundaries. Domain code does 
 
 ## Native development
 
-Normal development is native Windows and does not require Docker. Docker configuration is kept for later integration/production validation and must not become a hidden development dependency.
+Normal development is native Windows and does not require Docker. **Port 8000 is the single CFIP-PRO application entrypoint.** The native launcher builds the static Next.js application when needed and serves the web terminal and FastAPI API from the same origin.
 
-### Backend
+### Start the complete application
+
+From the repository root, with the project `.venv` available:
 
 ```powershell
-uv sync
-uv run pytest
-uv run ruff check .
-uv run mypy apps/api/src
-uv run uvicorn cfip.main:app --app-dir apps/api/src --reload
+.\.venv\Scripts\python.exe scripts\run_cfip.py
 ```
 
-### Frontend
+Then open `http://127.0.0.1:8000`. No second frontend terminal is required.
+
+The launcher only runs the frontend build when `apps/web/out/index.html` does not exist. It does not reinstall dependencies, reset PostgreSQL, or require Docker/WSL.
+
+### Backend verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m mypy apps/api/src
+```
+
+### Frontend development/build
 
 ```powershell
 cd apps/web
-npm install
-npm run dev
+npm run build
+npm run lint
+npm run typecheck
 ```
 
-The API defaults to `http://127.0.0.1:8000`; the web app defaults to `http://localhost:3000`.
+The API defaults to `http://127.0.0.1:8000/api`; the production-style native entrypoint serves both API and web UI on port `8000`.
 
 ## Architecture
 
@@ -57,6 +68,9 @@ apps/
         ├── components/     # reusable terminal UI
         ├── features/       # capability-owned UI modules
         └── lib/            # API/config/client utilities
+
+scripts/
+└── run_cfip.py              # single native application launcher
 ```
 
 ## Project state
