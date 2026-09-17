@@ -41,7 +41,11 @@ def test_query_limit_is_bounded() -> None:
 
 
 def test_event_envelope_serializes_uuid_and_datetime() -> None:
-    event = EventEnvelope(event_name="market.observation.recorded", producer="cfip.market", payload={})
+    event = EventEnvelope(
+        event_name="market.observation.recorded",
+        producer="cfip.market",
+        payload={},
+    )
     encoded = event.model_dump(mode="json")
     assert encoded["event_name"] == "market.observation.recorded"
     assert isinstance(encoded["event_id"], str)
