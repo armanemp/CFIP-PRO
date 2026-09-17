@@ -2,6 +2,20 @@
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
 
+## 2026-09-18 — Chart terminal v2 implementation
+
+- Added `apps/web/src/components/cfip-chart-terminal.tsx` as the new chart-first terminal implementation and switched `TerminalShell` to use it as the primary workspace.
+- The new terminal uses the existing stable `lightweight-charts` `5.2.1` dependency; no chart-library replacement or unnecessary package was added.
+- Implemented the useful v5 chart capabilities required by the current CFIP scope: candlestick, OHLC bars, line, area and baseline modes; six timeframes; volume pane; RSI pane; MACD pane; SMA/EMA/WMA/Bollinger/VWAP overlays; crosshair; wheel/pinch/axis scaling; kinetic scrolling; auto/manual scale; left/right price scale; logarithmic scale; fit/reset; fullscreen; screenshot export; and a professional compact terminal header.
+- Added drawing foundations for cursor, horizontal line, vertical line, trendline and rectangle with price/time coordinate conversion.
+- Added market-analysis foundations for FVG, Order Block and swing/structure analysis, exposed through the chart indicator menu without inventing external market data.
+- Added pane-resize configuration and uses the v5 pane-index series API rather than the former separate oscillator chart. Lightweight Charts v5 explicitly supports multiple panes, pane resizing and moving series between panes.
+- The implementation is intentionally separated from the legacy `market-chart.tsx`; this gives the new terminal a clean migration boundary while preserving the old component for controlled comparison until verification is complete.
+- Switched `terminal-shell.tsx` to a true chart-first full-screen workspace; the previous inspector/dashboard side rails were removed from the primary terminal surface.
+- Chart commit: `13376c0cbbb3d50a63727a004522f753ec6244fd`.
+- Chart-shell commit: `02332ef2b1f52e42980f15d11698b1c44a935c4b`.
+- These changes are not claimed as verified until the user pulls them and runs the existing frontend typecheck/lint/build gates.
+
 ## 2026-09-18 — Native Windows transport-noise correction + service-worker entrypoint
 
 - User runtime verification showed the application itself was healthy: `GET /` returned `200 OK`, static Next.js assets returned `200 OK`, and the normalized market observations endpoint returned `200 OK`.
@@ -17,7 +31,6 @@
 
 - The chart remains the main implementation focus. The repository already pins `lightweight-charts` `5.2.1`, which is the current stable release verified against the official Lightweight Charts project; no downgrade or unnecessary dependency replacement is justified.
 - The visual gap versus the original TradingView terminal is architectural: Lightweight Charts supplies the rendering engine, while CFIP-PRO must own the professional terminal shell, tool state, drawing system, indicator orchestration, market-structure/intelligence overlays, risk tools, multi-pane behavior, persistence and data lifecycle.
-- The next chart implementation work is therefore feature-complete modularization rather than adding cosmetic buttons: every adopted module must expose the useful capabilities that materially serve CFIP-PRO, with no fake market/business results.
 - Final target includes professional symbol/timeframe/header controls, chart types, scale controls, indicators, volume, oscillators, FVG/OB/market-structure intelligence, drawings, measurement/risk overlays, navigation/history/realtime boundaries, and a maintainable chart-state/rendering architecture.
 - Temporary `react-hooks/refs` lint containment remains a known architectural debt until the chart series/overlay bridge is state-driven.
 
