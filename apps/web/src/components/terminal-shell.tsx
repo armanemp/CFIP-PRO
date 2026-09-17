@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { CfipChartTerminal } from "@/components/cfip-chart-terminal";
+import { ProfessionalChartTerminal } from "@/components/professional-chart-terminal";
 import { getMarketObservations, type MarketObservation } from "@/lib/api";
 
 const SYMBOL = "EUR/USD";
@@ -47,9 +47,8 @@ export function TerminalShell() {
           <span className="text-[#5f6c7e]">●</span>
         </div>
       </header>
-
       <section className="min-h-0 min-w-0 flex-1">
-        <CfipChartTerminal observations={observations} symbol={SYMBOL} />
+        <ProfessionalChartTerminal observations={observations} symbol={SYMBOL} />
       </section>
     </main>
   );
