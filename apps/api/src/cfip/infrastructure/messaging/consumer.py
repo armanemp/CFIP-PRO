@@ -33,7 +33,13 @@ class MarketEventConsumer:
             config=config,
         )
 
-    async def consume_once(self, handler: EventHandler, *, batch: int = 10, timeout: float = 1.0) -> int:
+    async def consume_once(
+        self,
+        handler: EventHandler,
+        *,
+        batch: int = 10,
+        timeout: float = 1.0,
+    ) -> int:
         if self._subscription is None:
             await self.start()
         assert self._subscription is not None
