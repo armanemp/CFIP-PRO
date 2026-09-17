@@ -112,3 +112,21 @@ Do not generate another parallel architecture, progress file, duplicate prompt, 
 **Current implementation stage:** Foundation / executable skeleton
 
 **Next slice:** define and implement the first real market-data domain contract, then persistence/API/chart integration without introducing fake business data.
+
+## 2026-09-17 — CI follow-up: TypeScript/tooling compatibility
+
+- GitHub Actions run `35255078180` on commit `194e590` was inspected at job/step/log level.
+- Backend job: **PASS** (`uv sync`, Ruff, pytest).
+- Frontend typecheck: **PASS**.
+- Frontend lint: **FAIL** because `eslint-config-next` loads `typescript-eslint`, whose current supported TypeScript range is `>=4.8.4 <6.1.0`; the repository had pinned TypeScript `7.0.2`.
+- This is a tooling compatibility issue, not an application-code lint failure.
+- Verified against the current typescript-eslint dependency documentation before changing the pin. TypeScript 6.0.3 is a stable release and is inside the supported range.
+- Updated `apps/web/package.json` from TypeScript `7.0.2` to stable TypeScript `6.0.3` in commit `305282b`.
+- No canary/nightly TypeScript version was introduced. No forced audit remediation was performed.
+- The next local action is to refresh frontend dependencies from the changed manifest and run typecheck/lint/build. After that, GitHub CI should be rechecked before starting the first real market-data vertical slice.
+
+## Environment rule — mandatory
+- All Python execution for CFIP-PRO development is performed inside the project `.venv`.
+- On Windows the canonical executable is `C:\Users\armanemp\Desktop\CFIP-PRO\.venv\Scripts\python.exe`.
+- Prefer explicit `\.venv\Scripts\python.exe -m ...` commands; if the environment is activated, verify `sys.executable` before Python checks.
+- Docker and WSL are not part of the current native Windows development workflow.
