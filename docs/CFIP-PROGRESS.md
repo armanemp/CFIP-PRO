@@ -49,12 +49,22 @@
 - Cleanup now removes the single chart instance and clears both the imperative and render state handles safely.
 - Extracted the shared chart options into one constant to prevent lifecycle drift between multiple chart constructors.
 - No dependency was added, no cache was disabled, and no database/runtime reset was performed.
-- Correction committed on `main` as `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`.
+- Correction committed on `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`.
 - Local lint/typecheck and fresh CI verification are still required before declaring the frontend gate green.
+
+## 2026-09-17 — Lightweight Charts 5 series lifecycle compatibility correction
+
+- Local frontend typecheck exposed a single API incompatibility in `apps/web/src/components/market-chart.tsx`: Lightweight Charts `5.2.1` exposes `IChartApi.removeSeries(seriesApi)` but does not expose `IChartApi.removeAllSeries()`.
+- Corrected the chart series lifecycle by tracking every active series in `seriesRef` and removing each series explicitly with the supported `removeSeries()` API before creating the next series set.
+- All primary, volume, SMA/EMA/VWAP and Bollinger series created by the data effect are registered in the same lifecycle registry, preventing stale series accumulation when timeframe, chart mode, volume or indicators change.
+- Chart teardown clears the registry before removing the single chart instance.
+- No dependency was added, no cache was disabled, no rebuild was performed, and no database/runtime reset was performed.
+- Correction committed on `main` as `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`.
+- User must pull this commit and rerun frontend typecheck; fresh CI verification remains pending.
 
 ## Current stage
 
-**Stage:** Native runtime stabilized → frontend lint hardening → chart terminal hardening
+**Stage:** Native runtime stabilized → frontend typecheck hardening → chart terminal hardening
 
 **Foundation:** implemented and previously locally verified
 
@@ -74,7 +84,7 @@
 
 **Single entrypoint:** frontend build PASS and native FastAPI runtime PASS on port 8000
 
-**CI:** frontend lint blocker corrected in source; fresh verification pending
+**CI:** frontend lint correction committed; typecheck correction committed; fresh verification pending
 
 **Production readiness:** not claimed
 
@@ -96,13 +106,13 @@
 
 **PostgreSQL schema:** PASS — Alembic `0001_market_data`
 
-**Frontend production build:** PASS on the previous verified revision; rerun only after the current lint correction if verification requires it
+**Frontend production build:** PASS on the previous verified revision; current source changed after that verification
 
-**Frontend typecheck:** PASS on the previous verified revision; current source requires fresh verification after the lifecycle correction
+**Frontend typecheck:** BLOCKED on the previous revision by unsupported `IChartApi.removeAllSeries()`; correction is now committed and requires local verification
 
-**Frontend lint:** FAILED on the prior revision; React `react-hooks/refs` correction is now committed; fresh local/CI verification pending
+**Frontend lint:** CORRECTED on the source revision; previous local lint completed without errors before the typecheck-only correction
 
-**Chart implementation:** COMMITTED — lifecycle and React render-boundary correction committed as `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`
+**Chart implementation:** COMMITTED — Lightweight Charts 5.2.1-compatible series lifecycle committed as `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`
 
 **Single port 8000 entrypoint:** PASS — native runtime previously verified
 
@@ -112,9 +122,9 @@
 
 ## Next execution order
 
-1. Pull `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`.
-2. Run frontend lint and typecheck locally; do not rebuild unless these checks expose a build-specific issue.
-3. Check the fresh GitHub Actions result before declaring the CI gate green.
+1. Pull `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`.
+2. Run only frontend `npm run typecheck`; no dependency installation and no rebuild unless the typecheck exposes a new build-specific issue.
+3. Check fresh GitHub Actions status for the new commit before declaring the frontend gate green.
 4. Run backend gates after the pull if local state is clean.
 5. Continue chart hardening with true price/time-anchored FVG and Order Block overlays rather than screen-space placeholders.
 6. Replace screen-space drawings with persistent price/time anchored drawing state.
