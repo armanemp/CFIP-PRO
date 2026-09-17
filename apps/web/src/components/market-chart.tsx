@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   AreaSeries,
   BarSeries,
@@ -23,41 +24,12 @@ type Timeframe = "1m" | "5m" | "15m" | "1H" | "4H" | "1D";
 type Indicator = "sma20" | "ema20" | "ema50" | "bb20" | "vwap";
 type DrawingTool = "cursor" | "horizontal" | "vertical" | "trendline";
 
-interface Candle {
-  time: UTCTimestamp;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-interface Zone {
-  start: UTCTimestamp;
-  end: UTCTimestamp;
-  top: number;
-  bottom: number;
-  kind: "bullish" | "bearish";
-  label: string;
-}
-interface StructurePoint {
-  time: UTCTimestamp;
-  price: number;
-  label: string;
-}
-interface Drawing {
-  tool: Exclude<DrawingTool, "cursor">;
-  p1: { time: UTCTimestamp; price: number };
-  p2: { time: UTCTimestamp; price: number };
-}
+interface Candle { time: UTCTimestamp; open: number; high: number; low: number; close: number; volume: number; }
+interface Zone { start: UTCTimestamp; end: UTCTimestamp; top: number; bottom: number; kind: "bullish" | "bearish"; label: string; }
+interface StructurePoint { time: UTCTimestamp; price: number; label: string; }
+interface Drawing { tool: Exclude<DrawingTool, "cursor">; p1: { time: UTCTimestamp; price: number }; p2: { time: UTCTimestamp; price: number }; }
 
-const TIMEFRAME_SECONDS: Record<Timeframe, number> = {
-  "1m": 60,
-  "5m": 300,
-  "15m": 900,
-  "1H": 3600,
-  "4H": 14400,
-  "1D": 86400,
-};
+const TIMEFRAME_SECONDS: Record<Timeframe, number> = { "1m": 60, "5m": 300, "15m": 900, "1H": 3600, "4H": 14400, "1D": 86400 };
 const TIMEFRAMES: Timeframe[] = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const INDICATORS: { id: Indicator; label: string }[] = [
   { id: "sma20", label: "SMA 20" },
@@ -74,7 +46,6 @@ function aggregateObservations(observations: MarketObservation[], timeframe: Tim
     .filter(({ observation, epoch }) => Number.isFinite(epoch) && (observation.last ?? observation.bid ?? observation.ask) !== null)
     .sort((a, b) => a.epoch - b.epoch);
   const buckets = new Map<number, Candle>();
-
   for (const { observation, epoch } of sorted) {
     const rawValue = observation.last ?? observation.bid ?? observation.ask;
     if (rawValue === null) continue;
@@ -85,14 +56,7 @@ function aggregateObservations(observations: MarketObservation[], timeframe: Tim
     const volume = Number.isFinite(rawVolume) && rawVolume >= 0 ? rawVolume : 0;
     const existing = buckets.get(bucket);
     if (!existing) {
-      buckets.set(bucket, {
-        time: bucket as UTCTimestamp,
-        open: price,
-        high: price,
-        low: price,
-        close: price,
-        volume,
-      });
+      buckets.set(bucket, { time: bucket as UTCTimestamp, open: price, high: price, low: price, close: price, volume });
       continue;
     }
     existing.high = Math.max(existing.high, price);
@@ -152,18 +116,17 @@ function detectFvg(candles: Candle[]): Zone[] {
   if (lastTime === undefined) return zones;
   for (let i = 2; i < candles.length; i += 1) {
     const left = candles[i - 2];
-    const middle = candles[i - 1];
     const right = candles[i];
-    if (left.high < right.low && middle.high >= left.high && middle.low <= right.low) {
+    if (left.high < right.low) {
       const bottom = left.high;
       const top = right.low;
       const mitigated = candles.slice(i + 1).some((candle) => candle.low <= bottom);
-      if (!mitigated) zones.push({ start: middle.time, end: lastTime, top, bottom, kind: "bullish", label: "FVG" });
-    } else if (left.low > right.high && middle.high >= left.low && middle.low <= right.low) {
+      if (!mitigated) zones.push({ start: candles[i - 1].time, end: lastTime, top, bottom, kind: "bullish", label: "FVG" });
+    } else if (left.low > right.high) {
       const bottom = right.high;
       const top = left.low;
       const mitigated = candles.slice(i + 1).some((candle) => candle.high >= top);
-      if (!mitigated) zones.push({ start: middle.time, end: lastTime, top, bottom, kind: "bearish", label: "FVG" });
+      if (!mitigated) zones.push({ start: candles[i - 1].time, end: lastTime, top, bottom, kind: "bearish", label: "FVG" });
     }
   }
   return zones.slice(-12);
@@ -185,16 +148,7 @@ function detectOrderBlocks(candles: Candle[]): Zone[] {
     const mitigated = bullish
       ? candles.slice(i + 1).some((candle) => candle.low <= previous.low)
       : candles.slice(i + 1).some((candle) => candle.high >= previous.high);
-    if (!mitigated) {
-      zones.push({
-        start: previous.time,
-        end: lastTime,
-        top: previous.high,
-        bottom: previous.low,
-        kind: bullish ? "bullish" : "bearish",
-        label: "OB",
-      });
-    }
+    if (!mitigated) zones.push({ start: previous.time, end: lastTime, top: previous.high, bottom: previous.low, kind: bullish ? "bullish" : "bearish", label: "OB" });
   }
   return zones.slice(-8);
 }
@@ -205,11 +159,8 @@ function detectStructure(candles: Candle[]): StructurePoint[] {
     const previous = candles[i - 1];
     const current = candles[i];
     const next = candles[i + 1];
-    if (current.high > previous.high && current.high >= next.high) {
-      points.push({ time: current.time, price: current.high, label: "HH" });
-    } else if (current.low < previous.low && current.low <= next.low) {
-      points.push({ time: current.time, price: current.low, label: "LL" });
-    }
+    if (current.high > previous.high && current.high >= next.high) points.push({ time: current.time, price: current.high, label: "HH" });
+    else if (current.low < previous.low && current.low <= next.low) points.push({ time: current.time, price: current.low, label: "LL" });
   }
   return points.slice(-20);
 }
@@ -225,17 +176,12 @@ function calculateRsi(candles: Candle[], period = 14) {
   }
   let averageGain = gain / period;
   let averageLoss = loss / period;
-  const values: { time: UTCTimestamp; value: number }[] = [
-    { time: candles[period].time, value: averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss) },
-  ];
+  const values: { time: UTCTimestamp; value: number }[] = [{ time: candles[period].time, value: averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss) }];
   for (let i = period + 1; i < candles.length; i += 1) {
     const delta = candles[i].close - candles[i - 1].close;
-    const currentGain = Math.max(delta, 0);
-    const currentLoss = Math.max(-delta, 0);
-    averageGain = (averageGain * (period - 1) + currentGain) / period;
-    averageLoss = (averageLoss * (period - 1) + currentLoss) / period;
-    const value = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
-    values.push({ time: candles[i].time, value });
+    averageGain = (averageGain * (period - 1) + Math.max(delta, 0)) / period;
+    averageLoss = (averageLoss * (period - 1) + Math.max(-delta, 0)) / period;
+    values.push({ time: candles[i].time, value: averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss) });
   }
   return values;
 }
@@ -321,13 +267,11 @@ export function MarketChart({ observations }: MarketChartProps) {
       series = addSeries(nextChart.addSeries(LineSeries, { lineWidth: 2, color: "#4ca6ff" }));
       series.setData(candles.map((candle) => ({ time: candle.time, value: candle.close })));
     }
-
     if (showVolume && candles.length) {
       const volume = addSeries(nextChart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" }));
       volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       volume.setData(candles.map((candle) => ({ time: candle.time, value: candle.volume, color: candle.close >= candle.open ? "rgba(54,201,143,0.38)" : "rgba(240,93,94,0.38)" })));
     }
-
     const indicators = new Map<Indicator, { time: UTCTimestamp; value: number }[]>();
     if (activeIndicators.includes("sma20")) indicators.set("sma20", sma(candles, 20));
     if (activeIndicators.includes("ema20")) indicators.set("ema20", ema(candles, 20));
@@ -466,10 +410,10 @@ function DrawingLayer({ tool, drawings, drawingStart, chart, setDrawingStart, se
   setDrawingStart: (value: { time: UTCTimestamp; price: number } | null) => void;
   setDrawings: (value: Drawing[] | ((current: Drawing[]) => Drawing[])) => void;
 }) {
-  const [version, setVersion] = useState(0);
+  const [, redraw] = useState(0);
   useEffect(() => {
     if (!chart) return;
-    const update = () => setVersion((value) => value + 1);
+    const update = () => redraw((value) => value + 1);
     chart.timeScale().subscribeVisibleTimeRangeChange(update);
     return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(update);
   }, [chart]);
@@ -480,19 +424,16 @@ function DrawingLayer({ tool, drawings, drawingStart, chart, setDrawingStart, se
     const y = chart.priceScale("right").priceToCoordinate(point.price);
     return x === null || y === null ? null : { x, y };
   };
-  const pixelToPoint = (event: React.PointerEvent<SVGSVGElement>) => {
+  const pixelToPoint = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (!chart) return null;
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const time = chart.timeScale().coordinateToTime(x);
-    const price = chart.priceScale("right").coordinateToPrice(y);
+    const time = chart.timeScale().coordinateToTime(event.clientX - rect.left);
+    const price = chart.priceScale("right").coordinateToPrice(event.clientY - rect.top);
     if (time === null || price === null || !Number.isFinite(price)) return null;
     return { time: time as UTCTimestamp, price };
   };
-
-  void version;
   const startPixel = drawingStart ? toPixel(drawingStart) : null;
+
   return (
     <svg
       className={`absolute inset-0 z-20 h-full w-full ${tool === "cursor" ? "pointer-events-none" : "pointer-events-auto"}`}
