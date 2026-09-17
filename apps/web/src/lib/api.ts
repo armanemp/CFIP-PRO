@@ -23,7 +23,7 @@ export type MarketObservation = z.infer<typeof MarketObservationSchema>;
 
 const MarketObservationListSchema = z.array(MarketObservationSchema);
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
 export async function getHealth() {
   const response = await fetch(`${apiBaseUrl}/health`, { cache: "no-store" });
@@ -33,7 +33,9 @@ export async function getHealth() {
 
 export async function getMarketObservations(symbol: string, venue: string, limit = 500) {
   const params = new URLSearchParams({ symbol, venue, limit: String(limit) });
-  const response = await fetch(`${apiBaseUrl}/market/observations?${params}`, { cache: "no-store" });
+  const response = await fetch(`${apiBaseUrl}/market/observations?${params}`, {
+    cache: "no-store",
+  });
   if (!response.ok) throw new Error(`Market observations request failed: ${response.status}`);
   return MarketObservationListSchema.parse(await response.json());
 }
