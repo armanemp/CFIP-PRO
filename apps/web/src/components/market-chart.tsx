@@ -23,39 +23,11 @@ type Timeframe = "1m" | "5m" | "15m" | "1H" | "4H" | "1D";
 type Indicator = "sma20" | "ema20" | "ema50" | "bb20" | "vwap";
 type DrawingTool = "cursor" | "horizontal" | "vertical" | "trendline";
 
-interface Candle {
-  time: UTCTimestamp;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
+interface Candle { time: UTCTimestamp; open: number; high: number; low: number; close: number; volume: number; }
+interface Zone { start: UTCTimestamp; end: UTCTimestamp; top: number; bottom: number; kind: "bullish" | "bearish"; label: string; }
+interface StructurePoint { time: UTCTimestamp; price: number; label: string; }
 
-interface Zone {
-  start: UTCTimestamp;
-  end: UTCTimestamp;
-  top: number;
-  bottom: number;
-  kind: "bullish" | "bearish";
-  label: string;
-}
-
-interface StructurePoint {
-  time: UTCTimestamp;
-  price: number;
-  label: string;
-}
-
-const TIMEFRAME_SECONDS: Record<Timeframe, number> = {
-  "1m": 60,
-  "5m": 300,
-  "15m": 900,
-  "1H": 3600,
-  "4H": 14400,
-  "1D": 86400,
-};
-
+const TIMEFRAME_SECONDS: Record<Timeframe, number> = { "1m": 60, "5m": 300, "15m": 900, "1H": 3600, "4H": 14400, "1D": 86400 };
 const TIMEFRAMES: Timeframe[] = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const INDICATORS: { id: Indicator; label: string }[] = [
   { id: "sma20", label: "SMA 20" },
@@ -79,14 +51,7 @@ function aggregateObservations(observations: MarketObservation[], timeframe: Tim
     const volume = observation.volume === null ? 0 : Number(observation.volume);
     const existing = buckets.get(bucket);
     if (!existing) {
-      buckets.set(bucket, {
-        time: bucket as UTCTimestamp,
-        open: price,
-        high: price,
-        low: price,
-        close: price,
-        volume: Number.isFinite(volume) ? volume : 0,
-      });
+      buckets.set(bucket, { time: bucket as UTCTimestamp, open: price, high: price, low: price, close: price, volume: Number.isFinite(volume) ? volume : 0 });
       continue;
     }
     existing.high = Math.max(existing.high, price);
@@ -145,11 +110,8 @@ function detectFvg(candles: Candle[]): Zone[] {
   for (let i = 2; i < candles.length; i += 1) {
     const left = candles[i - 2];
     const right = candles[i];
-    if (left.high < right.low) {
-      zones.push({ start: left.time, end: right.time, top: right.low, bottom: left.high, kind: "bullish", label: "FVG" });
-    } else if (left.low > right.high) {
-      zones.push({ start: left.time, end: right.time, top: left.low, bottom: right.high, kind: "bearish", label: "FVG" });
-    }
+    if (left.high < right.low) zones.push({ start: left.time, end: right.time, top: right.low, bottom: left.high, kind: "bullish", label: "FVG" });
+    else if (left.low > right.high) zones.push({ start: left.time, end: right.time, top: left.low, bottom: right.high, kind: "bearish", label: "FVG" });
   }
   return zones.slice(-12);
 }
@@ -162,12 +124,8 @@ function detectOrderBlocks(candles: Candle[]): Zone[] {
     const range = Math.max(current.high - current.low, Number.EPSILON);
     const body = Math.abs(current.close - current.open);
     if (body / range < 0.6) continue;
-    if (current.close > current.open && previous.close < previous.open) {
-      zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bullish", label: "OB" });
-    }
-    if (current.close < current.open && previous.close > previous.open) {
-      zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bearish", label: "OB" });
-    }
+    if (current.close > current.open && previous.close < previous.open) zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bullish", label: "OB" });
+    if (current.close < current.open && previous.close > previous.open) zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bearish", label: "OB" });
   }
   return zones.slice(-8);
 }
@@ -178,23 +136,30 @@ function detectStructure(candles: Candle[]): StructurePoint[] {
     const previous = candles[i - 1];
     const current = candles[i];
     const next = candles[i + 1];
-    if (current.high > previous.high && current.high > next.high) {
-      points.push({ time: current.time, price: current.high, label: "HH" });
-    } else if (current.low < previous.low && current.low < next.low) {
-      points.push({ time: current.time, price: current.low, label: "LL" });
-    }
+    if (current.high > previous.high && current.high > next.high) points.push({ time: current.time, price: current.high, label: "HH" });
+    else if (current.low < previous.low && current.low < next.low) points.push({ time: current.time, price: current.low, label: "LL" });
   }
   return points.slice(-20);
 }
 
-interface MarketChartProps {
-  observations: MarketObservation[];
-}
+const chartOptions = {
+  autoSize: true,
+  layout: { background: { type: ColorType.Solid, color: "#070a0f" }, textColor: "#8f9aaa", attributionLogo: false },
+  grid: { vertLines: { color: "#111823" }, horzLines: { color: "#111823" } },
+  rightPriceScale: { borderColor: "#1d2734", autoScale: true },
+  timeScale: { borderColor: "#1d2734", timeVisible: true, secondsVisible: false, rightOffset: 8 },
+  crosshair: { mode: CrosshairMode.Normal, vertLine: { labelBackgroundColor: "#26364a" }, horzLine: { labelBackgroundColor: "#26364a" } },
+  handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+  handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
+} as const;
+
+interface MarketChartProps { observations: MarketObservation[]; }
 
 export function MarketChart({ observations }: MarketChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const oscillatorRef = useRef<IChartApi | null>(null);
+  const [chart, setChart] = useState<IChartApi | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>("15m");
   const [chartMode, setChartMode] = useState<ChartMode>("candles");
   const [showVolume, setShowVolume] = useState(true);
@@ -219,43 +184,24 @@ export function MarketChart({ observations }: MarketChartProps) {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const chart = createChart(container, {
-      autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#070a0f" }, textColor: "#8f9aaa", attributionLogo: false },
-      grid: { vertLines: { color: "#111823" }, horzLines: { color: "#111823" } },
-      rightPriceScale: { borderColor: "#1d2734", autoScale: true },
-      timeScale: { borderColor: "#1d2734", timeVisible: true, secondsVisible: false, rightOffset: 8 },
-      crosshair: { mode: CrosshairMode.Normal, vertLine: { labelBackgroundColor: "#26364a" }, horzLine: { labelBackgroundColor: "#26364a" } },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
-      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
-    });
-    chartRef.current = chart;
-    const resizeObserver = new ResizeObserver(() => chart.resize(container.clientWidth, container.clientHeight));
+    const nextChart = createChart(container, chartOptions);
+    chartRef.current = nextChart;
+    setChart(nextChart);
+    const resizeObserver = new ResizeObserver(() => nextChart.resize(container.clientWidth, container.clientHeight));
     resizeObserver.observe(container);
     return () => {
       resizeObserver.disconnect();
-      chart.remove();
-      chartRef.current = null;
+      nextChart.remove();
+      if (chartRef.current === nextChart) chartRef.current = null;
+      setChart((current) => current === nextChart ? null : current);
     };
   }, []);
 
   useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
-    chart.remove();
-    const container = containerRef.current;
-    if (!container) return;
-    const nextChart = createChart(container, {
-      autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#070a0f" }, textColor: "#8f9aaa", attributionLogo: false },
-      grid: { vertLines: { color: "#111823" }, horzLines: { color: "#111823" } },
-      rightPriceScale: { borderColor: "#1d2734", autoScale: true },
-      timeScale: { borderColor: "#1d2734", timeVisible: true, secondsVisible: false, rightOffset: 8 },
-      crosshair: { mode: CrosshairMode.Normal, vertLine: { labelBackgroundColor: "#26364a" }, horzLine: { labelBackgroundColor: "#26364a" } },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
-      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
-    });
-    chartRef.current = nextChart;
+    const nextChart = chartRef.current;
+    if (!nextChart) return;
+    nextChart.applyOptions(chartOptions);
+    nextChart.removeAllSeries();
     let series: ISeriesApi<SeriesType>;
     if (chartMode === "candles") {
       series = nextChart.addSeries(CandlestickSeries, { upColor: "#36c98f", downColor: "#f05d5e", borderVisible: false, wickUpColor: "#36c98f", wickDownColor: "#f05d5e" });
@@ -292,16 +238,11 @@ export function MarketChart({ observations }: MarketChartProps) {
     if (activeIndicators.includes("bb20")) {
       const bands = bollinger(candles);
       for (const key of ["upper", "middle", "lower"] as const) {
-        const line = nextChart.addSeries(LineSeries, { lineWidth: key === "middle" ? 1 : 1, color: key === "middle" ? "#8f9aaa" : "rgba(143,154,170,0.65)", lineStyle: key === "middle" ? 0 : 2, priceLineVisible: false, lastValueVisible: false });
+        const line = nextChart.addSeries(LineSeries, { lineWidth: 1, color: key === "middle" ? "#8f9aaa" : "rgba(143,154,170,0.65)", lineStyle: key === "middle" ? 0 : 2, priceLineVisible: false, lastValueVisible: false });
         line.setData(bands.map((band) => ({ time: band.time, value: band[key] })));
       }
     }
-
     if (candles.length) nextChart.timeScale().fitContent();
-    return () => {
-      nextChart.remove();
-      if (chartRef.current === nextChart) chartRef.current = null;
-    };
   }, [candles, chartMode, showVolume, activeIndicators]);
 
   useEffect(() => {
@@ -313,7 +254,7 @@ export function MarketChart({ observations }: MarketChartProps) {
     const host = document.getElementById("cfip-oscillator");
     if (!host) return;
     oscillatorRef.current?.remove();
-    const chart = createChart(host, {
+    const oscillator = createChart(host, {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: "#090d13" }, textColor: "#7d8998" },
       grid: { vertLines: { color: "#111823" }, horzLines: { color: "#111823" } },
@@ -321,8 +262,8 @@ export function MarketChart({ observations }: MarketChartProps) {
       timeScale: { borderColor: "#1d2734", visible: false },
       crosshair: { mode: CrosshairMode.Normal },
     });
-    oscillatorRef.current = chart;
-    const rsi = chart.addSeries(LineSeries, { color: "#d8a84e", lineWidth: 1, priceLineVisible: false });
+    oscillatorRef.current = oscillator;
+    const rsi = oscillator.addSeries(LineSeries, { color: "#d8a84e", lineWidth: 1, priceLineVisible: false });
     const period = 14;
     let gains = 0;
     let losses = 0;
@@ -342,23 +283,17 @@ export function MarketChart({ observations }: MarketChartProps) {
       }
     }
     rsi.setData(values);
-    chart.priceScale("right").applyOptions({ autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } });
-    chart.timeScale().fitContent();
+    oscillator.priceScale("right").applyOptions({ autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } });
+    oscillator.timeScale().fitContent();
     return () => {
-      chart.remove();
-      if (oscillatorRef.current === chart) oscillatorRef.current = null;
+      oscillator.remove();
+      if (oscillatorRef.current === oscillator) oscillatorRef.current = null;
     };
   }, [candles, showOscillator]);
 
-  const toggleIndicator = (indicator: Indicator) => {
-    setActiveIndicators((current) => current.includes(indicator) ? current.filter((item) => item !== indicator) : [...current, indicator]);
-  };
-
+  const toggleIndicator = (indicator: Indicator) => setActiveIndicators((current) => current.includes(indicator) ? current.filter((item) => item !== indicator) : [...current, indicator]);
   const resetView = () => chartRef.current?.timeScale().fitContent();
-  const clearDrawings = () => {
-    setDrawings([]);
-    setDrawingStart(null);
-  };
+  const clearDrawings = () => { setDrawings([]); setDrawingStart(null); };
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[var(--terminal-bg)] text-[var(--terminal-text)]">
@@ -366,30 +301,23 @@ export function MarketChart({ observations }: MarketChartProps) {
         <div className="mr-2 flex items-center gap-1 border-r border-[var(--terminal-border)] pr-2">
           {TIMEFRAMES.map((item) => <button key={item} onClick={() => setTimeframe(item)} className={`rounded px-2 py-1 text-xs ${timeframe === item ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)] hover:text-white"}`}>{item}</button>)}
         </div>
-        <select value={chartMode} onChange={(event) => setChartMode(event.target.value as ChartMode)} className="rounded border border-[var(--terminal-border)] bg-[#111823] px-2 py-1 text-xs">
-          <option value="candles">Candles</option><option value="bars">Bars</option><option value="line">Line</option><option value="area">Area</option>
-        </select>
+        <select value={chartMode} onChange={(event) => setChartMode(event.target.value as ChartMode)} className="rounded border border-[var(--terminal-border)] bg-[#111823] px-2 py-1 text-xs"><option value="candles">Candles</option><option value="bars">Bars</option><option value="line">Line</option><option value="area">Area</option></select>
         <button onClick={() => setShowVolume((value) => !value)} className={`rounded px-2 py-1 text-xs ${showVolume ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>Volume</button>
         {INDICATORS.map((indicator) => <button key={indicator.id} onClick={() => toggleIndicator(indicator.id)} className={`rounded px-2 py-1 text-xs ${activeIndicators.includes(indicator.id) ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>{indicator.label}</button>)}
         <button onClick={() => setShowOscillator((value) => !value)} className={`rounded px-2 py-1 text-xs ${showOscillator ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>RSI</button>
-        <div className="ml-auto flex items-center gap-1">
-          <button onClick={resetView} className="rounded px-2 py-1 text-xs text-[var(--terminal-muted)] hover:text-white">Fit</button>
-          <button onClick={clearDrawings} className="rounded px-2 py-1 text-xs text-[var(--terminal-muted)] hover:text-white">Clear drawings</button>
-        </div>
+        <div className="ml-auto flex items-center gap-1"><button onClick={resetView} className="rounded px-2 py-1 text-xs text-[var(--terminal-muted)] hover:text-white">Fit</button><button onClick={clearDrawings} className="rounded px-2 py-1 text-xs text-[var(--terminal-muted)] hover:text-white">Clear drawings</button></div>
       </div>
-
       <div className="flex shrink-0 items-center gap-4 border-b border-[var(--terminal-border)] bg-[#090d13] px-3 py-2 text-xs">
         <strong className="text-sm">EUR/USD</strong><span className="text-[var(--terminal-muted)]">{timeframe}</span>
         {latest && <><span>O {latest.open.toFixed(5)}</span><span>H {latest.high.toFixed(5)}</span><span>L {latest.low.toFixed(5)}</span><span>C {latest.close.toFixed(5)}</span><span className={change >= 0 ? "text-emerald-400" : "text-red-400"}>{change >= 0 ? "+" : ""}{change.toFixed(5)} ({changePct.toFixed(2)}%)</span></>}
         <span className="ml-auto text-[var(--terminal-muted)]">{candles.length} candles · {observations.length} observations</span>
       </div>
-
       <div className="relative min-h-0 flex-1">
         <div ref={containerRef} className="absolute inset-0" aria-label="CFIP full market chart" />
         <div className="pointer-events-none absolute inset-0">
-          {showFvg && fvgZones.map((zone, index) => <ZoneBadge key={`fvg-${index}`} zone={zone} chart={chartRef.current} />)}
-          {showOrderBlocks && orderBlocks.map((zone, index) => <ZoneBadge key={`ob-${index}`} zone={zone} chart={chartRef.current} />)}
-          {showStructure && structure.map((point, index) => <StructureBadge key={`structure-${index}`} point={point} chart={chartRef.current} />)}
+          {showFvg && fvgZones.map((zone, index) => <ZoneBadge key={`fvg-${index}`} zone={zone} chart={chart} />)}
+          {showOrderBlocks && orderBlocks.map((zone, index) => <ZoneBadge key={`ob-${index}`} zone={zone} chart={chart} />)}
+          {showStructure && structure.map((point, index) => <StructureBadge key={`structure-${index}`} point={point} chart={chart} />)}
         </div>
         <div className="absolute left-2 top-2 z-10 flex flex-col gap-1 rounded border border-[var(--terminal-border)] bg-[#0d121a]/90 p-1 backdrop-blur">
           {(["cursor", "horizontal", "vertical", "trendline"] as DrawingTool[]).map((tool) => <button key={tool} onClick={() => setDrawingTool(tool)} className={`rounded px-2 py-1 text-left text-[10px] ${drawingTool === tool ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)] hover:text-white"}`}>{tool}</button>)}
@@ -399,12 +327,8 @@ export function MarketChart({ observations }: MarketChartProps) {
         </div>
         <DrawingLayer tool={drawingTool} drawings={drawings} drawingStart={drawingStart} setDrawingStart={setDrawingStart} setDrawings={setDrawings} />
       </div>
-
       {showOscillator && <div id="cfip-oscillator" className="h-28 shrink-0 border-t border-[var(--terminal-border)]" aria-label="RSI oscillator" />}
-      <div className="flex shrink-0 items-center justify-between border-t border-[var(--terminal-border)] bg-[var(--terminal-panel)] px-3 py-1 text-[10px] text-[var(--terminal-muted)]">
-        <span>Crosshair · wheel zoom · drag pan · axis scale · drawings · FVG · Order Blocks · structure</span>
-        <span>Source: normalized market observations</span>
-      </div>
+      <div className="flex shrink-0 items-center justify-between border-t border-[var(--terminal-border)] bg-[var(--terminal-panel)] px-3 py-1 text-[10px] text-[var(--terminal-muted)]"><span>Crosshair · wheel zoom · drag pan · axis scale · drawings · FVG · Order Blocks · structure</span><span>Source: normalized market observations</span></div>
     </div>
   );
 }
@@ -443,13 +367,7 @@ function StructureBadge({ point, chart }: { point: StructurePoint; chart: IChart
   return <span className="absolute top-3 rounded bg-[#0d121a]/80 px-1 text-[9px] text-[#d8a84e]" style={{ left: position.left }}>{point.label}</span>;
 }
 
-function DrawingLayer({
-  tool,
-  drawings,
-  drawingStart,
-  setDrawingStart,
-  setDrawings,
-}: {
+function DrawingLayer({ tool, drawings, drawingStart, setDrawingStart, setDrawings }: {
   tool: DrawingTool;
   drawings: { tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[];
   drawingStart: { x: number; y: number } | null;
@@ -460,10 +378,7 @@ function DrawingLayer({
     if (tool === "cursor") return;
     const rect = event.currentTarget.getBoundingClientRect();
     const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    if (!drawingStart) {
-      setDrawingStart(point);
-      return;
-    }
+    if (!drawingStart) { setDrawingStart(point); return; }
     const end = tool === "horizontal" ? { x: point.x, y: drawingStart.y } : tool === "vertical" ? { x: drawingStart.x, y: point.y } : point;
     setDrawings((current) => [...current, { tool, x1: drawingStart.x, y1: drawingStart.y, x2: end.x, y2: end.y }]);
     setDrawingStart(null);
