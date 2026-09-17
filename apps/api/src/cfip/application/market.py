@@ -5,7 +5,13 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cfip.domain.events import EventEnvelope
-from cfip.domain.market import InstrumentCreate, MarketObservationCreate, MarketObservationQuery
+from cfip.domain.market import (
+    InstrumentCreate,
+    InstrumentRead,
+    MarketObservationCreate,
+    MarketObservationQuery,
+    MarketObservationRead,
+)
 from cfip.infrastructure.db.repositories.market import MarketRepository
 
 
@@ -14,16 +20,19 @@ class MarketService:
         self.repository = MarketRepository(session)
         self.session = session
 
-    async def create_instrument(self, command: InstrumentCreate):
+    async def create_instrument(self, command: InstrumentCreate) -> InstrumentRead:
         instrument = await self.repository.create_instrument(command)
         await self.session.commit()
         await self.session.refresh(instrument)
-        return instrument
+        return InstrumentRead.model_validate(instrument)
 
-    async def list_instruments(self):
-        return await self.repository.list_instruments()
+    async def list_instruments(self) -> list[InstrumentRead]:
+        instruments = await self.repository.list_instruments()
+        return [InstrumentRead.model_validate(item) for item in instruments]
 
-    async def ingest_observation(self, command: MarketObservationCreate):
+    async def ingest_observation(
+        self, command: MarketObservationCreate
+    ) -> MarketObservationRead:
         instrument = await self.repository.get_instrument(command.instrument_id)
         if instrument is None or not instrument.is_active:
             raise ValueError("instrument_not_found_or_inactive")
@@ -52,7 +61,10 @@ class MarketService:
         )
         await self.session.commit()
         await self.session.refresh(observation)
-        return observation
+        return MarketObservationRead.model_validate(observation)
 
-    async def list_observations(self, query: MarketObservationQuery):
-        return await self.repository.list_observations(query)
+    async def list_observations(
+        self, query: MarketObservationQuery
+    ) -> list[MarketObservationRead]:
+        observations = await self.repository.list_observations(query)
+        return [MarketObservationRead.model_validate(item) for item in observations]
