@@ -41,9 +41,20 @@
 - No dependency was added, no cache was disabled, and no database/runtime reset was performed.
 - Fresh CI verification is required for the new commit.
 
+## 2026-09-17 — Chart lifecycle + React ref lint correction
+
+- Frontend lint exposed three `react-hooks/refs` errors in `apps/web/src/components/market-chart.tsx` because JSX read `chartRef.current` during render for FVG, Order Block and Structure overlays.
+- Corrected the render boundary by keeping the imperative chart handle in `chartRef` while exposing the render-safe chart instance through React state (`chart`). Overlay components now receive the state value rather than reading a ref during render.
+- Removed the duplicate chart-creation lifecycle. The component now creates exactly one Lightweight Charts instance on mount, stores it in the ref/state pair, and reuses that instance while replacing series when chart data/mode/volume/indicator dependencies change.
+- Cleanup now removes the single chart instance and clears both the imperative and render state handles safely.
+- Extracted the shared chart options into one constant to prevent lifecycle drift between multiple chart constructors.
+- No dependency was added, no cache was disabled, and no database/runtime reset was performed.
+- Correction committed on `main` as `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`.
+- Local lint/typecheck and fresh CI verification are still required before declaring the frontend gate green.
+
 ## Current stage
 
-**Stage:** Native runtime stabilized → CI gate cleanup → chart terminal hardening
+**Stage:** Native runtime stabilized → frontend lint hardening → chart terminal hardening
 
 **Foundation:** implemented and previously locally verified
 
@@ -59,11 +70,11 @@
 
 **Frontend market-data API client:** implemented with Zod validation
 
-**Chart module:** interactive terminal foundation implemented; canonical historical OHLC semantics, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
+**Chart module:** interactive terminal foundation implemented; lifecycle/ref safety corrected; canonical historical OHLC semantics, true price/time-anchored FVG/OB overlays, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
 
 **Single entrypoint:** frontend build PASS and native FastAPI runtime PASS on port 8000
 
-**CI:** backend PASS; frontend lint failure identified and corrected; fresh CI pending
+**CI:** frontend lint blocker corrected in source; fresh verification pending
 
 **Production readiness:** not claimed
 
@@ -85,15 +96,15 @@
 
 **PostgreSQL schema:** PASS — Alembic `0001_market_data`
 
-**Frontend production build:** PASS — Next.js 16.3.3 compilation, TypeScript, page-data collection, static generation and finalization completed successfully
+**Frontend production build:** PASS on the previous verified revision; rerun only after the current lint correction if verification requires it
 
-**Frontend typecheck in CI:** PASS
+**Frontend typecheck:** PASS on the previous verified revision; current source requires fresh verification after the lifecycle correction
 
-**Frontend lint in CI:** FAILED on commit `71e6577`; configuration correction committed as `f3a4ed3`; fresh verification pending
+**Frontend lint:** FAILED on the prior revision; React `react-hooks/refs` correction is now committed; fresh local/CI verification pending
 
-**Chart implementation:** COMMITTED — latest TypeScript compatibility correction committed
+**Chart implementation:** COMMITTED — lifecycle and React render-boundary correction committed as `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`
 
-**Single port 8000 entrypoint:** PASS — native runtime verified
+**Single port 8000 entrypoint:** PASS — native runtime previously verified
 
 **Service Worker:** NOT IMPLEMENTED — `/sw.js` 404 is currently a known PWA gap, intentionally not masked with a placeholder
 
@@ -101,9 +112,9 @@
 
 ## Next execution order
 
-1. Pull latest `main` containing `f3a4ed3cf7c43839b76f0cf94dc919a1effab426`.
-2. Verify frontend lint locally; CI will independently verify the correction.
-3. Check fresh GitHub Actions result before declaring the CI gate green.
+1. Pull `8218dc1e3adca6b36f4fd54c45569f08a5d95c40`.
+2. Run frontend lint and typecheck locally; do not rebuild unless these checks expose a build-specific issue.
+3. Check the fresh GitHub Actions result before declaring the CI gate green.
 4. Run backend gates after the pull if local state is clean.
 5. Continue chart hardening with true price/time-anchored FVG and Order Block overlays rather than screen-space placeholders.
 6. Replace screen-space drawings with persistent price/time anchored drawing state.
