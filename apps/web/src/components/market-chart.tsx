@@ -2,14 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import {
-  CandlestickSeries,
   ColorType,
+  LineSeries,
   createChart,
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
 
-export function MarketChart() {
+import type { MarketObservation } from "@/lib/api";
+
+interface MarketChartProps {
+  observations: MarketObservation[];
+}
+
+export function MarketChart({ observations }: MarketChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
@@ -25,28 +31,21 @@ export function MarketChart() {
       timeScale: { borderColor: "#1d2734", timeVisible: true },
     });
 
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      borderVisible: false,
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
-    });
+    const series = chart.addSeries(LineSeries, { lineWidth: 2 });
+    const points = observations
+      .map((observation) => {
+        const value = observation.last ?? observation.bid ?? observation.ask;
+        if (value === null) return null;
+        return {
+          time: Math.floor(new Date(observation.observed_at).getTime() / 1000) as UTCTimestamp,
+          value: Number(value),
+        };
+      })
+      .filter((point): point is { time: UTCTimestamp; value: number } => point !== null)
+      .sort((a, b) => Number(a.time) - Number(b.time));
 
-    const now = Math.floor(Date.now() / 1000);
-    const data = Array.from({ length: 72 }, (_, index) => {
-      const close = 1.09 + Math.sin(index / 7) * 0.008 + index * 0.00008;
-      const open = close - Math.sin(index) * 0.0015;
-      return {
-        time: (now - (72 - index) * 3600) as UTCTimestamp,
-        open,
-        high: Math.max(open, close) + 0.0015,
-        low: Math.min(open, close) - 0.0015,
-        close,
-      };
-    });
-    series.setData(data);
-    chart.timeScale().fitContent();
+    series.setData(points);
+    if (points.length > 0) chart.timeScale().fitContent();
     chartRef.current = chart;
 
     const observer = new ResizeObserver(() => chart.resize(container.clientWidth, container.clientHeight));
@@ -57,7 +56,7 @@ export function MarketChart() {
       chart.remove();
       chartRef.current = null;
     };
-  }, []);
+  }, [observations]);
 
-  return <div ref={containerRef} className="h-full min-h-0 w-full" aria-label="Market chart" />;
+  return <div ref={containerRef} className="h-full min-h-0 w-full" aria-label="Market observation chart" />;
 }
