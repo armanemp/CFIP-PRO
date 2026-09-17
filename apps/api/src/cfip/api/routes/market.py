@@ -1,4 +1,4 @@
-"""HTTP transport for normalized market observations."""
+"""HTTP transport for normalized market observations and provider diagnostics."""
 
 from datetime import datetime
 from typing import Annotated
@@ -16,6 +16,7 @@ from cfip.domain.market import (
     MarketObservationRead,
 )
 from cfip.infrastructure.db.session import get_session
+from cfip.infrastructure.providers.eodhd_demo import fetch_demo_market
 
 router = APIRouter(prefix="/market")
 
@@ -81,3 +82,12 @@ async def list_observations(
         limit=limit,
     )
     return await service.list_observations(query)
+
+
+@router.get("/demo/eurusd")
+async def demo_eurusd(limit: int = Query(default=500, ge=50, le=1000)) -> dict[str, object]:
+    """Return real EODHD demo history + current EUR/USD quote for terminal testing."""
+    try:
+        return await fetch_demo_market(limit)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="demo_provider_unavailable") from exc
