@@ -2,6 +2,15 @@
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
 
+## 2026-09-17 — Native Windows chart build correction
+
+- The native launcher now correctly resolves Windows `npm.cmd`; the previous `WinError 2` launcher failure is resolved.
+- The next build reached Next.js compilation successfully and then exposed a Lightweight Charts 5.2.1 TypeScript error: `scaleMargins` is not a `HistogramSeries` option.
+- Corrected `apps/web/src/components/market-chart.tsx` to create the volume histogram with supported series options and apply `scaleMargins` through the histogram series price-scale API: `volume.priceScale().applyOptions(...)`.
+- No dependency was added, no cache was disabled, and no database/runtime reset was performed.
+- The correction is committed on `main` as `15123bfd895b09bd2495b0fb8a13e49a1e49baaa`.
+- Native local verification is still required after pulling this commit.
+
 ## 2026-09-17 — Native Windows single-entrypoint correction
 
 - The first implementation of `scripts/run_cfip.py` invoked `npm` directly through Python `subprocess`.
@@ -30,7 +39,7 @@
 
 **Chart module:** interactive terminal foundation implemented; canonical historical OHLC semantics, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
 
-**Single entrypoint:** corrected for native Windows; build step now resolves `npm.cmd` safely; native execution pending after pull
+**Single entrypoint:** corrected for native Windows; build step resolves `npm.cmd` safely; volume histogram configuration is now compatible with Lightweight Charts 5.2.1; native execution pending after pull
 
 **Production readiness:** not claimed
 
@@ -50,11 +59,11 @@
 
 **PostgreSQL schema:** PASS — Alembic `0001_market_data`
 
-**Chart implementation:** COMMITTED — native browser execution pending
+**Chart implementation:** COMMITTED — latest TypeScript compatibility correction committed; native browser execution pending
 
-**Single port 8000 entrypoint:** CORRECTED — native Windows launcher fix committed; local execution pending
+**Single port 8000 entrypoint:** CORRECTED — native Windows launcher and chart build path corrected; local execution pending
 
-**Latest verification blocker:** the previous launcher failed before reaching application startup because `npm` was not resolved by Python subprocess; this is fixed in the latest commit
+**Latest verification blocker:** local build previously stopped on the unsupported `HistogramSeries` `scaleMargins` option; corrected in commit `15123bfd895b09bd2495b0fb8a13e49a1e49baaa`
 
 **Production readiness:** not claimed
 
