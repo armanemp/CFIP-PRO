@@ -70,7 +70,7 @@ async def list_observations(
     start: datetime | None = None,
     end: datetime | None = None,
     limit: int = Query(default=500, ge=1, le=5000),
-    service: MarketServiceDependency = None,
+    service: MarketServiceDependency,
 ) -> list[MarketObservationRead]:
     query = MarketObservationQuery(
         symbol=symbol,
