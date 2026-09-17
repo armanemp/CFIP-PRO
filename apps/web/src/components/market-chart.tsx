@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CandlestickSeries, ColorType, createChart, type IChartApi } from "lightweight-charts";
+import {
+  CandlestickSeries,
+  ColorType,
+  createChart,
+  type IChartApi,
+  type UTCTimestamp,
+} from "lightweight-charts";
 
 export function MarketChart() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,7 +38,7 @@ export function MarketChart() {
       const close = 1.09 + Math.sin(index / 7) * 0.008 + index * 0.00008;
       const open = close - Math.sin(index) * 0.0015;
       return {
-        time: (now - (72 - index) * 3600) as number,
+        time: (now - (72 - index) * 3600) as UTCTimestamp,
         open,
         high: Math.max(open, close) + 0.0015,
         low: Math.min(open, close) - 0.0015,
