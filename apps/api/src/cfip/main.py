@@ -21,7 +21,8 @@ app.add_middleware(
 )
 app.include_router(api_router, prefix="/api")
 
-WEB_ROOT = Path(__file__).resolve().parents[4] / "web" / "out"
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+WEB_ROOT = PROJECT_ROOT / "apps" / "web" / "out"
 WEB_INDEX = WEB_ROOT / "index.html"
 
 
