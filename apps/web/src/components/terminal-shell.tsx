@@ -38,6 +38,17 @@ export function TerminalShell() {
       <section className="min-h-0 min-w-0 flex-1">
         <CfipChartTerminal observations={observations} symbol={SYMBOL} />
       </section>
+      <footer className="flex h-5 shrink-0 items-center justify-between border-t border-[#1c2632] bg-[#0c1118] px-3 text-[9px] text-[#687586]">
+        <span>CFIP-PRO chart terminal · native market-data boundary</span>
+        <a
+          href="https://www.tradingview.com/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[#8f9aaa] underline decoration-[#4a5564] underline-offset-2 hover:text-white"
+        >
+          TradingView Lightweight Charts™ · https://www.tradingview.com/
+        </a>
+      </footer>
     </main>
   );
 }
