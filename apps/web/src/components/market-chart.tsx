@@ -23,11 +23,41 @@ type Timeframe = "1m" | "5m" | "15m" | "1H" | "4H" | "1D";
 type Indicator = "sma20" | "ema20" | "ema50" | "bb20" | "vwap";
 type DrawingTool = "cursor" | "horizontal" | "vertical" | "trendline";
 
-interface Candle { time: UTCTimestamp; open: number; high: number; low: number; close: number; volume: number; }
-interface Zone { start: UTCTimestamp; end: UTCTimestamp; top: number; bottom: number; kind: "bullish" | "bearish"; label: string; }
-interface StructurePoint { time: UTCTimestamp; price: number; label: string; }
+interface Candle {
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+interface Zone {
+  start: UTCTimestamp;
+  end: UTCTimestamp;
+  top: number;
+  bottom: number;
+  kind: "bullish" | "bearish";
+  label: string;
+}
+interface StructurePoint {
+  time: UTCTimestamp;
+  price: number;
+  label: string;
+}
+interface Drawing {
+  tool: Exclude<DrawingTool, "cursor">;
+  p1: { time: UTCTimestamp; price: number };
+  p2: { time: UTCTimestamp; price: number };
+}
 
-const TIMEFRAME_SECONDS: Record<Timeframe, number> = { "1m": 60, "5m": 300, "15m": 900, "1H": 3600, "4H": 14400, "1D": 86400 };
+const TIMEFRAME_SECONDS: Record<Timeframe, number> = {
+  "1m": 60,
+  "5m": 300,
+  "15m": 900,
+  "1H": 3600,
+  "4H": 14400,
+  "1D": 86400,
+};
 const TIMEFRAMES: Timeframe[] = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const INDICATORS: { id: Indicator; label: string }[] = [
   { id: "sma20", label: "SMA 20" },
@@ -39,25 +69,36 @@ const INDICATORS: { id: Indicator; label: string }[] = [
 
 function aggregateObservations(observations: MarketObservation[], timeframe: Timeframe): Candle[] {
   const seconds = TIMEFRAME_SECONDS[timeframe];
+  const sorted = observations
+    .map((observation) => ({ observation, epoch: Math.floor(new Date(observation.observed_at).getTime() / 1000) }))
+    .filter(({ observation, epoch }) => Number.isFinite(epoch) && (observation.last ?? observation.bid ?? observation.ask) !== null)
+    .sort((a, b) => a.epoch - b.epoch);
   const buckets = new Map<number, Candle>();
-  for (const observation of observations) {
-    const value = observation.last ?? observation.bid ?? observation.ask;
-    if (value === null) continue;
-    const price = Number(value);
+
+  for (const { observation, epoch } of sorted) {
+    const rawValue = observation.last ?? observation.bid ?? observation.ask;
+    if (rawValue === null) continue;
+    const price = Number(rawValue);
     if (!Number.isFinite(price)) continue;
-    const epoch = Math.floor(new Date(observation.observed_at).getTime() / 1000);
-    if (!Number.isFinite(epoch)) continue;
     const bucket = Math.floor(epoch / seconds) * seconds;
-    const volume = observation.volume === null ? 0 : Number(observation.volume);
+    const rawVolume = observation.volume === null ? 0 : Number(observation.volume);
+    const volume = Number.isFinite(rawVolume) && rawVolume >= 0 ? rawVolume : 0;
     const existing = buckets.get(bucket);
     if (!existing) {
-      buckets.set(bucket, { time: bucket as UTCTimestamp, open: price, high: price, low: price, close: price, volume: Number.isFinite(volume) ? volume : 0 });
+      buckets.set(bucket, {
+        time: bucket as UTCTimestamp,
+        open: price,
+        high: price,
+        low: price,
+        close: price,
+        volume,
+      });
       continue;
     }
     existing.high = Math.max(existing.high, price);
     existing.low = Math.min(existing.low, price);
     existing.close = price;
-    if (Number.isFinite(volume)) existing.volume += volume;
+    existing.volume += volume;
   }
   return [...buckets.values()].sort((a, b) => Number(a.time) - Number(b.time));
 }
@@ -107,39 +148,96 @@ function vwap(candles: Candle[]) {
 
 function detectFvg(candles: Candle[]): Zone[] {
   const zones: Zone[] = [];
+  const lastTime = candles.at(-1)?.time;
+  if (lastTime === undefined) return zones;
   for (let i = 2; i < candles.length; i += 1) {
     const left = candles[i - 2];
+    const middle = candles[i - 1];
     const right = candles[i];
-    if (left.high < right.low) zones.push({ start: left.time, end: right.time, top: right.low, bottom: left.high, kind: "bullish", label: "FVG" });
-    else if (left.low > right.high) zones.push({ start: left.time, end: right.time, top: left.low, bottom: right.high, kind: "bearish", label: "FVG" });
+    if (left.high < right.low && middle.high >= left.high && middle.low <= right.low) {
+      const bottom = left.high;
+      const top = right.low;
+      const mitigated = candles.slice(i + 1).some((candle) => candle.low <= bottom);
+      if (!mitigated) zones.push({ start: middle.time, end: lastTime, top, bottom, kind: "bullish", label: "FVG" });
+    } else if (left.low > right.high && middle.high >= left.low && middle.low <= right.low) {
+      const bottom = right.high;
+      const top = left.low;
+      const mitigated = candles.slice(i + 1).some((candle) => candle.high >= top);
+      if (!mitigated) zones.push({ start: middle.time, end: lastTime, top, bottom, kind: "bearish", label: "FVG" });
+    }
   }
   return zones.slice(-12);
 }
 
 function detectOrderBlocks(candles: Candle[]): Zone[] {
   const zones: Zone[] = [];
+  const lastTime = candles.at(-1)?.time;
+  if (lastTime === undefined) return zones;
   for (let i = 2; i < candles.length; i += 1) {
     const previous = candles[i - 1];
     const current = candles[i];
     const range = Math.max(current.high - current.low, Number.EPSILON);
     const body = Math.abs(current.close - current.open);
     if (body / range < 0.6) continue;
-    if (current.close > current.open && previous.close < previous.open) zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bullish", label: "OB" });
-    if (current.close < current.open && previous.close > previous.open) zones.push({ start: previous.time, end: current.time, top: previous.high, bottom: previous.low, kind: "bearish", label: "OB" });
+    const bullish = current.close > current.open && previous.close < previous.open;
+    const bearish = current.close < current.open && previous.close > previous.open;
+    if (!bullish && !bearish) continue;
+    const mitigated = bullish
+      ? candles.slice(i + 1).some((candle) => candle.low <= previous.low)
+      : candles.slice(i + 1).some((candle) => candle.high >= previous.high);
+    if (!mitigated) {
+      zones.push({
+        start: previous.time,
+        end: lastTime,
+        top: previous.high,
+        bottom: previous.low,
+        kind: bullish ? "bullish" : "bearish",
+        label: "OB",
+      });
+    }
   }
   return zones.slice(-8);
 }
 
 function detectStructure(candles: Candle[]): StructurePoint[] {
   const points: StructurePoint[] = [];
-  for (let i = 1; i < candles.length - 1; i += 1) {
+  for (let i = 2; i < candles.length - 2; i += 1) {
     const previous = candles[i - 1];
     const current = candles[i];
     const next = candles[i + 1];
-    if (current.high > previous.high && current.high > next.high) points.push({ time: current.time, price: current.high, label: "HH" });
-    else if (current.low < previous.low && current.low < next.low) points.push({ time: current.time, price: current.low, label: "LL" });
+    if (current.high > previous.high && current.high >= next.high) {
+      points.push({ time: current.time, price: current.high, label: "HH" });
+    } else if (current.low < previous.low && current.low <= next.low) {
+      points.push({ time: current.time, price: current.low, label: "LL" });
+    }
   }
   return points.slice(-20);
+}
+
+function calculateRsi(candles: Candle[], period = 14) {
+  if (candles.length <= period) return [] as { time: UTCTimestamp; value: number }[];
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i <= period; i += 1) {
+    const delta = candles[i].close - candles[i - 1].close;
+    gain += Math.max(delta, 0);
+    loss += Math.max(-delta, 0);
+  }
+  let averageGain = gain / period;
+  let averageLoss = loss / period;
+  const values: { time: UTCTimestamp; value: number }[] = [
+    { time: candles[period].time, value: averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss) },
+  ];
+  for (let i = period + 1; i < candles.length; i += 1) {
+    const delta = candles[i].close - candles[i - 1].close;
+    const currentGain = Math.max(delta, 0);
+    const currentLoss = Math.max(-delta, 0);
+    averageGain = (averageGain * (period - 1) + currentGain) / period;
+    averageLoss = (averageLoss * (period - 1) + currentLoss) / period;
+    const value = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+    values.push({ time: candles[i].time, value });
+  }
+  return values;
 }
 
 const chartOptions = {
@@ -170,8 +268,8 @@ export function MarketChart({ observations }: MarketChartProps) {
   const [showOscillator, setShowOscillator] = useState(false);
   const [activeIndicators, setActiveIndicators] = useState<Indicator[]>(["ema20"]);
   const [drawingTool, setDrawingTool] = useState<DrawingTool>("cursor");
-  const [drawings, setDrawings] = useState<{ tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[]>([]);
-  const [drawingStart, setDrawingStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const [drawingStart, setDrawingStart] = useState<{ time: UTCTimestamp; price: number } | null>(null);
 
   const candles = useMemo(() => aggregateObservations(observations, timeframe), [observations, timeframe]);
   const fvgZones = useMemo(() => detectFvg(candles), [candles]);
@@ -253,7 +351,7 @@ export function MarketChart({ observations }: MarketChartProps) {
   }, [candles, chartMode, showVolume, activeIndicators]);
 
   useEffect(() => {
-    if (!showOscillator || candles.length < 2) {
+    if (!showOscillator || candles.length <= 14) {
       oscillatorRef.current?.remove();
       oscillatorRef.current = null;
       return;
@@ -265,32 +363,14 @@ export function MarketChart({ observations }: MarketChartProps) {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: "#090d13" }, textColor: "#7d8998" },
       grid: { vertLines: { color: "#111823" }, horzLines: { color: "#111823" } },
-      rightPriceScale: { borderColor: "#1d2734" },
+      rightPriceScale: { borderColor: "#1d2734", autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: { borderColor: "#1d2734", visible: false },
       crosshair: { mode: CrosshairMode.Normal },
     });
     oscillatorRef.current = oscillator;
     const rsi = oscillator.addSeries(LineSeries, { color: "#d8a84e", lineWidth: 1, priceLineVisible: false });
-    const period = 14;
-    let gains = 0;
-    let losses = 0;
-    const values: { time: UTCTimestamp; value: number }[] = [];
-    for (let i = 1; i < candles.length; i += 1) {
-      const delta = candles[i].close - candles[i - 1].close;
-      gains += Math.max(delta, 0);
-      losses += Math.max(-delta, 0);
-      if (i >= period) {
-        if (i > period) {
-          const oldDelta = candles[i - period].close - candles[i - period - 1].close;
-          gains -= Math.max(oldDelta, 0);
-          losses -= Math.max(-oldDelta, 0);
-        }
-        const rs = losses === 0 ? 100 : gains / losses;
-        values.push({ time: candles[i].time, value: 100 - 100 / (1 + rs) });
-      }
-    }
-    rsi.setData(values);
-    oscillator.priceScale("right").applyOptions({ autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } });
+    rsi.setData(calculateRsi(candles));
+    oscillator.priceScale("right").applyOptions({ autoScale: false, minValue: 0, maxValue: 100 });
     oscillator.timeScale().fitContent();
     return () => {
       oscillator.remove();
@@ -325,14 +405,14 @@ export function MarketChart({ observations }: MarketChartProps) {
           {showFvg && fvgZones.map((zone, index) => <ZoneBadge key={`fvg-${index}`} zone={zone} chart={chart} />)}
           {showOrderBlocks && orderBlocks.map((zone, index) => <ZoneBadge key={`ob-${index}`} zone={zone} chart={chart} />)}
           {showStructure && structure.map((point, index) => <StructureBadge key={`structure-${index}`} point={point} chart={chart} />)}
+          <DrawingLayer tool={drawingTool} drawings={drawings} drawingStart={drawingStart} chart={chart} setDrawingStart={setDrawingStart} setDrawings={setDrawings} />
         </div>
-        <div className="absolute left-2 top-2 z-10 flex flex-col gap-1 rounded border border-[var(--terminal-border)] bg-[#0d121a]/90 p-1 backdrop-blur">
+        <div className="absolute left-2 top-2 z-30 flex flex-col gap-1 rounded border border-[var(--terminal-border)] bg-[#0d121a]/90 p-1 backdrop-blur">
           {(["cursor", "horizontal", "vertical", "trendline"] as DrawingTool[]).map((tool) => <button key={tool} onClick={() => setDrawingTool(tool)} className={`rounded px-2 py-1 text-left text-[10px] ${drawingTool === tool ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)] hover:text-white"}`}>{tool}</button>)}
           <button onClick={() => setShowFvg((value) => !value)} className={`rounded px-2 py-1 text-left text-[10px] ${showFvg ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>FVG</button>
           <button onClick={() => setShowOrderBlocks((value) => !value)} className={`rounded px-2 py-1 text-left text-[10px] ${showOrderBlocks ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>Order Block</button>
           <button onClick={() => setShowStructure((value) => !value)} className={`rounded px-2 py-1 text-left text-[10px] ${showStructure ? "bg-[#26364a] text-white" : "text-[var(--terminal-muted)]"}`}>Structure</button>
         </div>
-        <DrawingLayer tool={drawingTool} drawings={drawings} drawingStart={drawingStart} setDrawingStart={setDrawingStart} setDrawings={setDrawings} />
       </div>
       {showOscillator && <div id="cfip-oscillator" className="h-28 shrink-0 border-t border-[var(--terminal-border)]" aria-label="RSI oscillator" />}
       <div className="flex shrink-0 items-center justify-between border-t border-[var(--terminal-border)] bg-[var(--terminal-panel)] px-3 py-1 text-[10px] text-[var(--terminal-muted)]"><span>Crosshair · wheel zoom · drag pan · axis scale · drawings · FVG · Order Blocks · structure</span><span>Source: normalized market observations</span></div>
@@ -347,50 +427,95 @@ function ZoneBadge({ zone, chart }: { zone: Zone; chart: IChartApi | null }) {
     const update = () => {
       const x1 = chart.timeScale().timeToCoordinate(zone.start);
       const x2 = chart.timeScale().timeToCoordinate(zone.end);
-      if (x1 === null || x2 === null) return;
-      setStyle({ left: Math.min(x1, x2), top: 0, width: Math.max(4, Math.abs(x2 - x1)), height: 2 });
+      const y1 = chart.priceScale("right").priceToCoordinate(zone.top);
+      const y2 = chart.priceScale("right").priceToCoordinate(zone.bottom);
+      if (x1 === null || x2 === null || y1 === null || y2 === null) return;
+      setStyle({ left: Math.min(x1, x2), top: Math.min(y1, y2), width: Math.max(2, Math.abs(x2 - x1)), height: Math.max(2, Math.abs(y2 - y1)) });
     };
     update();
     chart.timeScale().subscribeVisibleTimeRangeChange(update);
     return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(update);
   }, [chart, zone]);
   if (!style) return null;
-  return <div className="absolute" style={{ left: style.left, top: style.top, width: style.width, height: style.height }} />;
+  const className = zone.kind === "bullish" ? "border border-emerald-400/40 bg-emerald-400/10" : "border border-red-400/40 bg-red-400/10";
+  return <div className={`absolute ${className}`} style={{ left: style.left, top: style.top, width: style.width, height: style.height }} aria-label={`${zone.kind} ${zone.label}`} />;
 }
 
 function StructureBadge({ point, chart }: { point: StructurePoint; chart: IChartApi | null }) {
-  const [position, setPosition] = useState<{ left: number } | null>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   useEffect(() => {
     if (!chart) return;
     const update = () => {
       const x = chart.timeScale().timeToCoordinate(point.time);
-      if (x !== null) setPosition({ left: x });
+      const y = chart.priceScale("right").priceToCoordinate(point.price);
+      if (x !== null && y !== null) setPosition({ left: x, top: y });
     };
     update();
     chart.timeScale().subscribeVisibleTimeRangeChange(update);
     return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(update);
   }, [chart, point]);
   if (!position) return null;
-  return <span className="absolute top-3 rounded bg-[#0d121a]/80 px-1 text-[9px] text-[#d8a84e]" style={{ left: position.left }}>{point.label}</span>;
+  return <span className="absolute rounded bg-[#0d121a]/85 px-1 text-[9px] text-[#d8a84e]" style={{ left: position.left + 3, top: position.top - 10 }}>{point.label}</span>;
 }
 
-function DrawingLayer({ tool, drawings, drawingStart, setDrawingStart, setDrawings }: {
+function DrawingLayer({ tool, drawings, drawingStart, chart, setDrawingStart, setDrawings }: {
   tool: DrawingTool;
-  drawings: { tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[];
-  drawingStart: { x: number; y: number } | null;
-  setDrawingStart: (value: { x: number; y: number } | null) => void;
-  setDrawings: (value: { tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[] | ((current: { tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[]) => { tool: DrawingTool; x1: number; y1: number; x2: number; y2: number }[])) => void;
+  drawings: Drawing[];
+  drawingStart: { time: UTCTimestamp; price: number } | null;
+  chart: IChartApi | null;
+  setDrawingStart: (value: { time: UTCTimestamp; price: number } | null) => void;
+  setDrawings: (value: Drawing[] | ((current: Drawing[]) => Drawing[])) => void;
 }) {
-  return <svg className={`absolute inset-0 z-20 h-full w-full ${tool === "cursor" ? "pointer-events-none" : "pointer-events-auto"}`} onPointerDown={(event) => {
-    if (tool === "cursor") return;
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    if (!chart) return;
+    const update = () => setVersion((value) => value + 1);
+    chart.timeScale().subscribeVisibleTimeRangeChange(update);
+    return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(update);
+  }, [chart]);
+
+  const toPixel = (point: { time: UTCTimestamp; price: number }) => {
+    if (!chart) return null;
+    const x = chart.timeScale().timeToCoordinate(point.time);
+    const y = chart.priceScale("right").priceToCoordinate(point.price);
+    return x === null || y === null ? null : { x, y };
+  };
+  const pixelToPoint = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (!chart) return null;
     const rect = event.currentTarget.getBoundingClientRect();
-    const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    if (!drawingStart) { setDrawingStart(point); return; }
-    const end = tool === "horizontal" ? { x: point.x, y: drawingStart.y } : tool === "vertical" ? { x: drawingStart.x, y: point.y } : point;
-    setDrawings((current) => [...current, { tool, x1: drawingStart.x, y1: drawingStart.y, x2: end.x, y2: end.y }]);
-    setDrawingStart(null);
-  }}>
-    {drawings.map((drawing, index) => <line key={index} x1={drawing.x1} y1={drawing.y1} x2={drawing.x2} y2={drawing.y2} stroke="rgba(216,168,78,0.9)" strokeWidth="1" strokeDasharray={drawing.tool === "horizontal" || drawing.tool === "vertical" ? "4 3" : undefined} />)}
-    {drawingStart && <circle cx={drawingStart.x} cy={drawingStart.y} r="3" fill="rgba(216,168,78,0.9)" />}
-  </svg>;
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const time = chart.timeScale().coordinateToTime(x);
+    const price = chart.priceScale("right").coordinateToPrice(y);
+    if (time === null || price === null || !Number.isFinite(price)) return null;
+    return { time: time as UTCTimestamp, price };
+  };
+
+  void version;
+  const startPixel = drawingStart ? toPixel(drawingStart) : null;
+  return (
+    <svg
+      className={`absolute inset-0 z-20 h-full w-full ${tool === "cursor" ? "pointer-events-none" : "pointer-events-auto"}`}
+      onPointerDown={(event) => {
+        if (tool === "cursor") return;
+        const point = pixelToPoint(event);
+        if (!point) return;
+        if (!drawingStart) {
+          setDrawingStart(point);
+          return;
+        }
+        const end = tool === "horizontal" ? { time: point.time, price: drawingStart.price } : tool === "vertical" ? { time: drawingStart.time, price: point.price } : point;
+        setDrawings((current) => [...current, { tool, p1: drawingStart, p2: end }]);
+        setDrawingStart(null);
+      }}
+    >
+      {drawings.map((drawing, index) => {
+        const p1 = toPixel(drawing.p1);
+        const p2 = toPixel(drawing.p2);
+        if (!p1 || !p2) return null;
+        return <line key={`${drawing.tool}-${index}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="rgba(216,168,78,0.9)" strokeWidth="1" strokeDasharray={drawing.tool === "horizontal" || drawing.tool === "vertical" ? "4 3" : undefined} />;
+      })}
+      {startPixel && <circle cx={startPixel.x} cy={startPixel.y} r="3" fill="rgba(216,168,78,0.9)" />}
+    </svg>
+  );
 }
