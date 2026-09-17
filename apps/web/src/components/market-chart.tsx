@@ -158,6 +158,7 @@ interface MarketChartProps { observations: MarketObservation[]; }
 export function MarketChart({ observations }: MarketChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<SeriesType>[]>([]);
   const oscillatorRef = useRef<IChartApi | null>(null);
   const [chart, setChart] = useState<IChartApi | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>("15m");
@@ -191,6 +192,7 @@ export function MarketChart({ observations }: MarketChartProps) {
     resizeObserver.observe(container);
     return () => {
       resizeObserver.disconnect();
+      seriesRef.current = [];
       nextChart.remove();
       if (chartRef.current === nextChart) chartRef.current = null;
       setChart((current) => current === nextChart ? null : current);
@@ -201,24 +203,29 @@ export function MarketChart({ observations }: MarketChartProps) {
     const nextChart = chartRef.current;
     if (!nextChart) return;
     nextChart.applyOptions(chartOptions);
-    nextChart.removeAllSeries();
+    for (const existingSeries of seriesRef.current) nextChart.removeSeries(existingSeries);
+    seriesRef.current = [];
+    const addSeries = <T extends SeriesType>(nextSeries: ISeriesApi<T>): ISeriesApi<T> => {
+      seriesRef.current.push(nextSeries as ISeriesApi<SeriesType>);
+      return nextSeries;
+    };
     let series: ISeriesApi<SeriesType>;
     if (chartMode === "candles") {
-      series = nextChart.addSeries(CandlestickSeries, { upColor: "#36c98f", downColor: "#f05d5e", borderVisible: false, wickUpColor: "#36c98f", wickDownColor: "#f05d5e" });
+      series = addSeries(nextChart.addSeries(CandlestickSeries, { upColor: "#36c98f", downColor: "#f05d5e", borderVisible: false, wickUpColor: "#36c98f", wickDownColor: "#f05d5e" }));
       series.setData(candles);
     } else if (chartMode === "bars") {
-      series = nextChart.addSeries(BarSeries, { upColor: "#36c98f", downColor: "#f05d5e" });
+      series = addSeries(nextChart.addSeries(BarSeries, { upColor: "#36c98f", downColor: "#f05d5e" }));
       series.setData(candles);
     } else if (chartMode === "area") {
-      series = nextChart.addSeries(AreaSeries, { lineWidth: 2, lineColor: "#4ca6ff", topColor: "rgba(76,166,255,0.20)", bottomColor: "rgba(76,166,255,0.01)" });
+      series = addSeries(nextChart.addSeries(AreaSeries, { lineWidth: 2, lineColor: "#4ca6ff", topColor: "rgba(76,166,255,0.20)", bottomColor: "rgba(76,166,255,0.01)" }));
       series.setData(candles.map((candle) => ({ time: candle.time, value: candle.close })));
     } else {
-      series = nextChart.addSeries(LineSeries, { lineWidth: 2, color: "#4ca6ff" });
+      series = addSeries(nextChart.addSeries(LineSeries, { lineWidth: 2, color: "#4ca6ff" }));
       series.setData(candles.map((candle) => ({ time: candle.time, value: candle.close })));
     }
 
     if (showVolume && candles.length) {
-      const volume = nextChart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" });
+      const volume = addSeries(nextChart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" }));
       volume.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       volume.setData(candles.map((candle) => ({ time: candle.time, value: candle.volume, color: candle.close >= candle.open ? "rgba(54,201,143,0.38)" : "rgba(240,93,94,0.38)" })));
     }
@@ -232,13 +239,13 @@ export function MarketChart({ observations }: MarketChartProps) {
     for (const indicator of ["sma20", "ema20", "ema50", "vwap"] as Indicator[]) {
       const data = indicators.get(indicator);
       if (!data) continue;
-      const line = nextChart.addSeries(LineSeries, { lineWidth: 1, color: indicatorColors[indicator], priceLineVisible: false, lastValueVisible: false });
+      const line = addSeries(nextChart.addSeries(LineSeries, { lineWidth: 1, color: indicatorColors[indicator], priceLineVisible: false, lastValueVisible: false }));
       line.setData(data);
     }
     if (activeIndicators.includes("bb20")) {
       const bands = bollinger(candles);
       for (const key of ["upper", "middle", "lower"] as const) {
-        const line = nextChart.addSeries(LineSeries, { lineWidth: 1, color: key === "middle" ? "#8f9aaa" : "rgba(143,154,170,0.65)", lineStyle: key === "middle" ? 0 : 2, priceLineVisible: false, lastValueVisible: false });
+        const line = addSeries(nextChart.addSeries(LineSeries, { lineWidth: 1, color: key === "middle" ? "#8f9aaa" : "rgba(143,154,170,0.65)", lineStyle: key === "middle" ? 0 : 2, priceLineVisible: false, lastValueVisible: false }));
         line.setData(bands.map((band) => ({ time: band.time, value: band[key] })));
       }
     }
