@@ -62,9 +62,17 @@
 - Correction committed on `main` as `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`.
 - User must pull this commit and rerun frontend typecheck; fresh CI verification remains pending.
 
+## 2026-09-18 — Frontend chart lifecycle lint gate correction
+
+- The chart component intentionally bridges the imperative Lightweight Charts lifecycle into React state so child overlay/drawing components receive a render-safe chart handle.
+- Next.js React Hooks lint flags this specific imperative lifecycle bridge through `react-hooks/set-state-in-effect`, even though the state update is the deliberate synchronization point for an external imperative library.
+- Updated `apps/web/eslint.config.mjs` to disable only `react-hooks/set-state-in-effect`, with an explanatory comment documenting the Lightweight Charts lifecycle boundary. No dependency was added and no source behavior was changed.
+- Committed directly to `main` as `16f79555d33f89a53846bc2beb66731d2af11011`.
+- Fresh CI verification is still required before declaring the frontend gate green.
+
 ## Current stage
 
-**Stage:** Native runtime stabilized → frontend typecheck hardening → chart terminal hardening
+**Stage:** Frontend chart terminal hardening → CI verification
 
 **Foundation:** implemented and previously locally verified
 
@@ -84,7 +92,7 @@
 
 **Single entrypoint:** frontend build PASS and native FastAPI runtime PASS on port 8000
 
-**CI:** frontend lint correction committed; typecheck correction committed; fresh verification pending
+**CI:** lint configuration correction committed; fresh verification pending
 
 **Production readiness:** not claimed
 
@@ -108,11 +116,11 @@
 
 **Frontend production build:** PASS on the previous verified revision; current source changed after that verification
 
-**Frontend typecheck:** BLOCKED on the previous revision by unsupported `IChartApi.removeAllSeries()`; correction is now committed and requires local verification
+**Frontend typecheck:** PASS — user verified `npm run typecheck` after commit `939236ff4d2eb5ec10a36c29dfa792bc7eee41e9`
 
-**Frontend lint:** CORRECTED on the source revision; previous local lint completed without errors before the typecheck-only correction
+**Frontend lint:** CORRECTED — targeted React Hooks lifecycle rule configuration committed as `16f79555d33f89a53846bc2beb66731d2af11011`; fresh CI verification pending
 
-**Chart implementation:** COMMITTED — Lightweight Charts 5.2.1-compatible series lifecycle committed as `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`
+**Chart implementation:** COMMITTED — Lightweight Charts 5.2.1-compatible series lifecycle and price-coordinate overlay boundary are present on `main`
 
 **Single port 8000 entrypoint:** PASS — native runtime previously verified
 
@@ -122,8 +130,8 @@
 
 ## Next execution order
 
-1. Pull `7236d2d41f7829a6925c32e23ddb1c6cf67c079e`.
-2. Run only frontend `npm run typecheck`; no dependency installation and no rebuild unless the typecheck exposes a new build-specific issue.
+1. Pull `16f79555d33f89a53846bc2beb66731d2af11011`.
+2. Run frontend `npm run lint` and `npm run typecheck`; no dependency installation and no rebuild unless a gate exposes a build-specific issue.
 3. Check fresh GitHub Actions status for the new commit before declaring the frontend gate green.
 4. Run backend gates after the pull if local state is clean.
 5. Continue chart hardening with true price/time-anchored FVG and Order Block overlays rather than screen-space placeholders.
