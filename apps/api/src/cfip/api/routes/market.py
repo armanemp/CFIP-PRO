@@ -67,7 +67,7 @@ async def ingest_observation(
 async def list_observations(
     symbol: str = Query(min_length=1, max_length=64),
     venue: str = Query(min_length=1, max_length=64),
-    service: MarketServiceDependency,
+    service: MarketServiceDependency = ...,
     start: datetime | None = None,
     end: datetime | None = None,
     limit: int = Query(default=500, ge=1, le=5000),
