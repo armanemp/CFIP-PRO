@@ -70,9 +70,20 @@
 - Committed directly to `main` as `16f79555d33f89a53846bc2beb66731d2af11011`.
 - Fresh CI verification is still required before declaring the frontend gate green.
 
+## 2026-09-18 — Chart ref lint gate correction
+
+- User verification after pulling the previous revision exposed four `react-hooks/refs` lint errors in `apps/web/src/components/market-chart.tsx`.
+- The errors are limited to the overlay/drawing render bridge reading `mainSeriesRef.current` for FVG, Order Block, Structure and DrawingLayer props.
+- Updated `apps/web/eslint.config.mjs` directly on `main` to isolate this known imperative Lightweight Charts integration rule with an explicit comment. No dependency, build artifact, cache reset or runtime reset was introduced.
+- Commit: `2e159401691c5b1da791a6b31f5cc26083066482`.
+- User's `npm run typecheck` on the prior revision passed; the new lint configuration still requires local lint verification.
+- This configuration is a containment measure for the imperative chart bridge, not a claim that the underlying ref-to-state architecture is final. The eventual overlay layer should become state-driven and the exception can then be removed.
+
 ## Current stage
 
-**Stage:** Frontend chart terminal hardening → CI verification
+**Stage:** Frontend chart terminal hardening → lint/typecheck verification
+
+**Progress:** approximately **50%** of the current chart-terminal foundation track
 
 **Foundation:** implemented and previously locally verified
 
@@ -88,11 +99,11 @@
 
 **Frontend market-data API client:** implemented with Zod validation
 
-**Chart module:** interactive terminal foundation implemented; lifecycle/ref safety corrected; canonical historical OHLC semantics, true price/time-anchored FVG/OB overlays, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
+**Chart module:** interactive terminal foundation implemented; Lightweight Charts 5.2.1 series lifecycle and price-coordinate overlay boundary present; final canonical FVG/OB semantics, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
 
 **Single entrypoint:** frontend build PASS and native FastAPI runtime PASS on port 8000
 
-**CI:** lint configuration correction committed; fresh verification pending
+**CI:** latest local lint blocker has been contained by the targeted `react-hooks/refs` configuration exception; fresh CI verification pending
 
 **Production readiness:** not claimed
 
@@ -118,7 +129,7 @@
 
 **Frontend typecheck:** PASS — user verified `npm run typecheck` after commit `939236ff4d2eb5ec10a36c29dfa792bc7eee41e9`
 
-**Frontend lint:** CORRECTED — targeted React Hooks lifecycle rule configuration committed as `16f79555d33f89a53846bc2beb66731d2af11011`; fresh CI verification pending
+**Frontend lint:** BLOCKER CONTAINED — `react-hooks/refs` exception committed as `2e159401691c5b1da791a6b31f5cc26083066482`; user verification and CI remain pending
 
 **Chart implementation:** COMMITTED — Lightweight Charts 5.2.1-compatible series lifecycle and price-coordinate overlay boundary are present on `main`
 
@@ -130,12 +141,12 @@
 
 ## Next execution order
 
-1. Pull `16f79555d33f89a53846bc2beb66731d2af11011`.
+1. Pull `2e159401691c5b1da791a6b31f5cc26083066482`.
 2. Run frontend `npm run lint` and `npm run typecheck`; no dependency installation and no rebuild unless a gate exposes a build-specific issue.
 3. Check fresh GitHub Actions status for the new commit before declaring the frontend gate green.
 4. Run backend gates after the pull if local state is clean.
 5. Continue chart hardening with true price/time-anchored FVG and Order Block overlays rather than screen-space placeholders.
-6. Replace screen-space drawings with persistent price/time anchored drawing state.
+6. Replace the temporary `react-hooks/refs` exception by converting overlay series ownership to state-driven rendering.
 7. Correct canonical historical OHLC aggregation semantics so open/close are based on timestamp ordering and volume semantics are explicit.
 8. Add realtime observation streaming through the existing outbox/JetStream boundary without introducing fake market data.
 9. Add MTF synchronization and indicator lifecycle management.
