@@ -1,6 +1,9 @@
 """HTTP transport for normalized market observations."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cfip.application.market import MarketService
@@ -27,7 +30,7 @@ async def create_instrument(
 ) -> InstrumentRead:
     try:
         return await service.create_instrument(command)
-    except Exception as exc:
+    except IntegrityError as exc:
         await service.session.rollback()
         raise HTTPException(status_code=409, detail="instrument_conflict") from exc
 
@@ -47,7 +50,7 @@ async def ingest_observation(
     except ValueError as exc:
         await service.session.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except Exception as exc:
+    except IntegrityError as exc:
         await service.session.rollback()
         raise HTTPException(status_code=409, detail="observation_conflict") from exc
 
@@ -56,18 +59,16 @@ async def ingest_observation(
 async def list_observations(
     symbol: str = Query(min_length=1, max_length=64),
     venue: str = Query(min_length=1, max_length=64),
-    start: str | None = None,
-    end: str | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
     limit: int = Query(default=500, ge=1, le=5000),
     service: MarketService = Depends(get_market_service),
 ) -> list[MarketObservationRead]:
-    from datetime import datetime
-
     query = MarketObservationQuery(
         symbol=symbol,
         venue=venue,
-        start=datetime.fromisoformat(start) if start else None,
-        end=datetime.fromisoformat(end) if end else None,
+        start=start,
+        end=end,
         limit=limit,
     )
     return await service.list_observations(query)
