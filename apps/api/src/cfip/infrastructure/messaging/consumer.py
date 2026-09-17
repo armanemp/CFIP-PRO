@@ -1,13 +1,27 @@
 """Durable JetStream consumer boundary for market events."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
+from typing import Protocol
 
 from nats.js.api import AckPolicy, ConsumerConfig
-from nats.js.client import JetStreamContext, Msg, PullSubscription
+from nats.js.client import JetStreamContext
 
 from cfip.infrastructure.messaging.jetstream import STREAM_NAME
 
-EventHandler = Callable[[Msg], Awaitable[None]]
+
+class MarketMessage(Protocol):
+    async def ack(self) -> None: ...
+
+    async def nak(self) -> None: ...
+
+
+class MarketPullSubscription(Protocol):
+    async def fetch(self, batch: int = 1, timeout: float = 5) -> Sequence[MarketMessage]: ...
+
+    async def unsubscribe(self) -> None: ...
+
+
+EventHandler = Callable[[MarketMessage], Awaitable[None]]
 
 
 class MarketEventConsumer:
@@ -15,7 +29,7 @@ class MarketEventConsumer:
 
     def __init__(self, jetstream: JetStreamContext) -> None:
         self._jetstream = jetstream
-        self._subscription: PullSubscription | None = None
+        self._subscription: MarketPullSubscription | None = None
 
     async def start(self) -> None:
         if self._subscription is not None:
@@ -26,12 +40,13 @@ class MarketEventConsumer:
             max_deliver=5,
             filter_subject="market.>",
         )
-        self._subscription = await self._jetstream.pull_subscribe(
+        subscription = await self._jetstream.pull_subscribe(
             "market.>",
             durable=config.durable_name,
             stream=STREAM_NAME,
             config=config,
         )
+        self._subscription = subscription
 
     async def consume_once(
         self,
