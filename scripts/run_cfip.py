@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import uvicorn
 
 ROOT = Path(__file__).resolve().parents[1]
+API_SRC = ROOT / "apps" / "api" / "src"
 WEB = ROOT / "apps" / "web"
 WEB_INDEX = WEB / "out" / "index.html"
 
@@ -36,12 +38,7 @@ def _build_web() -> None:
 
 
 def _install_windows_disconnect_filter(loop: asyncio.AbstractEventLoop) -> None:
-    """Ignore the harmless WinSock reset raised when a browser closes a socket early.
-
-    Windows' Proactor transport can report WSAECONNRESET (10054) from its callback
-    after the peer has already closed the HTTP connection. It is not an application
-    failure and should not pollute the native developer console with a traceback.
-    """
+    """Ignore the harmless WinSock reset raised when a browser closes a socket early."""
     previous_handler = loop.get_exception_handler()
 
     def handle_exception(
@@ -64,13 +61,16 @@ async def _serve() -> None:
     _install_windows_disconnect_filter(loop)
 
     env = os.environ.copy()
-    env.setdefault("PYTHONPATH", str(ROOT / "apps" / "api" / "src"))
+    env.setdefault("PYTHONPATH", str(API_SRC))
     env.setdefault("API_HOST", "127.0.0.1")
     env.setdefault("API_PORT", "8000")
 
+    api_path = str(API_SRC)
+    if api_path not in sys.path:
+        sys.path.insert(0, api_path)
+
     config = uvicorn.Config(
         "cfip.main:app",
-        app_dir=str(ROOT / "apps" / "api" / "src"),
         host=env["API_HOST"],
         port=int(env["API_PORT"]),
     )
