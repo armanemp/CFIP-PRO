@@ -82,7 +82,9 @@ async def test_market_service_persists_observation_and_outbox_atomically(
         assert outbox_event.event_version == 1
         assert outbox_event.payload["payload"]["instrument_id"] == str(instrument.id)
 
-        await session.execute(delete(OutboxEventModel).where(OutboxEventModel.id == outbox_event.id))
+        await session.execute(
+            delete(OutboxEventModel).where(OutboxEventModel.id == outbox_event.id)
+        )
         await session.execute(
             delete(MarketObservationModel).where(MarketObservationModel.id == observation.id)
         )
