@@ -8,7 +8,7 @@ CFIP-PRO is a clean greenfield, Python-first financial market intelligence platf
 - PostgreSQL as transactional system of record
 - NATS JetStream for durable event workflows
 - Redis for cache/ephemeral coordination
-- Next.js 16 + React 19.3 + TypeScript 7 + Tailwind CSS 4.3
+- Next.js 16 + React 19.3 + TypeScript 6.0.3 + Tailwind CSS 4.3
 - TradingView Lightweight Charts 5.2.1
 - `uv` for Python dependency/environment management
 - npm for the frontend foundation
