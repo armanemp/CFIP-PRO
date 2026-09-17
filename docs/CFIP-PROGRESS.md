@@ -2,6 +2,26 @@
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
 
+## 2026-09-18 — Lightweight Charts attribution compliance + stale native frontend correction
+
+- Verified against the current official Lightweight Charts documentation and repository that the library requires specifying TradingView as the product creator, preserving the attribution notice from the upstream `NOTICE` file, and providing a link to `https://www.tradingview.com/` on the public website/application. The built-in `layout.attributionLogo` is an accepted way to satisfy the link requirement.
+- The CFIP-PRO chart configuration had explicitly set `attributionLogo: false`; this was identified as incorrect for the intended public deployment. The terminal shell now exposes a persistent user-visible `TradingView Lightweight Charts™ · https://www.tradingview.com/` attribution link, and the exact upstream `NOTICE` text is preserved at the repository root in `NOTICE`.
+- The project continues to use `lightweight-charts` `5.2.1`; no dependency churn is required.
+- User runtime showed `GET /sw.js 404 Not Found` even though `apps/web/public/sw.js` exists in source. Root cause is stale `apps/web/out` generated output: the native launcher only rebuilt when `index.html` was absent, so source changes could be served through an old export.
+- Corrected `scripts/run_cfip.py` so the single native Windows entrypoint rebuilds the web export only when it is missing or older than a tracked frontend source file. It deliberately excludes `out` and `node_modules`, avoiding unconditional builds while guaranteeing pulled frontend/PWA changes reach the served export.
+- No dependency was added, no database was reset, no cache was disabled, and Docker/WSL were not introduced.
+- Attribution notice committed as `96f94175c456caf63114f8c6dce12f978a374ecc`.
+- Attribution UI committed as `8050bbffa64c1a00505a2b49cf7587bdf5f59424`.
+- Stale-output launcher correction committed as `d95eaa188ee4069a1800102328dcfd159aedbbd8`.
+- User must pull these commits and rerun the canonical native launcher. The first run after this change may perform one necessary web rebuild because the current source is newer than the existing export. Subsequent runs should not rebuild unless frontend source changes again.
+
+## 2026-09-18 — Chart terminal completion track opened
+
+- The chart remains the main implementation focus. The repository already pins `lightweight-charts` `5.2.1`, which is the current stable release verified against the official Lightweight Charts project; no downgrade or unnecessary dependency replacement is justified.
+- The visual gap versus the original TradingView terminal is architectural: Lightweight Charts supplies the rendering engine, while CFIP-PRO must own the professional terminal shell, tool state, drawing system, indicator orchestration, market-structure/intelligence overlays, risk tools, multi-pane behavior, persistence and data lifecycle.
+- Final target includes professional symbol/timeframe/header controls, chart types, scale controls, indicators, volume, oscillators, FVG/OB/market-structure intelligence, drawings, measurement/risk overlays, navigation/history/realtime boundaries, and a maintainable chart-state/rendering architecture.
+- Temporary `react-hooks/refs` lint containment remains a known architectural debt until the chart series/overlay bridge is state-driven.
+
 ## 2026-09-18 — Chart terminal v2 implementation
 
 - Added `apps/web/src/components/cfip-chart-terminal.tsx` as the new chart-first terminal implementation and switched `TerminalShell` to use it as the primary workspace.
@@ -26,13 +46,6 @@
 - Service-worker correction committed as `8460d65524f6fc649d8fe88c38747743fbb12421`.
 - Native launcher transport correction committed as `df140721595aaff1c76c93258c6896154269f778`.
 - User verification is required after pulling these commits. Expected runtime: UI remains available at `http://127.0.0.1:8000`, `/sw.js` returns `200`, and the harmless WinError 10054 traceback no longer pollutes the console.
-
-## 2026-09-18 — Chart terminal completion track opened
-
-- The chart remains the main implementation focus. The repository already pins `lightweight-charts` `5.2.1`, which is the current stable release verified against the official Lightweight Charts project; no downgrade or unnecessary dependency replacement is justified.
-- The visual gap versus the original TradingView terminal is architectural: Lightweight Charts supplies the rendering engine, while CFIP-PRO must own the professional terminal shell, tool state, drawing system, indicator orchestration, market-structure/intelligence overlays, risk tools, multi-pane behavior, persistence and data lifecycle.
-- Final target includes professional symbol/timeframe/header controls, chart types, scale controls, indicators, volume, oscillators, FVG/OB/market-structure intelligence, drawings, measurement/risk overlays, navigation/history/realtime boundaries, and a maintainable chart-state/rendering architecture.
-- Temporary `react-hooks/refs` lint containment remains a known architectural debt until the chart series/overlay bridge is state-driven.
 
 ## 2026-09-18 — Native frontend serving path correction
 
