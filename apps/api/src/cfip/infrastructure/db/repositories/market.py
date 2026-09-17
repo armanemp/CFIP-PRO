@@ -25,7 +25,9 @@ class MarketRepository:
 
     async def list_instruments(self) -> list[InstrumentModel]:
         result = await self.session.execute(
-            select(InstrumentModel).where(InstrumentModel.is_active.is_(True)).order_by(InstrumentModel.symbol)
+            select(InstrumentModel)
+            .where(InstrumentModel.is_active.is_(True))
+            .order_by(InstrumentModel.symbol)
         )
         return list(result.scalars().all())
 
@@ -35,7 +37,9 @@ class MarketRepository:
         await self.session.flush()
         return model
 
-    async def list_observations(self, query: MarketObservationQuery) -> list[MarketObservationModel]:
+    async def list_observations(
+        self, query: MarketObservationQuery
+    ) -> list[MarketObservationModel]:
         statement = (
             select(MarketObservationModel)
             .join(MarketObservationModel.instrument)
