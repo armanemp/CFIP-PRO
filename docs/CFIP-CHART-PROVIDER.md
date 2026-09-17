@@ -11,7 +11,7 @@ The provider supplies:
 - explicit provider/source metadata;
 - a clear provider error rather than fabricated fallback prices.
 
-EODHD documents `EURUSD.FOREX` as one of its demo instruments and documents a WebSocket forex feed with `EURUSD` available under the demo token. Its real-time REST endpoint is delayed and should not be treated as a production tick feed. citeturn2search1turn2search2
+EODHD documents `EURUSD.FOREX` as a demo instrument and documents a WebSocket forex feed with `EURUSD` available under the demo token. Its real-time REST endpoint is delayed and should not be treated as a production tick feed.
 
 ## CFIP boundary
 
