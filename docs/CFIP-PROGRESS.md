@@ -78,7 +78,7 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 **Production readiness:** not claimed
 
-**GitHub CI baseline:** PASS for commit `2a42e0d`; the new vertical-slice commits require a fresh CI run
+**GitHub CI baseline:** PASS for commit `2a42e0d`; new vertical-slice CI is currently being corrected after lint findings
 
 ## 2026-09-17 — Native verification and CI baseline
 
@@ -107,6 +107,14 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 - Corrected README frontend version documentation from TypeScript 7 to TypeScript 6.0.3.
 - NATS JetStream consumer semantics were checked against current nats.py documentation before adding the consumer boundary; the repository remains on its existing `nats-py` dependency line and no new specialized dependency was introduced.
 
+## 2026-09-17 — Fresh CI lint correction
+
+- CI run `35261839952` reached the new vertical-slice commit and failed only in the backend Ruff step before pytest could run.
+- The exact Ruff findings were two E501 lines: `apps/api/src/cfip/infrastructure/messaging/consumer.py` and `tests/unit/test_market_domain.py`.
+- Both lines were split without changing behavior.
+- During the same CI sequence, the market route dependency signature was corrected to use an explicit `Annotated[..., Depends(...)]` dependency boundary and then adjusted so the dependency parameter remains valid after default-valued query parameters.
+- The latest `main` ref now contains those corrections; a fresh CI run is required before treating the vertical slice as green.
+
 ## Verification state after the vertical-slice implementation
 
 **Repository implementation:** pushed to `main`
@@ -119,11 +127,11 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 **Frontend typecheck/lint/build after new changes:** pending user-side execution
 
-**Fresh GitHub CI after new changes:** pending
+**Fresh GitHub CI after latest lint correction:** pending
 
 ## Next execution order
 
-1. Pull the new `main` state locally.
+1. Pull the latest `main` state locally.
 2. Run backend `.venv` tests, Ruff and mypy.
 3. Run frontend `npm install`, typecheck, lint and build; do not run forced audit remediation.
 4. Verify the Alembic migration against a reachable PostgreSQL instance.
