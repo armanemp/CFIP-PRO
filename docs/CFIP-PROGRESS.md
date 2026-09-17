@@ -21,7 +21,7 @@
 - Added FastAPI root and `/api/health` endpoint.
 - Added a real backend health test.
 - Created Next.js 16 App Router frontend foundation under `apps/web`.
-- Added React 19.3, TypeScript 7, Tailwind CSS 4.3, Zod, TanStack Query and Lightweight Charts dependencies.
+- Added React 19.3, TypeScript 6.0.3, Tailwind CSS 4.3, Zod, TanStack Query and Lightweight Charts dependencies.
 - Added a chart-first terminal shell with tool rail, chart area, inspector and status bar.
 - Added a lifecycle-safe Lightweight Charts component with resize observation and cleanup.
 - Added frontend API client boundary with Zod validation.
@@ -54,87 +54,61 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 ## Current stage
 
-**Stage:** First market-data vertical slice / implementation
-
-**Contract:** established by Master Prompt + Development Workflow
+**Stage:** Chart terminal + single native application entrypoint
 
 **Foundation:** implemented and locally verified
 
-**Market domain contract:** implemented
+**Market data vertical slice:** implemented and locally verified
 
-**PostgreSQL schema/migration:** implemented; runtime migration verification pending local PostgreSQL
+**PostgreSQL schema/migration:** implemented and verified with real PostgreSQL
 
-**Transactional outbox:** implemented
+**Transactional outbox:** implemented and locally verified
 
-**NATS JetStream publisher boundary:** implemented with message-id deduplication
-
-**JetStream consumer boundary:** implemented with explicit acknowledgements and bounded redelivery
+**NATS JetStream publisher/consumer boundaries:** implemented; live native runtime verification remains pending
 
 **Market API:** implemented
 
 **Frontend market-data API client:** implemented with Zod validation
 
-**Chart integration:** switched from synthetic candles to real observation-derived line data; no synthetic market values are generated
+**Chart module:** expanded into an interactive terminal chart module with multiple chart types, timeframes, volume, technical overlays, RSI, drawing tools, FVG/Order Block/structure detection foundations, crosshair, zoom/pan and fit controls
+
+**Single entrypoint:** implemented. Native launcher builds the static Next.js web application when needed and FastAPI serves the web UI plus `/api/*` from port `8000` on the same origin.
 
 **Production readiness:** not claimed
 
-**GitHub CI baseline:** PASS for commit `2a42e0d`; new vertical-slice CI is currently being corrected after lint findings
+## 2026-09-17 — Native verification after market vertical slice
 
-## 2026-09-17 — Native verification and CI baseline
+- Real PostgreSQL integration test passed: `1 passed in 0.82s`.
+- Full local pytest passed: `7 passed, 2 warnings in 1.08s`.
+- Ruff passed: `All checks passed!`.
+- Mypy passed: `Success: no issues found in 26 source files`.
+- The temporary `CFIP_TEST_DATABASE_URL` environment variable was removed after verification.
+- No database reset, migration rerun, dependency installation or Docker/WSL action was required for this verification.
 
-- Native Windows backend verification passed using the project `.venv`: pytest passed, Ruff passed, and mypy reported no issues across the backend source.
-- Native Windows frontend verification passed after the TypeScript compatibility correction: typecheck passed, lint passed with one non-blocking existing PostCSS anonymous-default-export warning, and Next build completed successfully.
-- Next.js generated local changes to `next-env.d.ts` and `tsconfig.json`; those generated changes were restored and were not committed.
-- `npm install` created `apps/web/package-lock.json`; it was intentionally removed because the repository has not established a lockfile policy and CI currently uses `npm install`.
-- GitHub Actions run `35260452595` for commit `2a42e0d` completed successfully.
-- No `npm audit fix --force` action was taken despite npm reporting two vulnerabilities; dependency changes require explicit compatibility/security analysis rather than forced remediation.
-- Docker and WSL remain outside the current native Windows development workflow.
+## 2026-09-17 — Full chart terminal module
 
-## 2026-09-17 — First market-data vertical slice implementation
+- Expanded `apps/web/src/components/market-chart.tsx` from a basic observation-derived chart into the first full interactive chart terminal module.
+- Added selectable 1m/5m/15m/1H/4H/1D timeframes with observation-to-OHLC aggregation.
+- Added Candlestick, OHLC Bars, Line and Area rendering modes.
+- Added volume histogram, SMA20, EMA20, EMA50, Bollinger Bands and VWAP overlays.
+- Added an RSI oscillator panel.
+- Added crosshair, wheel zoom, drag pan, axis scaling and fit-to-content controls.
+- Added client-side drawing tools for cursor, horizontal line, vertical line and trendline plus clear-drawings control.
+- Added FVG, Order Block and market-structure detection foundations as chart overlays/annotations. These are detection foundations only; canonical lifecycle semantics will be introduced in the dedicated market-intelligence vertical slices.
+- Kept the chart data boundary API-backed; no synthetic market dataset was introduced.
+- No new chart dependency was installed because Lightweight Charts 5.2.1 was already the selected stable chart engine.
 
-- Added framework-independent contracts for instruments, normalized market observations and observation queries in `apps/api/src/cfip/domain/market.py`.
-- Added PostgreSQL persistence models for `instruments`, `market_observations`, and `outbox_events`.
-- Added the first Alembic migration `0001_market_data` with UUID identifiers, timezone-aware timestamps, high-precision numeric market values, instrument/venue uniqueness, observation indexing, source-event uniqueness boundary and transactional outbox state.
-- Updated Alembic to use the async PostgreSQL driver and the SQLAlchemy metadata for online migrations.
-- Added repository and application-service boundaries. Observation ingestion writes the observation and its `market.observation.recorded` outbox event in the same database transaction.
-- Added FastAPI routes for instrument creation/listing, observation ingestion and observation queries by symbol/venue/time window.
-- Added a JetStream stream boundary for `market.>` subjects and message-id based publish deduplication.
-- Added a durable pull consumer boundary with explicit acknowledgement, negative acknowledgement on handler failure and `max_deliver=5` redelivery protection.
-- Added a transactional outbox relay worker that claims pending rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, publishes them using the outbox UUID as the NATS message id, records attempts/errors and marks successful publication.
-- Replaced the frontend synthetic candle dataset with API-backed normalized market observations. The chart now renders a line series from real `last`/`bid`/`ask` observations and never fabricates OHLC values from sparse ticks.
-- Added Zod validation for the market observation response shape.
-- Added unit coverage for market contracts and event serialization.
-- Corrected README frontend version documentation from TypeScript 7 to TypeScript 6.0.3.
-- NATS JetStream consumer semantics were checked against current nats.py documentation before adding the consumer boundary; the repository remains on its existing `nats-py` dependency line and no new specialized dependency was introduced.
+## 2026-09-17 — Single port 8000 native application entrypoint
 
-## 2026-09-17 — Fresh CI lint correction
+- Corrected the execution model so the user does not need a second terminal for the frontend.
+- Configured Next.js for a static export under `apps/web/out`.
+- Changed the frontend API client default from a cross-origin hardcoded API URL to same-origin `/api`, while retaining `NEXT_PUBLIC_API_BASE_URL` as an explicit override.
+- Updated FastAPI to serve the generated web application from the same process and origin as the API on port `8000`.
+- Added `scripts/run_cfip.py` as the single native Windows launcher. It uses the current project Python executable, builds the web application only when `apps/web/out/index.html` is missing, and then starts Uvicorn on port `8000`.
+- The launcher does not install dependencies, reset PostgreSQL, require Docker/WSL, or create a second frontend process.
+- Updated README to make port `8000` the canonical CFIP-PRO application entrypoint.
 
-- CI run `35261839952` reached the new vertical-slice commit and failed only in the backend Ruff step before pytest could run.
-- The exact Ruff findings were two E501 lines: `apps/api/src/cfip/infrastructure/messaging/consumer.py` and `tests/unit/test_market_domain.py`.
-- Both lines were split without changing behavior.
-- During the same CI sequence, the market route dependency signature was corrected to use an explicit `Annotated[..., Depends(...)]` dependency boundary and then adjusted so the dependency parameter remains valid after default-valued query parameters.
-- The latest `main` ref now contains those corrections; a fresh CI run is required before treating the vertical slice as green.
-
-## 2026-09-17 — Clean native PostgreSQL runtime verification
-
-- The local PostgreSQL 18.6 service was verified running natively on Windows at `127.0.0.1:5432`.
-- The development `cfip` database was explicitly deleted and recreated as a clean database at the user's request. This reset is now complete; do not reset the database again unless the user explicitly requests it.
-- Database ownership and the `public` schema ownership were aligned with the `cfip` role so Alembic can manage the schema without elevated privileges.
-- Alembic `upgrade head` completed successfully and applied migration `0001_market_data`.
-- Direct PostgreSQL verification confirmed `alembic_version=0001_market_data` and the expected `instruments`, `market_observations`, and `outbox_events` tables.
-- Column verification confirmed UUID identifiers, timezone-aware timestamps, high-precision numeric market values, source-event fields and outbox publication state.
-- The repository contains only `.env.example`; there is intentionally no committed `.env` or credential-bearing configuration file.
-
-## 2026-09-17 — Real PostgreSQL integration proof added
-
-- Added `tests/integration/test_market_postgres.py` as the first real database integration test.
-- The test uses `CFIP_TEST_DATABASE_URL` supplied by the local environment and never embeds a database password in source code.
-- The test creates a unique instrument, ingests a real normalized observation through `MarketService`, then verifies the persisted observation and the corresponding `market.observation.recorded` outbox event in PostgreSQL.
-- Cleanup removes the test outbox event, observation and instrument after successful verification, preventing test records from accumulating in the development database.
-- Registered the `integration` pytest marker in `pyproject.toml`.
-- The integration test is intentionally explicit rather than silently falling back to SQLite or mocks; when `CFIP_TEST_DATABASE_URL` is absent, pytest reports the integration test as skipped with a clear reason.
-
-## Verification state after the current native work
+## Verification state
 
 **Python 3.14.7:** PASS
 
@@ -144,35 +118,31 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 **Ruff:** PASS — all checks passed
 
-**Unit test suite:** PASS — 6 passed, 2 deprecation warnings
+**Full pytest:** PASS — 7 passed, 2 warnings
 
-**PostgreSQL service:** PASS — PostgreSQL 18.6 running natively
+**Real PostgreSQL integration:** PASS — 1 passed
 
-**Alembic migration:** PASS — `0001_market_data`
+**PostgreSQL schema:** PASS — Alembic `0001_market_data`
 
-**PostgreSQL schema verification:** PASS
+**Chart implementation:** COMMITTED — native browser execution pending after pull
 
-**Real PostgreSQL integration test:** added; local execution requires `CFIP_TEST_DATABASE_URL`
+**Single port 8000 entrypoint:** COMMITTED — native execution pending after pull
 
-**NATS JetStream runtime integration:** not yet executed against a live local NATS instance
-
-**Frontend verification after the latest backend commits:** not yet re-run after the latest repository changes
-
-**Fresh GitHub CI after the latest integration commits:** not yet verified
+**Latest chart CI:** queued at the time of implementation; must be checked after GitHub Actions completes
 
 **Production readiness:** not claimed
 
 ## Next execution order
 
 1. Pull the latest `main` state locally.
-2. Set `CFIP_TEST_DATABASE_URL` only in the local PowerShell session using the user's existing PostgreSQL credentials; never commit it.
-3. Run the real PostgreSQL integration test and confirm it passes against the clean `cfip` database.
-4. Run the complete backend verification again: pytest, Ruff and mypy.
-5. Verify the outbox relay and JetStream stream/consumer against a reachable native NATS JetStream instance.
-6. Re-run the frontend typecheck/lint/build after the current repository state is pulled.
-7. Check fresh GitHub Actions status for the resulting commits before declaring the vertical slice green.
-8. Exercise the API with an explicitly submitted real observation, then confirm the frontend renders persisted observation data rather than synthetic values.
-9. Only after this slice is green, add provider adapters and candle aggregation semantics; do not infer OHLC candles from arbitrary sparse observations.
+2. Run the single native launcher: `\.venv\Scripts\python.exe scripts\run_cfip.py`.
+3. Open `http://127.0.0.1:8000`; do not start a separate frontend terminal.
+4. Verify the static web build and API are reachable from the same origin.
+5. Run the backend test/lint/typecheck gates after the pull.
+6. Run frontend lint/typecheck/build if the launcher had to create a fresh web build.
+7. Check fresh GitHub Actions status before declaring the chart/entrypoint commit green.
+8. Verify live NATS JetStream runtime only when a native NATS instance is intentionally available; do not introduce Docker/WSL into the workflow.
+9. Continue chart work with canonical historical OHLC semantics, realtime streaming, MTF synchronization, persistent drawings, indicator lifecycle and replay/backtest parity rather than adding disconnected demo features.
 10. Continue capability-by-capability OSS evaluation before adding specialized libraries.
 11. Keep this file updated after every meaningful step.
 
@@ -184,3 +154,4 @@ Do not generate another parallel architecture, progress file, duplicate prompt, 
 - On Windows the canonical executable is `C:\Users\armanemp\Desktop\CFIP-PRO\.venv\Scripts\python.exe`.
 - Prefer explicit `\.venv\Scripts\python.exe -m ...` commands; if the environment is activated, verify `sys.executable` before Python checks.
 - Docker and WSL are not part of the current native Windows development workflow.
+- The canonical user-facing native application entrypoint is port `8000`; the frontend must not require a separate manual development server for the normal CFIP-PRO run.
