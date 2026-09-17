@@ -103,3 +103,16 @@
 - GitHub Actions run `#60` for `71e6577708709ca3d5caba396948b5b33f164721` has backend PASS, but frontend fails at `npm run lint`; therefore CI is not green and production readiness is not claimed.
 - Inspection identified the existing anonymous default export in `apps/web/postcss.config.mjs` as a known lint warning source. Corrected the configuration to use a named `config` constant before default export.
 - Correction committed on `main` as `f3a4ed3cf7c43839b76f0cf94dc919a1effab426`.
+
+## 2026-09-18 — Chart terminal engine extraction and native shutdown cleanup
+
+- Extracted the main Lightweight Charts series construction/update logic from the terminal component into `apps/web/src/components/terminal/chart-engine.ts`.
+- Added a typed `LinePoint` contract in `chart-series.ts`, removing the remaining explicit `any` from the chart indicator path.
+- Reworked the terminal to consume the extracted engine for main series, indicator series and volume series while preserving the existing stable Lightweight Charts 5.2.1 dependency.
+- Added a real settings popover for grid, volume, sessions, bid/ask and magnet preferences, plus explicit Auto fit, Fullscreen and accessible drawing-tool labels.
+- Replaced the manual chart attribution text with a single linkable `TradingView Lightweight Charts™` attribution component; the chart's built-in `attributionLogo` remains enabled.
+- Removed the extra in-chart attribution/status text so the terminal has one bottom status/attribution bar instead of duplicated attribution surfaces.
+- Updated the native launcher to treat cancellation/keyboard interruption as intentional shutdown rather than emitting a traceback after Uvicorn has stopped.
+- No dependency was added, no database was reset, and no cache was disabled.
+- Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
+- Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
