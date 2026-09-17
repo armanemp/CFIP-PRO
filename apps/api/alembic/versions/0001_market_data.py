@@ -22,7 +22,12 @@ def upgrade() -> None:
         sa.Column("base_currency", sa.String(length=16), nullable=True),
         sa.Column("quote_currency", sa.String(length=16), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("symbol", "venue", name="uq_instruments_symbol_venue"),
     )
@@ -38,11 +43,19 @@ def upgrade() -> None:
         sa.Column("volume", sa.Numeric(38, 18), nullable=True),
         sa.Column("source", sa.String(length=64), nullable=False),
         sa.Column("source_event_id", sa.String(length=128), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["instrument_id"], ["instruments.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "instrument_id", "source", "source_event_id", name="uq_market_observations_source_event"
+            "instrument_id",
+            "source",
+            "source_event_id",
+            name="uq_market_observations_source_event",
         ),
     )
     op.create_index(
@@ -59,7 +72,12 @@ def upgrade() -> None:
         sa.Column("subject", sa.String(length=256), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_error", sa.String(length=2000), nullable=True),
