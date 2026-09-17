@@ -76,7 +76,10 @@ async def _serve() -> None:
         sys.path.insert(0, api_path)
     config = uvicorn.Config("cfip.main:app", host=env["API_HOST"], port=int(env["API_PORT"]))
     server = uvicorn.Server(config)
-    await server.serve()
+    try:
+        await server.serve()
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        server.should_exit = True
 
 
 def main() -> int:
