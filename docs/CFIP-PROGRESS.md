@@ -29,9 +29,21 @@
 - Added an explicit post-build check for `apps/web/out/index.html` so a successful npm exit cannot silently leave an unusable application entrypoint.
 - The launcher still uses the project `.venv` Python executable for the backend and does not install dependencies, reset PostgreSQL, require Docker/WSL, or start a second frontend server.
 
+## 2026-09-17 — Native runtime verification + CI lint blocker
+
+- User pulled `71e6577708709ca3d5caba396948b5b33f164721` and executed the canonical native launcher successfully.
+- FastAPI application startup completed successfully under Uvicorn on `127.0.0.1:8000`.
+- The same-origin root request returned `GET / HTTP/1.1` with `200 OK`, confirming the corrected root response-model boundary works in the real native runtime.
+- Browser requested `/sw.js` and received `404 Not Found`. This is a non-blocking PWA gap; no placeholder Service Worker is being added merely to suppress the request.
+- GitHub Actions run `#60` for `71e6577708709ca3d5caba396948b5b33f164721` has backend PASS, but frontend fails at `npm run lint`; therefore CI is not green and production readiness is not claimed.
+- Inspection identified the existing anonymous default export in `apps/web/postcss.config.mjs` as a known lint warning source. Corrected the configuration to use a named `config` constant before default export.
+- Correction committed on `main` as `f3a4ed3cf7c43839b76f0cf94dc919a1effab426`.
+- No dependency was added, no cache was disabled, and no database/runtime reset was performed.
+- Fresh CI verification is required for the new commit.
+
 ## Current stage
 
-**Stage:** Native single-entrypoint runtime boot + chart terminal hardening
+**Stage:** Native runtime stabilized → CI gate cleanup → chart terminal hardening
 
 **Foundation:** implemented and previously locally verified
 
@@ -49,7 +61,9 @@
 
 **Chart module:** interactive terminal foundation implemented; canonical historical OHLC semantics, realtime streaming, MTF synchronization, persistent drawings and replay/backtest parity remain future vertical slices
 
-**Single entrypoint:** frontend build now passes; FastAPI root response-model boot issue corrected; native execution pending after pull
+**Single entrypoint:** frontend build PASS and native FastAPI runtime PASS on port 8000
+
+**CI:** backend PASS; frontend lint failure identified and corrected; fresh CI pending
 
 **Production readiness:** not claimed
 
@@ -57,7 +71,9 @@
 
 **Python 3.14.7:** PASS
 
-**Backend import/boot:** previously PASS; latest launcher run exposed and isolated the root response-model issue; correction committed, native rerun pending
+**Backend import/boot:** PASS — native Windows launcher reached successful FastAPI startup
+
+**Root `/`:** PASS — native request returned HTTP 200
 
 **Mypy:** PASS — no issues found in 26 source files
 
@@ -69,27 +85,34 @@
 
 **PostgreSQL schema:** PASS — Alembic `0001_market_data`
 
-**Frontend production build:** PASS — Next.js 16.3.3 compilation, TypeScript, page-data collection, static generation and finalization completed successfully before backend startup
+**Frontend production build:** PASS — Next.js 16.3.3 compilation, TypeScript, page-data collection, static generation and finalization completed successfully
+
+**Frontend typecheck in CI:** PASS
+
+**Frontend lint in CI:** FAILED on commit `71e6577`; configuration correction committed as `f3a4ed3`; fresh verification pending
 
 **Chart implementation:** COMMITTED — latest TypeScript compatibility correction committed
 
-**Single port 8000 entrypoint:** IN PROGRESS — frontend build is now green; backend boot correction committed; native runtime verification pending
+**Single port 8000 entrypoint:** PASS — native runtime verified
+
+**Service Worker:** NOT IMPLEMENTED — `/sw.js` 404 is currently a known PWA gap, intentionally not masked with a placeholder
 
 **Production readiness:** not claimed
 
 ## Next execution order
 
-1. Pull latest `main`.
-2. Run `\.venv\Scripts\python.exe scripts\run_cfip.py`.
-3. If `apps/web/out/index.html` is missing, the launcher builds it using the Windows-resolved npm command.
-4. Open `http://127.0.0.1:8000`; do not start a separate frontend terminal.
-5. Verify `/api/health` and the chart terminal from the same origin.
-6. Run backend test/lint/typecheck gates after the pull.
-7. Run frontend lint/typecheck/build if a fresh web build is created or required.
-8. Check GitHub Actions status for the latest commit before declaring it green.
-9. Continue chart hardening with canonical historical OHLC semantics, realtime streaming, MTF synchronization, persistent drawings, indicator lifecycle and replay/backtest parity.
-10. Continue capability-by-capability OSS evaluation before adding specialized libraries.
-11. Keep this file as the sole progress ledger.
+1. Pull latest `main` containing `f3a4ed3cf7c43839b76f0cf94dc919a1effab426`.
+2. Verify frontend lint locally; CI will independently verify the correction.
+3. Check fresh GitHub Actions result before declaring the CI gate green.
+4. Run backend gates after the pull if local state is clean.
+5. Continue chart hardening with true price/time-anchored FVG and Order Block overlays rather than screen-space placeholders.
+6. Replace screen-space drawings with persistent price/time anchored drawing state.
+7. Correct canonical historical OHLC aggregation semantics so open/close are based on timestamp ordering and volume semantics are explicit.
+8. Add realtime observation streaming through the existing outbox/JetStream boundary without introducing fake market data.
+9. Add MTF synchronization and indicator lifecycle management.
+10. Establish replay/backtest parity against the same market-event/candle contracts.
+11. Continue capability-by-capability OSS evaluation before adding specialized libraries.
+12. Keep this file as the sole progress ledger.
 
 ## Operational rules
 
