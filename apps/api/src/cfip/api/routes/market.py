@@ -1,6 +1,7 @@
 """HTTP transport for normalized market observations."""
 
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
@@ -19,14 +20,17 @@ from cfip.infrastructure.db.session import get_session
 router = APIRouter(prefix="/market")
 
 
-def get_market_service(session: AsyncSession = Depends(get_session)) -> MarketService:
+def get_market_service(session: Annotated[AsyncSession, Depends(get_session)]) -> MarketService:
     return MarketService(session)
+
+
+MarketServiceDependency = Annotated[MarketService, Depends(get_market_service)]
 
 
 @router.post("/instruments", response_model=InstrumentRead, status_code=status.HTTP_201_CREATED)
 async def create_instrument(
     command: InstrumentCreate,
-    service: MarketService = Depends(get_market_service),
+    service: MarketServiceDependency,
 ) -> InstrumentRead:
     try:
         return await service.create_instrument(command)
@@ -36,14 +40,18 @@ async def create_instrument(
 
 
 @router.get("/instruments", response_model=list[InstrumentRead])
-async def list_instruments(service: MarketService = Depends(get_market_service)) -> list[InstrumentRead]:
+async def list_instruments(service: MarketServiceDependency) -> list[InstrumentRead]:
     return await service.list_instruments()
 
 
-@router.post("/observations", response_model=MarketObservationRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/observations",
+    response_model=MarketObservationRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def ingest_observation(
     command: MarketObservationCreate,
-    service: MarketService = Depends(get_market_service),
+    service: MarketServiceDependency,
 ) -> MarketObservationRead:
     try:
         return await service.ingest_observation(command)
@@ -62,7 +70,7 @@ async def list_observations(
     start: datetime | None = None,
     end: datetime | None = None,
     limit: int = Query(default=500, ge=1, le=5000),
-    service: MarketService = Depends(get_market_service),
+    service: MarketServiceDependency = None,
 ) -> list[MarketObservationRead]:
     query = MarketObservationQuery(
         symbol=symbol,
