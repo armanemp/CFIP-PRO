@@ -25,9 +25,13 @@
 - Added a chart-first terminal shell with tool rail, chart area, inspector and status bar.
 - Added a lifecycle-safe Lightweight Charts component with resize observation and cleanup.
 - Added frontend API client boundary with Zod validation.
-- Added TypeScript/Next/Tailwind configuration.
+- Added TypeScript/Next/Tailwind configuration and ESLint flat config.
 - Added repository `.gitignore` and README.
 - Added `docs/CFIP-PRO-ARCHITECTURE.md` as the structural architecture reference.
+- Added `alembic.ini` and migration environment without creating a fake business schema.
+- Added optional infrastructure compose configuration for PostgreSQL, NATS JetStream and Redis. It is not part of the normal native Windows development loop.
+- Added a native Windows verification script at `scripts/dev.ps1`.
+- Added GitHub Actions CI for backend lint/test and frontend typecheck/lint/build.
 - Kept `docs/CFIP-MASTER-PROMPT.md` and `docs/CFIP-DEVELOPMENT-WORKFLOW.md` as the governing project contract; this implementation is consistent with their current rules, so no destructive rewrite was necessary.
 
 ### Dependency verification basis
@@ -68,14 +72,14 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 **Production readiness:** not claimed
 
-**CI verification:** pending execution on the user's environment/GitHub Actions
+**CI verification:** configured; first run pending
 
 **Database/NATS/Redis runtime integration:** pending first infrastructure-backed vertical slice
 
 ## Next execution order
 
 1. Pull this commit locally and run the backend test/lint/type checks.
-2. Install frontend dependencies once and run TypeScript/build checks.
+2. Install frontend dependencies once and run TypeScript/lint/build checks.
 3. Establish Alembic environment and the first real PostgreSQL schema only when the first persistent domain contract is defined.
 4. Build the first true vertical slice: market instrument → normalized market observation contract → PostgreSQL persistence → event publication → frontend query → chart data.
 5. Add NATS JetStream stream/consumer/idempotency/retry evidence as part of that slice.
@@ -85,3 +89,9 @@ The foundation is intentionally executable but not falsely feature-complete. Mar
 
 ## Operational rule for the next session
 Do not generate another parallel architecture, progress file, duplicate prompt, or duplicate workflow. Continue from this repository state and append to this file.
+
+## 2026-09-17 — CI/verification foundation added
+
+- Added `.github/workflows/ci.yml` for Python 3.14 backend lint/test and Node 24 frontend typecheck/lint/build.
+- Corrected the Alembic environment formatting before CI so repository linting does not fail on avoidable line-length violations.
+- CI has not yet been executed by this assistant against a local runtime; the first local verification remains the next operational step.

@@ -11,7 +11,11 @@ if config.config_file_name:
 
 
 def run_migrations_offline() -> None:
-    context.configure(url=get_settings().database_url, literal_binds=True, dialect_opts={"paramstyle": "named"})
+    context.configure(
+        url=get_settings().database_url,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
     with context.begin_transaction():
         context.run_migrations()
 
