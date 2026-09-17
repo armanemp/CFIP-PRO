@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,12 +27,33 @@ def _npm_command() -> str:
     return command
 
 
-def _build_web() -> None:
-    """Build the exported frontend only when the expected output is absent."""
-    import subprocess
+def _web_source_mtime() -> float:
+    """Return the newest frontend source timestamp, excluding generated output."""
+    newest = 0.0
+    for path in WEB.rglob("*"):
+        if not path.is_file() or "out" in path.parts or "node_modules" in path.parts:
+            continue
+        try:
+            newest = max(newest, path.stat().st_mtime)
+        except OSError:
+            continue
+    return newest
 
+
+def _web_build_required() -> bool:
+    """Build when output is missing or older than a tracked frontend source file."""
+    if not WEB_INDEX.is_file():
+        return True
+    try:
+        return WEB_INDEX.stat().st_mtime < _web_source_mtime()
+    except OSError:
+        return True
+
+
+def _build_web() -> None:
+    """Build the exported frontend when the generated output is stale or absent."""
     npm = _npm_command()
-    print("CFIP-PRO web build not found; building apps/web...", flush=True)
+    print("CFIP-PRO web build is missing or stale; building apps/web...", flush=True)
     subprocess.run([npm, "run", "build"], cwd=WEB, check=True)
     if not WEB_INDEX.is_file():
         raise RuntimeError("Next.js build completed without creating apps/web/out/index.html")
@@ -79,7 +101,7 @@ async def _serve() -> None:
 
 
 def main() -> int:
-    if not WEB_INDEX.is_file():
+    if _web_build_required():
         _build_web()
 
     print("CFIP-PRO is available at http://127.0.0.1:8000", flush=True)
