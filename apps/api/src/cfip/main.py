@@ -25,7 +25,7 @@ WEB_ROOT = Path(__file__).resolve().parents[4] / "web" / "out"
 WEB_INDEX = WEB_ROOT / "index.html"
 
 
-@app.get("/", tags=["meta"])
+@app.get("/", tags=["meta"], response_model=None)
 async def root() -> FileResponse | dict[str, str]:
     if WEB_INDEX.is_file():
         return FileResponse(WEB_INDEX, media_type="text/html")
