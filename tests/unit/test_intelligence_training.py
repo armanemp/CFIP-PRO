@@ -5,7 +5,24 @@ from cfip.domain.intelligence import IntelligenceEvidence
 from cfip.infrastructure.analysis.engine import analyze
 from cfip.infrastructure.intelligence.training import TrainingPreparationService
 
-from test_analysis_engine import _candles
+def _candles(count: int = 240):
+    from cfip.domain.analysis import CandleInput
+    price = 1.08
+    result = []
+    for index in range(count):
+        close = price + (0.00008 if index % 7 else -0.00002)
+        result.append(CandleInput(
+            time=1_700_000_000 + index * 900,
+            open=price,
+            high=max(price, close) + 0.00025,
+            low=min(price, close) - 0.00020,
+            close=close,
+            volume=100 + index,
+        ))
+        price = close
+    return result
+
+
 
 
 def test_training_example_is_derived_from_canonical_analysis() -> None:
