@@ -42,11 +42,22 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const rsiValue=useMemo(()=>rsi(candles,14).at(-1)?.value ?? null,[candles]);
   const macdValue=useMemo(()=>macd(candles).histogram.at(-1)?.value ?? null,[candles]);
   const atrValue=useMemo(()=>atr(candles,14).at(-1)?.value ?? null,[candles]);
+  const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
+  const analysisZones = useMemo(() => fvg(analysisCandles), [analysisCandles]);
+  const analysisStructure = useMemo(() => marketStructure(analysisCandles), [analysisCandles]);
+  const analysisBlocks = useMemo(() => orderBlocks(analysisCandles), [analysisCandles]);
+  const analysisLiquidity = useMemo(() => liquidityAnalysis(analysisCandles), [analysisCandles]);
+  const analysisDisplacement = useMemo(() => displacementAnalysis(analysisCandles), [analysisCandles]);
+  const analysisPd = useMemo(() => premiumDiscount(analysisCandles), [analysisCandles]);
+  const analysisMtf = useMemo(() => mtfStructure(analysisCandles, tf), [analysisCandles, tf]);
+  const analysisRsi = useMemo(() => rsi(analysisCandles,14).at(-1)?.value ?? null, [analysisCandles]);
+  const analysisMacd = useMemo(() => macd(analysisCandles).histogram.at(-1)?.value ?? null, [analysisCandles]);
+  const analysisAtr = useMemo(() => atr(analysisCandles,14).at(-1)?.value ?? null, [analysisCandles]);
   const analysis=useMemo<UnifiedAnalysis>(()=>aggregateAnalysis({
-    candles,zones,structurePoints:structure.points,structureEvents:structure.events,orderBlocks:blocks,
-    liquidityPools:liquidity.pools,liquiditySweeps:liquidity.sweeps,displacement,premiumDiscount:pd,mtf,
-    rsi:rsiValue,macdHistogram:macdValue,atr:atrValue,
-  }),[candles,zones,structure,blocks,liquidity,displacement,pd,mtf,rsiValue,macdValue,atrValue]);
+    candles:analysisCandles,zones:analysisZones,structurePoints:analysisStructure.points,structureEvents:analysisStructure.events,orderBlocks:analysisBlocks,
+    liquidityPools:analysisLiquidity.pools,liquiditySweeps:analysisLiquidity.sweeps,displacement:analysisDisplacement,premiumDiscount:analysisPd,mtf:analysisMtf,
+    rsi:analysisRsi,macdHistogram:analysisMacd,atr:analysisAtr,
+  }),[analysisCandles,analysisZones,analysisStructure,analysisBlocks,analysisLiquidity,analysisDisplacement,analysisPd,analysisMtf,analysisRsi,analysisMacd,analysisAtr]);
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
