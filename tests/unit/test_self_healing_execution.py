@@ -15,6 +15,7 @@ def _request() -> RepairExecutionRequest:
         artifact_digest="a" * 16,
         rollback_digest="b" * 16,
         test_evidence_ids=["test-1"],
+        security_evidence_ids=["security-1"],
         safety_invariant_ids=["safe-1"],
     )
 
