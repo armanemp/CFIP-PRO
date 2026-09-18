@@ -101,6 +101,18 @@ class LiquidityPool(BaseModel):
     origin_time: int = Field(gt=0)
 
 
+class MTFContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timeframe: str
+    closed_bar_time: int
+    bias: Bias
+    score: float = Field(ge=-1, le=1)
+    confidence: float = Field(ge=0, le=1)
+    candle_count: int = Field(ge=0)
+    completeness: float = Field(ge=0, le=1)
+
+
 class RiskTargetPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -137,5 +149,6 @@ class UnifiedAnalysisRead(BaseModel):
     fvg_states: list[FVGState] = Field(default_factory=list)
     order_blocks: list[OrderBlockState] = Field(default_factory=list)
     liquidity_pools: list[LiquidityPool] = Field(default_factory=list)
+    mtf_contexts: list[MTFContext] = Field(default_factory=list)
     risk_target: RiskTargetPlan
     closed_bar_time: int | None = None
