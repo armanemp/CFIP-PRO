@@ -48,6 +48,7 @@ def test_outcome_never_uses_pre_decision_observations() -> None:
         direction="long",
         decision_time=100,
         state="emitted",
+        emitted_at=100,
     )
     observations = [
         OutcomeObservation(time=99, high=101, low=90, close=95),
@@ -75,6 +76,7 @@ def test_outcome_rejects_only_pre_decision_observations() -> None:
         direction="long",
         decision_time=100,
         state="emitted",
+        emitted_at=100,
     )
     try:
         OutcomeService().label(
@@ -84,7 +86,9 @@ def test_outcome_rejects_only_pre_decision_observations() -> None:
             tp1=101,
             tp2=None,
             tp3=None,
-            observations=[OutcomeObservation(time=99, high=101, low=90, close=95)],
+            observations=[
+                OutcomeObservation(time=99, high=101, low=90, close=95)
+            ],
             evidence_ids=["m1"],
         )
     except ValueError as exc:
@@ -96,6 +100,8 @@ def test_outcome_rejects_only_pre_decision_observations() -> None:
 def test_calibration_and_drift_have_sample_guards() -> None:
     service = OutcomeService()
     report = service.calibration([(0.9, True), (0.1, False)])
-    assert report.sample_count == 2 and report.brier_score is not None
+    assert report.sample_count == 2
+    assert report.brier_score is not None
     drift = service.drift([0.5] * 49, [0.9] * 50)
-    assert not drift.detected and drift.reason == "insufficient_samples"
+    assert not drift.detected
+    assert drift.reason == "insufficient_samples"
