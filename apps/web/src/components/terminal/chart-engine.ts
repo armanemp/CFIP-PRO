@@ -40,23 +40,26 @@ export function addMainSeries(chart: IChartApi, kind: ChartKind, firstClose: num
 }
 
 export function setMainSeriesData(series: ChartMainSeries, kind: ChartKind, candles: Candle[]): void {
+  if (!candles.length) return;
   if (kind === "candles" || kind === "bars") series.setData(candles);
   else series.setData(candles.map(({ time, close }) => ({ time, value: close })));
 }
 
 export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: string, title: string): ISeriesApi<"Line"> {
   const series = chart.addSeries(LineSeries, { color, lineWidth: 1, title, priceScaleId: "right" });
-  series.setData(data);
+  if (data.length) series.setData(data);
   return series;
 }
 
 export function addVolumeSeries(chart: IChartApi, candles: Candle[]): ISeriesApi<"Histogram"> {
   const series = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" });
-  series.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
-  series.setData(candles.map(({ time, open, close, volume }) => ({
-    time,
-    value: volume,
-    color: close >= open ? "rgba(34,179,155,.32)" : "rgba(239,83,80,.32)",
-  })));
+  series.priceScale().applyOptions({ scaleMargins: { scaleMargins: { top: 0.84, bottom: 0 } } });
+  if (candles.length) {
+    series.setData(candles.map(({ time, open, close, volume }) => ({
+      time,
+      value: volume,
+      color: close >= open ? "rgba(34,179,155,.32)" : "rgba(239,83,80,.32)",
+    })));
+  }
   return series;
 }
