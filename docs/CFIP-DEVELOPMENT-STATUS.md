@@ -115,3 +115,14 @@ The latest repository audit applied and verified the following corrections on Gi
 - The frontend chart instance no longer gets recreated merely because locale/grid preferences change; grid updates are applied in place.
 
 The remaining blocker is operational verification: the GitHub connector currently exposes no workflow result for the newest commits, so source correctness has been hardened but CI green is not asserted without an actual Actions result.
+
+
+## 2026-09-18 — first high-value OSS integration pass
+
+The OSS strategy is now moving from evaluation-only to executable integration:
+- pyvsmc 0.3.7 (MIT) is installed and its FVG detector is used by the canonical analysis engine; CFIP retains causal lifecycle/invalidation semantics around the detector.
+- CCXT 4.5.78 (MIT) is installed and exposed through a normalized public OHLCV provider endpoint at /market/providers/ccxt/ohlcv.
+- Polars 1.44.2 (MIT) is installed as the high-throughput dataframe/research substrate and pyvsmc integration dependency.
+- PydanticAI 2.44.0 (MIT) is installed as the governed typed-agent foundation; agent execution remains behind CFIP evidence, approval and deterministic safety boundaries.
+
+OSS integration rule: a package is not considered product-complete merely because it is installed. Each module must be wrapped by a CFIP-owned boundary, tested for semantic equivalence, and wired into the runtime before its capability is marked complete.
