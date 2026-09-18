@@ -107,6 +107,26 @@ def test_analysis_exposes_lifecycle_state_contracts() -> None:
     assert all(0 <= item.mitigation_ratio <= 1 for item in result.fvg_states)
 
 
+def test_analysis_contract_rejects_non_finite_ohlc() -> None:
+    try:
+        CandleInput(time=1, open=float("nan"), high=2, low=1, close=2)
+    except ValueError as exc:
+        assert "non_finite_ohlc" in str(exc)
+    else:
+        raise AssertionError("non-finite OHLC must be rejected")
+
+
+def test_analysis_contract_rejects_out_of_order_candles() -> None:
+    candles = _candles(6)
+    candles[4] = candles[3].model_copy(update={"time": candles[3].time})
+    try:
+        AnalysisRequest(symbol="EUR/USD", timeframe="15m", candles=candles)
+    except ValueError as exc:
+        assert "candles_must_be_strictly_increasing" in str(exc)
+    else:
+        raise AssertionError("out-of-order candles must be rejected")
+
+
 def test_analysis_contract_rejects_invalid_ohlc() -> None:
     try:
         CandleInput(time=1, open=2, high=1, low=0, close=2)
