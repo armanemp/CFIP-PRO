@@ -5,6 +5,7 @@ alerts and future AI orchestration. Provider-specific implementations never cros
 this boundary.
 """
 
+from math import isfinite
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -18,14 +19,16 @@ class CandleInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     time: int = Field(gt=0)
-    open: float
-    high: float
-    low: float
-    close: float
+    open: float = Field(gt=0)
+    high: float = Field(gt=0)
+    low: float = Field(gt=0)
+    close: float = Field(gt=0)
     volume: float = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def validate_ohlc(self) -> "CandleInput":
+        if not all(isfinite(value) for value in (self.open, self.high, self.low, self.close, self.volume)):
+            raise ValueError("non_finite_ohlc")
         if self.high < max(self.open, self.close) or self.low > min(self.open, self.close):
             raise ValueError("invalid_ohlc")
         if self.high < self.low:
@@ -42,6 +45,12 @@ class AnalysisRequest(BaseModel):
     min_confluence_score: int = Field(default=84, ge=0, le=100)
     minimum_aligned_htfs: int = Field(default=2, ge=0, le=5)
     closed_bar_only: bool = True
+
+    @model_validator(mode="after")
+    def validate_candle_order(self) -> "AnalysisRequest":
+        if any(current.time <= previous.time for previous, current in zip(self.candles, self.candles[1:])):
+            raise ValueError("candles_must_be_strictly_increasing")
+        return self
 
 
 class AnalysisEvidence(BaseModel):
