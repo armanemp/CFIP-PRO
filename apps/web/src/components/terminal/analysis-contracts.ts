@@ -63,6 +63,12 @@ export interface MTFStructureSummary {
   lastEvent?: StructureEvent;
 }
 
+export interface ConfluenceGate {
+  id: "htf_alignment" | "liquidity_or_fvg" | "zone_or_premium" | "displacement_or_structure";
+  passed: boolean;
+  detail: string;
+}
+
 export interface UnifiedAnalysis {
   bias: AnalysisBias;
   score: number;
@@ -75,6 +81,12 @@ export interface UnifiedAnalysis {
   premiumDiscount: PremiumDiscountRange | null;
   mtf: MTFStructureSummary[];
   evidence: string[];
+  confluence: {
+    score: number;
+    threshold: number;
+    accepted: boolean;
+    gates: ConfluenceGate[];
+  };
 }
 
 export interface AnalysisContext {
@@ -106,6 +118,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
       bias: "neutral", score: 0, confidence: 0, regime: "insufficient", recommendation: "wait",
       modules: [], liquidity: { pools: ctx.liquidityPools, sweeps: ctx.liquiditySweeps },
       displacement: ctx.displacement, premiumDiscount: ctx.premiumDiscount, mtf: ctx.mtf, evidence: ["Insufficient market data."],
+      confluence: { score: 0, threshold: 84, accepted: false, gates: [] },
     };
   }
 
@@ -181,16 +194,32 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const confidence = weight ? Math.min(1, Math.abs(weighted) / weight * .65 + Math.min(1, weight / 5) * .35) : 0;
   const range = ctx.atr && last.high - last.low > ctx.atr * 1.5 ? "volatile" : Math.abs(score) > .35 ? "trending" : "ranging";
   const evidence = modules.flatMap(m => m.facts.map(f => `${m.module}: ${f}`)).slice(-8);
+  const alignedMtf = ctx.mtf.filter(m => m.bias === bias && m.structure !== "insufficient").length;
+  const htfGate = alignedMtf >= 2;
+  const liquidityOrFvg = ctx.liquiditySweeps.length > 0 || ctx.zones.length > 0;
+  const zoneOrPremium = ctx.orderBlocks.length > 0 || ctx.premiumDiscount?.zone === (bias === "bullish" ? "discount" : bias === "bearish" ? "premium" : "equilibrium");
+  const displacementOrStructure = ctx.displacement.length > 0 || ctx.structureEvents.length > 0;
+  const gates: ConfluenceGate[] = [
+    { id: "htf_alignment", passed: htfGate, detail: `${alignedMtf} aligned timeframes` },
+    { id: "liquidity_or_fvg", passed: liquidityOrFvg, detail: liquidityOrFvg ? "Liquidity/FVG evidence present" : "No liquidity/FVG trigger" },
+    { id: "zone_or_premium", passed: zoneOrPremium, detail: zoneOrPremium ? "Zone/premium-discount context present" : "No zone/premium context" },
+    { id: "displacement_or_structure", passed: displacementOrStructure, detail: displacementOrStructure ? "Displacement/structure trigger present" : "No trigger confirmation" },
+  ];
+  const possible = modules.reduce((n, m) => n + (m.confidence > 0 ? 1 : 0), 0) + gates.length;
+  const raw = modules.reduce((n, m) => n + (m.score > 0 ? m.confidence : 0), 0) + gates.filter(g => g.passed).length;
+  const confluenceScore = possible ? Math.round(Math.max(0, Math.min(100, raw / possible * 100))) : 0;
+  const accepted = confluenceScore >= 84 && gates.filter(g => g.passed).length >= 3 && bias !== "neutral";
 
   return {
     bias, score, confidence,
     regime: range,
-    recommendation: bias === "bullish" ? "long" : bias === "bearish" ? "short" : "wait",
+    recommendation: accepted ? (bias === "bullish" ? "long" : "short") : "wait",
     modules,
     liquidity: { pools: ctx.liquidityPools, sweeps: ctx.liquiditySweeps },
     displacement: ctx.displacement,
     premiumDiscount: ctx.premiumDiscount,
     mtf: ctx.mtf,
     evidence,
+    confluence: { score: confluenceScore, threshold: 84, accepted, gates },
   };
 }
