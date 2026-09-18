@@ -18,6 +18,7 @@ from cfip.domain.analysis import (
     ConfluenceGate,
     RiskTargetPlan,
     MTFContext,
+    Regime,
     UnifiedAnalysisRead,
 )
 
@@ -278,7 +279,7 @@ def _mtf_contexts(candles: list[Any], timeframe: str) -> list[MTFContext]:
     return contexts
 
 
-def _regime(adx: float | None, atr: float, close: float) -> str:
+def _regime(adx: float | None, atr: float, close: float) -> Regime:
     if adx is None or not isfinite(adx) or atr <= 0 or close <= 0:
         return "insufficient"
     if adx >= 25:
@@ -407,7 +408,20 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     structure_score, structure_confidence, structure_regime = _swing_state(highs, lows, closes)
     structure = _Module("structure", structure_score, structure_confidence, "confirmed swing structure", (structure_regime,))
 
-    fvg_score, fvg_present, fvg_detail = _fvg_state(highs, lows)
+    fvg_states = _fvg_lifecycle(highs, lows, times)
+    active_fvgs = [item for item in fvg_states if item["state"] in {"active", "partial"}]
+    if active_fvgs:
+        bullish_fvgs = sum(item["direction"] == "bullish" for item in active_fvgs)
+        bearish_fvgs = sum(item["direction"] == "bearish" for item in active_fvgs)
+        if bullish_fvgs and not bearish_fvgs:
+            fvg_score, fvg_detail = 0.65, "active bullish fair-value gap"
+        elif bearish_fvgs and not bullish_fvgs:
+            fvg_score, fvg_detail = -0.65, "active bearish fair-value gap"
+        else:
+            fvg_score, fvg_detail = 0.0, "mixed active fair-value-gap context"
+        fvg_present = True
+    else:
+        fvg_score, fvg_present, fvg_detail = 0.0, False, "no active fair-value gap"
     fvg_module = _Module("fvg", fvg_score, 0.7 if fvg_present else 0.35, fvg_detail, ())
 
     liquidity_score, liquidity_present, liquidity_detail = _liquidity_state(highs, lows, closes, atr)
@@ -477,7 +491,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         bias=bias,
         score=score,
         confidence=min(1.0, confidence_weight / len(modules)),
-        regime=regime,  # type: ignore[arg-type]
+        regime=regime,
         recommendation=recommendation,
         modules=[_module_evidence(m) for m in modules],
         confluence_score=confluence_score,
@@ -485,7 +499,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         confluence_accepted=accepted,
         gates=gates,
         evidence=facts,
-        fvg_states=_fvg_lifecycle(highs, lows, times),
+        fvg_states=fvg_states,
         order_blocks=_order_block_lifecycle(opens, highs, lows, closes, times, atr),
         liquidity_pools=_liquidity_pools(highs, lows, closes, times, atr),
         mtf_contexts=mtf_contexts,
