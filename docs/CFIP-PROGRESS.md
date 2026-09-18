@@ -1,3 +1,13 @@
+## 2026-09-18 — Interactive drawing and intelligence overlays
+
+- Added a persistent terminal drawing layer for trend lines, rays, horizontal/vertical levels, rectangles, Fibonacci retracement guides, and position-direction guides. Two-click placement is mapped through Lightweight Charts time/price coordinates.
+- Added a browser-persisted drawing/object collection with visibility, locking and deletion controls in the terminal Object Manager.
+- Added direct FVG zone rendering over the price chart using normalized candle data; bullish/bearish zones are derived by the existing detector.
+- Kept drawing state separate from the chart engine so a future server-backed workspace/object API can replace local persistence without rewriting rendering primitives.
+- Corrected an escaped-newline source defect introduced during implementation and verified the stored TypeScript source contains valid line breaks.
+- Implementation commits: `52ab1e0005dd1531d666a6ad956635842d76455c`, `e999a58d9cc125bed6e1aed5c02e20201736d292`, `a89250686415290f34cefe999fd28a2408ea68aa`, `a29a60730748711150062618e515dcce506a401d`, `4184418bb6666a5c2ea44b89652e68dc4adc58df`.
+- CI verification remains pending for the latest implementation.
+
 ## 2026-09-18 — Terminal analytics expansion
 
 - Extended the terminal's reusable market-math layer with MACD, configurable session-range extraction, and support/resistance clustering derived from swing pivots.
