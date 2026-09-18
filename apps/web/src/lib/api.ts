@@ -74,6 +74,15 @@ export const UnifiedAnalysisSchema = z.object({
   order_blocks: z.array(z.object({ id: z.string(), direction: z.enum(["bullish","bearish"]), low: z.number(), high: z.number(), state: z.enum(["active","mitigated","invalidated","breaker"]), origin_time: z.number(), last_evaluated_time: z.number(), displacement_time: z.number().nullable(), structure_break_time: z.number().nullable() })),
   fvg_states: z.array(z.object({ id: z.string(), direction: z.enum(["bullish","bearish"]), lower: z.number(), upper: z.number(), state: z.enum(["active","partial","mitigated","invalidated"]), origin_time: z.number(), last_evaluated_time: z.number(), mitigation_ratio: z.number() })),
   liquidity_pools: z.array(z.object({ id: z.string(), side: z.enum(["buy_side","sell_side"]), price: z.number(), strength: z.number(), swept: z.boolean(), origin_time: z.number() })),
+  mtf_contexts: z.array(z.object({
+    timeframe: z.string(),
+    closed_bar_time: z.number(),
+    bias: z.enum(["bullish","bearish","neutral"]),
+    score: z.number(),
+    confidence: z.number(),
+    candle_count: z.number(),
+    completeness: z.number(),
+  })),
   risk_target: RiskTargetSchema,
   closed_bar_time: z.number().nullable(),
 });
