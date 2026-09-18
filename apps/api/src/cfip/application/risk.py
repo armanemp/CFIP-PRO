@@ -46,8 +46,21 @@ class RiskService:
         value_per_price_unit = instrument.tick_value_per_unit / instrument.tick_size
         quantity = risk_amount / (distance * value_per_price_unit * quote_to_account_rate)
         stepped = floor(quantity / instrument.quantity_step) * instrument.quantity_step
-        stepped = min(max(stepped, instrument.min_quantity), instrument.max_quantity)
-        margin_required = (stepped * request.entry) / account.leverage
+        if stepped < instrument.min_quantity:
+            return RiskTargetPlan(
+                available=False,
+                reason="risk_budget_below_minimum_quantity",
+                direction=request.direction,
+                entry=request.entry,
+                stop=stop,
+                tp1=targets[0],
+                tp2=targets[1],
+                tp3=targets[2],
+                risk_distance=distance,
+                risk_amount=risk_amount,
+            )
+        stepped = min(stepped, instrument.max_quantity)
+        margin_required = (stepped * request.entry * quote_to_account_rate) / account.leverage
 
         return RiskTargetPlan(
             available=True,
