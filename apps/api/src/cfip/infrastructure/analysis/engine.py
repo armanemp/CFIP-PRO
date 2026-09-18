@@ -156,7 +156,7 @@ def _order_block_lifecycle(
     blocks: list[dict] = []
     for i in range(max(2, len(closes) - 48), len(closes) - 2):
         body = abs(closes[i] - opens[i])
-        if body < atr[i] * 0.15 if isinstance(atr, np.ndarray) else body < atr * 0.15:
+        if body < atr * 0.15:
             continue
         # A qualifying block is an opposite candle immediately followed by a
         # directional displacement and subsequent close beyond the local swing.
@@ -293,8 +293,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     ema50 = _last(talib.EMA(closes, timeperiod=50))
     ema200 = _last(talib.EMA(closes, timeperiod=200))
     rsi = _last(talib.RSI(closes, timeperiod=14))
-    atr_series = talib.ATR(highs, lows, closes, timeperiod=14)
-    atr = _last(atr_series) or 0.0
+    atr = _last(talib.ATR(highs, lows, closes, timeperiod=14)) or 0.0
     adx = _last(talib.ADX(highs, lows, closes, timeperiod=14))
     plus_di = _last(talib.PLUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
     minus_di = _last(talib.MINUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
