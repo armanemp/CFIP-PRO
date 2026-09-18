@@ -206,7 +206,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
     { id: "displacement_or_structure", passed: displacementOrStructure, detail: displacementOrStructure ? "Displacement/structure trigger present" : "No trigger confirmation" },
   ];
   const possible = modules.reduce((n, m) => n + (m.confidence > 0 ? 1 : 0), 0) + gates.length;
-  const raw = modules.reduce((n, m) => n + (m.score > 0 ? m.confidence : 0), 0) + gates.filter(g => g.passed).length;
+  const raw = modules.reduce((n, m) => n + Math.abs(m.score) * m.confidence, 0) + gates.filter(g => g.passed).length;
   const confluenceScore = possible ? Math.round(Math.max(0, Math.min(100, raw / possible * 100))) : 0;
   const accepted = confluenceScore >= 84 && gates.filter(g => g.passed).length >= 3 && bias !== "neutral";
 
