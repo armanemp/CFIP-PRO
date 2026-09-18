@@ -10,6 +10,7 @@ from math import isfinite
 from typing import Any
 import numpy as np
 import talib
+import pyvsmc as smc
 
 from cfip.domain.analysis import (
     AnalysisEvidence,
@@ -294,12 +295,13 @@ def _regime(adx: float | None, atr: float, close: float) -> Regime:
 def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, close: np.ndarray, times: np.ndarray) -> list[dict[str, Any]]:
     """Track recent three-candle gaps using only bars available at evaluation time."""
     states: list[dict] = []
+    detected = smc.detect_fvg(high, low, close=close, compute_mitigation=False)
     start = max(2, len(high) - 24)
     for i in range(start, len(high)):
-        if high[i - 2] < low[i]:
-            lower, upper, direction = float(high[i - 2]), float(low[i]), "bullish"
-        elif low[i - 2] > high[i]:
-            lower, upper, direction = float(high[i]), float(low[i - 2]), "bearish"
+        if bool(detected.bullish[i]):
+            lower, upper, direction = float(detected.bullish_lower[i]), float(detected.bullish_upper[i]), "bullish"
+        elif bool(detected.bearish[i]):
+            lower, upper, direction = float(detected.bearish_lower[i]), float(detected.bearish_upper[i]), "bearish"
         else:
             continue
         gap = max(upper - lower, np.finfo(float).eps)
