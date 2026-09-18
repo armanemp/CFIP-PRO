@@ -66,7 +66,17 @@ def test_risk_is_not_fabricated_without_account_context() -> None:
     assert result.risk_target.entry is None
 
 
-def test_analysis_respects_minimum_aligned_htfs() -> None:
+def test_analysis_exposes_multi_timeframe_context() -> None:
+    result = analyze(
+        AnalysisRequest(symbol="EUR/USD", timeframe="15m", candles=_candles(1000), minimum_aligned_htfs=2),
+        as_of="2026-09-18T00:00:00+00:00",
+    )
+    assert [item.timeframe for item in result.mtf_contexts] == ["1H", "4H", "1D"]
+    assert all(item.closed_bar_time <= result.closed_bar_time for item in result.mtf_contexts)
+    assert all(0 <= item.completeness <= 1 for item in result.mtf_contexts)
+
+
+def test_analysis_respects_minimum_aligned_htfs():
     request = AnalysisRequest(symbol="EUR/USD", timeframe="15m", candles=_candles(), minimum_aligned_htfs=2)
     result = analyze(request, as_of="2026-09-18T00:00:00+00:00")
     gate = next(g for g in result.gates if g.id == "htf_alignment")
