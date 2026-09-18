@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cfip.domain.outcomes import OutcomeLabelResult, SignalLifecycle
+from cfip.domain.outcomes import CalibrationReport, DriftReport, OutcomeLabelResult, SignalLifecycle
 from cfip.infrastructure.db.repositories.outcomes import OutcomeRepository
 from cfip.infrastructure.db.session import get_session
 
@@ -37,11 +37,18 @@ class OutcomeEventRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
-class OutcomeReportRequest(BaseModel):
+class CalibrationRecordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     as_of: int = Field(gt=0)
-    report: dict
+    report: CalibrationReport
+
+
+class DriftRecordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    as_of: int = Field(gt=0)
+    report: DriftReport
 
 
 @router.post("/signals")
@@ -93,19 +100,19 @@ async def finalize_outcome(
 
 @router.post("/calibration")
 async def record_calibration(
-    request: OutcomeReportRequest,
+    request: CalibrationRecordRequest,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, str]:
-    OutcomeRepository(session).add_calibration(as_of=request.as_of, report=request.report)
+    OutcomeRepository(session).add_calibration(as_of=request.as_of, report=request.report.model_dump())
     await session.commit()
     return {"status": "stored"}
 
 
 @router.post("/drift")
 async def record_drift(
-    request: OutcomeReportRequest,
+    request: DriftRecordRequest,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, str]:
-    OutcomeRepository(session).add_drift(as_of=request.as_of, report=request.report)
+    OutcomeRepository(session).add_drift(as_of=request.as_of, report=request.report.model_dump())
     await session.commit()
     return {"status": "stored"}
