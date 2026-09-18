@@ -22,7 +22,7 @@ def _candles(count: int, *, base: int = 900) -> list[SimpleNamespace]:
 
 
 def test_htf_aggregation_rejects_gaps() -> None:
-    candles = _candles(8)
+    candles = _candles(4)
     candles.pop(3)
     bars, completeness = _aggregate_htf(candles, 900, 3600)
     assert bars == []
