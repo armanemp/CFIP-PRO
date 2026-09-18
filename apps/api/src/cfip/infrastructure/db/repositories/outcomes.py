@@ -71,6 +71,25 @@ class OutcomeRepository:
         existing.triggered_at = signal.triggered_at
         existing.closed_at = signal.closed_at
         existing.expires_at = signal.expires_at
+        for name, value in (
+            ("entry", entry),
+            ("stop", stop),
+            ("tp1", tp1),
+            ("tp2", tp2),
+            ("tp3", tp3),
+        ):
+            incoming_value = Decimal(str(value)) if value is not None else None
+            stored_value = getattr(existing, name)
+            if incoming_value is not None and stored_value is not None and incoming_value != stored_value:
+                raise ValueError("signal_price_conflict")
+            if stored_value is None and incoming_value is not None:
+                setattr(existing, name, incoming_value)
+        if analysis_id is not None:
+            if existing.analysis_id is not None and existing.analysis_id != analysis_id:
+                raise ValueError("signal_analysis_conflict")
+            existing.analysis_id = analysis_id
+        if evidence_ids:
+            existing.evidence_ids = list(dict.fromkeys([*existing.evidence_ids, *evidence_ids]))
 
     async def append_event(
         self,
