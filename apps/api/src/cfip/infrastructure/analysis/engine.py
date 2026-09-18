@@ -146,6 +146,60 @@ def _premium_discount(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> t
     return 0.0, True, "price near equilibrium"
 
 
+
+def _order_block_lifecycle(
+    opens: np.ndarray, highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, times: np.ndarray, atr: float,
+) -> list[dict]:
+    """Identify conservative origin candles and track mitigation/invalidation causally."""
+    if len(closes) < 8 or atr <= 0:
+        return []
+    blocks: list[dict] = []
+    for i in range(max(2, len(closes) - 48), len(closes) - 2):
+        body = abs(closes[i] - opens[i])
+        if body < atr[i] * 0.15 if isinstance(atr, np.ndarray) else body < atr * 0.15:
+            continue
+        # A qualifying block is an opposite candle immediately followed by a
+        # directional displacement and subsequent close beyond the local swing.
+        nxt_range = highs[i + 1] - lows[i + 1]
+        nxt_body = abs(closes[i + 1] - opens[i + 1])
+        if nxt_range < atr * 1.1 or nxt_body / max(nxt_range, np.finfo(float).eps) < 0.6:
+            continue
+        bullish = closes[i] < opens[i] and closes[i + 1] > closes[i]
+        bearish = closes[i] > opens[i] and closes[i + 1] < closes[i]
+        if not (bullish or bearish):
+            continue
+        block_low, block_high = float(lows[i]), float(highs[i])
+        state = "active"
+        breaker = False
+        for j in range(i + 2, len(closes)):
+            if bullish and closes[j] < block_low:
+                state = "breaker"
+                breaker = True
+                break
+            if bearish and closes[j] > block_high:
+                state = "breaker"
+                breaker = True
+                break
+            if lows[j] <= block_high and highs[j] >= block_low:
+                state = "mitigated"
+                if bullish and closes[j] < block_low:
+                    state = "breaker"
+                elif bearish and closes[j] > block_high:
+                    state = "breaker"
+                break
+        blocks.append({
+            "id": f"ob-{int(times[i])}-{'bullish' if bullish else 'bearish'}",
+            "direction": "bullish" if bullish else "bearish",
+            "low": block_low,
+            "high": block_high,
+            "state": state,
+            "origin_time": int(times[i]),
+            "last_evaluated_time": int(times[-1]),
+            "displacement_time": int(times[i + 1]),
+            "structure_break_time": None,
+        })
+    return blocks[-12:]
+
 def _regime(adx: float | None, atr: float, close: float) -> str:
     if adx is None or not isfinite(adx) or atr <= 0 or close <= 0:
         return "insufficient"
@@ -239,7 +293,8 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     ema50 = _last(talib.EMA(closes, timeperiod=50))
     ema200 = _last(talib.EMA(closes, timeperiod=200))
     rsi = _last(talib.RSI(closes, timeperiod=14))
-    atr = _last(talib.ATR(highs, lows, closes, timeperiod=14)) or 0.0
+    atr_series = talib.ATR(highs, lows, closes, timeperiod=14)
+    atr = _last(atr_series) or 0.0
     adx = _last(talib.ADX(highs, lows, closes, timeperiod=14))
     plus_di = _last(talib.PLUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
     minus_di = _last(talib.MINUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
@@ -352,6 +407,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         gates=gates,
         evidence=facts,
         fvg_states=_fvg_lifecycle(highs, lows, times),
+        order_blocks=_order_block_lifecycle(opens, highs, lows, closes, times, atr),
         liquidity_pools=_liquidity_pools(highs, lows, closes, times, atr),
         risk_target=risk,
         closed_bar_time=candles[-1].time,
