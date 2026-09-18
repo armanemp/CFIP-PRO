@@ -30,6 +30,10 @@ export interface Candle {
 export interface Point { time: UTCTimestamp; price: number }
 export interface Drawing { tool: Exclude<Tool, "cursor" | "crosshair">; a: Point; b: Point; id: string; locked?: boolean; visible?: boolean }
 export interface Zone { a: UTCTimestamp; b: UTCTimestamp; high: number; low: number; bullish: boolean }
+export interface OrderBlock { time: UTCTimestamp; end: UTCTimestamp; high: number; low: number; bullish: boolean; strength: number }
+export type StructureLabel = "HH" | "HL" | "LH" | "LL";
+export interface StructurePoint { time: UTCTimestamp; price: number; high: boolean; label: StructureLabel }
+export interface StructureEvent { time: UTCTimestamp; type: "BOS" | "CHoCH" | "MSS"; bullish: boolean; price: number }
 export interface SymbolDefinition { symbol: string; base: string; quote: string; name: string; digits: number; category: "majors" | "minors" | "exotics" }
 export interface StudyDefinition { id: string; name: string; group: "trend" | "momentum" | "volatility" | "volume" | "structure"; pane: "overlay" | "oscillator" }
 export interface ChartPreferences { showGrid: boolean; showVolume: boolean; showSessions: boolean; showBidAsk: boolean; magnet: boolean; rightSidebar: boolean; leftRail: boolean; }
