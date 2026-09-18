@@ -1,3 +1,13 @@
+## 2026-09-18 — Terminal workspace persistence, shortcuts and capture
+
+- Added `apps/web/src/components/terminal/session-storage.ts` as a small browser-only persistence boundary for terminal session state. It stores symbol, timeframe, chart type, locale, active tool, selected studies and terminal preferences under a versioned local-storage key; malformed/unavailable storage is ignored so the terminal remains usable.
+- Extended `professional-chart-terminal-v3.tsx` to restore the persisted workspace, persist subsequent changes, wire the left rail/right sidebar visibility into the persisted preference model, expose all nine configured timeframes directly in the header, add keyboard shortcuts (`1`–`6`, `R`, `F`, `Escape`), and add client-side chart screenshot capture using Lightweight Charts' screenshot API.
+- Added an explicit terminal-workspace reset action that clears persisted state and restores the documented defaults.
+- Corrected the README's native launcher description so it reflects the incremental rebuild behavior rather than the older index-only rule.
+- No new runtime dependency was added and no market data was fabricated.
+- Implementation commits: `30ce82a707589d9bd8e86c14b282e2e209e7ba8e`, `7c05376192f6ca803a421f3c589d9041d04e5733`, `7533a6a28202e1c3b7cbfc3bf1f5686ddb806586`.
+- CI verification is pending GitHub Actions execution for the latest commit; no local build result is claimed here.
+
 # CFIP-PRO Canonical Progress Record
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
