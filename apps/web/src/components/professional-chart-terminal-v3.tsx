@@ -12,7 +12,7 @@ import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
-import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
+import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, displacementAnalysis, premiumDiscount, mtfStructure, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
@@ -25,7 +25,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const host=useRef<HTMLDivElement>(null);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[viewRevision,setViewRevision]=useState(0);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -35,13 +35,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const session=useMemo(()=>sessionRange(candles),[candles]);
   const structure=useMemo(()=>marketStructure(candles),[candles]);
   const blocks=useMemo(()=>orderBlocks(candles),[candles]);
-  const liquidity=useMemo(()=>liquidityAnalysis(candles),[candles]);
-  const displacement=useMemo(()=>displacementAnalysis(candles),[candles]);
-  const pd=useMemo(()=>premiumDiscount(candles),[candles]);
-  const mtf=useMemo(()=>mtfStructure(candles,tf),[candles,tf]);
-  const rsiValue=useMemo(()=>rsi(candles,14).at(-1)?.value ?? null,[candles]);
-  const macdValue=useMemo(()=>macd(candles).histogram.at(-1)?.value ?? null,[candles]);
-  const atrValue=useMemo(()=>atr(candles,14).at(-1)?.value ?? null,[candles]);
   const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
   const analysisZones = useMemo(() => fvg(analysisCandles), [analysisCandles]);
   const analysisStructure = useMemo(() => marketStructure(analysisCandles), [analysisCandles]);
