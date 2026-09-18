@@ -1,3 +1,12 @@
+## 2026-09-18 — Repository hygiene: remove superseded chart implementation
+
+- Audited frontend references against the current TerminalShell entrypoint and repository code search.
+- Confirmed apps/web/src/components/market-chart.tsx has no active import/reference and duplicates superseded chart-terminal functionality that is no longer part of the runtime path.
+- Removed the unused legacy chart implementation rather than retaining dead code that can drift, trigger lint/typecheck maintenance, or confuse future development.
+- Confirmed the active terminal remains apps/web/src/components/professional-chart-terminal-v3.tsx through TerminalShell.
+- No dependency, build, database reset, or cache invalidation was introduced.
+- Verification of the resulting tree remains pending the user's normal frontend lint/typecheck/build gate.
+
 ## 2026-09-18 — Market structure + Order Block intelligence layer
 
 - Added typed market-intelligence models for structure points/events and Order Blocks.
