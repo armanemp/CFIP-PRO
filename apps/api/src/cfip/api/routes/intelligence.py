@@ -25,7 +25,7 @@ async def intelligence_snapshot(
     lessons: list[LearningRecord],
     proposals: list[IntelligenceProposal],
     calibration_score: float | None = None,
-    session: Annotated[AsyncSession, Depends(get_session)],
+    session: Annotated[AsyncSession, Depends(get_session)] = Depends(get_session),
 ) -> IntelligenceSnapshot:
     service = IntelligenceService(session)
     await service.record_snapshot_inputs(
