@@ -12,12 +12,12 @@ import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
 import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
-import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr } from "@/components/terminal/chart-math";
+import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
 const tfs: Timeframe[] = ["1m","5m","15m","30m","1H","4H","1D","1W","1M"];
-const studies = ["EMA20","EMA50","SMA20","WMA20","VWAP","BB20","RSI14","MACD"] as const;
+const studies = ["EMA20","EMA50","EMA200","SMA20","WMA20","VWAP","BB20","RSI14","MACD","DMI14","STOCH14","DONCHIAN20","KELTNER20","ICHIMOKU"] as const;
 const tools: Tool[] = ["cursor","crosshair","trendline","ray","horizontal","vertical","rectangle","fib","measure","long","short"];
 const toolGlyph: Record<Tool,string> = {cursor:"•",crosshair:"✛",trendline:"╱",ray:"↗",horizontal:"—",vertical:"│",rectangle:"□",fib:"F",measure:"↔",long:"↗",short:"↘"};
 
@@ -152,6 +152,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
     if(selected.includes("EMA20"))addIndicatorSeries(c,ema(candles,20),"#60a5fa","EMA 20");
     if(selected.includes("EMA50"))addIndicatorSeries(c,ema(candles,50),"#c084fc","EMA 50");
+    if(selected.includes("EMA200"))addIndicatorSeries(c,ema(candles,200),"#f97316","EMA 200");
     if(selected.includes("SMA20"))addIndicatorSeries(c,sma(candles,20),"#fbbf24","SMA 20");
     if(selected.includes("WMA20"))addIndicatorSeries(c,wma(candles,20),"#fb923c","WMA 20");
     if(selected.includes("VWAP"))addIndicatorSeries(c,vwap(candles),"#34d399","VWAP");
@@ -160,6 +161,32 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       const m=macd(candles);
       addIndicatorSeries(c,m.macd,"#38bdf8","MACD");
       addIndicatorSeries(c,m.signal,"#f59e0b","MACD signal");
+    }
+    if(selected.includes("DMI14")) {
+      const d=dmi(candles,14);
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.plus})), "#22c55e", "DMI +DI");
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.minus})), "#ef4444", "DMI -DI");
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.adx})), "#a78bfa", "ADX");
+    }
+    if(selected.includes("STOCH14")) addIndicatorSeries(c,stochastic(candles,14,3),"#f472b6","Stochastic 14");
+    if(selected.includes("DONCHIAN20")) {
+      const d=donchian(candles,20);
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.upper})),"#64748b","Donchian upper");
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.middle})),"#94a3b8","Donchian mid");
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.lower})),"#64748b","Donchian lower");
+    }
+    if(selected.includes("KELTNER20")) {
+      const k=keltner(candles,20,14,1.5);
+      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.upper})),"#0ea5e9","Keltner upper");
+      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.middle})),"#38bdf8","Keltner mid");
+      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.lower})),"#0ea5e9","Keltner lower");
+    }
+    if(selected.includes("ICHIMOKU")) {
+      const i=ichimoku(candles);
+      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.tenkan})),"#f43f5e","Ichimoku Tenkan");
+      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.kijun})),"#f59e0b","Ichimoku Kijun");
+      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.senkouA})),"#22c55e","Ichimoku Span A");
+      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.senkouB})),"#a855f7","Ichimoku Span B");
     }
     if(selected.includes("BB20")){
       const b=bollinger(candles);
