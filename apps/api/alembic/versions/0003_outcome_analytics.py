@@ -110,8 +110,30 @@ def upgrade() -> None:
     )
     op.create_index("ix_drift_reports_as_of", "drift_reports", ["as_of"])
 
+    op.execute("""
+        CREATE OR REPLACE FUNCTION prevent_signal_outcome_mutation()
+        RETURNS trigger LANGUAGE plpgsql AS $func$
+        BEGIN
+            RAISE EXCEPTION 'signal outcome records are immutable';
+        END;
+        $func$;
+    """)
+    op.execute("""
+        CREATE TRIGGER signal_outcome_events_immutable
+        BEFORE UPDATE OR DELETE ON signal_outcome_events
+        FOR EACH ROW EXECUTE FUNCTION prevent_signal_outcome_mutation();
+    """)
+    op.execute("""
+        CREATE TRIGGER signal_outcomes_immutable
+        BEFORE UPDATE OR DELETE ON signal_outcomes
+        FOR EACH ROW EXECUTE FUNCTION prevent_signal_outcome_mutation();
+    """)
+
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS signal_outcomes_immutable ON signal_outcomes")
+    op.execute("DROP TRIGGER IF EXISTS signal_outcome_events_immutable ON signal_outcome_events")
+    op.execute("DROP FUNCTION IF EXISTS prevent_signal_outcome_mutation()")
     op.drop_index("ix_drift_reports_as_of", table_name="drift_reports")
     op.drop_table("drift_reports")
     op.drop_index("ix_calibration_reports_as_of", table_name="calibration_reports")
