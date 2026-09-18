@@ -7,8 +7,6 @@ not generic indicator calculations.
 
 from dataclasses import dataclass
 from math import isfinite
-from typing import Sequence
-
 import numpy as np
 import talib
 
@@ -183,11 +181,8 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     adx = _last(talib.ADX(highs, lows, closes, timeperiod=14))
     plus_di = _last(talib.PLUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
     minus_di = _last(talib.MINUS_DI(highs, lows, closes, timeperiod=14)) or 0.0
-    macd, signal, hist = talib.MACD(closes, fastperiod=12, slowperiod=26, signalperiod=9)
+    _, _, hist = talib.MACD(closes, fastperiod=12, slowperiod=26, signalperiod=9)
     macd_hist = _last(hist)
-    bb_upper, bb_mid, bb_lower = talib.BBANDS(
-        closes, timeperiod=20, nbdevup=2, nbdevdn=2, matype=0
-    )
     close = float(closes[-1])
 
     trend_score = 0.0
