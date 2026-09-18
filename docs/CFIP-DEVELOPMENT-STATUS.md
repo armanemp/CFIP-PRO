@@ -59,3 +59,8 @@ The governed intelligence boundary is now connected to PostgreSQL rather than re
 ### Completion rule
 
 A contract is not considered complete until it has an executable application boundary, persistence where required, migration, idempotency/conflict handling, auditability, tests, and operational verification. The same rule applies to the remaining signal/outcome, risk, replay, notification, research, training, and self-development tracks.
+
+
+## 2026-09-18 — risk foundation
+
+A deterministic broker-aware risk/target boundary is now present. It requires explicit account equity/risk/leverage, instrument pip/tick/minimum constraints, and quote-to-account conversion before producing sizing. It calculates ATR/min-stop constrained SL, TP1/TP2/TP3, risk amount, quantity-step sizing and margin requirement. If required context is absent or the risk budget cannot satisfy the broker minimum quantity, the result is explicitly unavailable rather than fabricated.
