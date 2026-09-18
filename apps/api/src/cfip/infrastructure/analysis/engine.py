@@ -415,7 +415,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     structure_score, structure_confidence, structure_regime = _swing_state(highs, lows, closes)
     structure = _Module("structure", structure_score, structure_confidence, "confirmed swing structure", (structure_regime,))
 
-    fvg_states = _fvg_lifecycle(highs, lows, times)
+    fvg_states = _fvg_lifecycle(highs, lows, closes, times)
     active_fvgs = [item for item in fvg_states if item["state"] in {"active", "partial"}]
     if active_fvgs:
         bullish_fvgs = sum(item["direction"] == "bullish" for item in active_fvgs)
