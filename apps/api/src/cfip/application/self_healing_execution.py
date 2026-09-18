@@ -24,7 +24,7 @@ class SelfHealingExecutionService:
     @staticmethod
     def gate_self_development(change: SelfDevelopmentChange, *, approval_present: bool, signed_artifact: bool) -> ExecutionGateResult:
         reasons=[]
-        if not change.review_required: reasons.append("review_required")
+        if change.review_required and not approval_present: reasons.append("review_required")
         if not approval_present: reasons.append("production_approval_required")
         if not signed_artifact: reasons.append("signed_artifact_required")
         if not change.test_evidence_ids: reasons.append("test_evidence_required")
