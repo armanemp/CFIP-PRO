@@ -51,6 +51,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     liquidityPools:analysisLiquidity.pools,liquiditySweeps:analysisLiquidity.sweeps,displacement:analysisDisplacement,premiumDiscount:analysisPd,mtf:analysisMtf,
     rsi:analysisRsi,macdHistogram:analysisMacd,atr:analysisAtr,
   }),[analysisCandles,analysisZones,analysisStructure,analysisBlocks,analysisLiquidity,analysisDisplacement,analysisPd,analysisMtf,analysisRsi,analysisMacd,analysisAtr]);
+  const closedBarKey = analysisCandles.at(-1)?.time ?? null;
   useEffect(() => {
     if (analysisCandles.length < 5) {
       setBackendAnalysis(null);
@@ -67,7 +68,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     };
     void run();
     return () => { active = false; };
-  }, [analysisCandles, symbol, tf]);
+  }, [closedBarKey, symbol, tf]);
 
   const canonicalAnalysis: UnifiedAnalysis = backendAnalysis
     ? {
