@@ -20,6 +20,40 @@ OSS is an implementation component, not the CFIP decision authority. CFIP owns t
 - Python baseline: compatible with the project's Python 3.14 target.
 - CFIP-specific logic remains outside TA-Lib: FVG lifecycle, liquidity, structure, displacement, premium/discount and confluence.
 
+### pyvsmc
+
+- Repository: Khaymat/pyvsmc
+- Package: pyvsmc==0.3.7
+- License: MIT
+- Role: SMC/market-structure primitives.
+- Integrated now: FVG candidate detection in the canonical backend analysis engine.
+- CFIP retains lifecycle state, causal invalidation and confluence semantics around the OSS detector; pyvsmc is not treated as the decision authority.
+- Candidate future integrations: swings, BOS/CHOCH, order blocks, liquidity and premium/discount after contract-level equivalence tests.
+
+### Polars
+
+- Repository: pola-rs/polars
+- Package: polars==1.44.2
+- License: MIT
+- Role: high-throughput tabular/research/data-engineering substrate, including the pyvsmc integration surface.
+- Kept as a platform capability rather than forcing PostgreSQL/runtime paths through a dataframe abstraction.
+
+### PydanticAI
+
+- Repository: pydantic/pydantic-ai
+- Package: pydantic-ai==2.44.0
+- License: MIT
+- Role: governed typed agent runtime for future research, market-narration, review and self-development agents.
+- The deterministic analysis/risk/release boundaries remain authoritative; agents cannot replace them.
+
+### CCXT
+
+- Repository: ccxt/ccxt
+- Package: ccxt==4.5.78
+- License: MIT
+- Role: unified crypto exchange market-data/trading connectivity boundary.
+- It will sit behind CFIP provider interfaces; exchange-specific semantics and credentials remain outside domain logic.
+
 ## Evaluated but deliberately not embedded
 
 ### VectorBT
