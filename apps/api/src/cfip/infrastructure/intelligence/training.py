@@ -24,6 +24,7 @@ class TrainingPreparationService:
         *,
         outcome: str = "unknown",
         label_horizon_bars: int = 0,
+        example_id: str | None = None,
     ) -> TrainingExample:
         evidence_ids = [item.id for item in evidence]
         if not evidence_ids:
@@ -67,7 +68,7 @@ class TrainingPreparationService:
         )
         provenance_hash = hashlib.sha256(provenance.encode()).hexdigest()
         return TrainingExample(
-            id=f"train-{provenance_hash[:32]}",
+            id=example_id or f"train-{provenance_hash[:32]}",
             subject=f"{analysis.symbol}:{analysis.timeframe}",
             as_of=analysis.closed_bar_time,
             timeframe=analysis.timeframe,
@@ -76,7 +77,11 @@ class TrainingPreparationService:
             target=analysis.bias,
             outcome=outcome,
             label_horizon_bars=label_horizon_bars,
-            label_quality=0.0 if outcome == "unknown" else 1.0,
+            label_quality=(
+                min(item.confidence for item in evidence)
+                if outcome == "unknown"
+                else 1.0
+            ),
             evidence_ids=evidence_ids,
             provenance_hash=provenance_hash,
         )
