@@ -1,3 +1,14 @@
+## 2026-09-18 — Market-data continuity gate
+
+- Added a provider-agnostic deterministic data-quality contract in apps/api/src/cfip/domain/data_quality.py.
+- The policy detects unexpected same-UTC-day gaps while deliberately not treating cross-day session boundaries as missing bars; no synthetic bars are inserted.
+- Unified analysis now returns data_quality evidence and adds a data-quality confluence gate.
+- Degraded or insufficient market-data continuity blocks an accepted long/short conclusion and forces the final recommendation to wait.
+- Added focused unit coverage for cross-day boundaries, same-day gaps and insufficient history.
+- Added docs/CFIP-MARKET-DATA-QUALITY.md as the canonical explanation of the boundary and current defaults.
+- No dependency, Docker image, database reset or cache invalidation was introduced.
+- This batch is ready for local pull and verification after GitHub Actions completes.
+
 ## 2026-09-18 — Analysis polling efficiency correction
 
 - The terminal polls normalized market observations every two seconds for realtime updates, but the canonical backend analysis intentionally excludes the still-open candle.
