@@ -167,3 +167,117 @@ class IntelligenceAuditEventModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class SignalLifecycleModel(Base):
+    __tablename__ = "signal_lifecycles"
+    __table_args__ = (
+        UniqueConstraint("signal_id", name="uq_signal_lifecycles_signal_id"),
+        Index(
+            "ix_signal_lifecycles_symbol_timeframe_decision",
+            "symbol",
+            "timeframe",
+            "decision_time",
+        ),
+        Index("ix_signal_lifecycles_state", "state"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    signal_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(64), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(16), nullable=False)
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)
+    decision_time: Mapped[int] = mapped_column(nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False)
+    emitted_at: Mapped[int | None] = mapped_column()
+    triggered_at: Mapped[int | None] = mapped_column()
+    closed_at: Mapped[int | None] = mapped_column()
+    expires_at: Mapped[int | None] = mapped_column()
+    analysis_id: Mapped[str | None] = mapped_column(String(128))
+    entry: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    stop: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp1: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp2: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp3: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class SignalOutcomeEventModel(Base):
+    __tablename__ = "signal_outcome_events"
+    __table_args__ = (
+        UniqueConstraint("event_key", name="uq_signal_outcome_events_event_key"),
+        Index("ix_signal_outcome_events_signal_time", "signal_id", "event_time"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    event_key: Mapped[str] = mapped_column(String(256), nullable=False)
+    signal_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    event_time: Mapped[int] = mapped_column(nullable=False)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class SignalOutcomeModel(Base):
+    __tablename__ = "signal_outcomes"
+    __table_args__ = (
+        UniqueConstraint("signal_id", name="uq_signal_outcomes_signal_id"),
+        Index("ix_signal_outcomes_label_evaluation_time", "label", "evaluation_time"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    signal_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    label: Mapped[str] = mapped_column(String(16), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    decision_time: Mapped[int] = mapped_column(nullable=False)
+    evaluation_time: Mapped[int] = mapped_column(nullable=False)
+    entry: Mapped[Decimal] = mapped_column(Numeric(38, 18), nullable=False)
+    stop: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp1: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp2: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    tp3: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
+    mfe_r: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    mae_r: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    realized_r: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    attribution: Mapped[dict[str, float]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class CalibrationReportModel(Base):
+    __tablename__ = "calibration_reports"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    as_of: Mapped[int] = mapped_column(nullable=False)
+    sample_count: Mapped[int] = mapped_column(nullable=False)
+    brier_score: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    log_loss: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    expected_calibration_error: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    bins: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class DriftReportModel(Base):
+    __tablename__ = "drift_reports"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    as_of: Mapped[int] = mapped_column(nullable=False)
+    baseline_count: Mapped[int] = mapped_column(nullable=False)
+    current_count: Mapped[int] = mapped_column(nullable=False)
+    minimum_sample_count: Mapped[int] = mapped_column(nullable=False)
+    score: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    detected: Mapped[bool] = mapped_column(nullable=False)
+    reason: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
