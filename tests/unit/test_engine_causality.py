@@ -33,5 +33,6 @@ def test_fvg_invalidates_on_close_through_boundary() -> None:
     high = np.array([1.1000, 1.1005, 1.1002, 1.1010], dtype=np.float64)
     low = np.array([1.0990, 1.0995, 1.1008, 1.0980], dtype=np.float64)
     times = np.array([900, 1800, 2700, 3600], dtype=np.int64)
-    states = _fvg_lifecycle(high, low, times)
+    close = np.array([1.1000, 1.1000, 1.1009, 1.0990], dtype=np.float64)
+    states = _fvg_lifecycle(high, low, close, times)
     assert any(item["state"] == "invalidated" for item in states)
