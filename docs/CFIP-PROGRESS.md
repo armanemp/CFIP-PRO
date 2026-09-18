@@ -73,13 +73,13 @@
 
 ## 2026-09-18 — Chart terminal v2 implementation
 
-- Added `apps/web/src/components/cfip-chart-terminal.tsx` as the new chart-first terminal implementation and switched `TerminalShell` to use it as the primary workspace.
+- Established the chart-first terminal boundary and switched TerminalShell to the current professional terminal implementation at `apps/web/src/components/professional-chart-terminal-v3.tsx`.
 - The new terminal uses the existing stable `lightweight-charts` `5.2.1` dependency; no chart-library replacement or unnecessary package was added.
 - Implemented the useful v5 chart capabilities required by the current CFIP scope: candlestick, OHLC bars, line, area and baseline modes; six timeframes; volume pane; RSI pane; MACD pane; SMA/EMA/WMA/Bollinger/VWAP overlays; crosshair; wheel/pinch/axis scaling; kinetic scrolling; auto/manual scale; left/right price scale; logarithmic scale; fit/reset; fullscreen; screenshot export; and a professional compact terminal header.
 - Added drawing foundations for cursor, horizontal line, vertical line, trendline and rectangle with price/time coordinate conversion.
 - Added market-analysis foundations for FVG, Order Block and swing/structure analysis, exposed through the chart indicator menu without inventing external market data.
 - Added pane-resize configuration and uses the v5 pane-index series API rather than the former separate oscillator chart. Lightweight Charts v5 explicitly supports multiple panes, pane resizing and moving series between panes.
-- The implementation is intentionally separated from the legacy `market-chart.tsx`; this gives the new terminal a clean migration boundary while preserving the old component for controlled comparison until verification is complete.
+- The implementation is now the active terminal path; the superseded `market-chart.tsx` implementation has since been removed after repository-wide reference verification.
 - Switched `terminal-shell.tsx` to a true chart-first full-screen workspace; the previous inspector/dashboard side rails were removed from the primary terminal surface.
 - Chart commit: `13376c0cbbb3d50a63727a004522f753ec6244fd`.
 - Chart-shell commit: `02332ef2b1f52e42980f15d11698b1c44a935c4b`.
