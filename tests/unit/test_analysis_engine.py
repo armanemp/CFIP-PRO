@@ -66,6 +66,13 @@ def test_risk_is_not_fabricated_without_account_context() -> None:
     assert result.risk_target.entry is None
 
 
+def test_analysis_respects_minimum_aligned_htfs() -> None:
+    request = AnalysisRequest(symbol="EUR/USD", timeframe="15m", candles=_candles(), minimum_aligned_htfs=2)
+    result = analyze(request, as_of="2026-09-18T00:00:00+00:00")
+    gate = next(g for g in result.gates if g.id == "htf_alignment")
+    assert gate.passed is False
+
+
 def test_analysis_rejects_insufficient_closed_history() -> None:
     request = AnalysisRequest(
         symbol="EUR/USD",
