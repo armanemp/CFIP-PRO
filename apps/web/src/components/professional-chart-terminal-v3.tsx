@@ -218,6 +218,12 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
         {session && prefs.showSessions && <div className="pointer-events-none absolute left-3 bottom-20 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">Session {session.low.toFixed(meta?.digits??5)} — {session.high.toFixed(meta?.digits??5)}</div>}
         <svg aria-label="Chart drawings" className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+          {zones.map((z,i)=>{
+            const xa=chartRef.current?.timeScale().timeToCoordinate(z.a), xb=chartRef.current?.timeScale().timeToCoordinate(z.b);
+            const ya=mainRef.current?.priceToCoordinate(z.high), yb=mainRef.current?.priceToCoordinate(z.low);
+            if(xa===null||xa===undefined||xb===null||xb===undefined||ya===null||ya===undefined||yb===null||yb===undefined)return null;
+            return <rect key={'fvg-'+i} x={Math.min(xa,xb)} y={Math.min(ya,yb)} width={Math.max(1,Math.abs(xb-xa))} height={Math.max(1,Math.abs(yb-ya))} fill={z.bullish?'rgba(34,197,94,.07)':'rgba(239,68,68,.07)'} stroke={z.bullish?'#22c55e':'#ef4444'} strokeWidth='1' strokeDasharray='4 3'/>;
+          })}
           {drawings.filter(d=>d.visible!==false).map(d=>{
             const x1=chartRef.current?.timeScale().timeToCoordinate(d.a.time), x2=chartRef.current?.timeScale().timeToCoordinate(d.b.time);
             const y1=mainRef.current?.priceToCoordinate(d.a.price), y2=mainRef.current?.priceToCoordinate(d.b.price);
@@ -234,7 +240,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs}/>}
+      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={setDrawings}/>}
     </div>
     <footer className="flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
       <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
