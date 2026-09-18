@@ -95,7 +95,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         },
       }
     : analysis;
-  const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;\n  void viewRevision;
+  const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
+  void viewRevision;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
   useEffect(() => {
