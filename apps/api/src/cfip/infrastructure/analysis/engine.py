@@ -226,12 +226,13 @@ def _aggregate_htf(candles: list[Any], base_seconds: int, target_seconds: int) -
     completeness_values: list[float] = []
     for start, items in sorted(buckets.items()):
         expected = max(1, target_seconds // base_seconds)
-        coverage = min(1.0, len(items) / expected)
-        end = start + target_seconds
-        last_end = max(int(item.time) for item in items) + base_seconds
-        if last_end < end:
-            continue
         ordered = sorted(items, key=lambda item: int(item.time))
+        expected_times = [start + offset * base_seconds for offset in range(expected)]
+        actual_times = [int(item.time) for item in ordered]
+        if actual_times != expected_times:
+            continue
+        coverage = 1.0
+        end = start + target_seconds
         bars.append({
             "time": start,
             "open": float(ordered[0].open),
@@ -252,7 +253,7 @@ def _mtf_contexts(candles: list[Any], timeframe: str) -> list[MTFContext]:
     for target in _higher_timeframes(timeframe):
         target_seconds = _TIMEFRAME_SECONDS[target]
         bars, completeness = _aggregate_htf(candles, base_seconds, target_seconds)
-        closed_time = int(bars[-1]["time"]) if bars else 0
+        closed_time = (int(bars[-1]["time"]) + target_seconds - base_seconds) if bars else 0
         if len(bars) < 20:
             contexts.append(MTFContext(timeframe=target, closed_bar_time=closed_time,
                                        bias="neutral", score=0.0, confidence=0.0,
@@ -310,14 +311,22 @@ def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list
             overlap = max(0.0, min(float(high[j]), upper) - max(float(low[j]), lower))
             if overlap > 0:
                 mitigation = max(mitigation, min(1.0, overlap / gap))
-            if direction == "bullish" and low[j] <= lower:
-                state = "mitigated"
-                mitigation = 1.0
-                break
-            if direction == "bearish" and high[j] >= upper:
-                state = "mitigated"
-                mitigation = 1.0
-                break
+            if direction == "bullish":
+                if close[j] < lower:
+                    state = "invalidated"
+                    break
+                if low[j] <= lower:
+                    state = "mitigated"
+                    mitigation = 1.0
+                    break
+            else:
+                if close[j] > upper:
+                    state = "invalidated"
+                    break
+                if high[j] >= upper:
+                    state = "mitigated"
+                    mitigation = 1.0
+                    break
         if state == "active" and mitigation > 0:
             state = "partial"
         states.append({
