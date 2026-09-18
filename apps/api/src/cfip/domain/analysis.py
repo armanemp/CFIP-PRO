@@ -25,6 +25,19 @@ class CandleInput(BaseModel):
     close: float = Field(gt=0)
     volume: float = Field(default=0, ge=0)
 
+    @model_validator(mode="before")
+    @classmethod
+    def validate_raw_ohlc(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        values = [data.get(name) for name in ("open", "high", "low", "close", "volume")]
+        if any(value is not None and isinstance(value, (int, float)) and not isfinite(value) for value in values):
+            raise ValueError("non_finite_ohlc")
+        prices = [data.get(name) for name in ("open", "high", "low", "close")]
+        if any(value is not None and isinstance(value, (int, float)) and value <= 0 for value in prices):
+            raise ValueError("invalid_ohlc")
+        return data
+
     @model_validator(mode="after")
     def validate_ohlc(self) -> "CandleInput":
         if not all(isfinite(value) for value in (self.open, self.high, self.low, self.close, self.volume)):
