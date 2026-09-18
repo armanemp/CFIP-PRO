@@ -10,12 +10,12 @@ import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
-import { ema, bollinger, sma, wma, vwap, toCandles } from "@/components/terminal/chart-math";
+import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
 const tfs: Timeframe[] = ["1m","5m","15m","30m","1H","4H","1D","1W","1M"];
-const studies = ["EMA20","EMA50","SMA20","WMA20","VWAP","BB20"] as const;
+const studies = ["EMA20","EMA50","SMA20","WMA20","VWAP","BB20","RSI14","MACD"] as const;
 const tools: Tool[] = ["cursor","crosshair","trendline","ray","horizontal","vertical","rectangle","fib","measure","long","short"];
 const toolGlyph: Record<Tool,string> = {cursor:"•",crosshair:"✛",trendline:"╱",ray:"↗",horizontal:"—",vertical:"│",rectangle:"□",fib:"F",measure:"↔",long:"↗",short:"↘"};
 
@@ -26,7 +26,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[live,setLive]=useState(false),[error,setError]=useState(false);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
-  const last=candles.at(-1),prev=candles.at(-2);
+  const last=candles.at(-1),prev=candles.at(-2);\n  const zones=useMemo(()=>fvg(candles),[candles]);\n  const pivotPoints=useMemo(()=>pivots(candles),[candles]);\n  const levels=useMemo(()=>supportResistance(candles),[candles]);\n  const session=useMemo(()=>sessionRange(candles),[candles]);
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
@@ -127,6 +127,12 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(selected.includes("SMA20"))addIndicatorSeries(c,sma(candles,20),"#fbbf24","SMA 20");
     if(selected.includes("WMA20"))addIndicatorSeries(c,wma(candles,20),"#fb923c","WMA 20");
     if(selected.includes("VWAP"))addIndicatorSeries(c,vwap(candles),"#34d399","VWAP");
+    if(selected.includes("RSI14")) addIndicatorSeries(c, rsi(candles,14), "#e879f9", "RSI 14");
+    if(selected.includes("MACD")) {
+      const m=macd(candles);
+      addIndicatorSeries(c,m.macd,"#38bdf8","MACD");
+      addIndicatorSeries(c,m.signal,"#f59e0b","MACD signal");
+    }
     if(selected.includes("BB20")){
       const b=bollinger(candles);
       addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.upper})),"#64748b","BB upper");
@@ -185,11 +191,17 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     <div className="flex min-h-0 flex-1">
       {rail&&<nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{tools.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{toolGlyph[x]}</button>)}</nav>}
       <section className="relative min-w-0 flex-1">
-        <div className="absolute left-3 top-2 z-20 flex items-center gap-3 text-xs">
+<div className="absolute left-3 top-8 z-20 flex gap-2 text-[10px] text-[#66758a]">
+          {pivotPoints.at(-1) && <span>Structure: {pivotPoints.at(-1)?.high ? "swing high" : "swing low"}</span>}
+          {zones.length > 0 && <span>FVG {zones.filter(z=>z.bullish).length}↑ / {zones.filter(z=>!z.bullish).length}↓</span>}
+        </div>        <div className="absolute left-3 top-2 z-20 flex items-center gap-3 text-xs">
           <strong className="text-white">{symbol}</strong><span className="text-[#8492a5]">{tf}</span>
           {last&&<><span>O {last.open.toFixed(meta?.digits??5)}</span><span>H {last.high.toFixed(meta?.digits??5)}</span><span>L {last.low.toFixed(meta?.digits??5)}</span><span>C {last.close.toFixed(meta?.digits??5)}</span><span className={pct>=0?"text-emerald-400":"text-red-400"}>{pct>=0?"+":""}{pct.toFixed(2)}%</span></>}
           <span className={live?"text-emerald-400":"text-amber-400"}>● {live?t(locale,"live"):error?t(locale,"dataOffline"):t(locale,"loading")}</span>
         </div>
+        {zones.length > 0 && <div className="pointer-events-none absolute left-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{zones.length} FVG zones</div>}
+        {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
+        {session && prefs.showSessions && <div className="pointer-events-none absolute left-3 bottom-20 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">Session {session.low.toFixed(meta?.digits??5)} — {session.high.toFixed(meta?.digits??5)}</div>}
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
