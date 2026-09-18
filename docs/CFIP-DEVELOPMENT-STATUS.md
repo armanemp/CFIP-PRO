@@ -29,7 +29,7 @@ Self-healing execution is intentionally separated from diagnosis. No shell/proce
 
 ## Active completion tracks
 
-1. Persistent signal/outcome/event store and immutable audit trail.
+1. Persistent signal/outcome/event store and immutable audit trail (schema migration now added; runtime repository/API wiring remains).
 2. Full risk/position-sizing and Entry/SL/TP1/TP2/TP3 engine.
 3. Complete FVG/OB/liquidity invalidation, mitigation, breaker and target semantics.
 4. Replay/backtest with explicit event-time/no-lookahead contracts.
@@ -64,3 +64,23 @@ A contract is not considered complete until it has an executable application bou
 ## 2026-09-18 — risk foundation
 
 A deterministic broker-aware risk/target boundary is now present. It requires explicit account equity/risk/leverage, instrument pip/tick/minimum constraints, and quote-to-account conversion before producing sizing. It calculates ATR/min-stop constrained SL, TP1/TP2/TP3, risk amount, quantity-step sizing and margin requirement. If required context is absent or the risk budget cannot satisfy the broker minimum quantity, the result is explicitly unavailable rather than fabricated.
+
+
+## 2026-09-18 — repair of previously applied intelligence/training gaps
+
+A source-level audit found two concrete integration defects that could survive a contract-only review:
+- Training preparation referenced `AnalysisEvidence.id`, while the canonical field is `module`. The lookup is now centralized and tested.
+- Training examples require a non-null causal `closed_bar_time`; preparation now rejects missing timestamps instead of constructing an invalid lineage record.
+
+The audit also found that signal/outcome SQLAlchemy models had been present without a corresponding Alembic migration. Migration `0003_outcomes` now creates the signal lifecycle, outcome-event, outcome, calibration and drift tables plus their required indexes.
+
+## 2026-09-18 — health and self-healing control loop foundation
+
+The self-healing layer now has executable deterministic health controls in addition to proposal/execution contracts:
+- component health captures status, latency, error rate, freshness, invariant failures and evidence;
+- incidents have explicit lifecycle/severity and causal timestamps;
+- circuit breakers enforce failure budgets and cooldown-based probing;
+- success resets failure state;
+- health/circuit transitions are deterministic and covered by unit tests.
+
+The executor boundary remains separate: these controls decide whether remediation may proceed; they do not execute arbitrary shell/process commands.
