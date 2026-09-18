@@ -1,3 +1,14 @@
+## 2026-09-18 — Market structure + Order Block intelligence layer
+
+- Added typed market-intelligence models for structure points/events and Order Blocks.
+- Added deterministic market-structure extraction from confirmed pivots with HH/HL/LH/LL labels and BOS/CHoCH event detection; the output is descriptive analysis, not a trade recommendation.
+- Added a conservative Order Block detector based on an opposite-color base candle followed by a strong displacement candle; each block carries price bounds and a normalized displacement-strength value.
+- Connected computed structure and Order Block results to the terminal overlay and inspector sidebar.
+- Order Blocks are rendered as chart zones and structure events as price markers; the existing FVG renderer remains active.
+- No new runtime dependency was introduced and no synthetic market data was added.
+- Implementation commits: `c86189aef86c803f44d2860d1dbf6224a66b76c7`, `4729b8fbc705e8cd6bd215b06371a552c1fe26bc`, `aca2da6ff001a95c7667878a05253d33b2f141c7`, `9f776019a3d28afa8b73aca8ac7f6121544a7075`.
+- CI verification remains pending for the latest implementation batch.
+
 ## 2026-09-18 — Interactive drawing and intelligence overlays
 
 - Added a persistent terminal drawing layer for trend lines, rays, horizontal/vertical levels, rectangles, Fibonacci retracement guides, and position-direction guides. Two-click placement is mapped through Lightweight Charts time/price coordinates.
