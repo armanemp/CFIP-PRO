@@ -8,7 +8,7 @@ SignalState = Literal[
     "candidate", "accepted", "emitted", "expired", "triggered", "closed", "cancelled"
 ]
 OutcomeLabel = Literal["win", "loss", "breakeven", "unknown"]
-OutcomeEvent = Literal["entry", "stop", "tp1", "tp2", "tp3", "expiry", "cancel"]
+OutcomeEvent = Literal["entry", "stop", "tp1", "tp2", "tp3", "expiry", "cancel", "ambiguous"]
 Direction = Literal["long", "short"]
 
 
