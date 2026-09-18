@@ -17,6 +17,7 @@ from cfip.domain.analysis import (
     Bias,
     ConfluenceGate,
     RiskTargetPlan,
+    MTFContext,
     UnifiedAnalysisRead,
 )
 
@@ -201,6 +202,82 @@ def _order_block_lifecycle(
         })
     return blocks[-12:]
 
+_TIMEFRAME_SECONDS = {
+    "1m": 60, "5m": 300, "15m": 900, "30m": 1800,
+    "1H": 3600, "4H": 14400, "1D": 86400, "1W": 604800, "1M": 2592000,
+}
+
+
+def _higher_timeframes(timeframe: str) -> tuple[str, ...]:
+    seconds = _TIMEFRAME_SECONDS.get(timeframe)
+    if seconds is None:
+        return ()
+    ordered = ("1H", "4H", "1D")
+    return tuple(tf for tf in ordered if _TIMEFRAME_SECONDS[tf] > seconds)
+
+
+def _aggregate_htf(candles: list[Any], base_seconds: int, target_seconds: int) -> tuple[list[dict[str, float | int]], float]:
+    buckets: dict[int, list[Any]] = {}
+    for candle in candles:
+        bucket = (int(candle.time) // target_seconds) * target_seconds
+        buckets.setdefault(bucket, []).append(candle)
+    bars: list[dict[str, float | int]] = []
+    completeness_values: list[float] = []
+    for start, items in sorted(buckets.items()):
+        expected = max(1, target_seconds // base_seconds)
+        coverage = min(1.0, len(items) / expected)
+        end = start + target_seconds
+        last_end = max(int(item.time) for item in items) + base_seconds
+        if last_end < end:
+            continue
+        ordered = sorted(items, key=lambda item: int(item.time))
+        bars.append({
+            "time": start,
+            "open": float(ordered[0].open),
+            "high": max(float(item.high) for item in ordered),
+            "low": min(float(item.low) for item in ordered),
+            "close": float(ordered[-1].close),
+            "volume": sum(float(item.volume) for item in ordered),
+        })
+        completeness_values.append(coverage)
+    return bars, (sum(completeness_values) / len(completeness_values) if completeness_values else 0.0)
+
+
+def _mtf_contexts(candles: list[Any], timeframe: str) -> list[MTFContext]:
+    base_seconds = _TIMEFRAME_SECONDS.get(timeframe)
+    if base_seconds is None:
+        return []
+    contexts: list[MTFContext] = []
+    for target in _higher_timeframes(timeframe):
+        target_seconds = _TIMEFRAME_SECONDS[target]
+        bars, completeness = _aggregate_htf(candles, base_seconds, target_seconds)
+        closed_time = int(bars[-1]["time"]) if bars else 0
+        if len(bars) < 20:
+            contexts.append(MTFContext(timeframe=target, closed_bar_time=closed_time,
+                                       bias="neutral", score=0.0, confidence=0.0,
+                                       candle_count=len(bars), completeness=completeness))
+            continue
+        closes = np.asarray([float(item["close"]) for item in bars], dtype=np.float64)
+        ema20_series = talib.EMA(closes, timeperiod=20)
+        ema20 = _last(ema20_series)
+        ema50 = _last(talib.EMA(closes, timeperiod=50)) if len(closes) >= 50 else None
+        if ema20 is None:
+            bias, score, confidence = "neutral", 0.0, 0.0
+        else:
+            score = 0.65 if closes[-1] >= ema20 else -0.65
+            if len(closes) >= 21 and isfinite(float(ema20_series[-2])):
+                score += 0.35 if ema20 >= float(ema20_series[-2]) else -0.35
+            if ema50 is not None:
+                score += 0.35 if ema20 >= ema50 else -0.35
+            score = max(-1.0, min(1.0, score / 1.35))
+            bias = _bias(score)
+            confidence = min(1.0, 0.55 + (0.2 if ema50 is not None else 0.0) + completeness * 0.25)
+        contexts.append(MTFContext(timeframe=target, closed_bar_time=closed_time,
+                                   bias=bias, score=score, confidence=confidence,
+                                   candle_count=len(bars), completeness=completeness))
+    return contexts
+
+
 def _regime(adx: float | None, atr: float, close: float) -> str:
     if adx is None or not isfinite(adx) or atr <= 0 or close <= 0:
         return "insufficient"
@@ -347,9 +424,11 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     confidence_weight = sum(m.confidence for m in modules) or 1.0
     score = max(-1.0, min(1.0, weighted / confidence_weight))
 
-    bullish_mtf = int(ema20 is not None and ema50 is not None and ema20 > ema50)
-    bearish_mtf = int(ema20 is not None and ema50 is not None and ema20 < ema50)
-    aligned_htfs = bullish_mtf + bearish_mtf
+    mtf_contexts = _mtf_contexts(candles, request.timeframe)
+    directional_contexts = [item for item in mtf_contexts if item.confidence > 0 and item.bias != "neutral"]
+    aligned_bullish = sum(item.bias == "bullish" for item in directional_contexts)
+    aligned_bearish = sum(item.bias == "bearish" for item in directional_contexts)
+    aligned_htfs = max(aligned_bullish, aligned_bearish)
     gates = [
         ConfluenceGate(
             id="htf_alignment",
@@ -409,6 +488,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         fvg_states=_fvg_lifecycle(highs, lows, times),
         order_blocks=_order_block_lifecycle(opens, highs, lows, closes, times, atr),
         liquidity_pools=_liquidity_pools(highs, lows, closes, times, atr),
+        mtf_contexts=mtf_contexts,
         risk_target=risk,
         closed_bar_time=candles[-1].time,
     )
