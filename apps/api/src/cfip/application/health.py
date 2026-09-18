@@ -15,6 +15,13 @@ class HealthService:
         circuit: CircuitBreaker,
         policy: HealthPolicy,
     ) -> HealthEvaluation:
+        if circuit.state == "open":
+            return HealthEvaluation(
+                status="unhealthy",
+                reasons=["circuit_open"],
+                should_open_circuit=True,
+                next_state="open",
+            )
         reasons: list[str] = []
         if health.status in {"unhealthy", "degraded"}:
             reasons.append(f"component_{health.status}")
@@ -62,6 +69,7 @@ class HealthService:
                     "state": "open",
                     "consecutive_failures": failures,
                     "opened_at": observed_at,
+                    "cooldown_seconds": policy.cooldown_seconds,
                 }
             )
         return circuit.model_copy(update={"consecutive_failures": failures})
