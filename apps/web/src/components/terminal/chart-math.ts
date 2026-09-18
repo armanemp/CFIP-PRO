@@ -1,5 +1,6 @@
 import type { MarketObservation } from "@/lib/api";
 import type { Candle, OrderBlock, StructureEvent, StructurePoint, Timeframe, Zone } from "./types";
+import type { Displacement, LiquidityPool, LiquiditySweep, MTFStructureSummary, PremiumDiscountRange } from "./analysis-contracts";
 import { timeframeSeconds } from "./types";
 
 export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
@@ -106,4 +107,96 @@ export function orderBlocks(c: Candle[]): OrderBlock[] {
     if (impulse.close<impulse.open && base.close>base.open) out.push({time:base.time,end:c.at(-1)!.time,high:base.high,low:base.low,bullish:false,strength:Math.min(1,body/range)});
   }
   return out.slice(-10);
+}
+
+
+export function liquidityAnalysis(c: Candle[], toleranceRatio = 0.00015) {
+  const pools: LiquidityPool[] = [];
+  const sweeps: LiquiditySweep[] = [];
+  const raw = pivots(c);
+  const highs = raw.filter(p => p.high);
+  const lows = raw.filter(p => !p.high);
+  const tolerance = Math.max(Number.EPSILON, (c.at(-1)?.close ?? 1) * toleranceRatio);
+  const cluster = (points: typeof highs, kind: LiquidityPool["kind"]) => {
+    for (let i = 0; i < points.length; i++) {
+      const group = points.filter(p => Math.abs(p.price - points[i].price) <= tolerance);
+      if (group.length < 2) continue;
+      const unique = new Set(group.map(p => String(p.time)));
+      if (unique.size < 2) continue;
+      const price = group.reduce((s, p) => s + p.price, 0) / group.length;
+      const start = group.reduce((a, p) => Number(p.time) < Number(a.time) ? p : a).time;
+      const end = group.reduce((a, p) => Number(p.time) > Number(a.time) ? p : a).time;
+      if (!pools.some(x => x.kind === kind && Math.abs(x.price - price) <= tolerance && x.start === start)) {
+        pools.push({ kind, price, touches: unique.size, start, end, swept: false });
+      }
+    }
+  };
+  cluster(highs, "equal_high");
+  cluster(lows, "equal_low");
+
+  for (const pool of pools) {
+    const candidates = c.filter(x => Number(x.time) > Number(pool.end));
+    for (const candle of candidates) {
+      const breach = pool.kind === "equal_high" ? candle.high > pool.price + tolerance : candle.low < pool.price - tolerance;
+      const reclaimed = pool.kind === "equal_high" ? candle.close < pool.price : candle.close > pool.price;
+      if (breach) {
+        sweeps.push({
+          time: candle.time,
+          price: pool.price,
+          kind: pool.kind === "equal_high" ? "buy_side" : "sell_side",
+          reclaimed,
+          strength: Math.min(1, Math.abs((pool.kind === "equal_high" ? candle.high - pool.price : pool.price - candle.low)) / Math.max(candle.high - candle.low, tolerance)),
+        });
+        pool.swept = true;
+        break;
+      }
+    }
+  }
+  return { pools: pools.slice(-12), sweeps: sweeps.slice(-12) };
+}
+
+export function displacementAnalysis(c: Candle[], period = 14): Displacement[] {
+  const a = atr(c, period);
+  const atrByTime = new Map(a.map(x => [x.time, x.value]));
+  return c.flatMap((x) => {
+    const range = x.high - x.low;
+    const atrValue = atrByTime.get(x.time);
+    if (!atrValue || range <= 0) return [];
+    const bodyRatio = Math.abs(x.close - x.open) / range;
+    const atrMultiple = range / Math.max(atrValue, Number.EPSILON);
+    if (bodyRatio < 0.65 || atrMultiple < 1.25) return [];
+    return [{ time: x.time, bullish: x.close > x.open, bodyRatio, range, atrMultiple, strength: Math.min(1, bodyRatio * 0.55 + Math.min(2, atrMultiple) / 2 * 0.45) }];
+  }).slice(-12);
+}
+
+export function premiumDiscount(c: Candle[], lookback = 80): PremiumDiscountRange | null {
+  const window = c.slice(-lookback);
+  if (window.length < 5) return null;
+  const highCandle = window.reduce((a, x) => x.high > a.high ? x : a);
+  const lowCandle = window.reduce((a, x) => x.low < a.low ? x : a);
+  if (highCandle.high <= lowCandle.low) return null;
+  const equilibrium = (highCandle.high + lowCandle.low) / 2;
+  const current = c.at(-1)!.close;
+  const span = highCandle.high - lowCandle.low;
+  const zone = current > equilibrium + span * 0.02 ? "premium" : current < equilibrium - span * 0.02 ? "discount" : "equilibrium";
+  return { high: highCandle.high, low: lowCandle.low, equilibrium, current, zone, sourceHigh: highCandle.time, sourceLow: lowCandle.time };
+}
+
+export function mtfStructure(c: Candle[], currentTf: Timeframe): MTFStructureSummary[] {
+  const order: Timeframe[] = ["1m","5m","15m","30m","1H","4H","1D","1W","1M"];
+  const index = order.indexOf(currentTf);
+  const targets = order.slice(Math.max(0, index - 2), Math.min(order.length, index + 3));
+  return targets.map(timeframe => {
+    const candles = toCandles(c.map(x => ({ observed_at: new Date(Number(x.time) * 1000).toISOString(), last: x.close, bid: null, ask: null, volume: x.volume } as never)), timeframe);
+    const structure = marketStructure(candles);
+    const points = structure.points.slice(-6);
+    const bull = points.filter(p => p.label === "HH" || p.label === "HL").length;
+    const bear = points.filter(p => p.label === "LH" || p.label === "LL").length;
+    return {
+      timeframe,
+      bias: bull > bear ? "bullish" : bear > bull ? "bearish" : "neutral",
+      structure: points.length < 2 ? "insufficient" : bull > bear + 1 ? "HH_HL" : bear > bull + 1 ? "LH_LL" : "mixed",
+      lastEvent: structure.events.at(-1),
+    };
+  });
 }
