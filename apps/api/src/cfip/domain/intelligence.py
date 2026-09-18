@@ -50,6 +50,18 @@ class LearningRecord(BaseModel):
         return self
 
 
+class TrainingExample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=128)
+    subject: str = Field(min_length=1, max_length=256)
+    feature_vector: dict[str, float] = Field(default_factory=dict, max_length=128)
+    target: Literal["bullish", "bearish", "neutral"] | None = None
+    outcome: Literal["win", "loss", "breakeven", "unknown"] = "unknown"
+    evidence_ids: list[str] = Field(min_length=1, max_length=100)
+    label_quality: float = Field(default=0.0, ge=0, le=1)
+
+
 class IntelligenceFeedback(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
