@@ -11,6 +11,13 @@ class TrainingPreparationService:
     """Create reproducible, leakage-resistant examples without training or promotion."""
 
     @staticmethod
+    def _module_score(analysis: UnifiedAnalysisRead, name: str) -> float:
+        for module in analysis.modules:
+            if module.module == name:
+                return module.score
+        return 0.0
+
+    @staticmethod
     def from_analysis(
         analysis: UnifiedAnalysisRead,
         evidence: list[IntelligenceEvidence],
@@ -21,18 +28,17 @@ class TrainingPreparationService:
         evidence_ids = [item.id for item in evidence]
         if not evidence_ids:
             raise ValueError("training_example_requires_evidence")
+        if analysis.closed_bar_time is None:
+            raise ValueError("training_example_requires_closed_bar_time")
+
         features = {
             "analysis_score": analysis.score,
             "analysis_confidence": analysis.confidence,
             "confluence_score": float(analysis.confluence_score),
-            "trend_score": next(
-                (item.score for item in analysis.modules if item.id == "trend"), 0.0
-            ),
-            "momentum_score": next(
-                (item.score for item in analysis.modules if item.id == "momentum"), 0.0
-            ),
-            "structure_score": next(
-                (item.score for item in analysis.modules if item.id == "structure"), 0.0
+            "trend_score": TrainingPreparationService._module_score(analysis, "trend"),
+            "momentum_score": TrainingPreparationService._module_score(analysis, "momentum"),
+            "structure_score": TrainingPreparationService._module_score(
+                analysis, "structure"
             ),
             "fvg_count": float(len(analysis.fvg_states)),
             "order_block_count": float(len(analysis.order_blocks)),
@@ -51,6 +57,7 @@ class TrainingPreparationService:
                 "analysis_as_of": analysis.as_of,
                 "analysis_timeframe": analysis.timeframe,
                 "analysis_symbol": analysis.symbol,
+                "closed_bar_time": analysis.closed_bar_time,
                 "evidence_ids": evidence_ids,
                 "feature_schema": feature_schema,
                 "label_horizon_bars": label_horizon_bars,
