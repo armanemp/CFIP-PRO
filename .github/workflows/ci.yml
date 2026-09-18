@@ -8,6 +8,22 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: cfip
+          POSTGRES_PASSWORD: cfip
+          POSTGRES_DB: cfip
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U cfip -d cfip"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgresql+asyncpg://cfip:cfip@127.0.0.1:5432/cfip
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
@@ -16,6 +32,7 @@ jobs:
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run pytest
+      - run: uv run alembic -c apps/api/alembic.ini upgrade head
 
   frontend:
     runs-on: ubuntu-latest
@@ -27,7 +44,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
-      - run: npm install
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
