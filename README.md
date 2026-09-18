@@ -29,7 +29,7 @@ From the repository root, with the project `.venv` available:
 
 Then open `http://127.0.0.1:8000`. No second frontend terminal is required.
 
-The launcher only runs the frontend build when `apps/web/out/index.html` does not exist. It does not reinstall dependencies, reset PostgreSQL, or require Docker/WSL.
+The launcher rebuilds the frontend export only when it is missing or older than tracked frontend source/config files. It does not rebuild unconditionally, reinstall dependencies, reset PostgreSQL, or require Docker/WSL.
 
 ### Backend verification
 
