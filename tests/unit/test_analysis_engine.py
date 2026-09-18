@@ -64,3 +64,17 @@ def test_risk_is_not_fabricated_without_account_context() -> None:
     )
     assert result.risk_target.available is False
     assert result.risk_target.entry is None
+
+
+def test_analysis_rejects_insufficient_closed_history() -> None:
+    request = AnalysisRequest(
+        symbol="EUR/USD",
+        timeframe="15m",
+        candles=_candles(5),
+    )
+    try:
+        analyze(request, as_of="2026-09-18T00:00:00+00:00")
+    except ValueError as exc:
+        assert str(exc) == "insufficient_closed_bars"
+    else:
+        raise AssertionError("analysis must reject fewer than five closed bars")
