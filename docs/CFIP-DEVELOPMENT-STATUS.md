@@ -42,3 +42,20 @@ Self-healing execution is intentionally separated from diagnosis. No shell/proce
 11. Full repository security, dependency, typing, test, runtime, performance and documentation audit.
 
 This file is a living release-gate document. A feature is not considered complete merely because its contract exists; executable integration, persistence, verification and operational safeguards are required before production completion.
+
+
+## 2026-09-18 — intelligence persistence closure
+
+The governed intelligence boundary is now connected to PostgreSQL rather than remaining contract-only:
+- Evidence, learning records, proposals and reviewer feedback have persistent SQLAlchemy models.
+- Intelligence feedback is transactional and updates learning validation state.
+- An immutable-by-API audit-event table provides idempotent event keys for governed learning actions.
+- Alembic migration 0002_intelligence owns the schema change.
+- /intelligence/snapshot now persists supplied artifacts and reads authoritative counts from PostgreSQL.
+- /intelligence/feedback now persists the review and audit event.
+- Duplicate artifact IDs are conflict-checked instead of silently overwritten.
+- The learning layer remains prohibited from silently promoting models or bypassing deterministic analysis/risk gates.
+
+### Completion rule
+
+A contract is not considered complete until it has an executable application boundary, persistence where required, migration, idempotency/conflict handling, auditability, tests, and operational verification. The same rule applies to the remaining signal/outcome, risk, replay, notification, research, training, and self-development tracks.
