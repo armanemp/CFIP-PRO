@@ -94,11 +94,11 @@ def upgrade() -> None:
     )
     op.execute("""
         CREATE OR REPLACE FUNCTION prevent_intelligence_audit_mutation()
-        RETURNS trigger LANGUAGE plpgsql AS $
+        RETURNS trigger LANGUAGE plpgsql AS $func$
         BEGIN
             RAISE EXCEPTION 'intelligence audit events are immutable';
         END;
-        $;
+        $func$;
     """)
     op.execute("""
         CREATE TRIGGER intelligence_audit_events_immutable
