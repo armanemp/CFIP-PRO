@@ -1,10 +1,20 @@
 """Governed platform-intelligence endpoints."""
 
 from datetime import UTC, datetime
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from cfip.application.intelligence import IntelligenceService
-from cfip.domain.intelligence import IntelligenceEvidence, IntelligenceFeedback, IntelligenceProposal, IntelligenceSnapshot, LearningRecord
+from cfip.domain.intelligence import (
+    IntelligenceEvidence,
+    IntelligenceFeedback,
+    IntelligenceProposal,
+    IntelligenceSnapshot,
+    LearningRecord,
+)
+from cfip.infrastructure.db.session import get_session
 
 router = APIRouter(prefix="/intelligence")
 
@@ -15,17 +25,23 @@ async def intelligence_snapshot(
     lessons: list[LearningRecord],
     proposals: list[IntelligenceProposal],
     calibration_score: float | None = None,
+    session: Annotated[AsyncSession, Depends(get_session)] = None,
 ) -> IntelligenceSnapshot:
-    return IntelligenceService().snapshot(
+    service = IntelligenceService(session)
+    await service.record_snapshot_inputs(
         evidence=evidence,
         lessons=lessons,
         proposals=proposals,
+    )
+    return await service.snapshot(
         calibration_score=calibration_score,
         as_of=int(datetime.now(UTC).timestamp()),
     )
 
 
 @router.post("/feedback", response_model=IntelligenceFeedback)
-async def intelligence_feedback(feedback: IntelligenceFeedback) -> IntelligenceFeedback:
-    """Accept a governed feedback event; persistence/promotion is handled by the learning store."""
-    return feedback
+async def intelligence_feedback(
+    feedback: IntelligenceFeedback,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> IntelligenceFeedback:
+    return await IntelligenceService(session).feedback(feedback)
