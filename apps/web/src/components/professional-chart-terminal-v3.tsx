@@ -9,7 +9,7 @@ import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
-import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
+import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
 import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
@@ -23,7 +23,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const host=useRef<HTMLDivElement>(null);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[live,setLive]=useState(false),[error,setError]=useState(false);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);\n  const zones=useMemo(()=>fvg(candles),[candles]);\n  const pivotPoints=useMemo(()=>pivots(candles),[candles]);\n  const levels=useMemo(()=>supportResistance(candles),[candles]);\n  const session=useMemo(()=>sessionRange(candles),[candles]);
@@ -39,6 +39,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       tool: "cursor",
       selectedStudies: ["EMA20"],
       preferences: DEFAULT_PREFERENCES,
+      drawings: [],
     });
     setSymbol(session.symbol);
     setTf(session.timeframe);
@@ -49,14 +50,15 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setPrefs(session.preferences);
     setSidebar(session.preferences.rightSidebar);
     setRail(session.preferences.leftRail);
+    setDrawings(session.drawings);
   }, [initialSymbol]);
 
   useEffect(() => {
     saveTerminalSession({
       symbol, timeframe: tf, chartKind: kind, locale, tool,
-      selectedStudies: selected, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail },
+      selectedStudies: selected, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail }, drawings,
     });
-  }, [symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail]);
+  }, [symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -155,6 +157,19 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
+  const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
+    if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
+    const rect=event.currentTarget.getBoundingClientRect();
+    const x=event.clientX-rect.left, y=event.clientY-rect.top;
+    const time=chartRef.current.timeScale().coordinateToTime(x);
+    const price=mainRef.current.coordinateToPrice(y);
+    if(time===null||price===null)return;
+    const point={time,price};
+    if(!pendingPoint){setPendingPoint(point);return;}
+    const drawing:Drawing={id:crypto.randomUUID(),tool:tool as Drawing["tool"],a:pendingPoint,b:point,visible:true,locked:false};
+    setDrawings(value=>[...value,drawing]);
+    setPendingPoint(null);
+  };
   const toggleFullscreen=async()=>{
     const element=host.current?.parentElement;
     if(!element)return;
@@ -190,7 +205,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     </header>
     <div className="flex min-h-0 flex-1">
       {rail&&<nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{tools.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{toolGlyph[x]}</button>)}</nav>}
-      <section className="relative min-w-0 flex-1">
+      <section className="relative min-w-0 flex-1" onClick={placeDrawing}>
 <div className="absolute left-3 top-8 z-20 flex gap-2 text-[10px] text-[#66758a]">
           {pivotPoints.at(-1) && <span>Structure: {pivotPoints.at(-1)?.high ? "swing high" : "swing low"}</span>}
           {zones.length > 0 && <span>FVG {zones.filter(z=>z.bullish).length}↑ / {zones.filter(z=>!z.bullish).length}↓</span>}
@@ -202,6 +217,20 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         {zones.length > 0 && <div className="pointer-events-none absolute left-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{zones.length} FVG zones</div>}
         {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
         {session && prefs.showSessions && <div className="pointer-events-none absolute left-3 bottom-20 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">Session {session.low.toFixed(meta?.digits??5)} — {session.high.toFixed(meta?.digits??5)}</div>}
+        <svg aria-label="Chart drawings" className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+          {drawings.filter(d=>d.visible!==false).map(d=>{
+            const x1=chartRef.current?.timeScale().timeToCoordinate(d.a.time), x2=chartRef.current?.timeScale().timeToCoordinate(d.b.time);
+            const y1=mainRef.current?.priceToCoordinate(d.a.price), y2=mainRef.current?.priceToCoordinate(d.b.price);
+            if(x1===null||x1===undefined||x2===null||x2===undefined||y1===null||y1===undefined||y2===null||y2===undefined)return null;
+            if(d.tool==="horizontal") return <line key={d.id} x1={0} x2="100%" y1={y1} y2={y1} stroke="#94a3b8" strokeWidth="1" strokeDasharray="5 4"/>;
+            if(d.tool==="vertical") return <line key={d.id} x1={x1} x2={x1} y1={0} y2="100%" stroke="#94a3b8" strokeWidth="1" strokeDasharray="5 4"/>;
+            if(d.tool==="rectangle") return <rect key={d.id} x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke="#70a7ff" strokeWidth="1"/>;
+            if(d.tool==="fib") return <g key={d.id}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.382} y2={y1+(y2-y1)*.382} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.618} y2={y1+(y2-y1)*.618} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/></g>;
+            const stroke=d.tool==="short"?"#ef5350":"#70a7ff";
+            return <line key={d.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1}/>;
+          })}
+          {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
+        </svg>
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
