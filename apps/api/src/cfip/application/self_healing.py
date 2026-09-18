@@ -1,6 +1,6 @@
 """Deterministic guardrails for autonomous diagnosis and repair proposals."""
 
-from cfip.domain.self_healing import HealthSignal, Diagnosis, RepairProposal, SelfHealingPolicy
+from cfip.domain.self_healing import Diagnosis, HealthSignal, RepairProposal, SelfHealingPolicy
 
 
 class SelfHealingService:
