@@ -57,3 +57,37 @@ Proposals therefore carry evidence IDs, risk level and explicit approval state.
 - knowledge graph and semantic retrieval
 - agent orchestration with deterministic tool permissions
 - human approval and rollback
+
+## Self-healing and self-development fabric
+
+CFIP treats self-healing as a controlled engineering feedback loop rather than unrestricted autonomous mutation:
+
+1. Observe health, correctness, latency, data-quality and security signals.
+2. Correlate signals with deployment, dependency, market-data and runtime evidence.
+3. Produce an explicit diagnosis with confidence, evidence and blast radius.
+4. Generate a reversible repair proposal with expected effect and rollback plan.
+5. Run tests, static analysis, security checks and targeted regression verification in isolation.
+6. Require approval for changes outside a narrowly configured reversible local/component policy.
+7. Apply through an auditable release boundary, monitor the canary, and automatically roll back when protected health invariants fail.
+8. Record the outcome as system learning so repeated incidents become less likely.
+
+Self-development follows the same boundary. The intelligence layer can research the codebase, identify architecture or quality gaps, generate candidate changes, build experiments and collect evidence. It cannot silently mutate production code or production risk controls. Every promoted change must have provenance, tests, verification evidence, a rollback path and an auditable lifecycle.
+
+### Autonomous improvement domains
+
+- code quality and type safety
+- test-gap discovery and regression generation
+- dependency/security advisories
+- performance and resource optimization
+- database/index/cache tuning proposals
+- data-provider quality and fallback proposals
+- frontend accessibility/performance proposals
+- prompt/tool policy evaluation
+- model evaluation, calibration and drift
+- documentation consistency
+- architecture-debt detection
+- operational runbook improvement
+
+### Non-negotiable invariants
+
+Self-healing must never bypass authentication/authorization, data provenance, risk limits, deterministic trading gates, audit logging, or release verification. Destructive or platform-wide changes remain approval-gated.
