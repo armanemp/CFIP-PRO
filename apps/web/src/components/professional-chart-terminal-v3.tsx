@@ -25,7 +25,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const host=useRef<HTMLDivElement>(null);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[viewRevision,setViewRevision]=useState(0);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -95,7 +95,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         },
       }
     : analysis;
-  const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
+  const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;\n  void viewRevision;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
   useEffect(() => {
@@ -176,7 +176,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     });
     chartRef.current=c;
     return()=>{c.remove();chartRef.current=null;};
-  },[locale,prefs.showGrid]);
+  },[]);
 
   useEffect(()=>{
     const c=chartRef.current;
