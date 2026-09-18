@@ -81,6 +81,10 @@ The source emphasizes:
 
 CFIP-PRO will preserve these semantics at the analysis/decision boundary.
 
+## OSS integration policy
+
+Standard indicator calculations are delegated to the backend TA-Lib integration. CFIP-specific market-structure and decision semantics remain native and auditable. See docs/CFIP-OSS-INTEGRATION-REGISTER.md for the current dependency decisions.
+
 ## CFIP-PRO contract architecture
 
 The frontend analysis contract is now centralized in:
@@ -116,6 +120,10 @@ apps/web/src/components/terminal/terminal-theme.module.css
 This file is the maintenance point for terminal widths, rail size, top bar/footer sizing, and shared terminal palette tokens.
 
 ## Next parity work
+
+The backend canonical analysis boundary is now executable: /analysis/unified accepts normalized OHLCV candles, enforces closed-bar semantics, calculates standard indicators through TA-Lib, applies CFIP-specific structure/liquidity/FVG/displacement/premium-discount gates, and returns one unified decision plus an explicit non-fabricated risk-target placeholder.
+
+The terminal now sends its closed-bar analysis context to that endpoint and uses the backend result for the canonical bias, recommendation, confluence and evidence while retaining frontend calculations for rendering overlays.
 
 The next implementation layers are required parity work:
 - DMI/ADX, Keltner, Donchian and Ichimoku as first-class analysis inputs
