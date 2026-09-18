@@ -214,7 +214,9 @@ class SignalOutcomeEventModel(Base):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     event_key: Mapped[str] = mapped_column(String(256), nullable=False)
-    signal_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    signal_id: Mapped[str] = mapped_column(
+        String(160), ForeignKey("signal_lifecycles.signal_id", ondelete="RESTRICT"), nullable=False
+    )
     event_type: Mapped[str] = mapped_column(String(16), nullable=False)
     event_time: Mapped[int] = mapped_column(nullable=False)
     price: Mapped[Decimal | None] = mapped_column(Numeric(38, 18))
@@ -232,7 +234,9 @@ class SignalOutcomeModel(Base):
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    signal_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    signal_id: Mapped[str] = mapped_column(
+        String(160), ForeignKey("signal_lifecycles.signal_id", ondelete="RESTRICT"), nullable=False
+    )
     label: Mapped[str] = mapped_column(String(16), nullable=False)
     event_type: Mapped[str] = mapped_column(String(16), nullable=False)
     decision_time: Mapped[int] = mapped_column(nullable=False)
