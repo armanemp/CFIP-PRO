@@ -83,10 +83,19 @@ class IntelligenceRepository:
         if existing.kind != item.kind or existing.title != item.title:
             raise ValueError("proposal_id_conflict")
 
-    async def record_feedback(self, item: IntelligenceFeedback) -> None:
+    async def record_feedback(self, item: IntelligenceFeedback) -> bool:
         learning = await self.session.get(LearningRecordModel, item.learning_id)
         if learning is None:
             raise ValueError("learning_not_found")
+        duplicate = await self.session.scalar(
+            select(IntelligenceFeedbackModel.id).where(
+                IntelligenceFeedbackModel.learning_id == item.learning_id,
+                IntelligenceFeedbackModel.reviewer == item.reviewer,
+                IntelligenceFeedbackModel.observed_at == item.observed_at,
+            )
+        )
+        if duplicate is not None:
+            return False
         self.session.add(
             IntelligenceFeedbackModel(
                 learning_id=item.learning_id,
@@ -101,6 +110,7 @@ class IntelligenceRepository:
             learning.status = "validated"
         elif learning.status == "candidate":
             learning.status = "rejected"
+        return True
 
     async def append_audit(
         self,
@@ -112,6 +122,16 @@ class IntelligenceRepository:
         payload: dict,
         occurred_at: int,
     ) -> bool:
+        existing = await self.session.scalar(
+            select(IntelligenceAuditEventModel.id).where(
+                IntelligenceAuditEventModel.event_key == event_key
+            )
+        )
+        if existing is not None:
+            return False
+        # Serialize chain-head selection inside the PostgreSQL transaction so concurrent
+        # writers cannot silently create divergent previous_hash links.
+        await self.session.execute(select(func.pg_advisory_xact_lock(8473621)))
         existing = await self.session.scalar(
             select(IntelligenceAuditEventModel.id).where(
                 IntelligenceAuditEventModel.event_key == event_key
