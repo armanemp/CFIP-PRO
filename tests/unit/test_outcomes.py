@@ -115,6 +115,7 @@ def test_outcome_marks_same_bar_stop_and_target_as_ambiguous() -> None:
         direction="long",
         decision_time=100,
         state="emitted",
+        emitted_at=100,
     )
     result = OutcomeService().label(
         signal,
