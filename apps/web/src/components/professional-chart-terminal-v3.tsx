@@ -122,6 +122,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   }, [symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
+  const toggleFullscreen=async()=>{
+    const element=host.current?.parentElement;
+    if(!element)return;
+    if(document.fullscreenElement)await document.exitFullscreen();
+    else await element.requestFullscreen();
+  };
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -253,12 +260,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const drawing:Drawing={id:crypto.randomUUID(),tool:tool as Drawing["tool"],a:pendingPoint,b:point,visible:true,locked:false};
     setDrawings(value=>[...value,drawing]);
     setPendingPoint(null);
-  };
-  const toggleFullscreen=async()=>{
-    const element=host.current?.parentElement;
-    if(!element)return;
-    if(document.fullscreenElement)await document.exitFullscreen();
-    else await element.requestFullscreen();
   };
 
   return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
