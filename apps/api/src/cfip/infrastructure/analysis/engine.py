@@ -12,6 +12,8 @@ import numpy as np
 import talib
 import pyvsmc as smc
 
+from cfip.domain.data_quality import DataQualityPolicy, DataQualityReport, assess_data_quality
+
 from cfip.domain.analysis import (
     AnalysisEvidence,
     AnalysisRequest,
@@ -369,6 +371,24 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         candles = request.candles
     if len(candles) < 5:
         raise ValueError("insufficient_closed_bars")
+    expected_interval = _TIMEFRAME_SECONDS.get(request.timeframe)
+    if expected_interval is None:
+        data_quality = DataQualityReport(
+            status="insufficient",
+            expected_interval_seconds=0,
+            candle_count=len(candles),
+            contiguous_gap_count=0,
+            largest_contiguous_gap_seconds=0,
+            coverage_ratio=0.0,
+            first_bar_time=candles[0].time,
+            last_bar_time=candles[-1].time,
+            reasons=["unsupported_timeframe_for_continuity_policy"],
+        )
+    else:
+        data_quality = assess_data_quality(
+            [candle.time for candle in candles],
+            DataQualityPolicy(expected_interval_seconds=expected_interval),
+        )
     opens, highs, lows, closes, volumes = _arr(request)
     if request.closed_bar_only:
         opens, highs, lows, closes, volumes = (
@@ -471,11 +491,21 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
             passed=displacement_present or abs(structure_score) >= 0.5,
             detail="displacement or confirmed structure impulse is present",
         ),
+        ConfluenceGate(
+            id="data_quality",
+            passed=data_quality.status == "ok",
+            detail=(
+                "continuous market-data coverage meets policy"
+                if data_quality.status == "ok"
+                else "market-data continuity is degraded or insufficient; executable conclusion is blocked"
+            ),
+        ),
     ]
     passed = sum(g.passed for g in gates)
     confluence_score = int(round((passed / len(gates)) * 70 + min(30, abs(score) * 30)))
     accepted = (
-        confluence_score >= request.min_confluence_score
+        data_quality.status == "ok"
+        and confluence_score >= request.min_confluence_score
         and passed >= 3
         and abs(score) >= 0.15
     )
@@ -512,4 +542,5 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         mtf_contexts=mtf_contexts,
         risk_target=risk,
         closed_bar_time=candles[-1].time,
+        data_quality=data_quality,
     )
