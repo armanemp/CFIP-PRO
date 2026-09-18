@@ -5,11 +5,29 @@ mutation is always represented as a governed proposal with explicit safety gates
 """
 
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 Severity = Literal["info", "warning", "critical"]
-RepairAction = Literal["restart", "rollback", "disable", "invalidate_cache", "rebuild_index", "code_change", "config_change"]
-ProposalStatus = Literal["detected", "diagnosed", "testing", "awaiting_approval", "approved", "applied", "rolled_back", "rejected"]
+RepairAction = Literal[
+    "restart",
+    "rollback",
+    "disable",
+    "invalidate_cache",
+    "rebuild_index",
+    "code_change",
+    "config_change",
+]
+ProposalStatus = Literal[
+    "detected",
+    "diagnosed",
+    "testing",
+    "awaiting_approval",
+    "approved",
+    "applied",
+    "rolled_back",
+    "rejected",
+]
 
 
 class HealthSignal(BaseModel):
