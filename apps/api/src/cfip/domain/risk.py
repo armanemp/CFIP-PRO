@@ -5,6 +5,7 @@ pip/tick value, stop distance or broker constraints produce an unavailable resul
 than a fabricated position size.
 """
 
+from math import isfinite
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -19,6 +20,12 @@ class AccountRiskContext(BaseModel):
     risk_fraction: float = Field(gt=0, le=1)
     leverage: float = Field(gt=0)
     account_currency: str = Field(min_length=3, max_length=16)
+
+    @model_validator(mode="after")
+    def validate_finite(self) -> "AccountRiskContext":
+        if not all(isfinite(value) for value in (self.equity, self.risk_fraction, self.leverage)):
+            raise ValueError("non_finite_account_risk")
+        return self
 
 
 class InstrumentRiskContext(BaseModel):
@@ -36,7 +43,18 @@ class InstrumentRiskContext(BaseModel):
     quantity_step: float = Field(gt=0)
 
     @model_validator(mode="after")
-    def validate_quantity_bounds(self) -> "InstrumentRiskContext":
+    def validate_constraints(self) -> "InstrumentRiskContext":
+        values = (
+            self.pip_size,
+            self.tick_size,
+            self.tick_value_per_unit,
+            self.min_stop_distance,
+            self.min_quantity,
+            self.max_quantity,
+            self.quantity_step,
+        )
+        if not all(isfinite(value) for value in values):
+            raise ValueError("non_finite_instrument_risk")
         if self.max_quantity < self.min_quantity:
             raise ValueError("max_quantity_below_minimum")
         return self
@@ -54,6 +72,11 @@ class RiskTargetRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_targets(self) -> "RiskTargetRequest":
+        values = (self.entry, self.atr, self.stop_atr_multiplier, self.minimum_rr, *self.target_rr)
+        if not all(isfinite(value) for value in values):
+            raise ValueError("non_finite_risk_target")
+        if any(rr <= 0 for rr in self.target_rr):
+            raise ValueError("target_rr_must_be_positive")
         if any(rr < self.minimum_rr for rr in self.target_rr):
             raise ValueError("target_rr_below_minimum")
         return self
@@ -74,3 +97,20 @@ class RiskTargetPlan(BaseModel):
     risk_amount: float | None = None
     quantity: float | None = None
     margin_required: float | None = None
+
+    @model_validator(mode="after")
+    def validate_finite_outputs(self) -> "RiskTargetPlan":
+        values = (
+            self.entry,
+            self.stop,
+            self.tp1,
+            self.tp2,
+            self.tp3,
+            self.risk_distance,
+            self.risk_amount,
+            self.quantity,
+            self.margin_required,
+        )
+        if any(value is not None and not isfinite(value) for value in values):
+            raise ValueError("non_finite_risk_output")
+        return self
