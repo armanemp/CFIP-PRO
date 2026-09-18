@@ -81,6 +81,8 @@ def upgrade() -> None:
         sa.Column("aggregate_id", sa.String(length=160), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("occurred_at", sa.BigInteger(), nullable=False),
+        sa.Column("previous_hash", sa.String(length=128), nullable=True),
+        sa.Column("event_hash", sa.String(length=128), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("event_key", name="uq_intelligence_audit_event_key"),
@@ -90,9 +92,24 @@ def upgrade() -> None:
         "intelligence_audit_events",
         ["occurred_at"],
     )
+    op.execute("""
+        CREATE OR REPLACE FUNCTION prevent_intelligence_audit_mutation()
+        RETURNS trigger LANGUAGE plpgsql AS $
+        BEGIN
+            RAISE EXCEPTION 'intelligence audit events are immutable';
+        END;
+        $;
+    """)
+    op.execute("""
+        CREATE TRIGGER intelligence_audit_events_immutable
+        BEFORE UPDATE OR DELETE ON intelligence_audit_events
+        FOR EACH ROW EXECUTE FUNCTION prevent_intelligence_audit_mutation();
+    """)
 
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS intelligence_audit_events_immutable ON intelligence_audit_events")
+    op.execute("DROP FUNCTION IF EXISTS prevent_intelligence_audit_mutation()")
     op.drop_index("ix_intelligence_audit_events_occurred_at", table_name="intelligence_audit_events")
     op.drop_table("intelligence_audit_events")
     op.drop_index("ix_intelligence_feedback_learning_id", table_name="intelligence_feedback")
