@@ -158,6 +158,68 @@ def _regime(adx: float | None, atr: float, close: float) -> str:
     return "mixed"
 
 
+
+def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list[dict]:
+    """Track recent three-candle gaps without using future bars."""
+    states: list[dict] = []
+    start = max(2, len(high) - 24)
+    for i in range(start, len(high)):
+        if high[i - 2] < low[i]:
+            lower, upper, direction = float(high[i - 2]), float(low[i]), "bullish"
+        elif low[i - 2] > high[i]:
+            lower, upper, direction = float(high[i]), float(low[i - 2]), "bearish"
+        else:
+            continue
+        gap = max(upper - lower, np.finfo(float).eps)
+        state = "active"
+        mitigation = 0.0
+        for j in range(i + 1, len(high)):
+            overlap = max(0.0, min(float(high[j]), upper) - max(float(low[j]), lower))
+            if overlap > 0:
+                mitigation = max(mitigation, min(1.0, overlap / gap))
+            if direction == "bullish" and low[j] <= lower:
+                state = "mitigated"
+                mitigation = 1.0
+                break
+            if direction == "bearish" and high[j] >= upper:
+                state = "mitigated"
+                mitigation = 1.0
+                break
+        if state == "active" and mitigation > 0:
+            state = "partial"
+        states.append({
+            "id": f"fvg-{int(times[i])}-{direction}",
+            "direction": direction,
+            "lower": lower,
+            "upper": upper,
+            "state": state,
+            "origin_time": int(times[i]),
+            "last_evaluated_time": int(times[-1]),
+            "mitigation_ratio": round(mitigation, 4),
+        })
+    return states[-12:]
+
+
+def _liquidity_pools(high: np.ndarray, low: np.ndarray, close: np.ndarray, times: np.ndarray, atr: float) -> list[dict]:
+    if len(close) < 8 or atr <= 0:
+        return []
+    tolerance = max(atr * 0.15, close[-1] * 0.00005)
+    pools: list[dict] = []
+    for i in range(max(2, len(close) - 40), len(close) - 1):
+        if abs(high[i] - high[i - 1]) <= tolerance:
+            price = float((high[i] + high[i - 1]) / 2)
+            swept = bool(high[-1] > price + tolerance and close[-1] < price)
+            pools.append({"id": f"liq-b-{int(times[i])}", "side": "buy_side", "price": price,
+                          "strength": min(100, 50 + int(max(0.0, 1 - abs(high[i]-high[i-1])/max(tolerance,np.finfo(float).eps))*50)),
+                          "swept": swept, "origin_time": int(times[i])})
+        if abs(low[i] - low[i - 1]) <= tolerance:
+            price = float((low[i] + low[i - 1]) / 2)
+            swept = bool(low[-1] < price - tolerance and close[-1] > price)
+            pools.append({"id": f"liq-s-{int(times[i])}", "side": "sell_side", "price": price,
+                          "strength": min(100, 50 + int(max(0.0, 1 - abs(low[i]-low[i-1])/max(tolerance,np.finfo(float).eps))*50)),
+                          "swept": swept, "origin_time": int(times[i])})
+    return pools[-12:]
+
 def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     if request.closed_bar_only:
         if len(request.candles) <= 5:
@@ -184,6 +246,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     _, _, hist = talib.MACD(closes, fastperiod=12, slowperiod=26, signalperiod=9)
     macd_hist = _last(hist)
     close = float(closes[-1])
+    times = np.asarray([x.time for x in candles], dtype=np.int64)
 
     trend_score = 0.0
     trend_facts: list[str] = []
@@ -287,6 +350,8 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
         confluence_accepted=accepted,
         gates=gates,
         evidence=facts,
+        fvg_states=_fvg_lifecycle(highs, lows, times),
+        liquidity_pools=_liquidity_pools(highs, lows, closes, times, atr),
         risk_target=risk,
         closed_bar_time=candles[-1].time,
     )
