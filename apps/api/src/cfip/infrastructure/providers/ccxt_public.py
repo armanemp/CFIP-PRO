@@ -6,6 +6,7 @@ CFIP domain/application contracts. Credentials are not required for public OHLCV
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from math import isfinite
 
 import ccxt.async_support as ccxt
@@ -50,6 +51,7 @@ async def fetch_public_ohlcv(
     symbol: str,
     timeframe: str = "1m",
     limit: int = 500,
+    exchange_factory: Callable[[dict[str, object]], object] | None = None,
 ) -> dict[str, object]:
     """Fetch normalized public OHLCV data from a CCXT-supported exchange."""
     if not exchange_id or not exchange_id.replace("_", "").isalnum():
@@ -61,7 +63,7 @@ async def fetch_public_ohlcv(
     if limit < 1 or limit > 5000:
         raise ValueError("invalid_limit")
 
-    exchange_type = getattr(ccxt, exchange_id, None)
+    exchange_type = exchange_factory or getattr(ccxt, exchange_id, None)
     if not callable(exchange_type):
         raise ValueError("unsupported_exchange")
 
