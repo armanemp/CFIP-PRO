@@ -1,5 +1,5 @@
 import type { MarketObservation } from "@/lib/api";
-import type { Candle, Timeframe, Zone } from "./types";
+import type { Candle, OrderBlock, StructureEvent, StructurePoint, Timeframe, Zone } from "./types";
 import { timeframeSeconds } from "./types";
 
 export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
@@ -65,4 +65,45 @@ export function supportResistance(c: Candle[]) {
     else buckets.set(bucket, { price: point.price, touches: 1 });
   }
   return [...buckets.values()].filter(x => x.touches >= 2).sort((a, b) => b.touches - a.touches).slice(0, 8);
+}
+
+export function marketStructure(c: Candle[]) {
+  const raw = pivots(c);
+  const points: StructurePoint[] = [];
+  let lastHigh: number | undefined;
+  let lastLow: number | undefined;
+  for (const p of raw) {
+    if (p.high) {
+      const label: StructurePoint["label"] = lastHigh === undefined ? "HH" : p.price > lastHigh ? "HH" : "LH";
+      points.push({ ...p, label }); lastHigh = p.price;
+    } else {
+      const label: StructurePoint["label"] = lastLow === undefined ? "HL" : p.price > lastLow ? "HL" : "LL";
+      points.push({ ...p, label }); lastLow = p.price;
+    }
+  }
+  points.sort((a,b)=>Number(a.time)-Number(b.time));
+  const events: StructureEvent[] = [];
+  let trend: "bullish" | "bearish" | undefined;
+  let brokenHigh: number | undefined;
+  let brokenLow: number | undefined;
+  for (let i=0;i<c.length;i++) {
+    const candle=c[i];
+    const priorHigh=[...raw].reverse().find(p=>p.high && Number(p.time)<Number(candle.time) && (brokenHigh===undefined || p.price!==brokenHigh));
+    const priorLow=[...raw].reverse().find(p=>!p.high && Number(p.time)<Number(candle.time) && (brokenLow===undefined || p.price!==brokenLow));
+    if (priorHigh && candle.close>priorHigh.price) { const bullish=true; events.push({time:candle.time,type:trend && trend!=="bullish"?"CHoCH":"BOS",bullish,price:priorHigh.price}); trend="bullish"; brokenHigh=priorHigh.price; }
+    if (priorLow && candle.close<priorLow.price) { const bullish=false; events.push({time:candle.time,type:trend && trend!=="bearish"?"CHoCH":"BOS",bullish,price:priorLow.price}); trend="bearish"; brokenLow=priorLow.price; }
+  }
+  return { points: points.slice(-24), events: events.slice(-12) };
+}
+
+export function orderBlocks(c: Candle[]): OrderBlock[] {
+  const out: OrderBlock[] = [];
+  for (let i=2;i<c.length;i++) {
+    const impulse=c[i]; const body=Math.abs(impulse.close-impulse.open); const range=impulse.high-impulse.low;
+    if (range<=0 || body/range<0.6) continue;
+    const base=c[i-1];
+    if (impulse.close>impulse.open && base.close<base.open) out.push({time:base.time,end:c.at(-1)!.time,high:base.high,low:base.low,bullish:true,strength:Math.min(1,body/range)});
+    if (impulse.close<impulse.open && base.close>base.open) out.push({time:base.time,end:c.at(-1)!.time,high:base.high,low:base.low,bullish:false,strength:Math.min(1,body/range)});
+  }
+  return out.slice(-10);
 }
