@@ -34,8 +34,10 @@ export function setMainSeriesData(series: ChartMainSeries, kind: ChartKind, cand
 
 export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: string, title: string): ISeriesApi<"Line"> {
   const series = chart.addSeries(LineSeries, { color, lineWidth: 1, title, priceScaleId: "right" });
-  if (data.length) {
-    try { series.setData(data); } catch { series.setData([]); }
+  try {
+    series.setData(data.length ? data : []);
+  } catch {
+    series.setData([]);
   }
   return series;
 }
@@ -43,8 +45,10 @@ export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: s
 export function addVolumeSeries(chart: IChartApi, candles: Candle[]): ISeriesApi<"Histogram"> {
   const series = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" });
   series.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
-  if (candles.length) {
-    series.setData(candles.map(({ time, open, close, volume }) => ({ time, value: volume, color: close >= open ? "rgba(34,179,155,.32)" : "rgba(239,83,80,.32)" })));
+  try {
+    series.setData(candles.map(({ time, open, close, volume }) => ({ time, value: volume ?? 0, color: close >= open ? "rgba(34,179,155,.32)" : "rgba(239,83,80,.32)" })));
+  } catch {
+    series.setData([]);
   }
   return series;
 }
