@@ -29,19 +29,13 @@ class FakeExchange:
 
 @pytest.mark.asyncio
 async def test_ccxt_normalizes_sorted_deduplicated_valid_bars(
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     exchange = FakeExchange({})
-    monkeypatch.setattr(
-        ccxt_public.ccxt,
-        "fakeexchange",
-        lambda config: exchange,
-    )
-
     result = await ccxt_public.fetch_public_ohlcv(
         "fakeexchange",
         "BTC/USDT",
         limit=3,
+        exchange_factory=lambda _config: exchange,
     )
 
     assert [bar["time"] for bar in result["bars"]] == [1000, 2000, 3000]
