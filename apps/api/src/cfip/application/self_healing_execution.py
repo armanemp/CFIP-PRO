@@ -29,15 +29,13 @@ class SelfHealingExecutionService:
             "index",
         }
         if (
-            mutation_requires_approval
-            and request.artifact_kind == "code"
+            request.artifact_kind == "code"
             and policy.require_approval_for_code
             and not approval_present
         ):
             reasons.append("approval_required")
         if (
-            mutation_requires_approval
-            and request.artifact_kind == "dependency"
+            request.artifact_kind == "dependency"
             and policy.require_approval_for_dependency
             and not approval_present
         ):
