@@ -5,6 +5,12 @@ Repository: armanemp/CFIP-PRO
 
 ## Completed in this batch
 
+- Implemented event-time higher-timeframe aggregation for the canonical analysis engine (1H/4H/1D where applicable).
+- Enforced HTF closed-bar availability and exposed typed MTF context with completeness/confidence.
+- Replaced the previous same-timeframe placeholder alignment calculation with directional alignment across actual higher-timeframe contexts.
+- Added strict increasing-candle and finite-positive OHLC validation to prevent silent analytical corruption.
+- Added regression coverage for MTF context and market-data integrity guards.
+
 - Added canonical FVG lifecycle state contracts and causal mitigation tracking.
 - Added canonical liquidity-pool contracts with ATR-relative tolerance and sweep state.
 - Added canonical order-block lifecycle contracts with displacement linkage and breaker state.
@@ -33,13 +39,15 @@ The terminal remains chart-first. Frontend analysis is currently retained for vi
 
 ## Remaining high-value work
 
-1. True causal multi-timeframe aggregation across actual event-time bars rather than local resampling approximations.
+1. Extend causal MTF aggregation to provider/session calendars and explicit data-quality gap policy.
 2. Broker/account-aware Entry/SL/TP1/TP2/TP3 and position sizing.
 3. Replay and backtest boundary with explicit no-lookahead execution semantics.
 4. Signal outcome attribution, calibration and drift.
 5. Notification lifecycle and cooldown/startup suppression.
 6. Research provenance, evidence freshness and governed AI orchestration.
 7. Whole-repository frontend/backend/security/performance audit and CI verification.
+8. Risk/account context and executable target model.
+9. Replay/backtest, signal lifecycle, attribution/calibration/drift, notifications, and governed research/AI orchestration.
 
 ## Current verification note
 
