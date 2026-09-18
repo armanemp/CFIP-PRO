@@ -293,7 +293,7 @@ def _regime(adx: float | None, atr: float, close: float) -> Regime:
 
 
 
-def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list[dict[str, Any]]:
+def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, close: np.ndarray, times: np.ndarray) -> list[dict[str, Any]]:
     """Track recent three-candle gaps using only bars available at evaluation time."""
     states: list[dict] = []
     start = max(2, len(high) - 24)
