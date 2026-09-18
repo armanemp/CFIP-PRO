@@ -134,6 +134,11 @@ class IntelligenceProposalModel(Base):
 
 class IntelligenceFeedbackModel(Base):
     __tablename__ = "intelligence_feedback"
+    __table_args__ = (
+        UniqueConstraint(
+            "learning_id", "reviewer", "observed_at", name="uq_intelligence_feedback_idempotency"
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     learning_id: Mapped[str] = mapped_column(
