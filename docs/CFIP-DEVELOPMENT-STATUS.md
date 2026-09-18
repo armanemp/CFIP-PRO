@@ -29,7 +29,7 @@ Self-healing execution is intentionally separated from diagnosis. No shell/proce
 
 ## Active completion tracks
 
-1. Persistent signal/outcome/event store and immutable audit trail (schema migration now added; runtime repository/API wiring remains).
+1. Persistent signal/outcome/event store and immutable audit trail (repository/API wiring now present; migration chain includes 0003 outcome analytics and 0004 feedback idempotency).
 2. Full risk/position-sizing and Entry/SL/TP1/TP2/TP3 engine.
 3. Complete FVG/OB/liquidity invalidation, mitigation, breaker and target semantics.
 4. Replay/backtest with explicit event-time/no-lookahead contracts.
@@ -99,3 +99,19 @@ A second repository-wide source audit closed additional failure modes that had p
 - The migration name in this status document is aligned with the actual 0003_signal_outcomes revision.
 
 Verification policy: GitHub commit existence is verified after each write. GitHub currently exposes no workflow/status result for the newest connector-created commits, so CI green is not claimed until an actual GitHub Actions result exists.
+
+
+## 2026-09-18 — deep causal/outcome and terminal hardening
+
+The latest repository audit applied and verified the following corrections on GitHub:
+- Signal/outcome persistence now has an executable repository and FastAPI boundary for lifecycle records, outcome events, finalized outcomes, calibration and drift reports.
+- Signal writes preserve risk/target context and evidence on idempotent retries while rejecting conflicting immutable identity fields.
+- Intelligence feedback is idempotent at both repository and PostgreSQL-constraint levels; the tamper-evident audit chain serializes chain-head selection inside a PostgreSQL transaction.
+- Outcome attribution now marks a same-bar stop/TP collision as 'ambiguous' instead of inventing an event order from OHLC data alone.
+- Risk contracts reject non-finite account, instrument, target and output values and require strictly positive target R multiples.
+- Higher-timeframe aggregation rejects missing base bars instead of treating sparse data as complete; reported HTF closed-bar time is causal to the last constituent base bar.
+- FVG lifecycle now distinguishes partial/mitigated states from invalidation by a close through the zone boundary.
+- Chart overlays subscribe to viewport changes so drawings/zones are recalculated after pan/zoom rather than remaining visually stale.
+- The frontend chart instance no longer gets recreated merely because locale/grid preferences change; grid updates are applied in place.
+
+The remaining blocker is operational verification: the GitHub connector currently exposes no workflow result for the newest commits, so source correctness has been hardened but CI green is not asserted without an actual Actions result.
