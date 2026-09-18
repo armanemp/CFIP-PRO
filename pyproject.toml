@@ -14,6 +14,10 @@ dependencies = [
   "nats-py>=2.11,<3",
   "redis==8.1.0",
   "TA-Lib==0.8.0",
+  "ccxt==4.5.78",
+  "polars==1.44.2",
+  "pyvsmc==0.3.7",
+  "pydantic-ai==2.44.0",
   "uvicorn[standard]>=0.35,<1",
 ]
 
