@@ -3,7 +3,7 @@
 import type { Candle, Drawing, InspectorTab, Locale, ChartPreferences, OrderBlock, StructureEvent, StructurePoint } from "./types";
 import type { UnifiedAnalysis } from "./analysis-contracts";
 import { t } from "./i18n";
-import "./terminal-theme.css";
+import "./terminal-theme.module.css";
 
 const tabsA: InspectorTab[] = ["market", "watchlist", "structure"];
 const tabsB: InspectorTab[] = ["intelligence", "risk", "objects"];
