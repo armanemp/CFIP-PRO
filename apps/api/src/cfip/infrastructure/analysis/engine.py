@@ -181,7 +181,6 @@ def _order_block_lifecycle(
                 break
             if bearish and closes[j] > block_high:
                 state = "breaker"
-                breaker = True
                 break
             if lows[j] <= block_high and highs[j] >= block_low:
                 state = "mitigated"
