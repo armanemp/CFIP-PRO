@@ -10,7 +10,9 @@ import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
-import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange } from "@/components/terminal/chart-math";
+import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
+import "./terminal/terminal-theme.css";
+import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
@@ -31,6 +33,20 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const pivotPoints=useMemo(()=>pivots(candles),[candles]);
   const levels=useMemo(()=>supportResistance(candles),[candles]);
   const session=useMemo(()=>sessionRange(candles),[candles]);
+  const structure=useMemo(()=>marketStructure(candles),[candles]);
+  const blocks=useMemo(()=>orderBlocks(candles),[candles]);
+  const liquidity=useMemo(()=>liquidityAnalysis(candles),[candles]);
+  const displacement=useMemo(()=>displacementAnalysis(candles),[candles]);
+  const pd=useMemo(()=>premiumDiscount(candles),[candles]);
+  const mtf=useMemo(()=>mtfStructure(candles,tf),[candles,tf]);
+  const rsiValue=useMemo(()=>rsi(candles,14).at(-1)?.value ?? null,[candles]);
+  const macdValue=useMemo(()=>macd(candles).histogram.at(-1)?.value ?? null,[candles]);
+  const atrValue=useMemo(()=>atr(candles,14).at(-1)?.value ?? null,[candles]);
+  const analysis=useMemo<UnifiedAnalysis>(()=>aggregateAnalysis({
+    candles,zones,structurePoints:structure.points,structureEvents:structure.events,orderBlocks:blocks,
+    liquidityPools:liquidity.pools,liquiditySweeps:liquidity.sweeps,displacement,premiumDiscount:pd,mtf,
+    rsi:rsiValue,macdHistogram:macdValue,atr:atrValue,
+  }),[candles,zones,structure,blocks,liquidity,displacement,pd,mtf,rsiValue,macdValue,atrValue]);
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
@@ -97,11 +113,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const id=window.setInterval(load,2000);
     return()=>{active=false;window.clearInterval(id);};
   },[symbol]);
-
-  useEffect(()=>{
-    document.documentElement.dir=rtlLocales.has(locale)?"rtl":"ltr";
-    document.documentElement.lang=locale;
-  },[locale]);
 
   useEffect(()=>{
     if(!host.current)return;
@@ -181,8 +192,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     else await element.requestFullscreen();
   };
 
-  return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
-    <header className="relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
+  return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
+    <header className="cfip-terminal-topbar relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
       <button onClick={()=>toggleRail(!rail)} title={rail?t(locale,"hideRail"):t(locale,"showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
       <button onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
       {panel==="symbol"&&<SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/>}
@@ -208,7 +219,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       </div>}
     </header>
     <div className="flex min-h-0 flex-1">
-      {rail&&<nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{tools.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{toolGlyph[x]}</button>)}</nav>}
+      {rail&&<nav className="cfip-terminal-rail flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{tools.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{toolGlyph[x]}</button>)}</nav>}
       <section className="relative min-w-0 flex-1" onClick={placeDrawing}>
 <div className="absolute left-3 top-8 z-20 flex gap-2 text-[10px] text-[#66758a]">
           {pivotPoints.at(-1) && <span>Structure: {pivotPoints.at(-1)?.high ? "swing high" : "swing low"}</span>}
@@ -244,9 +255,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={setDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks}/>}
+      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={analysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={setDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks}/>}
     </div>
-    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
+    <footer className="cfip-terminal-footer flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
       <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
       <ChartAttribution locale={locale}/>
     </footer>
