@@ -177,7 +177,6 @@ def _order_block_lifecycle(
         for j in range(i + 2, len(closes)):
             if bullish and closes[j] < block_low:
                 state = "breaker"
-                breaker = True
                 break
             if bearish and closes[j] > block_high:
                 state = "breaker"
@@ -232,7 +231,6 @@ def _aggregate_htf(candles: list[Any], base_seconds: int, target_seconds: int) -
         if actual_times != expected_times:
             continue
         coverage = 1.0
-        end = start + target_seconds
         bars.append({
             "time": start,
             "open": float(ordered[0].open),
