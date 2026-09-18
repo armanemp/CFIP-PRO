@@ -28,3 +28,65 @@ export async function getMarketObservations(symbol: string, venue: string, limit
   if (demo.last !== null) rows.push({ id: "00000000-0000-4000-8000-999999999999", instrument_id: instrumentId, observed_at: demo.observed_at, bid: demo.bid === null ? null : String(demo.bid), ask: demo.ask === null ? null : String(demo.ask), last: String(demo.last), volume: null, source: demo.provider, source_event_id: `demo-quote-${demo.observed_at}`, created_at: new Date().toISOString() });
   return rows;
 }
+
+
+const AnalysisModuleSchema = z.object({
+  module: z.string(),
+  bias: z.enum(["bullish","bearish","neutral"]),
+  score: z.number(),
+  confidence: z.number(),
+  summary: z.string(),
+  facts: z.array(z.string()),
+});
+const AnalysisGateSchema = z.object({
+  id: z.string(),
+  passed: z.boolean(),
+  detail: z.string(),
+});
+const RiskTargetSchema = z.object({
+  available: z.boolean(),
+  reason: z.string().nullable(),
+  entry: z.number().nullable(),
+  stop: z.number().nullable(),
+  risk_distance: z.number().nullable(),
+  tp1: z.number().nullable(),
+  tp2: z.number().nullable(),
+  tp3: z.number().nullable(),
+  rr1: z.number().nullable(),
+  rr2: z.number().nullable(),
+  rr3: z.number().nullable(),
+});
+export const UnifiedAnalysisSchema = z.object({
+  symbol: z.string(),
+  timeframe: z.string(),
+  as_of: z.string(),
+  bias: z.enum(["bullish","bearish","neutral"]),
+  score: z.number(),
+  confidence: z.number(),
+  regime: z.enum(["trending","ranging","volatile","mixed","insufficient"]),
+  recommendation: z.enum(["long","short","wait"]),
+  modules: z.array(AnalysisModuleSchema),
+  confluence_score: z.number(),
+  confluence_threshold: z.number(),
+  confluence_accepted: z.boolean(),
+  gates: z.array(AnalysisGateSchema),
+  evidence: z.array(z.string()),
+  risk_target: RiskTargetSchema,
+  closed_bar_time: z.number().nullable(),
+});
+export type UnifiedAnalysisRead = z.infer<typeof UnifiedAnalysisSchema>;
+
+export async function postUnifiedAnalysis(
+  symbol: string,
+  timeframe: string,
+  candles: Array<{ time: number; open: number; high: number; low: number; close: number; volume: number }>,
+): Promise<UnifiedAnalysisRead> {
+  const response = await fetch(`${apiBaseUrl}/analysis/unified`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ symbol, timeframe, candles, closed_bar_only: true }),
+  });
+  if (!response.ok) throw new Error(`Unified analysis request failed: ${response.status}`);
+  return UnifiedAnalysisSchema.parse(await response.json());
+}
