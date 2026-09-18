@@ -1,3 +1,12 @@
+## 2026-09-18 — Terminal analytics expansion
+
+- Extended the terminal's reusable market-math layer with MACD, configurable session-range extraction, and support/resistance clustering derived from swing pivots.
+- Added RSI 14 and MACD study rendering to the existing Lightweight Charts terminal without introducing another runtime dependency.
+- Added lightweight on-chart context badges for detected FVG count, latest swing structure, support/resistance availability, and optional session range; these are derived only from normalized observations.
+- Kept the architecture dependency-light: calculations remain isolated from the renderer and can later be replaced/adapted to mature Python analytics packages without coupling the UI to a vendor implementation.
+- Implementation commits: `f0c025a8c4867694ccedccef422e234ea6ad20fb`, `d15455d16fb1514cd0b01133d7742d54feba74b4`.
+- CI verification is pending for the latest changes.
+
 ## 2026-09-18 — Terminal workspace persistence, shortcuts and capture
 
 - Added `apps/web/src/components/terminal/session-storage.ts` as a small browser-only persistence boundary for terminal session state. It stores symbol, timeframe, chart type, locale, active tool, selected studies and terminal preferences under a versioned local-storage key; malformed/unavailable storage is ignored so the terminal remains usable.
