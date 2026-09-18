@@ -1,4 +1,4 @@
-import type { ChartKind, ChartPreferences, Locale, Timeframe, Tool } from "./types";
+import type { ChartKind, ChartPreferences, Drawing, Locale, Timeframe, Tool } from "./types";
 
 export interface TerminalSession {
   symbol: string;
@@ -8,6 +8,7 @@ export interface TerminalSession {
   tool: Tool;
   selectedStudies: string[];
   preferences: ChartPreferences;
+  drawings: Drawing[];
 }
 
 const KEY = "cfip-pro:terminal-session:v1";
@@ -23,6 +24,7 @@ export function loadTerminalSession(fallback: TerminalSession): TerminalSession 
       ...value,
       selectedStudies: Array.isArray(value.selectedStudies) ? value.selectedStudies : fallback.selectedStudies,
       preferences: { ...fallback.preferences, ...(value.preferences ?? {}) },
+      drawings: Array.isArray(value.drawings) ? value.drawings : fallback.drawings,
     };
   } catch {
     return fallback;
