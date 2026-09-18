@@ -11,7 +11,7 @@ import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Timeframe, type Tool } from "@/components/terminal/types";
 import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
-import "./terminal/terminal-theme.css";
+import "./terminal/terminal-theme.module.css";
 import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
