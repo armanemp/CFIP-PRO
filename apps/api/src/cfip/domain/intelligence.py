@@ -1,16 +1,18 @@
-"""Canonical contracts for governed platform intelligence and learning.
-
-The intelligence layer is deliberately provider/model agnostic. It records evidence,
-lessons and feedback as auditable facts; deterministic market decisions remain outside
-the learning loop and cannot be silently overridden by an AI model.
-"""
+"""Canonical contracts for governed platform intelligence and learning."""
 
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 LearningType = Literal[
-    "market_pattern", "trade_outcome", "user_feedback", "research", "data_quality",
-    "model_evaluation", "risk_review", "system_incident",
+    "market_pattern",
+    "trade_outcome",
+    "user_feedback",
+    "research",
+    "data_quality",
+    "model_evaluation",
+    "risk_review",
+    "system_incident",
 ]
 EvidenceKind = Literal["market", "analysis", "outcome", "research", "user", "system"]
 LessonStatus = Literal["candidate", "validated", "rejected", "superseded"]
@@ -45,21 +47,43 @@ class LearningRecord(BaseModel):
 
     @model_validator(mode="after")
     def require_evidence_for_learning(self) -> "LearningRecord":
-        if self.type in {"market_pattern", "trade_outcome", "research", "model_evaluation"} and not self.evidence_ids:
+        if (
+            self.type
+            in {"market_pattern", "trade_outcome", "research", "model_evaluation"}
+            and not self.evidence_ids
+        ):
             raise ValueError("learning_requires_evidence")
         return self
 
 
 class TrainingExample(BaseModel):
+    """Leakage-resistant, lineage-aware example prepared for model evaluation/training."""
+
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1, max_length=128)
     subject: str = Field(min_length=1, max_length=256)
+    schema_version: str = Field(default="1", min_length=1, max_length=32)
+    as_of: int = Field(gt=0)
+    timeframe: str = Field(min_length=1, max_length=16)
     feature_vector: dict[str, float] = Field(default_factory=dict, max_length=128)
+    feature_schema: dict[str, str] = Field(default_factory=dict, max_length=128)
     target: Literal["bullish", "bearish", "neutral"] | None = None
     outcome: Literal["win", "loss", "breakeven", "unknown"] = "unknown"
-    evidence_ids: list[str] = Field(min_length=1, max_length=100)
+    label_horizon_bars: int = Field(default=0, ge=0, le=100000)
     label_quality: float = Field(default=0.0, ge=0, le=1)
+    evidence_ids: list[str] = Field(min_length=1, max_length=100)
+    source_analysis_id: str | None = Field(default=None, max_length=128)
+    dataset_id: str | None = Field(default=None, max_length=128)
+    provenance_hash: str = Field(min_length=16, max_length=128)
+
+    @model_validator(mode="after")
+    def validate_lineage(self) -> "TrainingExample":
+        if not self.feature_vector:
+            raise ValueError("training_example_requires_features")
+        if set(self.feature_schema) != set(self.feature_vector):
+            raise ValueError("training_feature_schema_mismatch")
+        return self
 
 
 class IntelligenceFeedback(BaseModel):
