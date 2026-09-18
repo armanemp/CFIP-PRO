@@ -254,7 +254,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const time=chartRef.current.timeScale().coordinateToTime(x);
     const price=mainRef.current.coordinateToPrice(y);
     if(time===null||price===null)return;
-    const point={time,price};
+    if(typeof time !== "number")return;
+    const point:Point={time:time as UTCTimestamp,price:price as number};
     if(!pendingPoint){setPendingPoint(point);return;}
     const drawing:Drawing={id:crypto.randomUUID(),tool:tool as Drawing["tool"],a:pendingPoint,b:point,visible:true,locked:false};
     setDrawings(value=>[...value,drawing]);
