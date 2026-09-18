@@ -32,7 +32,7 @@ jobs:
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run pytest
-      - run: uv run alembic -c apps/api/alembic.ini upgrade head
+      - run: uv run alembic -c alembic.ini upgrade head
 
   frontend:
     runs-on: ubuntu-latest
