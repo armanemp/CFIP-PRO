@@ -222,7 +222,7 @@ def _liquidity_pools(high: np.ndarray, low: np.ndarray, close: np.ndarray, times
 
 def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     if request.closed_bar_only:
-        if len(request.candles) <= 5:
+        if len(request.candles) < 6:
             raise ValueError("insufficient_closed_bars")
         candles = request.candles[:-1]
     else:
@@ -294,11 +294,12 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
 
     bullish_mtf = int(ema20 is not None and ema50 is not None and ema20 > ema50)
     bearish_mtf = int(ema20 is not None and ema50 is not None and ema20 < ema50)
+    aligned_htfs = bullish_mtf + bearish_mtf
     gates = [
         ConfluenceGate(
             id="htf_alignment",
-            passed=bullish_mtf > 0 or bearish_mtf > 0,
-            detail="directional EMA alignment is available",
+            passed=aligned_htfs >= request.minimum_aligned_htfs if request.minimum_aligned_htfs > 0 else aligned_htfs > 0,
+            detail=f"{aligned_htfs} aligned timeframe context(s); minimum={request.minimum_aligned_htfs}",
         ),
         ConfluenceGate(
             id="liquidity_or_fvg",
