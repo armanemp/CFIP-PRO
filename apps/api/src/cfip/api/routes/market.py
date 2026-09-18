@@ -16,6 +16,7 @@ from cfip.domain.market import (
     MarketObservationRead,
 )
 from cfip.infrastructure.db.session import get_session
+from cfip.infrastructure.providers.ccxt_public import fetch_public_ohlcv
 from cfip.infrastructure.providers.eodhd_demo import fetch_demo_market
 
 router = APIRouter(prefix="/market")
@@ -91,3 +92,19 @@ async def demo_eurusd(limit: int = Query(default=500, ge=50, le=1000)) -> dict[s
         return await fetch_demo_market(limit)
     except Exception as exc:
         raise HTTPException(status_code=502, detail="demo_provider_unavailable") from exc
+
+
+@router.get("/providers/ccxt/ohlcv")
+async def ccxt_ohlcv(
+    exchange: str = Query(min_length=1, max_length=32),
+    symbol: str = Query(min_length=1, max_length=64),
+    timeframe: str = Query(default="1m", min_length=1, max_length=16),
+    limit: int = Query(default=500, ge=1, le=5000),
+) -> dict[str, object]:
+    """Return normalized public OHLCV from a CCXT-supported crypto venue."""
+    try:
+        return await fetch_public_ohlcv(exchange, symbol, timeframe, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="ccxt_provider_unavailable") from exc
