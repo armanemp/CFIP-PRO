@@ -64,7 +64,7 @@ export function TerminalSidebar({
       {tab === "intelligence" && <div className="space-y-3">
         <div className="rounded border border-[#263241] bg-[#0a0f16] p-3">
           <div className="flex items-center justify-between"><span className="text-xs uppercase text-[#64748b]">Decision engine</span><strong>{analysis.recommendation.toUpperCase()}</strong></div>
-          <div className="mt-1 text-[10px] text-[#64748b]">{biasLabel(analysis)} · score {analysis.score.toFixed(2)} · {Math.round(analysis.confidence*100)}% confidence</div>
+          <div className="mt-1 text-[10px] text-[#64748b]">{biasLabel(analysis)} · score {analysis.score.toFixed(2)} · {Math.round(analysis.confidence*100)}% confidence</div><div className="mt-2 text-[10px] text-[#64748b]">Confluence {analysis.confluence.score}/{analysis.confluence.threshold}</div><div className="mt-1 grid grid-cols-2 gap-1">{analysis.confluence.gates.map(g=><span key={g.id} className={`rounded px-1.5 py-1 ${g.passed?"bg-[#173128] text-emerald-300":"bg-[#241b1b] text-red-300"}`}>{g.passed?"✓":"×"} {g.id.replaceAll("_"," ")}</span>)}</div>
         </div>
         <div className="grid grid-cols-2 gap-1.5">{analysis.modules.map(m => <div key={m.module} className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] uppercase text-[#64748b]">{m.module.replace("_"," ")}</div><div className="mt-1 text-xs">{m.bias} · {Math.round(m.confidence*100)}%</div></div>)}</div>
         <div className="rounded border border-[#263241] bg-[#0a0f16] p-3">
