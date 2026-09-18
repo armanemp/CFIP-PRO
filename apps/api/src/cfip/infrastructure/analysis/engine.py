@@ -7,6 +7,7 @@ not generic indicator calculations.
 
 from dataclasses import dataclass
 from math import isfinite
+from typing import Any
 import numpy as np
 import talib
 
@@ -149,7 +150,7 @@ def _premium_discount(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> t
 
 def _order_block_lifecycle(
     opens: np.ndarray, highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, times: np.ndarray, atr: float,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Identify conservative origin candles and track mitigation/invalidation causally."""
     if len(closes) < 8 or atr <= 0:
         return []
