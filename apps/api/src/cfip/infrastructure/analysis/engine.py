@@ -161,11 +161,16 @@ def _regime(adx: float | None, atr: float, close: float) -> str:
 
 
 def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
-    candles = request.candles[:-1] if request.closed_bar_only and len(request.candles) > 5 else request.candles
+    if request.closed_bar_only:
+        if len(request.candles) <= 5:
+            raise ValueError("insufficient_closed_bars")
+        candles = request.candles[:-1]
+    else:
+        candles = request.candles
     if len(candles) < 5:
         raise ValueError("insufficient_closed_bars")
     opens, highs, lows, closes, volumes = _arr(request)
-    if request.closed_bar_only and len(closes) > 5:
+    if request.closed_bar_only:
         opens, highs, lows, closes, volumes = (
             x[:-1] for x in (opens, highs, lows, closes, volumes)
         )
