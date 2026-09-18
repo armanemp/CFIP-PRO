@@ -5,6 +5,13 @@ Repository: armanemp/CFIP-PRO
 
 ## Completed in this batch
 
+- Added canonical FVG lifecycle state contracts and causal mitigation tracking.
+- Added canonical liquidity-pool contracts with ATR-relative tolerance and sweep state.
+- Added canonical order-block lifecycle contracts with displacement linkage and breaker state.
+- Exposed lifecycle state through the frontend API schema.
+- Added lifecycle and malformed-OHLC regression coverage.
+- Fixed the backend confluence gate so `minimum_aligned_htfs` is actually enforced.
+
 - Added stable TA-Lib==0.8.0 to the Python 3.14 backend.
 - Replaced the placeholder analysis endpoint with a deterministic backend analysis service.
 - Added strict analysis request/candle validation.
@@ -26,17 +33,18 @@ The terminal remains chart-first. Frontend analysis is currently retained for vi
 
 ## Remaining high-value work
 
-1. Full FVG lifecycle: active, partial mitigation, full mitigation, invalidation.
-2. Full order-block lifecycle: origin, displacement link, mitigation, invalidation, breaker.
-3. True liquidity pools/sweeps/nearest-target state with ATR-relative tolerance.
-4. Causal multi-timeframe aggregation across actual event-time bars rather than local resampling approximations.
-5. Broker/account-aware Entry/SL/TP1/TP2/TP3 and position sizing.
-6. Replay and backtest boundary with explicit no-lookahead execution semantics.
-7. Signal outcome attribution, calibration and drift.
-8. Notification lifecycle and cooldown/startup suppression.
-9. Research provenance, evidence freshness and governed AI orchestration.
-10. Whole-repository frontend/backend/security/performance audit and CI verification.
+1. True causal multi-timeframe aggregation across actual event-time bars rather than local resampling approximations.
+2. Broker/account-aware Entry/SL/TP1/TP2/TP3 and position sizing.
+3. Replay and backtest boundary with explicit no-lookahead execution semantics.
+4. Signal outcome attribution, calibration and drift.
+5. Notification lifecycle and cooldown/startup suppression.
+6. Research provenance, evidence freshness and governed AI orchestration.
+7. Whole-repository frontend/backend/security/performance audit and CI verification.
 
 ## Current verification note
 
 The latest repository commits were created successfully through GitHub. The repository workflow query currently exposes no PR-triggered workflow run for the latest push, so CI is not being claimed as green until an actual workflow result is available.
+
+## Latest implementation checkpoint
+
+HEAD advanced through the lifecycle contract, FVG/liquidity state, order-block/breaker state, frontend schema, and regression-test commits. CI is not claimed green without a visible workflow result.
