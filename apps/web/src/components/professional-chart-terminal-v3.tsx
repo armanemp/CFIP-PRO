@@ -26,7 +26,11 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
-  const last=candles.at(-1),prev=candles.at(-2);\n  const zones=useMemo(()=>fvg(candles),[candles]);\n  const pivotPoints=useMemo(()=>pivots(candles),[candles]);\n  const levels=useMemo(()=>supportResistance(candles),[candles]);\n  const session=useMemo(()=>sessionRange(candles),[candles]);
+  const last=candles.at(-1),prev=candles.at(-2);
+  const zones=useMemo(()=>fvg(candles),[candles]);
+  const pivotPoints=useMemo(()=>pivots(candles),[candles]);
+  const levels=useMemo(()=>supportResistance(candles),[candles]);
+  const session=useMemo(()=>sessionRange(candles),[candles]);
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
