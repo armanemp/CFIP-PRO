@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from cfip.domain.data_quality import DataQualityReport
+
 Bias = Literal["bullish", "bearish", "neutral"]
 Recommendation = Literal["long", "short", "wait"]
 Regime = Literal["trending", "ranging", "volatile", "mixed", "insufficient"]
@@ -174,3 +176,4 @@ class UnifiedAnalysisRead(BaseModel):
     mtf_contexts: list[MTFContext] = Field(default_factory=list)
     risk_target: RiskTargetPlan
     closed_bar_time: int | None = None
+    data_quality: DataQualityReport
