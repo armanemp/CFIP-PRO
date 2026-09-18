@@ -12,7 +12,7 @@ import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
-import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, displacementAnalysis, premiumDiscount, mtfStructure, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
+import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
@@ -89,7 +89,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       }
     : analysis;
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
-  void viewRevision;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
   useEffect(() => {
@@ -241,7 +240,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
-  const resetView=()=>chartRef.current?.timeScale().fitContent();
   const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
     if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
     const rect=event.currentTarget.getBoundingClientRect();
