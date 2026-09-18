@@ -84,3 +84,18 @@ The self-healing layer now has executable deterministic health controls in addit
 - health/circuit transitions are deterministic and covered by unit tests.
 
 The executor boundary remains separate: these controls decide whether remediation may proceed; they do not execute arbitrary shell/process commands.
+
+
+## 2026-09-18 — release-integrity gates and repair hardening
+
+A second repository-wide source audit closed additional failure modes that had previously allowed commits to land without proving operational integrity:
+- Signal lifecycle contracts now enforce causal event ordering and state-dependent timestamps.
+- Outcome observations validate OHLC consistency before attribution.
+- Training examples now carry schema/version, closed-bar timestamp, feature schema, label horizon and provenance hash; feature/schema mismatches are rejected.
+- Persistent signal/outcome storage has deterministic uniqueness boundaries and foreign-key protection.
+- Self-healing execution now requires security evidence for mutable artifacts and has an explicit failure circuit-breaker in addition to repair budget/cooldown controls.
+- Health remediation preserves the configured circuit cooldown and does not report an already-open circuit as closed.
+- CI now starts PostgreSQL, executes the complete Alembic migration chain, runs backend tests/lint, and uses npm ci with the lockfile for the frontend.
+- The migration name in this status document is aligned with the actual 0003_signal_outcomes revision.
+
+Verification policy: GitHub commit existence is verified after each write. GitHub currently exposes no workflow/status result for the newest connector-created commits, so CI green is not claimed until an actual GitHub Actions result exists.
