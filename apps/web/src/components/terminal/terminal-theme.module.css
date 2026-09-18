@@ -16,7 +16,11 @@
 :global(.cfip-terminal) {
   background: var(--cfip-terminal-bg);
   color: var(--cfip-terminal-text);
+  direction: ltr;
 }
+
+:global(.cfip-terminal[dir="rtl"]) { direction: ltr; }
+:global(.cfip-terminal[dir="rtl"] .cfip-terminal-copy) { direction: rtl; text-align: right; }
 
 :global(.cfip-terminal button) {
   min-height: 32px;
