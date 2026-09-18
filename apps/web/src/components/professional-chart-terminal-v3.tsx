@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ColorType, CrosshairMode, createChart, type IChartApi, type ISeriesApi, type SeriesType } from "lightweight-charts";
 import type { MarketObservation } from "@/lib/api";
-import { getMarketObservations } from "@/lib/api";
+import { getMarketObservations, postUnifiedAnalysis, type UnifiedAnalysisRead } from "@/lib/api";
 import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
@@ -25,7 +25,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const host=useRef<HTMLDivElement>(null);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -58,6 +58,43 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     liquidityPools:analysisLiquidity.pools,liquiditySweeps:analysisLiquidity.sweeps,displacement:analysisDisplacement,premiumDiscount:analysisPd,mtf:analysisMtf,
     rsi:analysisRsi,macdHistogram:analysisMacd,atr:analysisAtr,
   }),[analysisCandles,analysisZones,analysisStructure,analysisBlocks,analysisLiquidity,analysisDisplacement,analysisPd,analysisMtf,analysisRsi,analysisMacd,analysisAtr]);
+  useEffect(() => {
+    if (analysisCandles.length < 5) {
+      setBackendAnalysis(null);
+      return;
+    }
+    let active = true;
+    const run = async () => {
+      try {
+        const result = await postUnifiedAnalysis(symbol, tf, analysisCandles);
+        if (active) setBackendAnalysis(result);
+      } catch {
+        if (active) setBackendAnalysis(null);
+      }
+    };
+    void run();
+    return () => { active = false; };
+  }, [analysisCandles, symbol, tf]);
+
+  const canonicalAnalysis: UnifiedAnalysis = backendAnalysis
+    ? {
+        ...analysis,
+        bias: backendAnalysis.bias,
+        score: backendAnalysis.score,
+        confidence: backendAnalysis.confidence,
+        regime: backendAnalysis.regime,
+        recommendation: backendAnalysis.recommendation,
+        evidence: backendAnalysis.evidence,
+        confluence: {
+          score: backendAnalysis.confluence_score,
+          threshold: backendAnalysis.confluence_threshold,
+          accepted: backendAnalysis.confluence_accepted,
+          gates: backendAnalysis.gates.filter((gate): gate is UnifiedAnalysis["confluence"]["gates"][number] =>
+            ["htf_alignment","liquidity_or_fvg","zone_or_premium","displacement_or_structure"].includes(gate.id),
+          ).map(gate => ({ id: gate.id, passed: gate.passed, detail: gate.detail })),
+        },
+      }
+    : analysis;
   const pct=last&&prev?((last.close-prev.close)/prev.close)*100:0;
   const meta=forexSymbols.find(x=>x.symbol===symbol);
 
@@ -293,7 +330,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={analysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={setDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks}/>}
+      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={setDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks}/>}
     </div>
     <footer className="cfip-terminal-footer flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
       <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
