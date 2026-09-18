@@ -154,7 +154,7 @@ def _order_block_lifecycle(
     """Identify conservative origin candles and track mitigation/invalidation causally."""
     if len(closes) < 8 or atr <= 0:
         return []
-    blocks: list[dict] = []
+    blocks: list[dict[str, Any]] = []
     for i in range(max(2, len(closes) - 48), len(closes) - 2):
         body = abs(closes[i] - opens[i])
         if body < atr * 0.15:
@@ -214,8 +214,8 @@ def _regime(adx: float | None, atr: float, close: float) -> str:
 
 
 
-def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list[dict]:
-    """Track recent three-candle gaps without using future bars."""
+def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list[dict[str, Any]]:
+    """Track recent three-candle gaps using only bars available at evaluation time."""
     states: list[dict] = []
     start = max(2, len(high) - 24)
     for i in range(start, len(high)):
@@ -255,7 +255,7 @@ def _fvg_lifecycle(high: np.ndarray, low: np.ndarray, times: np.ndarray) -> list
     return states[-12:]
 
 
-def _liquidity_pools(high: np.ndarray, low: np.ndarray, close: np.ndarray, times: np.ndarray, atr: float) -> list[dict]:
+def _liquidity_pools(high: np.ndarray, low: np.ndarray, close: np.ndarray, times: np.ndarray, atr: float) -> list[dict[str, Any]]:
     if len(close) < 8 or atr <= 0:
         return []
     tolerance = max(atr * 0.15, close[-1] * 0.00005)
