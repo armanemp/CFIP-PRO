@@ -1,6 +1,6 @@
 """Deterministic broker-aware risk and target calculation service."""
 
-from math import floor
+from math import floor, isfinite
 
 from cfip.domain.risk import (
     AccountRiskContext,
@@ -26,7 +26,11 @@ class RiskService:
                 direction=request.direction,
                 entry=request.entry,
             )
-        if quote_to_account_rate is None or quote_to_account_rate <= 0:
+        if (
+            quote_to_account_rate is None
+            or not isfinite(quote_to_account_rate)
+            or quote_to_account_rate <= 0
+        ):
             return RiskTargetPlan(
                 available=False,
                 reason="quote_to_account_conversion_required",
@@ -42,6 +46,15 @@ class RiskService:
             stop = request.entry + distance
             targets = tuple(request.entry - distance * rr for rr in request.target_rr)
 
+        if stop <= 0:
+            return RiskTargetPlan(
+                available=False,
+                reason="stop_price_non_positive",
+                direction=request.direction,
+                entry=request.entry,
+                stop=stop,
+                risk_distance=distance,
+            )
         risk_amount = account.equity * account.risk_fraction
         value_per_price_unit = instrument.tick_value_per_unit / instrument.tick_size
         quantity = risk_amount / (distance * value_per_price_unit * quote_to_account_rate)
