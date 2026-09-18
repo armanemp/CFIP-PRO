@@ -105,3 +105,26 @@ def test_calibration_and_drift_have_sample_guards() -> None:
     drift = service.drift([0.5] * 49, [0.9] * 50)
     assert not drift.detected
     assert drift.reason == "insufficient_samples"
+
+
+def test_outcome_marks_same_bar_stop_and_target_as_ambiguous() -> None:
+    signal = SignalLifecycle(
+        signal_id="s",
+        symbol="EUR/USD",
+        timeframe="15m",
+        direction="long",
+        decision_time=100,
+        state="emitted",
+    )
+    result = OutcomeService().label(
+        signal,
+        entry=100,
+        stop=98,
+        tp1=102,
+        tp2=None,
+        tp3=None,
+        observations=[OutcomeObservation(time=101, high=103, low=97, close=101)],
+        evidence_ids=["m1"],
+    )
+    assert result.label == "unknown"
+    assert result.event == "ambiguous"
