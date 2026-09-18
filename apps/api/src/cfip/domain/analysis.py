@@ -1,20 +1,52 @@
-"""Canonical backend analysis contract.
+"""Canonical backend analysis contracts.
 
-The API owns the normalized shape consumed by terminal, replay, alerts and future AI
-orchestration. Provider-specific data and individual analyzers must not leak into it.
+The backend owns the normalized analysis envelope consumed by the terminal, replay,
+alerts and future AI orchestration. Provider-specific implementations never cross
+this boundary.
 """
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Bias = Literal["bullish", "bearish", "neutral"]
 Recommendation = Literal["long", "short", "wait"]
 Regime = Literal["trending", "ranging", "volatile", "mixed", "insufficient"]
 
 
+class CandleInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    time: int = Field(gt=0)
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_ohlc(self) -> "CandleInput":
+        if self.high < max(self.open, self.close) or self.low > min(self.open, self.close):
+            raise ValueError("invalid_ohlc")
+        if self.high < self.low:
+            raise ValueError("invalid_ohlc_range")
+        return self
+
+
+class AnalysisRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str = Field(min_length=1, max_length=64)
+    timeframe: str = Field(min_length=1, max_length=16)
+    candles: list[CandleInput] = Field(min_length=5, max_length=20000)
+    min_confluence_score: int = Field(default=84, ge=0, le=100)
+    minimum_aligned_htfs: int = Field(default=2, ge=0, le=5)
+    closed_bar_only: bool = True
+
+
 class AnalysisEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     module: str
     bias: Bias
     score: float = Field(ge=-1, le=1)
@@ -25,13 +57,31 @@ class AnalysisEvidence(BaseModel):
 
 class ConfluenceGate(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     id: str
     passed: bool
     detail: str
 
 
+class RiskTargetPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    available: bool = False
+    reason: str | None = None
+    entry: float | None = None
+    stop: float | None = None
+    risk_distance: float | None = None
+    tp1: float | None = None
+    tp2: float | None = None
+    tp3: float | None = None
+    rr1: float | None = None
+    rr2: float | None = None
+    rr3: float | None = None
+
+
 class UnifiedAnalysisRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     symbol: str
     timeframe: str
     as_of: str
@@ -46,3 +96,5 @@ class UnifiedAnalysisRead(BaseModel):
     confluence_accepted: bool
     gates: list[ConfluenceGate] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
+    risk_target: RiskTargetPlan
+    closed_bar_time: int | None = None
