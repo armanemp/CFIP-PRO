@@ -71,6 +71,8 @@ export const UnifiedAnalysisSchema = z.object({
   confluence_accepted: z.boolean(),
   gates: z.array(AnalysisGateSchema),
   evidence: z.array(z.string()),
+  fvg_states: z.array(z.object({ id: z.string(), direction: z.enum(["bullish","bearish"]), lower: z.number(), upper: z.number(), state: z.enum(["active","partial","mitigated","invalidated"]), origin_time: z.number(), last_evaluated_time: z.number(), mitigation_ratio: z.number() })),
+  liquidity_pools: z.array(z.object({ id: z.string(), side: z.enum(["buy_side","sell_side"]), price: z.number(), strength: z.number(), swept: z.boolean(), origin_time: z.number() })),
   risk_target: RiskTargetSchema,
   closed_bar_time: z.number().nullable(),
 });
