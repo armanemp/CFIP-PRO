@@ -66,6 +66,18 @@ class OutcomeService:
         observations: list[OutcomeObservation],
         evidence_ids: list[str],
     ) -> OutcomeLabelResult:
+        if entry <= 0:
+            raise ValueError("entry_must_be_positive")
+        if signal.direction == "long":
+            if stop is not None and stop >= entry:
+                raise ValueError("long_stop_must_be_below_entry")
+            if any(target is not None and target <= entry for target in (tp1, tp2, tp3)):
+                raise ValueError("long_target_must_be_above_entry")
+        else:
+            if stop is not None and stop <= entry:
+                raise ValueError("short_stop_must_be_above_entry")
+            if any(target is not None and target >= entry for target in (tp1, tp2, tp3)):
+                raise ValueError("short_target_must_be_below_entry")
         observations_after_decision = [
             item for item in observations if item.time >= signal.decision_time
         ]
@@ -87,63 +99,39 @@ class OutcomeService:
             )
         for item in observations_after_decision:
             if signal.direction == "long":
-                if stop is not None and item.low <= stop:
-                    return OutcomeLabelResult(
-                        signal_id=signal.signal_id,
-                        label="loss",
-                        event="stop",
-                        decision_time=signal.decision_time,
-                        evaluation_time=item.time,
-                        entry=entry,
-                        stop=stop,
-                        tp1=tp1,
-                        tp2=tp2,
-                        tp3=tp3,
-                        evidence_ids=evidence_ids,
-                    )
-                if tp1 is not None and item.high >= tp1:
-                    return OutcomeLabelResult(
-                        signal_id=signal.signal_id,
-                        label="win",
-                        event="tp1",
-                        decision_time=signal.decision_time,
-                        evaluation_time=item.time,
-                        entry=entry,
-                        stop=stop,
-                        tp1=tp1,
-                        tp2=tp2,
-                        tp3=tp3,
-                        evidence_ids=evidence_ids,
-                    )
+                stop_hit = stop is not None and item.low <= stop
+                target_hit = tp1 is not None and item.high >= tp1
             else:
-                if stop is not None and item.high >= stop:
-                    return OutcomeLabelResult(
-                        signal_id=signal.signal_id,
-                        label="loss",
-                        event="stop",
-                        decision_time=signal.decision_time,
-                        evaluation_time=item.time,
-                        entry=entry,
-                        stop=stop,
-                        tp1=tp1,
-                        tp2=tp2,
-                        tp3=tp3,
-                        evidence_ids=evidence_ids,
-                    )
-                if tp1 is not None and item.low <= tp1:
-                    return OutcomeLabelResult(
-                        signal_id=signal.signal_id,
-                        label="win",
-                        event="tp1",
-                        decision_time=signal.decision_time,
-                        evaluation_time=item.time,
-                        entry=entry,
-                        stop=stop,
-                        tp1=tp1,
-                        tp2=tp2,
-                        tp3=tp3,
-                        evidence_ids=evidence_ids,
-                    )
+                stop_hit = stop is not None and item.high >= stop
+                target_hit = tp1 is not None and item.low <= tp1
+            if stop_hit and target_hit:
+                return OutcomeLabelResult(
+                    signal_id=signal.signal_id,
+                    label="unknown",
+                    event="ambiguous",
+                    decision_time=signal.decision_time,
+                    evaluation_time=item.time,
+                    entry=entry,
+                    stop=stop,
+                    tp1=tp1,
+                    tp2=tp2,
+                    tp3=tp3,
+                    evidence_ids=evidence_ids,
+                )
+            if stop_hit or target_hit:
+                return OutcomeLabelResult(
+                    signal_id=signal.signal_id,
+                    label="loss" if stop_hit else "win",
+                    event="stop" if stop_hit else "tp1",
+                    decision_time=signal.decision_time,
+                    evaluation_time=item.time,
+                    entry=entry,
+                    stop=stop,
+                    tp1=tp1,
+                    tp2=tp2,
+                    tp3=tp3,
+                    evidence_ids=evidence_ids,
+                )
         return OutcomeLabelResult(
             signal_id=signal.signal_id,
             label="unknown",
