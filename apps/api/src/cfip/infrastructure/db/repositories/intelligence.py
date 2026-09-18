@@ -1,4 +1,7 @@
-"""Persistent governed intelligence store with idempotent audit events."""
+"""Persistent governed intelligence store with idempotent, tamper-evident audit events."""
+
+import hashlib
+import json
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,6 +119,25 @@ class IntelligenceRepository:
         )
         if existing is not None:
             return False
+        previous_hash = await self.session.scalar(
+            select(IntelligenceAuditEventModel.event_hash)
+            .order_by(IntelligenceAuditEventModel.occurred_at.desc(), IntelligenceAuditEventModel.id.desc())
+            .limit(1)
+        )
+        canonical = json.dumps(
+            {
+                "event_key": event_key,
+                "event_type": event_type,
+                "aggregate_type": aggregate_type,
+                "aggregate_id": aggregate_id,
+                "payload": payload,
+                "occurred_at": occurred_at,
+                "previous_hash": previous_hash,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        event_hash = hashlib.sha256(canonical.encode()).hexdigest()
         self.session.add(
             IntelligenceAuditEventModel(
                 event_key=event_key,
@@ -124,6 +146,8 @@ class IntelligenceRepository:
                 aggregate_id=aggregate_id,
                 payload=payload,
                 occurred_at=occurred_at,
+                previous_hash=previous_hash,
+                event_hash=event_hash,
             )
         )
         return True
