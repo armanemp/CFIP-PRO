@@ -174,7 +174,6 @@ def _order_block_lifecycle(
             continue
         block_low, block_high = float(lows[i]), float(highs[i])
         state = "active"
-        breaker = False
         for j in range(i + 2, len(closes)):
             if bullish and closes[j] < block_low:
                 state = "breaker"
