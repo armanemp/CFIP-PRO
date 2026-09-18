@@ -78,3 +78,22 @@ def test_analysis_rejects_insufficient_closed_history() -> None:
         assert str(exc) == "insufficient_closed_bars"
     else:
         raise AssertionError("analysis must reject fewer than five closed bars")
+
+
+def test_analysis_exposes_lifecycle_state_contracts() -> None:
+    result = analyze(
+        AnalysisRequest(symbol="EUR/USD", timeframe="15m", candles=_candles()),
+        as_of="2026-09-18T00:00:00+00:00",
+    )
+    assert all(item.origin_time <= item.last_evaluated_time for item in result.fvg_states)
+    assert all(item.origin_time <= item.last_evaluated_time for item in result.order_blocks)
+    assert all(0 <= item.mitigation_ratio <= 1 for item in result.fvg_states)
+
+
+def test_analysis_contract_rejects_invalid_ohlc() -> None:
+    try:
+        CandleInput(time=1, open=2, high=1, low=0, close=2)
+    except ValueError as exc:
+        assert "invalid_ohlc" in str(exc)
+    else:
+        raise AssertionError("invalid OHLC must be rejected")
