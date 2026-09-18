@@ -48,7 +48,7 @@ class AnalysisRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_candle_order(self) -> "AnalysisRequest":
-        if any(current.time <= previous.time for previous, current in zip(self.candles, self.candles[1:])):
+        if any(current.time <= previous.time for previous, current in zip(self.candles, self.candles[1:], strict=False)):
             raise ValueError("candles_must_be_strictly_increasing")
         return self
 
