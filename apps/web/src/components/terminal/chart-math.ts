@@ -25,3 +25,44 @@ export function atr(c:Candle[],p=14){const tr=c.map((x,i)=>i?Math.max(x.high-x.l
 export function obv(c:Candle[]){let v=0;return c.map((x,i)=>{if(i)v+=x.close>c[i-1].close?x.volume:x.close<c[i-1].close?-x.volume:0;return{time:x.time,value:v};});}
 export function fvg(c:Candle[]):Zone[]{const z:Zone[]=[];const end=c.at(-1)?.time;if(end===undefined)return z;for(let i=2;i<c.length;i++){if(c[i-2].high<c[i].low)z.push({a:c[i-1].time,b:end,low:c[i-2].high,high:c[i].low,bullish:true});else if(c[i-2].low>c[i].high)z.push({a:c[i-1].time,b:end,low:c[i].high,high:c[i-2].low,bullish:false});}return z.slice(-12);}
 export function pivots(c:Candle[]){const p:{time:Candle["time"];price:number;high:boolean}[]=[];for(let i=2;i<c.length-2;i++){if(c[i].high>c[i-1].high&&c[i].high>=c[i+1].high)p.push({time:c[i].time,price:c[i].high,high:true});if(c[i].low<c[i-1].low&&c[i].low<=c[i+1].low)p.push({time:c[i].time,price:c[i].low,high:false});}return p.slice(-20);}
+
+export function macd(c: Candle[], fast=12, slow=26, signal=9) {
+  const slowLine = ema(c, slow);
+  const fastLine = ema(c, fast);
+  const fastByTime = new Map(fastLine.map(x => [x.time, x.value]));
+  const macdLine = slowLine.flatMap(x => {
+    const f = fastByTime.get(x.time);
+    return f === undefined ? [] : [{ time: x.time, value: f - x.value }];
+  });
+  const signalLine = ema(macdLine.map(x => ({ ...x, open: x.value, high: x.value, low: x.value, close: x.value, volume: 0 })), signal);
+  return { macd: macdLine, signal: signalLine, histogram: macdLine.flatMap(x => {
+    const s = signalLine.find(q => q.time === x.time)?.value;
+    return s === undefined ? [] : [{ time: x.time, value: x.value - s }];
+  }) };
+}
+
+export function sessionRange(c: Candle[], startHour=7, endHour=16) {
+  const selected = c.filter(x => {
+    const hour = new Date(Number(x.time) * 1000).getUTCHours();
+    return hour >= startHour && hour < endHour;
+  });
+  if (!selected.length) return null;
+  return {
+    high: Math.max(...selected.map(x => x.high)),
+    low: Math.min(...selected.map(x => x.low)),
+    from: selected[0].time,
+    to: selected.at(-1)?.time ?? selected[0].time,
+  };
+}
+
+export function supportResistance(c: Candle[]) {
+  const points = pivots(c);
+  const buckets = new Map<number, { price: number; touches: number }>();
+  for (const point of points) {
+    const bucket = Math.round(point.price * 10000) / 10000;
+    const current = buckets.get(bucket);
+    if (current) current.touches += 1;
+    else buckets.set(bucket, { price: point.price, touches: 1 });
+  }
+  return [...buckets.values()].filter(x => x.touches >= 2).sort((a, b) => b.touches - a.touches).slice(0, 8);
+}
