@@ -1,54 +1,75 @@
-"""Deterministic training-data preparation for platform intelligence.
+"""Deterministic preparation of governed training examples."""
 
-This layer prepares auditable examples; it does not silently train or promote a model.
-Training and promotion remain separately governed operations.
-"""
+import hashlib
+import json
 
 from cfip.domain.analysis import UnifiedAnalysisRead
 from cfip.domain.intelligence import IntelligenceEvidence, TrainingExample
 
 
 class TrainingPreparationService:
+    """Create reproducible, leakage-resistant examples without training or promotion."""
+
+    @staticmethod
     def from_analysis(
-        self,
         analysis: UnifiedAnalysisRead,
-        *,
         evidence: list[IntelligenceEvidence],
-        example_id: str,
+        *,
+        outcome: str = "unknown",
+        label_horizon_bars: int = 0,
     ) -> TrainingExample:
-        evidence_ids = {item.id for item in evidence}
-        usable = [item.id for item in evidence if item.id in evidence_ids]
-        quality = min(
-            1.0,
-            sum(item.confidence for item in evidence) / max(1, len(evidence)),
-        )
+        evidence_ids = [item.id for item in evidence]
+        if not evidence_ids:
+            raise ValueError("training_example_requires_evidence")
         features = {
             "analysis_score": analysis.score,
             "analysis_confidence": analysis.confidence,
-            "confluence_score": analysis.confluence_score / 100.0,
-            "trend_score": self._module_score(analysis, "trend"),
-            "momentum_score": self._module_score(analysis, "momentum"),
-            "structure_score": self._module_score(analysis, "structure"),
+            "confluence_score": float(analysis.confluence_score),
+            "trend_score": next(
+                (item.score for item in analysis.modules if item.id == "trend"), 0.0
+            ),
+            "momentum_score": next(
+                (item.score for item in analysis.modules if item.id == "momentum"), 0.0
+            ),
+            "structure_score": next(
+                (item.score for item in analysis.modules if item.id == "structure"), 0.0
+            ),
             "fvg_count": float(len(analysis.fvg_states)),
             "order_block_count": float(len(analysis.order_blocks)),
             "liquidity_count": float(len(analysis.liquidity_pools)),
-            "mtf_aligned_count": float(sum(
-                item.bias == analysis.bias and item.confidence > 0
-                for item in analysis.mtf_contexts
-            )),
+            "mtf_aligned_count": float(
+                sum(
+                    item.bias == analysis.bias
+                    for item in analysis.mtf_contexts
+                    if item.bias != "neutral"
+                )
+            ),
         }
-        return TrainingExample(
-            id=example_id,
-            subject=analysis.symbol,
-            feature_vector=features,
-            target=analysis.bias,
-            evidence_ids=usable,
-            label_quality=quality,
+        feature_schema = {name: "float" for name in features}
+        provenance = json.dumps(
+            {
+                "analysis_as_of": analysis.as_of,
+                "analysis_timeframe": analysis.timeframe,
+                "analysis_symbol": analysis.symbol,
+                "evidence_ids": evidence_ids,
+                "feature_schema": feature_schema,
+                "label_horizon_bars": label_horizon_bars,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
         )
-
-    @staticmethod
-    def _module_score(analysis: UnifiedAnalysisRead, name: str) -> float:
-        for module in analysis.modules:
-            if module.module == name:
-                return module.score
-        return 0.0
+        provenance_hash = hashlib.sha256(provenance.encode()).hexdigest()
+        return TrainingExample(
+            id=f"train-{provenance_hash[:32]}",
+            subject=f"{analysis.symbol}:{analysis.timeframe}",
+            as_of=analysis.closed_bar_time,
+            timeframe=analysis.timeframe,
+            feature_vector=features,
+            feature_schema=feature_schema,
+            target=analysis.bias,
+            outcome=outcome,
+            label_horizon_bars=label_horizon_bars,
+            label_quality=0.0 if outcome == "unknown" else 1.0,
+            evidence_ids=evidence_ids,
+            provenance_hash=provenance_hash,
+        )
