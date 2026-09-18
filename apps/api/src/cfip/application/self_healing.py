@@ -1,11 +1,19 @@
 """Deterministic guardrails for autonomous diagnosis and repair proposals."""
 
-from cfip.domain.self_healing import Diagnosis, RepairProposal, SelfHealingPolicy, HealthSignal
+from cfip.domain.self_healing import HealthSignal, Diagnosis, RepairProposal, SelfHealingPolicy
 
 
 class SelfHealingService:
-    def diagnose(self, signal: HealthSignal, *, evidence_ids: list[str], root_cause: str, confidence: float,
-                 blast_radius: str, reversible: bool) -> Diagnosis:
+    def diagnose(
+        self,
+        signal: HealthSignal,
+        *,
+        evidence_ids: list[str],
+        root_cause: str,
+        confidence: float,
+        blast_radius: str,
+        reversible: bool,
+    ) -> Diagnosis:
         return Diagnosis(
             id=f"diagnosis:{signal.id}",
             component=signal.component,
