@@ -122,6 +122,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     });
   }, [symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
 
+  const resetView=()=>chartRef.current?.timeScale().fitContent();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
