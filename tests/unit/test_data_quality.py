@@ -1,11 +1,11 @@
 from cfip.domain.data_quality import DataQualityPolicy, assess_data_quality
 
 
-def test_quality_ignores_overnight_and_weekend_session_boundaries() -> None:
+def test_quality_ignores_cross_day_session_boundary() -> None:
     policy = DataQualityPolicy(expected_interval_seconds=3600)
     times = [
-        1726743600,  # Friday 23:00 UTC
-        1726750800,  # Saturday 01:00 UTC boundary
+        1726786800,  # Thursday 23:00 UTC
+        1726794000,  # Friday 01:00 UTC
     ]
     report = assess_data_quality(times, policy)
     assert report.contiguous_gap_count == 0
