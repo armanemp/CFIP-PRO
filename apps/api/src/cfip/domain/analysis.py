@@ -63,6 +63,30 @@ class ConfluenceGate(BaseModel):
     detail: str
 
 
+class FVGState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    direction: Literal["bullish", "bearish"]
+    lower: float = Field(gt=0)
+    upper: float = Field(gt=0)
+    state: Literal["active", "partial", "mitigated", "invalidated"]
+    origin_time: int = Field(gt=0)
+    last_evaluated_time: int = Field(gt=0)
+    mitigation_ratio: float = Field(ge=0, le=1)
+
+
+class LiquidityPool(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    side: Literal["buy_side", "sell_side"]
+    price: float = Field(gt=0)
+    strength: int = Field(ge=1, le=100)
+    swept: bool
+    origin_time: int = Field(gt=0)
+
+
 class RiskTargetPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -96,5 +120,7 @@ class UnifiedAnalysisRead(BaseModel):
     confluence_accepted: bool
     gates: list[ConfluenceGate] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
+    fvg_states: list[FVGState] = Field(default_factory=list)
+    liquidity_pools: list[LiquidityPool] = Field(default_factory=list)
     risk_target: RiskTargetPlan
     closed_bar_time: int | None = None
