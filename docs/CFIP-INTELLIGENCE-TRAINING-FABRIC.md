@@ -91,3 +91,15 @@ Self-development follows the same boundary. The intelligence layer can research 
 ### Non-negotiable invariants
 
 Self-healing must never bypass authentication/authorization, data provenance, risk limits, deterministic trading gates, audit logging, or release verification. Destructive or platform-wide changes remain approval-gated.
+
+## Implemented governed outcome fabric
+
+The repository now includes a deterministic signal/outcome boundary in `cfip.domain.outcomes` and `cfip.application.outcomes`. Signal IDs are deterministic from symbol/timeframe/direction/decision time, emission enforces startup suppression and cooldown/spacing, and outcome labeling filters observations by event time so pre-decision candles cannot leak into labels. Calibration exposes Brier score, log loss and expected calibration error with explicit binning; drift detection is sample-gated and reports a standardized mean-shift signal rather than silently changing a model.
+
+## Implemented self-healing execution boundary
+
+Self-healing is now split into diagnosis/proposal and execution authorization. `self_healing_execution` defines artifact digests, rollback digests, safety invariants, test evidence, canary requirements, approval boundaries, repair budgets and cooldown/circuit-breaker controls. The application service is a pure policy gate: it does not execute shell commands or mutate production. Code changes require explicit approval; self-development remains branch/sandbox-oriented and production application is denied unless an explicit production grant exists. This separation is intentional so a future executor can be independently sandboxed, audited, canaried and rolled back.
+
+## Required next hardening layers
+
+Before autonomous execution is enabled, the platform still needs persistent event/audit storage, signed artifact verification, isolated worktrees/containers, a restricted action registry, health-invariant evaluation, canary telemetry, automatic rollback, incident locking/escalation, dependency/security/test-generation agents, dataset manifests and model evaluation/registry. These are release gates, not optional AI features.
