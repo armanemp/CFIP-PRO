@@ -76,6 +76,20 @@ class FVGState(BaseModel):
     mitigation_ratio: float = Field(ge=0, le=1)
 
 
+class OrderBlockState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    direction: Literal["bullish", "bearish"]
+    low: float = Field(gt=0)
+    high: float = Field(gt=0)
+    state: Literal["active", "mitigated", "invalidated", "breaker"]
+    origin_time: int = Field(gt=0)
+    last_evaluated_time: int = Field(gt=0)
+    displacement_time: int | None = None
+    structure_break_time: int | None = None
+
+
 class LiquidityPool(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -121,6 +135,7 @@ class UnifiedAnalysisRead(BaseModel):
     gates: list[ConfluenceGate] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     fvg_states: list[FVGState] = Field(default_factory=list)
+    order_blocks: list[OrderBlockState] = Field(default_factory=list)
     liquidity_pools: list[LiquidityPool] = Field(default_factory=list)
     risk_target: RiskTargetPlan
     closed_bar_time: int | None = None
