@@ -1,3 +1,11 @@
+## 2026-09-18 — Analysis polling efficiency correction
+
+- The terminal polls normalized market observations every two seconds for realtime updates, but the canonical backend analysis intentionally excludes the still-open candle.
+- Previously, every observation refresh recreated the closed-candle array and could trigger an identical TA-Lib-backed analysis request even when the latest closed candle had not changed.
+- Added a closed-bar key so backend unified analysis is recomputed when the symbol/timeframe changes or a new closed candle becomes available, while open-candle refreshes continue updating the chart without repeatedly invoking the analysis service.
+- No dependency, cache, database, or polling-frequency change was introduced.
+- Frontend verification remains pending the normal typecheck/lint/build gate.
+
 ## 2026-09-18 — Repository hygiene: remove superseded chart implementation
 
 - Audited frontend references against the current TerminalShell entrypoint and repository code search.
