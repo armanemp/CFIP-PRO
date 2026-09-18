@@ -60,3 +60,43 @@ def test_risk_calculates_stop_targets_and_quantity() -> None:
     assert result.tp2 == 1.103
     assert result.tp3 == 1.1045
     assert result.quantity is not None and result.quantity > 0
+
+
+def test_risk_rejects_non_finite_conversion_rate() -> None:
+    account, instrument = _contexts()
+    request = RiskTargetRequest(
+        direction="long",
+        entry=1.1,
+        atr=0.001,
+        stop_atr_multiplier=1.5,
+        target_rr=(1.0, 2.0, 3.0),
+        minimum_rr=1.0,
+    )
+    result = RiskService.plan(
+        request,
+        account=account,
+        instrument=instrument,
+        quote_to_account_rate=float("nan"),
+    )
+    assert result.available is False
+    assert result.reason == "quote_to_account_conversion_required"
+
+
+def test_risk_rejects_non_positive_computed_stop() -> None:
+    account, instrument = _contexts()
+    request = RiskTargetRequest(
+        direction="long",
+        entry=0.0001,
+        atr=1.0,
+        stop_atr_multiplier=2.0,
+        target_rr=(1.0, 2.0, 3.0),
+        minimum_rr=1.0,
+    )
+    result = RiskService.plan(
+        request,
+        account=account,
+        instrument=instrument,
+        quote_to_account_rate=1.0,
+    )
+    assert result.available is False
+    assert result.reason == "stop_price_non_positive"
