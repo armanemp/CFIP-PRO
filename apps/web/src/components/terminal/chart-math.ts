@@ -200,3 +200,66 @@ export function mtfStructure(c: Candle[], currentTf: Timeframe): MTFStructureSum
     };
   });
 }
+
+export function dmi(c: Candle[], p = 14) {
+  if (c.length <= p) return [];
+  let trSum = 0, plusSum = 0, minusSum = 0;
+  const out: { time: Candle["time"]; plus: number; minus: number; adx: number }[] = [];
+  for (let i = 1; i < c.length; i++) {
+    const up = c[i].high - c[i - 1].high;
+    const down = c[i - 1].low - c[i].low;
+    const tr = Math.max(c[i].high - c[i].low, Math.abs(c[i].high - c[i - 1].close), Math.abs(c[i].low - c[i - 1].close));
+    trSum += tr; plusSum += up > down && up > 0 ? up : 0; minusSum += down > up && down > 0 ? down : 0;
+    if (i >= p) {
+      const plus = trSum ? 100 * plusSum / trSum : 0;
+      const minus = trSum ? 100 * minusSum / trSum : 0;
+      const dx = plus + minus ? 100 * Math.abs(plus - minus) / (plus + minus) : 0;
+      out.push({ time: c[i].time, plus, minus, adx: dx });
+      const old = i - p;
+      const oldUp = c[old + 1].high - c[old].high;
+      const oldDown = c[old].low - c[old + 1].low;
+      const oldTr = Math.max(c[old + 1].high - c[old + 1].low, Math.abs(c[old + 1].high - c[old].close), Math.abs(c[old + 1].low - c[old].close));
+      trSum -= oldTr; plusSum -= oldUp > oldDown && oldUp > 0 ? oldUp : 0; minusSum -= oldDown > oldUp && oldDown > 0 ? oldDown : 0;
+    }
+  }
+  return out;
+}
+
+export function stochastic(c: Candle[], p = 14, smooth = 3) {
+  const raw = c.flatMap((x, i) => {
+    if (i + 1 < p) return [];
+    const w = c.slice(i + 1 - p, i + 1);
+    const high = Math.max(...w.map(q => q.high)), low = Math.min(...w.map(q => q.low));
+    return [{ time: x.time, value: high === low ? 50 : ((x.close - low) / (high - low)) * 100 }];
+  });
+  return raw.map((x, i) => ({ time: x.time, value: raw.slice(Math.max(0, i + 1 - smooth), i + 1).reduce((s, q) => s + q.value, 0) / Math.min(smooth, i + 1) }));
+}
+
+export function donchian(c: Candle[], p = 20) {
+  return c.flatMap((x, i) => {
+    if (i + 1 < p) return [];
+    const w = c.slice(i + 1 - p, i + 1);
+    return [{ time: x.time, upper: Math.max(...w.map(q => q.high)), middle: (Math.max(...w.map(q => q.high)) + Math.min(...w.map(q => q.low))) / 2, lower: Math.min(...w.map(q => q.low)) }];
+  });
+}
+
+export function keltner(c: Candle[], emaPeriod = 20, atrPeriod = 14, multiplier = 1.5) {
+  const mid = ema(c, emaPeriod);
+  const atrValues = new Map(atr(c, atrPeriod).map(x => [x.time, x.value]));
+  return mid.flatMap(x => {
+    const a = atrValues.get(x.time);
+    return a === undefined ? [] : [{ time: x.time, middle: x.value, upper: x.value + a * multiplier, lower: x.value - a * multiplier }];
+  });
+}
+
+export function ichimoku(c: Candle[], conversion = 9, base = 26, span = 52) {
+  const midpoint = (w: Candle[]) => (Math.max(...w.map(x => x.high)) + Math.min(...w.map(x => x.low))) / 2;
+  return c.flatMap((x, i) => {
+    if (i + 1 < span) return [];
+    const tenkan = midpoint(c.slice(i + 1 - conversion, i + 1));
+    const kijun = midpoint(c.slice(i + 1 - base, i + 1));
+    const senkouA = (tenkan + kijun) / 2;
+    const senkouB = midpoint(c.slice(i + 1 - span, i + 1));
+    return [{ time: x.time, tenkan, kijun, senkouA, senkouB }];
+  });
+}
