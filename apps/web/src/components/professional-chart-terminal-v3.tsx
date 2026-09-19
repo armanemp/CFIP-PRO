@@ -10,9 +10,9 @@ import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
-import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
+import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
-import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
+import { toCandles, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks } from "@/components/terminal/chart-math";
 import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
 import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
@@ -44,9 +44,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const analysisSnapshot = useMemo(() => computeAnalysisSnapshot(candles, tf), [candles, tf]);
   const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
   const analysis = analysisSnapshot.analysis;
-  const analysisRsi = analysisSnapshot.rsi;
-  const analysisMacd = analysisSnapshot.macdHistogram;
-  const analysisAtr = analysisSnapshot.atr;
   const closedBarKey = analysisCandles.at(-1)?.time ?? null;
   useEffect(() => {
     if (analysisCandles.length < 5) {
