@@ -36,6 +36,11 @@ export const ADMIN_SETTINGS: readonly AdminSettingDefinition[] = [
   {id:"experience.locales",section:"experience",label:"Enabled locales",type:"json",mutable:true,sensitive:false,description:"Enabled UI locales and RTL configuration."},
   {id:"experience.theme",section:"experience",label:"Theme",type:"select",mutable:true,sensitive:false,description:"Terminal visual theme.",options:["dark","light","system"]},
   {id:"experience.chart_defaults",section:"experience",label:"Chart defaults",type:"json",mutable:true,sensitive:false,description:"Chart-first defaults such as timeframe, panes and display preferences."},
+  {id:"terminal.alerts",section:"experience",label:"Alert preferences",type:"json",mutable:true,sensitive:false,description:"Alert channels, cooldowns and user notification preferences."},
+  {id:"terminal.workspace_layouts",section:"experience",label:"Workspace layouts",type:"json",mutable:true,sensitive:false,description:"Saved terminal layouts, panes, chart synchronization and object visibility."},
+  {id:"git.governance",section:"platform",label:"Git governance",type:"json",mutable:false,sensitive:false,description:"Protected paths, approval rules, validation and rollback requirements."},
+  {id:"git.proposal_queue",section:"intelligence",label:"AI change proposals",type:"json",mutable:true,sensitive:false,description:"Evidence-backed repository changes awaiting authorization and verification."},
+  {id:"research.oss_adapters",section:"research",label:"OSS adapters",type:"json",mutable:true,sensitive:false,description:"Installed and evaluated OSS adapters with license, security and compatibility evidence."},
 ];
 
 export function settingsForSection(section:string): AdminSettingDefinition[] {
