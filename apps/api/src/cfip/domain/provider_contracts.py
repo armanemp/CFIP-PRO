@@ -6,7 +6,7 @@ integration. Every adapter must normalize into CFIP contracts.
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
-ProviderKind = Literal["market-data","broker","execution","news","fundamentals","ai","research"]
+ProviderKind = Literal["market-data","broker","execution","news","fundamentals","ai","research","identity","payments","storage","messaging","observability"]
 ProviderStatus = Literal["catalog","adapter","verified"]
 
 class ProviderDescriptor(BaseModel):
@@ -47,4 +47,15 @@ PROVIDER_CATALOG: tuple[ProviderDescriptor, ...] = (
     ProviderDescriptor(id="tavily",name="Tavily",kind="research",capabilities=("web-search","research")),
     ProviderDescriptor(id="exa",name="Exa",kind="research",capabilities=("web-search","research")),
     ProviderDescriptor(id="gdelt",name="GDELT",kind="news",capabilities=("news","events","research")),
+    ProviderDescriptor(id="google-oauth",name="Google OAuth",kind="identity",capabilities=("oauth2","login","account-linking")),
+    ProviderDescriptor(id="btcpay-server",name="BTCPay Server",kind="payments",capabilities=("crypto-checkout","invoice","settlement","webhooks")),
+    ProviderDescriptor(id="coinbase-commerce",name="Coinbase Commerce",kind="payments",capabilities=("crypto-checkout","invoice","settlement","webhooks")),
+    ProviderDescriptor(id="postgresql",name="PostgreSQL",kind="storage",capabilities=("transactional","audit","configuration")),
+    ProviderDescriptor(id="clickhouse",name="ClickHouse",kind="storage",capabilities=("analytics","timeseries","large-scale-query")),
+    ProviderDescriptor(id="redis",name="Redis",kind="storage",capabilities=("cache","rate-limit","ephemeral-state")),
+    ProviderDescriptor(id="nats-jetstream",name="NATS JetStream",kind="messaging",capabilities=("events","durable-streams","replay","consumer-groups")),
+    ProviderDescriptor(id="opentelemetry",name="OpenTelemetry",kind="observability",capabilities=("traces","metrics","logs","genai-observability")),
+    ProviderDescriptor(id="mlflow",name="MLflow",kind="observability",capabilities=("model-lifecycle","evaluation","lineage")),
+    ProviderDescriptor(id="prometheus",name="Prometheus",kind="observability",capabilities=("metrics","alerting")),
+    ProviderDescriptor(id="grafana",name="Grafana",kind="observability",capabilities=("dashboards","alerting","exploration")),
 )
