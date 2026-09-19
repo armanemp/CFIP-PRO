@@ -228,3 +228,13 @@
 - Added unit coverage for lifecycle ordering, event-bus round trip and paper-order idempotency/safety.
 - No new dependency, forced rebuild, cache purge or database reset was introduced.
 - This batch establishes the startup/runtime spine; external provider connections remain configuration- and adapter-gated rather than pretending that catalog entries are live integrations.
+
+
+## 2026-09-19 — Provider/workspace/auth contract hardening
+
+- Added a transport-neutral MarketDataProvider adapter protocol so EODHD/Twelve Data/Finnhub/Polygon/Alpha Vantage/Dukascopy/TrueFX/CCXT and future adapters must normalize into CFIP-owned market-data contracts; catalog entries remain distinct from verified connectivity.
+- Added WorkspaceRepository + WorkspaceService ports for persistent chart-first workspaces, keeping storage implementation out of the domain and application use case boundary.
+- Added typed Principal/AuthorizationDecision/RBAC contracts with explicit permissions for terminal, research, intelligence, governed Git and admin settings. Authorization is deny-by-default for unknown permissions.
+- Added /api/authz/check for authorization-boundary introspection while real identity/session authentication remains a separate infrastructure integration.
+- Hardened the admin control-plane component after runtime-health integration so runtime state is passed explicitly and no undeclared UI state is referenced.
+- The platform remains modular: provider adapters, persistence, authentication, execution and intelligence promotion are independent boundaries rather than one monolithic service.
