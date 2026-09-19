@@ -6,7 +6,7 @@ registers services without inventing credentials or opening uncontrolled connect
 from datetime import UTC, datetime
 from cfip.application.event_bus import EventBus
 from cfip.domain.platform_settings import PlatformSettings
-from cfip.domain.runtime_contracts import ComponentHealth
+from cfip.domain.runtime_contracts import ComponentHealth\nfrom cfip.application.intelligence_runtime import IntelligenceRuntime
 
 def _now() -> int:
     return int(datetime.now(UTC).timestamp())
