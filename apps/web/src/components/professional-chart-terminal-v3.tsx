@@ -27,7 +27,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const marketVersionRef=useRef(`${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
@@ -125,7 +125,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setSymbol(session.symbol);
     setTf(session.timeframe);
     setKind(session.chartKind);
-    setLocale(session.locale);
     setTool(session.tool);
     setSelected(session.selectedStudies);
     setPrefs(session.preferences);
@@ -138,10 +137,10 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   useEffect(() => {
     if (!sessionReady) return;
     saveTerminalSession({
-      symbol, timeframe: tf, chartKind: kind, locale, tool,
+      symbol, timeframe: tf, chartKind: kind, locale: "en", tool,
       selectedStudies: selected, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail }, drawings,
     });
-  }, [sessionReady, symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
+  }, [sessionReady, symbol, tf, kind, tool, selected, prefs, sidebar, rail, drawings]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
@@ -361,7 +360,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       <div className="flex gap-1">{TIMEFRAMES.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
       <div className="ml-auto flex items-center gap-1"><button onClick={undoDrawing} title="Ctrl/Cmd+Z" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↶</button><button onClick={redoDrawing} title="Ctrl/Cmd+Y" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↷</button>
         <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","autoFit")}</button>
-        <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
+        <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","screenshot")}</button>
         <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"fullscreen")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="replay"?null:"replay")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"replay")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="indicators"?null:"indicators")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"indicators")}</button>
@@ -384,7 +383,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{TIMEFRAMES.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
       {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
       {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div>}
-      {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{setLocale(x);setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
+      {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{window.dispatchEvent(new CustomEvent("cfip:set-app-locale",{detail:x}));setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
       {panel==="settings"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
         {([
           ["showGrid","grid"],["showVolume","volume"],["showSessions","sessions"],["showBidAsk","bidAsk"],["magnet","magnet"]
