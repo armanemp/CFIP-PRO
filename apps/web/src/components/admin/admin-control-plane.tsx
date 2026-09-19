@@ -2,19 +2,19 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { getAdminRuntime, type AdminRuntime } from "@/lib/admin-api";
-import { getProviderCatalog, type ProviderDescriptor } from "@/lib/api";
+import { getProviderCatalog, getRuntimeStatus, type ProviderDescriptor, type RuntimeSnapshot } from "@/lib/api";
 import { ADMIN_MODULES, type AdminSection } from "./admin-config";
 import { settingsForSection } from "./admin-settings";
 
 export function AdminControlPlane() {
   const [section, setSection] = useState<AdminSection>("overview");
   const [runtime, setRuntime] = useState<AdminRuntime | null>(null);
-  const [providers, setProviders] = useState<ProviderDescriptor[]>([]);
+  const [providers, setProviders] = useState<ProviderDescriptor[]>([]);\n  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getAdminRuntime().then(setRuntime).catch((e: unknown) => setError(e instanceof Error ? e.message : "Runtime unavailable"));
-    getProviderCatalog().then(setProviders).catch(() => setProviders([]));
+    getProviderCatalog().then(setProviders).catch(() => setProviders([]));\n    getRuntimeStatus().then(setRuntimeStatus).catch(() => setRuntimeStatus(null));
   }, []);
 
   const active = ADMIN_MODULES.find(x => x.id === section) ?? ADMIN_MODULES[0];
@@ -58,7 +58,7 @@ function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: str
   return <div className="grid gap-4 lg:grid-cols-3">
     {error && <Card title="Runtime"><div className="text-sm text-amber-300">{error}</div></Card>}
     {checks.map(([label,ok,detail])=><Card key={label} title={label}><div className={`text-xl font-semibold ${ok?"text-emerald-300":"text-amber-300"}`}>{ok?"READY":"GUARDED"}</div><div className="mt-1 text-[11px] text-[#718096]">{detail}</div></Card>)}
-    <Card title="Release posture"><div className="text-xl font-semibold text-white">Governed</div><div className="mt-1 text-[11px] text-[#718096]">Production mutation stays behind explicit control-plane authorization.</div></Card>
+    <Card title="Runtime components"><div className="space-y-1.5">{runtimeStatus?.components.map(item=><div key={item.component} className="flex items-center justify-between rounded border border-[#1d2734] px-2 py-1.5 text-[10px]"><span className="text-[#a3afbf]">{item.component}</span><span className={item.status==="ready"?"text-emerald-300":"text-amber-300"}>{item.status.toUpperCase()}</span></div>) ?? <div className="text-xs text-[#718096]">Loading lifecycle status…</div>}</Card><Card title="Release posture"><div className="text-xl font-semibold text-white">Governed</div><div className="mt-1 text-[11px] text-[#718096]">Production mutation stays behind explicit control-plane authorization.</div></Card>
     <Card title="Terminal"><div className="text-xl font-semibold text-white">Chart-first</div><div className="mt-1 text-[11px] text-[#718096]">Indicators, analysis, risk and replay are modular domains.</div></Card>
     <Card title="Intelligence"><div className="text-xl font-semibold text-white">Elyrava</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
   </div>;
