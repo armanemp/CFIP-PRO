@@ -27,6 +27,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const drawingDragRef=useRef<{id:string;origin:Drawing;startTime:number;startPrice:number}|null>(null);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -302,6 +303,42 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     };
   }, []);
 
+  useEffect(()=>{
+    const move=(event:PointerEvent)=>{
+      const drag=drawingDragRef.current;
+      const c=chartRef.current, main=mainRef.current, section=host.current?.parentElement;
+      if(!drag||!c||!main||!section)return;
+      const rect=section.getBoundingClientRect();
+      const time=c.timeScale().coordinateToTime(event.clientX-rect.left);
+      const price=main.coordinateToPrice(event.clientY-rect.top);
+      if(typeof time!=="number"||price===null)return;
+      const dt=time-drag.startTime, dp=price-drag.startPrice;
+      setDrawings(current=>current.map(d=>d.id===drag.id?{
+        ...d,
+        a:{...drag.origin.a,time:(drag.origin.a.time as number)+dt,price:drag.origin.a.price+dp},
+        b:{...drag.origin.b,time:(drag.origin.b.time as number)+dt,price:drag.origin.b.price+dp}
+      }:d));
+      setOverlayTick(v=>v+1);
+    };
+    const up=()=>{drawingDragRef.current=null;};
+    window.addEventListener("pointermove",move);
+    window.addEventListener("pointerup",up);
+    return()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  },[]);
+
+  const startDrawingDrag=(event:React.PointerEvent<SVGElement>,drawing:Drawing)=>{
+    event.stopPropagation();
+    if(drawing.locked)return;
+    const c=chartRef.current,main=mainRef.current,section=host.current?.parentElement;
+    if(!c||!main||!section)return;
+    const rect=section.getBoundingClientRect();
+    const time=c.timeScale().coordinateToTime(event.clientX-rect.left);
+    const price=main.coordinateToPrice(event.clientY-rect.top);
+    if(typeof time!=="number"||price===null)return;
+    setSelectedDrawingId(drawing.id);
+    drawingDragRef.current={id:drawing.id,origin:drawing,startTime:time,startPrice:price};
+  };
+
   const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
     if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
     const rect=event.currentTarget.getBoundingClientRect();
@@ -368,12 +405,14 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
             const x1=chartRef.current?.timeScale().timeToCoordinate(d.a.time), x2=chartRef.current?.timeScale().timeToCoordinate(d.b.time);
             const y1=mainRef.current?.priceToCoordinate(d.a.price), y2=mainRef.current?.priceToCoordinate(d.b.price);
             if(x1===null||x1===undefined||x2===null||x2===undefined||y1===null||y1===undefined||y2===null||y2===undefined)return null;
-            if(d.tool==="horizontal") return <line key={d.id} x1={0} x2="100%" y1={y1} y2={y1} stroke="#94a3b8" strokeWidth="1" strokeDasharray="5 4"/>;
-            if(d.tool==="vertical") return <line key={d.id} x1={x1} x2={x1} y1={0} y2="100%" stroke="#94a3b8" strokeWidth="1" strokeDasharray="5 4"/>;
-            if(d.tool==="rectangle") return <rect key={d.id} x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke="#70a7ff" strokeWidth="1"/>;
-            if(d.tool==="fib") return <g key={d.id}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.382} y2={y1+(y2-y1)*.382} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.618} y2={y1+(y2-y1)*.618} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/></g>;
+            const selectedStroke=selectedDrawingId===d.id?"#fbbf24":"#94a3b8";
+            const hit=(xA:number,yA:number,xB:number,yB:number)=><line x1={xA} y1={yA} x2={xB} y2={yB} stroke="transparent" strokeWidth="16" pointerEvents="stroke" onPointerDown={e=>startDrawingDrag(e,d)}/>;
+            if(d.tool==="horizontal") return <g key={d.id}>{hit(0,y1,1000,y1)}<line x1={0} x2="100%" y1={y1} y2={y1} stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
+            if(d.tool==="vertical") return <g key={d.id}>{hit(x1,0,x1,1000)}<line x1={x1} x2={x1} y1={0} y2="100%" stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
+            if(d.tool==="rectangle") return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke={selectedDrawingId===d.id?"#fbbf24":"#70a7ff"} strokeWidth={selectedDrawingId===d.id?2:1}/></g>;
+            if(d.tool==="fib") return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.382} y2={y1+(y2-y1)*.382} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.618} y2={y1+(y2-y1)*.618} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/></g>;
             const stroke=d.tool==="short"?"#ef5350":"#70a7ff";
-            return <line key={d.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1}/>;
+            return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
           })}
           {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
         </svg>
