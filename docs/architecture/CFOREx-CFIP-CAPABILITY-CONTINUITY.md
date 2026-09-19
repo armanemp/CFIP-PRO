@@ -34,4 +34,4 @@ CForex v0.9.154 is a capability reference for CFIP-PRO, not a code migration tar
 11. AI command surface and evidence-backed research.
 12. Admin control plane and security/audit.
 
-External projects are evaluated through the OSS registry for license, maintenance, API fit, performance and vendor-lock-in risk before integration. cforex-platform remains abandoned.
+External projects are evaluated through the OSS registry for license, maintenance, API fit, performance and vendor-lock-in risk before integration. the abandoned legacy platform repository remains abandoned.
