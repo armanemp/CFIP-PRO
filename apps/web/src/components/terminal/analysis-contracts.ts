@@ -1,3 +1,4 @@
+import { ANALYSIS_POLICY } from "./analysis-policy";
 import type { Candle, OrderBlock, StructureEvent, StructurePoint, Zone } from "./types";
 
 export type AnalysisBias = "bullish" | "bearish" | "neutral";
@@ -118,16 +119,16 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
       bias: "neutral", score: 0, confidence: 0, regime: "insufficient", recommendation: "wait",
       modules: [], liquidity: { pools: ctx.liquidityPools, sweeps: ctx.liquiditySweeps },
       displacement: ctx.displacement, premiumDiscount: ctx.premiumDiscount, mtf: ctx.mtf, evidence: ["Insufficient market data."],
-      confluence: { score: 0, threshold: 84, accepted: false, gates: [] },
+      confluence: { score: 0, threshold: ANALYSIS_POLICY.confluenceThreshold, accepted: false, gates: [] },
     };
   }
 
-  const trendPoints = ctx.structurePoints.slice(-6);
+  const trendPoints = ctx.structurePoints.slice(-ANALYSIS_POLICY.maximumTrendPoints);
   const bullishStructure = trendPoints.filter(p => p.label === "HH" || p.label === "HL").length;
   const bearishStructure = trendPoints.filter(p => p.label === "LH" || p.label === "LL").length;
   const trendScore = clamp((bullishStructure - bearishStructure) / Math.max(1, trendPoints.length));
   modules.push({
-    module: "trend", bias: trendScore > .2 ? "bullish" : trendScore < -.2 ? "bearish" : "neutral",
+    module: "trend", bias: trendScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : trendScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: trendScore, confidence: Math.min(1, trendPoints.length / 6),
     summary: trendScore > .2 ? "Structure is skewed bullish." : trendScore < -.2 ? "Structure is skewed bearish." : "Structure is mixed.",
     facts: trendPoints.slice(-3).map(p => p.label),
@@ -135,7 +136,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
 
   const momentumScore = ctx.rsi === null ? 0 : clamp((ctx.rsi - 50) / 25) * .65 + (ctx.macdHistogram === null ? 0 : Math.sign(ctx.macdHistogram) * .35);
   modules.push({
-    module: "momentum", bias: momentumScore > .15 ? "bullish" : momentumScore < -.15 ? "bearish" : "neutral",
+    module: "momentum", bias: momentumScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : momentumScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: momentumScore, confidence: ctx.rsi === null ? 0 : .8,
     summary: ctx.rsi === null ? "Momentum unavailable." : `RSI ${ctx.rsi.toFixed(1)} with MACD confirmation ${ctx.macdHistogram === null ? "unavailable" : ctx.macdHistogram >= 0 ? "positive" : "negative"}.`,
     facts: [ctx.rsi === null ? "RSI unavailable" : `RSI=${ctx.rsi.toFixed(1)}`],
@@ -144,7 +145,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const displacement = ctx.displacement.at(-1);
   const volScore = displacement ? (displacement.bullish ? 1 : -1) * Math.min(1, displacement.strength) : 0;
   modules.push({
-    module: "volatility", bias: volScore > .15 ? "bullish" : volScore < -.15 ? "bearish" : "neutral",
+    module: "volatility", bias: volScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : volScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: volScore, confidence: displacement ? .75 : 0,
     summary: displacement ? `Recent ${displacement.bullish ? "bullish" : "bearish"} displacement detected.` : "No qualifying displacement.",
     facts: displacement ? [`ATR multiple=${displacement.atrMultiple.toFixed(2)}`, `body/range=${(displacement.bodyRatio * 100).toFixed(0)}%`] : [],
@@ -153,7 +154,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const ob = ctx.orderBlocks.at(-1);
   const obScore = ob ? (ob.bullish ? 1 : -1) * ob.strength : 0;
   modules.push({
-    module: "order_blocks", bias: obScore > .15 ? "bullish" : obScore < -.15 ? "bearish" : "neutral",
+    module: "order_blocks", bias: obScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : obScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: obScore, confidence: ob ? .65 : 0,
     summary: ob ? `Latest order block is ${ob.bullish ? "bullish" : "bearish"}.` : "No qualifying order block.",
     facts: ob ? [`strength=${Math.round(ob.strength * 100)}%`] : [],
@@ -171,7 +172,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const sweep = ctx.liquiditySweeps.at(-1);
   const liqScore = sweep ? (sweep.kind === "sell_side" ? 1 : -1) * sweep.strength : 0;
   modules.push({
-    module: "liquidity", bias: liqScore > .15 ? "bullish" : liqScore < -.15 ? "bearish" : "neutral",
+    module: "liquidity", bias: liqScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : liqScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: liqScore, confidence: sweep ? .7 : 0,
     summary: sweep ? `${sweep.kind === "sell_side" ? "Sell-side" : "Buy-side"} liquidity sweep detected.` : "No recent liquidity sweep.",
     facts: sweep ? [sweep.reclaimed ? "Price reclaimed the liquidity level" : "Liquidity level was breached"] : [],
@@ -180,7 +181,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const vol = ctx.candles.length >= 2 ? Math.abs(last.close - prev!.close) / Math.max(last.high - last.low, Number.EPSILON) : 0;
   const volumeScore = last.volume > 0 ? (last.close >= last.open ? 1 : -1) * Math.min(1, vol) : 0;
   modules.push({
-    module: "volume", bias: volumeScore > .15 ? "bullish" : volumeScore < -.15 ? "bearish" : "neutral",
+    module: "volume", bias: volumeScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : volumeScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: volumeScore, confidence: last.volume > 0 ? .45 : 0,
     summary: last.volume > 0 ? "Latest bar has directional volume participation." : "Volume unavailable.",
     facts: last.volume > 0 ? [`volume=${last.volume.toFixed(2)}`] : [],
@@ -193,7 +194,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const bias: AnalysisBias = score > .18 ? "bullish" : score < -.18 ? "bearish" : "neutral";
   const confidence = weight ? Math.min(1, Math.abs(weighted) / weight * .65 + Math.min(1, weight / 5) * .35) : 0;
   const range = ctx.atr && last.high - last.low > ctx.atr * 1.5 ? "volatile" : Math.abs(score) > .35 ? "trending" : "ranging";
-  const evidence = modules.flatMap(m => m.facts.map(f => `${m.module}: ${f}`)).slice(-8);
+  const evidence = modules.flatMap(m => m.facts.map(f => `${m.module}: ${f}`)).slice(-ANALYSIS_POLICY.maximumEvidenceItems);
   const alignedMtf = ctx.mtf.filter(m => m.bias === bias && m.structure !== "insufficient").length;
   const htfGate = alignedMtf >= 2;
   const liquidityOrFvg = ctx.liquiditySweeps.length > 0 || ctx.zones.length > 0;
@@ -208,7 +209,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const possible = modules.reduce((n, m) => n + (m.confidence > 0 ? 1 : 0), 0) + gates.length;
   const raw = modules.reduce((n, m) => n + Math.abs(m.score) * m.confidence, 0) + gates.filter(g => g.passed).length;
   const confluenceScore = possible ? Math.round(Math.max(0, Math.min(100, raw / possible * 100))) : 0;
-  const accepted = confluenceScore >= 84 && gates.filter(g => g.passed).length >= 3 && bias !== "neutral";
+  const accepted = confluenceScore >= ANALYSIS_POLICY.confluenceThreshold && gates.filter(g => g.passed).length >= ANALYSIS_POLICY.minimumPassedGates && bias !== "neutral";
 
   return {
     bias, score, confidence,
