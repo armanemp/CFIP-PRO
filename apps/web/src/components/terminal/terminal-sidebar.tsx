@@ -1,49 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import type { Candle, Drawing, InspectorTab, Locale, ChartPreferences, OrderBlock, StructureEvent, StructurePoint } from "./types";
 import type { UnifiedAnalysis } from "./analysis-contracts";
 import { t } from "./i18n";
 import "./terminal-theme.module.css";
+import { DEFAULT_WATCHLIST } from "./terminal-config";
+import { RiskCalculator } from "./risk-calculator";
 
 const tabsA: InspectorTab[] = ["market", "watchlist", "structure"];
 const tabsB: InspectorTab[] = ["intelligence", "risk", "objects"];
 
 function biasLabel(analysis: UnifiedAnalysis) {
   return analysis.bias === "bullish" ? "Bullish" : analysis.bias === "bearish" ? "Bearish" : "Neutral";
-}
-
-function RiskCalculator({ locale, lastPrice }: { locale: Locale; lastPrice: number }) {
-  const [equity, setEquity] = useState("10000");
-  const [riskPct, setRiskPct] = useState("1");
-  const [leverage, setLeverage] = useState("30");
-  const [contractSize, setContractSize] = useState("100000");
-  const [entry, setEntry] = useState(lastPrice ? String(lastPrice) : "");
-  const [stop, setStop] = useState("");
-  const [target, setTarget] = useState("");
-  const n = (v: string) => Number.isFinite(Number(v)) ? Number(v) : 0;
-  const eq=n(equity), risk=n(riskPct), lev=n(leverage), cs=n(contractSize), ep=n(entry), sl=n(stop), tp=n(target);
-  const riskCash=eq*Math.max(risk,0)/100;
-  const stopDistance=Math.abs(ep-sl);
-  const units=stopDistance>0 ? riskCash/stopDistance : 0;
-  const maxUnits=lev>0 && ep>0 ? (eq*lev)/ep : 0;
-  const cappedUnits=maxUnits>0?Math.min(units,maxUnits):units;
-  const reward=tp>0?Math.abs(tp-ep):0;
-  const rr=stopDistance>0?reward/stopDistance:0;
-  const valid=eq>0&&risk>0&&ep>0&&sl>0&&stopDistance>0&&cs>0;
-  return <div className="space-y-3">
-    <div className="rounded border border-[#263241] bg-[#0a0f16] p-3"><div className="text-xs uppercase text-[#64748b]">Risk engine</div><div className="mt-1 text-[10px] leading-4 text-[#64748b]">Client-side sizing estimate. Broker contract specification and account currency conversion must be supplied by the execution layer before live orders.</div></div>
-    <div className="grid grid-cols-2 gap-2">
-      {([["Equity",equity,setEquity],["Risk %",riskPct,setRiskPct],["Leverage",leverage,setLeverage],["Contract size",contractSize,setContractSize],["Entry",entry,setEntry],["Stop loss",stop,setStop],["Take profit",target,setTarget]] as const).map(([label,value,setter])=><label key={label} className="text-[10px] text-[#718096]">{label}<input value={value} onChange={e=>setter(e.target.value)} inputMode="decimal" className="mt-1 w-full rounded border border-[#334155] bg-[#0d131b] px-2 py-1.5 text-xs text-white outline-none focus:border-[#64748b]" /></label>)}
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Risk cash</div><div className="mt-1 tabular-nums">{riskCash.toFixed(2)}</div></div>
-      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Stop distance</div><div className="mt-1 tabular-nums">{stopDistance.toFixed(5)}</div></div>
-      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Units</div><div className="mt-1 tabular-nums">{valid?Math.floor(cappedUnits).toLocaleString():"—"}</div><div className="mt-1 text-[9px] text-[#64748b]">{valid?`${(cappedUnits/cs).toFixed(2)} lots`:""}</div></div>
-      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">R:R</div><div className="mt-1 tabular-nums">{rr>0?rr.toFixed(2):"—"}</div></div>
-    </div>
-    <div className="text-[10px] text-[#64748b]">Max notional leverage cap: {maxUnits>0?Math.floor(maxUnits).toLocaleString():"—"} · {locale==="fa"?"محاسبه تخمینی":"Estimate only"}</div>
-  </div>;
 }
 
 export function TerminalSidebar({
@@ -77,7 +45,7 @@ export function TerminalSidebar({
           <div key={String(k)} className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] uppercase text-[#64748b]">{k}</div><div className="mt-1 tabular-nums">{typeof v === "number" ? v.toFixed(5) : "—"}</div></div>)}</div>
       </div>}
 
-      {tab === "watchlist" && <div className="space-y-1.5">{["EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","NZD/USD","EUR/JPY"].map(s =>
+      {tab === "watchlist" && <div className="space-y-1.5">{DEFAULT_WATCHLIST.map(s =>
         <button type="button" key={s} onClick={() => setSymbol(s)} className={`flex min-h-9 w-full items-center justify-between rounded border px-3 py-2 text-left ${s === symbol ? "border-[#3b82f6] bg-[#132033] text-white" : "border-[#263241] hover:bg-[#111a25]"}`}><span>{s}</span><span className="text-xs text-[#64748b]">{s === symbol && last ? last.close.toFixed(5) : "—"}</span></button>)}</div>
 
       {tab === "structure" && <div className="space-y-3">
