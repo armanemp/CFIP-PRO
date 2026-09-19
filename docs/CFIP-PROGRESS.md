@@ -1,3 +1,11 @@
+# 2026-09-20 — Cross-platform contracts, provider expansion and hardcode audit
+
+- Added `apps/api/src/cfip/domain/stream_contracts.py` as the transport-neutral realtime boundary for WebSocket/polling/NATS/replay adapters. It defines stream identity, event envelopes, cursors and deterministic duplicate/out-of-order classification.
+- Added focused unit coverage for first-event acceptance, duplicate identity, sequence ordering and timestamp ordering.
+- Expanded the provider catalog beyond market/broker/AI/research into identity (Google OAuth), crypto payments (BTCPay Server/Coinbase Commerce), storage (PostgreSQL/ClickHouse/Redis), messaging (NATS JetStream) and observability/lifecycle (OpenTelemetry/MLflow/Prometheus/Grafana). Catalog presence is not treated as live connectivity.
+- Audited the active professional terminal for remaining presentation hardcodes and moved its remaining status/overlay/replay visual tokens into the semantic CSS theme boundary. The active V3 file now has no targeted hex/RGB/Tailwind status-color literals.
+- Current feature branch is 48 commits ahead of `main`, 0 behind. GitHub Actions currently reports no workflow run for the latest commit, so CI green is not claimed.
+
 # 2026-09-20 — Terminal modular runtime expansion
 
 - Extracted terminal drawing undo/redo history into `apps/web/src/components/terminal/drawing-history.ts`. The component no longer owns raw history-array mutation; the boundary now provides bounded undo/redo stacks, redo invalidation and structural no-op detection.
