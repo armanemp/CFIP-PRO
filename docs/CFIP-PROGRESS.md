@@ -1,3 +1,16 @@
+## 2026-09-19 — platform-wide modularization pass
+
+- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Elyrava intelligence, research, platform governance and admin boundaries.
+- Exposed the capability registry through `GET /capabilities` so the web/admin surfaces can consume one platform capability truth instead of duplicating feature lists.
+- Expanded configuration contracts for chart defaults, notifications and governed Git operations while retaining provider-neutral secret references.
+- Hardened Git governance contracts: protected CI/security/environment paths, explicit validation/rollback plans, risk classification, approval metadata and prohibition of direct main/master commits through the governed change boundary.
+- Expanded admin settings for Git governance, AI change proposals, OSS adapters, alerts and workspace layouts.
+- Corrected the terminal command registry's malformed escaped-newline union and expanded command coverage across all configured timeframes and terminal operations.
+- Corrected the indicator-instance test import boundary so tests resolve the module through the local package boundary.
+- Removed all occurrences of the retired legacy repository name from the canonical CFIP documentation set; current docs describe only the legacy repository generically where historical exclusion must be recorded.
+- Added the 2026-09-19 OSS adoption matrix. Current external research includes OpenBB, OpenTerminalUI, Open Exchange trading UI and Pairlens; these remain adapter/reference candidates until license, runtime compatibility, semantic equivalence, security and performance gates are satisfied. Current integrated dependencies remain unchanged.
+- GitHub Actions does not currently expose a workflow result for the newest connector-created commit, so CI green is not claimed.
+
 ## 2026-09-18 — Market-data continuity gate
 
 - Added a provider-agnostic deterministic data-quality contract in apps/api/src/cfip/domain/data_quality.py.
