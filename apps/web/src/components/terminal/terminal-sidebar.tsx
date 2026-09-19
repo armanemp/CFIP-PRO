@@ -39,7 +39,7 @@ function RiskCalculator({ locale, lastPrice }: { locale: Locale; lastPrice: numb
     <div className="grid grid-cols-2 gap-2">
       <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Risk cash</div><div className="mt-1 tabular-nums">{riskCash.toFixed(2)}</div></div>
       <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Stop distance</div><div className="mt-1 tabular-nums">{stopDistance.toFixed(5)}</div></div>
-      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Units</div><div className="mt-1 tabular-nums">{valid?Math.floor(cappedUnits).toLocaleString():"—"}</div></div>
+      <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">Units</div><div className="mt-1 tabular-nums">{valid?Math.floor(cappedUnits).toLocaleString():"—"}</div><div className="mt-1 text-[9px] text-[#64748b]">{valid?`${(cappedUnits/cs).toFixed(2)} lots`:""}</div></div>
       <div className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] text-[#64748b]">R:R</div><div className="mt-1 tabular-nums">{rr>0?rr.toFixed(2):"—"}</div></div>
     </div>
     <div className="text-[10px] text-[#64748b]">Max notional leverage cap: {maxUnits>0?Math.floor(maxUnits).toLocaleString():"—"} · {locale==="fa"?"محاسبه تخمینی":"Estimate only"}</div>
