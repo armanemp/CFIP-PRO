@@ -2,19 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { ProfessionalChartTerminalV3 } from "@/components/professional-chart-terminal-v3";
-import { getMarketObservations, type MarketObservation } from "@/lib/api";
-import { TERMINAL_DATA_DEFAULTS } from "@/components/terminal/terminal-config";
+import { getMarketObservations, getTerminalManifest, type MarketObservation, type TerminalManifest } from "@/lib/api";
 
 export function TerminalShell() {
   const [observations, setObservations] = useState<MarketObservation[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [manifest, setManifest] = useState<TerminalManifest | null>(null);
 
   useEffect(() => {
     let active = true;
-    getMarketObservations(TERMINAL_DATA_DEFAULTS.symbol, TERMINAL_DATA_DEFAULTS.venue, TERMINAL_DATA_DEFAULTS.initialObservationLimit).then((data) => {
-      if (active) setObservations(data);
+    getTerminalManifest().then((next) => {
+      if (!active) return;
+      setManifest(next);
+      return getMarketObservations(
+        next.datafeed_defaults.symbol,
+        next.datafeed_defaults.venue,
+        next.datafeed_defaults.limit,
+      );
+    }).then((data) => {
+      if (active && data) setObservations(data);
     }).catch((reason: unknown) => {
-      if (active) setError(reason instanceof Error ? reason.message : "Market data unavailable");
+      if (active) setError(reason instanceof Error ? reason.message : "Terminal manifest or market data unavailable");
     });
     return () => { active = false; };
   }, []);
@@ -25,6 +33,6 @@ export function TerminalShell() {
       <span className="mx-4 h-4 w-px bg-[#2b3542]" /><span className="text-xs text-[#748196]">CHART TERMINAL</span>
       <div className="ml-auto text-[10px] text-[#687689]">{error ? "DATA SOURCE UNAVAILABLE" : "NORMALIZED MARKET DATA"}</div>
     </header>
-    <section className="min-h-0 min-w-0 flex-1"><ProfessionalChartTerminalV3 observations={observations} symbol={TERMINAL_DATA_DEFAULTS.symbol} /></section>
+    <section className="min-h-0 min-w-0 flex-1">{manifest ? <ProfessionalChartTerminalV3 observations={observations} symbol={manifest.datafeed_defaults.symbol} /> : <div className="grid h-full place-items-center text-xs text-[#687689]">Loading terminal configuration…</div>}</section>
   </main>;
 }
