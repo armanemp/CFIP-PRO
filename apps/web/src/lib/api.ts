@@ -116,3 +116,46 @@ export async function getProviderCatalog(): Promise<ProviderDescriptor[]> {
   if (!response.ok) throw new Error(`Provider catalog request failed: ${response.status}`);
   return z.array(ProviderSchema).parse(await response.json());
 }
+
+
+const IndicatorDefinitionSchema = z.object({
+  id: z.string(), name: z.string(), kind: z.string(),
+  parameters: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
+  output_names: z.array(z.string()), source: z.string(), version: z.string(),
+});
+export type IndicatorDefinition = z.infer<typeof IndicatorDefinitionSchema>;
+
+export async function getIndicatorDefinitions(): Promise<IndicatorDefinition[]> {
+  const response = await fetch(`${apiBaseUrl}/indicators/definitions`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Indicator catalog request failed: ${response.status}`);
+  return z.array(IndicatorDefinitionSchema).parse(await response.json());
+}
+
+const PlanSchema = z.object({
+  id: z.enum(["free","pro"]), name: z.string(), price_minor: z.number().int().nonnegative(),
+  currency: z.string(), billing_period: z.enum(["month","year"]),
+  entitlements: z.array(z.string()), limits: z.record(z.string(), z.union([z.number(), z.boolean()])),
+});
+export type PlanDefinition = z.infer<typeof PlanSchema>;
+
+export async function getPlans(): Promise<PlanDefinition[]> {
+  const response = await fetch(`${apiBaseUrl}/subscriptions/plans`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Subscription plan request failed: ${response.status}`);
+  return z.array(PlanSchema).parse(await response.json());
+}
+
+export async function getPlatformManifest(): Promise<{
+  schema_version: number;
+  capabilities: Array<Record<string, unknown>>;
+  providers: ProviderDescriptor[];
+  governance: Record<string, boolean>;
+}> {
+  const response = await fetch(`${apiBaseUrl}/platform/manifest`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Platform manifest request failed: ${response.status}`);
+  return z.object({
+    schema_version: z.number(),
+    capabilities: z.array(z.record(z.string(), z.unknown())),
+    providers: z.array(ProviderSchema),
+    governance: z.record(z.string(), z.boolean()),
+  }).parse(await response.json());
+}
