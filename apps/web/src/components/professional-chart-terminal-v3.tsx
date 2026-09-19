@@ -14,7 +14,7 @@ import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/a
 import "./terminal/terminal-theme.module.css";
 import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
-import { clearTerminalSession, loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
+import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 
 const tfs: Timeframe[] = ["1m","5m","15m","30m","1H","4H","1D","1W","1M"];
 const studies = ["EMA20","EMA50","EMA200","SMA20","WMA20","VWAP","BB20","RSI14","MACD","DMI14","STOCH14","DONCHIAN20","KELTNER20","ICHIMOKU"] as const;
@@ -27,7 +27,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
-  const drawingDragRef=useRef<{id:string;origin:Drawing;startTime:number;startPrice:number}|null>(null);
+  const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
+  const drawingsRef=useRef<Drawing[]>(drawings);
+  drawingsRef.current=drawings;
   const drawingHistoryRef=useRef<Drawing[][]>([]);
   const drawingRedoRef=useRef<Drawing[][]>([]);
 
@@ -341,7 +343,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       }:d));
       setOverlayTick(v=>v+1);
     };
-    const up=()=>{drawingDragRef.current=null;};
+    const up=()=>{const drag=drawingDragRef.current;if(drag&&JSON.stringify(drawingsRef.current)!==JSON.stringify(drag.before)){drawingHistoryRef.current=[...drawingHistoryRef.current.slice(-49),drag.before];drawingRedoRef.current=[];} drawingDragRef.current=null;};
     window.addEventListener("pointermove",move);
     window.addEventListener("pointerup",up);
     return()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
@@ -357,7 +359,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const price=main.coordinateToPrice(event.clientY-rect.top);
     if(typeof time!=="number"||price===null)return;
     setSelectedDrawingId(drawing.id);
-    drawingDragRef.current={id:drawing.id,origin:drawing,startTime:time,startPrice:price};
+    drawingDragRef.current={id:drawing.id,origin:drawing,before:drawingsRef.current,startTime:time,startPrice:price};
   };
 
   const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
@@ -431,7 +433,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
             if(d.tool==="horizontal") return <g key={d.id}>{hit(0,y1,1000,y1)}<line x1={0} x2="100%" y1={y1} y2={y1} stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
             if(d.tool==="vertical") return <g key={d.id}>{hit(x1,0,x1,1000)}<line x1={x1} x2={x1} y1={0} y2="100%" stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
             if(d.tool==="rectangle") return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke={selectedDrawingId===d.id?"#fbbf24":"#70a7ff"} strokeWidth={selectedDrawingId===d.id?2:1}/></g>;
-            if(d.tool==="fib") return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.382} y2={y1+(y2-y1)*.382} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.618} y2={y1+(y2-y1)*.618} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/></g>;
+            if(d.tool==="fib"){const levels=[0,.236,.382,.5,.618,.786,1];return <g key={d.id}>{hit(x1,y1,x2,y2)}{levels.map(level=>{const yy=y1+(y2-y1)*level;return <g key={level}><line x1={0} x2="100%" y1={yy} y2={yy} stroke="#fbbf24" strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="3 3"/><text x={Math.max(x1,x2)+6} y={yy-3} fill="#d8e0ea" fontSize="9">{(level*100).toFixed(1)}% · {((d.a.price+(d.b.price-d.a.price)*level)).toFixed(meta?.digits??5)}</text></g>})}</g>};
             const stroke=d.tool==="short"?"#ef5350":d.tool==="long"?"#22c55e":"#70a7ff";
             if(d.tool==="measure"){
               const distance=d.b.price-d.a.price;
