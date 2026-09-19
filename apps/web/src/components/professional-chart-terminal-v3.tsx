@@ -254,7 +254,22 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
-  useEffect(() => {\n    const c = chartRef.current;\n    if (!c) return;\n    const redraw = () => setOverlayTick(v => v + 1);\n    const scale = c.timeScale();\n    scale.subscribeVisibleLogicalRangeChange(redraw);\n    scale.subscribeSizeChange(redraw);\n    window.addEventListener("resize", redraw);\n    return () => {\n      scale.unsubscribeVisibleLogicalRangeChange(redraw);\n      scale.unsubscribeSizeChange(redraw);\n      window.removeEventListener("resize", redraw);\n    };\n  }, []);\n\n  const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
+  useEffect(() => {
+    const c = chartRef.current;
+    if (!c) return;
+    const redraw = () => setOverlayTick(v => v + 1);
+    const scale = c.timeScale();
+    scale.subscribeVisibleLogicalRangeChange(redraw);
+    scale.subscribeSizeChange(redraw);
+    window.addEventListener("resize", redraw);
+    return () => {
+      scale.unsubscribeVisibleLogicalRangeChange(redraw);
+      scale.unsubscribeSizeChange(redraw);
+      window.removeEventListener("resize", redraw);
+    };
+  }, []);
+
+  const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
     if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
     const rect=event.currentTarget.getBoundingClientRect();
     const x=event.clientX-rect.left, y=event.clientY-rect.top;
