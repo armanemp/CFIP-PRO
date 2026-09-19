@@ -106,6 +106,7 @@ class PlatformRuntime:
             "ready_count": sum(item.state == ComponentState.READY for item in statuses),
             "degraded_count": sum(item.state == ComponentState.DEGRADED for item in statuses),
             "components": [item.as_dict() for item in statuses],
+            "local_bootstrap": platform_bootstrap.snapshot(),
         }
 
     def mark(
