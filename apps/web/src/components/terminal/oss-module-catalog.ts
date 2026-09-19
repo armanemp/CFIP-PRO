@@ -36,6 +36,15 @@ export const OSS_MODULE_CATALOG: readonly OssModuleDescriptor[] = [
     status: "integrated",
   },
   {
+    id: "pairlens-fast-financial-charts",
+    family: "chart",
+    mode: "reference",
+    license: "MIT",
+    capabilities: ["90 indicators","42 drawing tools","multi-pane","live tick streaming","AI control surface"],
+    status: "planned",
+    notes: "Evaluate as a chart-engine benchmark/adapter candidate; do not add until performance, API fit and dependency policy pass.",
+  },
+  {
     id: "open-terminal-ui-reference",
     family: "research",
     mode: "reference",
