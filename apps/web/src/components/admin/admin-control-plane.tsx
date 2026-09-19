@@ -48,19 +48,22 @@ export function AdminControlPlane() {
 
 function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: string | null }) {
   const checks = runtime ? [
-    ["API runtime", true, `${runtime.app.name} ${runtime.app.version}`],
+    ["API runtime", runtime.platform.status === "ready", `${runtime.app.name} ${runtime.app.version}`],
     ["PostgreSQL configured", runtime.dependencies.postgres, "connection boundary present"],
     ["NATS configured", runtime.dependencies.nats, "event boundary present"],
     ["Redis configured", runtime.dependencies.redis, "cache boundary present"],
     ["Secrets exposed", !runtime.security.secrets_exposed, "safe introspection"],
     ["Mutations", false, "authentication/authorization boundary required"],
   ] as const : [];
-  return <div className="grid gap-4 lg:grid-cols-3">
+  return <div className="space-y-5">
     {error && <Card title="Runtime"><div className="text-sm text-amber-300">{error}</div></Card>}
-    {checks.map(([label,ok,detail])=><Card key={label} title={label}><div className={`text-xl font-semibold ${ok?"text-emerald-300":"text-amber-300"}`}>{ok?"READY":"GUARDED"}</div><div className="mt-1 text-[11px] text-[#718096]">{detail}</div></Card>)}
-    <Card title="Release posture"><div className="text-xl font-semibold text-white">Governed</div><div className="mt-1 text-[11px] text-[#718096]">Production mutation stays behind explicit control-plane authorization.</div></Card>
-    <Card title="Terminal"><div className="text-xl font-semibold text-white">Chart-first</div><div className="mt-1 text-[11px] text-[#718096]">Indicators, analysis, risk and replay are modular domains.</div></Card>
-    <Card title="Intelligence"><div className="text-xl font-semibold text-white">Elyrava</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
+    <div className="grid gap-4 lg:grid-cols-3">
+      {checks.map(([label,ok,detail])=><Card key={label} title={label}><div className={`text-xl font-semibold ${ok?"text-emerald-300":"text-amber-300"}`}>{ok?"READY":"GUARDED"}</div><div className="mt-1 text-[11px] text-[#718096]">{detail}</div></Card>)}
+      <Card title="Platform startup"><div className="text-xl font-semibold text-white">{runtime ? `${runtime.platform.ready_count}/${runtime.platform.component_count}` : "—"}</div><div className="mt-1 text-[11px] text-[#718096]">Runtime components initialized in one application lifecycle.</div></Card>
+      <Card title="Terminal"><div className="text-xl font-semibold text-white">Chart-first</div><div className="mt-1 text-[11px] text-[#718096]">Indicators, analysis, risk and replay are modular domains.</div></Card>
+      <Card title="Intelligence"><div className="text-xl font-semibold text-white">Elyrava</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
+    </div>
+    {runtime && <section><div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#566579]">Runtime components</div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{runtime.platform.components.map(component=><Card key={component.name} title={component.name}><div className={`text-sm font-semibold ${component.state==="ready"?"text-emerald-300":component.state==="degraded"?"text-amber-300":"text-[#9aa8ba"}`}>{component.state.toUpperCase()}</div><div className="mt-1 text-[11px] text-[#718096]">{component.detail}</div><div className="mt-3 flex justify-between text-[10px] uppercase tracking-wider text-[#59687b]"><span>{component.required?"required":"optional"}</span><span>{component.duration_ms === null ? "—" : `${component.duration_ms}ms`}</span></div></Card>)}</div></section>}
   </div>;
 }
 
