@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ColorType, CrosshairMode, createChart, type IChartApi, type ISeriesApi, type SeriesType, type UTCTimestamp } from "lightweight-charts";
 import type { MarketObservation } from "@/lib/api";
-import { getMarketObservations, postUnifiedAnalysis, type UnifiedAnalysisRead } from "@/lib/api";
+import { postUnifiedAnalysis, type UnifiedAnalysisRead } from "@/lib/api";
 import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
@@ -19,6 +19,7 @@ import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
+import { useTerminalMarketData } from "@/components/terminal/use-terminal-market-data";
 
 
 
@@ -28,6 +29,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const market = useTerminalMarketData(symbol, initial);
+  useEffect(() => {
+    setRows(market.rows);
+    setLive(market.live);
+    setError(market.error);
+  }, [market.rows, market.live, market.error]);
+
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
@@ -208,24 +216,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     return()=>window.removeEventListener("pointerdown",close);
   },[panel]);
 
-  useEffect(()=>{
-    let active=true;
-    const load=async()=>{
-      try{
-        const next=await getMarketObservations(symbol,TERMINAL_DATA_DEFAULTS.venue,TERMINAL_DATA_DEFAULTS.initialObservationLimit);
-        if(active){
-          const version = `${next.length}:${next.at(-1)?.observed_at ?? ""}:${next.at(-1)?.last ?? ""}`;
-          if (version !== marketVersionRef.current) { marketVersionRef.current = version; setRows(next); }
-          setLive(next.length>0);setError(false);
-        }
-      }catch{
-        if(active){setLive(false);setError(true);}
-      }
-    };
-    void load();
-    const id=window.setInterval(load,TERMINAL_DATA_DEFAULTS.refreshMs);
-    return()=>{active=false;window.clearInterval(id);};
-  },[symbol]);
+
 
   useEffect(()=>{
     if(!host.current)return;
