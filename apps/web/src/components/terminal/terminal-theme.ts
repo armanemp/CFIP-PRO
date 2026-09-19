@@ -22,6 +22,15 @@ export const TERMINAL_THEME = {
   info: "#60a5fa",
   volumeUp: "#70a7ff",
   volumeDown: "#ef5350",
+  seriesAlt: "#c084fc",
+  seriesWarm: "#f97316",
+  seriesPink: "#e879f9",
+  seriesTeal: "#34d399",
+  seriesBlue: "#38bdf8",
+  seriesRose: "#fb7185",
+  seriesPurple: "#a78bfa",
+  seriesRed: "#f43f5e",
+  seriesViolet: "#a855f7",
 } as const;
 
 export type TerminalTheme = typeof TERMINAL_THEME;
