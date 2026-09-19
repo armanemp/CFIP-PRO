@@ -1,3 +1,10 @@
+# 2026-09-20 — Elyrava governed improvement boundary audit
+
+- Re-read the existing self-development contracts before extending autonomous behavior. The current safe boundary is preserved: Elyrava may observe/diagnose/propose, but promotion requires evidence, validation and rollback information; high/critical proposals explicitly require human approval.
+- Kept Git mutation behind the existing governed Git boundary rather than granting the intelligence unrestricted shell or production-write access.
+- The improvement endpoint remains a validation boundary only and reports `mutation_performed: false`; this avoids a false impression that self-development is already changing production.
+- This is intentional architecture: the next implementation layer should add durable evidence/proposal/validation records and sandbox execution, then connect them to the governed Git proposal lifecycle rather than bypassing it.
+
 # 2026-09-20 — Terminal semantic theme boundary
 
 - Moved the professional terminal's remaining UI color literals onto semantic CSS custom properties backed by the terminal theme contract.
