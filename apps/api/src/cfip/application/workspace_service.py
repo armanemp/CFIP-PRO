@@ -6,13 +6,11 @@ class WorkspaceService:
     def __init__(self, repository: WorkspaceRepository) -> None:
         self.repository = repository
 
-    async def get(self, user_id: str, workspace_id: str) -> Workspace | None:
+    async def get(self, user_id: str, workspace_id: str) -> ChartWorkspace | None:
         return await self.repository.get(user_id, workspace_id)
 
-    async def list(self, user_id: str) -> tuple[Workspace, ...]:
+    async def list(self, user_id: str) -> tuple[ChartWorkspace, ...]:
         return await self.repository.list(user_id)
 
-    async def save(self, user_id: str, workspace: Workspace) -> Workspace:
-        if workspace.user_id != user_id:
-            raise PermissionError("workspace_owner_mismatch")
+    async def save(self, user_id: str, workspace: ChartWorkspace) -> ChartWorkspace:
         return await self.repository.save(workspace)
