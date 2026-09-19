@@ -215,3 +215,16 @@
 - Hardened the workspace viewport default with default_factory to avoid shared mutable model state.
 - Opened draft PR #4 for this batch. The branch is deliberately not represented as production-ready until the repository CI and native frontend/runtime gates are actually verified.
 - No new dependency, cache purge, database reset or forced rebuild was introduced by this batch.
+
+
+## 2026-09-19 — Runtime lifecycle, realtime boundary, paper OMS and control-plane health
+
+- Added a typed runtime lifecycle contract and dependency-aware RuntimeSupervisor; application startup now initializes the event boundary, provider registry, Elyrava intelligence runtime, canonical market-data boundary and terminal orchestration before serving traffic, and shuts them down in reverse order.
+- Added a process-local event bus as the transport-neutral realtime boundary. It is deliberately replaceable by the existing NATS JetStream architecture without coupling terminal code to a broker implementation.
+- Added /api/runtime/status so the control plane can observe every initialized component and its dependency/status metadata.
+- Added /api/ws/terminal/{topic} for normalized realtime event delivery and connected market observation ingestion to the event boundary.
+- Added an idempotent paper OMS at /api/orders/paper; live/simulation execution is rejected by this boundary and remains an explicitly authorized adapter concern.
+- Extended the admin control plane to display runtime component health and retained the existing modular provider/settings/governance inventory.
+- Added unit coverage for lifecycle ordering, event-bus round trip and paper-order idempotency/safety.
+- No new dependency, forced rebuild, cache purge or database reset was introduced.
+- This batch establishes the startup/runtime spine; external provider connections remain configuration- and adapter-gated rather than pretending that catalog entries are live integrations.
