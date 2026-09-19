@@ -1,7 +1,7 @@
 import type { IChartApi } from "lightweight-charts";
 import type { Candle } from "./types";
 import { getIndicatorDefinition, type IndicatorId } from "./indicator-registry";
-import { ema, bollinger, sma, wma, vwap, rsi, macd, dmi, stochastic, donchian, keltner, ichimoku } from "./chart-math";
+import { atr, ema, bollinger, sma, wma, vwap, obv, rsi, macd, dmi, stochastic, donchian, keltner, ichimoku } from "./chart-math";
 import { addIndicatorSeries } from "./chart-engine";
 
 const COLORS: Record<string, string> = {
@@ -28,6 +28,8 @@ export function renderRegisteredIndicators(
       case "SMA20": add(id, sma(candles, 20), COLORS[id], "SMA 20"); break;
       case "WMA20": add(id, wma(candles, 20), COLORS[id], "WMA 20"); break;
       case "VWAP": add(id, vwap(candles), COLORS[id], "VWAP"); break;
+      case "ATR14": add(id, atr(candles, 14), "#fb7185", "ATR 14", oscillatorPaneIndex); break;
+      case "OBV": add(id, obv(candles), "#34d399", "OBV", oscillatorPaneIndex); break;
       case "RSI14": add(id, rsi(candles, 14), COLORS[id], "RSI 14", oscillatorPaneIndex); break;
       case "MACD": {
         const value = macd(candles);
