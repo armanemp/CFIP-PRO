@@ -57,5 +57,5 @@ class RuntimeSupervisor:
         values = tuple(self._health[name] for name in sorted(self._health))
         failed = any(item.status == "failed" for item in values)
         degraded = any(item.status == "degraded" for item in values)
-        status = "failed" if failed else "degraded" if degraded else "ready" if self._started else "starting"
+        stopped = bool(values) and all(item.status == "stopped" for item in values)\n        status = "failed" if failed else "degraded" if degraded else "ready" if self._started else "stopped" if stopped else "starting"
         return RuntimeSnapshot(status=status, components=values)
