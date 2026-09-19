@@ -14,7 +14,7 @@ function biasLabel(analysis: UnifiedAnalysis) {
 
 export function TerminalSidebar({
   locale, tab, setTab, symbol, candles, collapsed, setCollapsed, preferences, setPreferences,
-  drawings, setDrawings, structurePoints, structureEvents, orderBlocks, analysis,
+  drawings, setDrawings, selectedDrawingId, setSelectedDrawingId, structurePoints, structureEvents, orderBlocks, analysis,
 }: {
   locale: Locale; tab: InspectorTab; setTab: (v: InspectorTab) => void; symbol: string; candles: Candle[];
   collapsed: boolean; setCollapsed: (v: boolean) => void; preferences: ChartPreferences;
@@ -87,7 +87,7 @@ export function TerminalSidebar({
 
       {tab === "objects" && <div className="space-y-2 text-xs text-[#8b98aa]">
         {drawings.length === 0 && <div className="rounded border border-[#263241] bg-[#0a0f16] p-3">No chart objects.</div>}
-        {drawings.map((d,i)=><div key={d.id} className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="flex items-center justify-between"><span className="uppercase">{d.tool}</span><span className="text-[#64748b]">#{i+1}</span></div><div className="mt-2 flex gap-1"><button onClick={()=>setDrawings(drawings.map(x=>x.id===d.id?{...x,visible:x.visible===false}:x))} className="rounded border border-[#334155] px-2 py-1">{d.visible===false?"Show":"Hide"}</button><button onClick={()=>setDrawings(drawings.map(x=>x.id===d.id?{...x,locked:!x.locked}:x))} className="rounded border border-[#334155] px-2 py-1">{d.locked?"Unlock":"Lock"}</button><button onClick={()=>setDrawings(drawings.filter(x=>x.id!==d.id))} className="rounded border border-[#334155] px-2 py-1 text-red-300">Delete</button></div></div>)}
+        {drawings.map((d,i)=><div key={d.id} onClick={()=>setSelectedDrawingId(d.id)} className={`rounded border p-2 ${selectedDrawingId===d.id?"border-[#fbbf24] bg-[#111a25]":"border-[#263241] bg-[#0a0f16]"}`}><div className="flex items-center justify-between"><span className="uppercase">{d.tool}</span><span className="text-[#64748b]">#{i+1}</span></div><div className="mt-2 flex gap-1"><button onClick={()=>setDrawings(drawings.map(x=>x.id===d.id?{...x,visible:x.visible===false}:x))} className="rounded border border-[#334155] px-2 py-1">{d.visible===false?"Show":"Hide"}</button><button onClick={()=>setDrawings(drawings.map(x=>x.id===d.id?{...x,locked:!x.locked}:x))} className="rounded border border-[#334155] px-2 py-1">{d.locked?"Unlock":"Lock"}</button><button onClick={()=>{setDrawings(drawings.filter(x=>x.id!==d.id)); if(selectedDrawingId===d.id)setSelectedDrawingId(null);}} className="rounded border border-[#334155] px-2 py-1 text-red-300">Delete</button></div></div>)}
       </div>}
     </div>
     <div className="border-t border-[#27313d] p-3"><label className="flex items-center justify-between text-xs"><span>{t(locale,"grid")}</span><input type="checkbox" checked={preferences.showGrid} onChange={e=>setPreferences({...preferences,showGrid:e.target.checked})}/></label><label className="mt-2 flex items-center justify-between text-xs"><span>{t(locale,"magnet")}</span><input type="checkbox" checked={preferences.magnet} onChange={e=>setPreferences({...preferences,magnet:e.target.checked})}/></label></div>
