@@ -1,18 +1,18 @@
 """Read-only effective configuration metadata.
 
-Mutation is intentionally excluded until authenticated RBAC + persistence + audit are
-connected. This prevents a UI control from becoming an unaudited production mutation.
+Mutation remains behind authenticated RBAC, persistence and audit. The endpoint exposes
+typed defaults and capability policy without secrets.
 """
 from fastapi import APIRouter
-from cfip.domain.config_contracts import IntelligenceConfig, RiskConfig
+from cfip.domain.platform_settings import PlatformSettings
 
 router = APIRouter(prefix="/config", tags=["config"])
 
 @router.get("/defaults")
 async def defaults() -> dict[str, object]:
+    settings = PlatformSettings()
     return {
-        "risk": RiskConfig().model_dump(),
-        "intelligence": IntelligenceConfig().model_dump(),
+        "settings": settings.model_dump(),
         "mutation_enabled": False,
         "secrets_exposed": False,
     }
