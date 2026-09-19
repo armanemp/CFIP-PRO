@@ -1,12 +1,13 @@
 """Governed Git control-plane contracts.
 
-The intelligence layer can inspect repository state and propose changes, but production
-mutation is represented as an explicit, auditable command. No shell execution lives here.
+Repository intelligence may inspect state and prepare a change, but mutation is an
+explicit, auditable operation. This domain contract never executes a shell command.
 """
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 GitOperation = Literal["read","diff","branch","commit","pull_request"]
+GitRisk = Literal["low","medium","high","critical"]
 
 class GitScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -14,8 +15,11 @@ class GitScope(BaseModel):
     allowed_paths: tuple[str, ...] = ()
     protected_paths: tuple[str, ...] = (
         ".github/workflows/",
+        ".github/",
         ".env",
         ".env.",
+        "secrets/",
+        "apps/api/src/cfip/core/config.py",
     )
 
 class GitChangeProposal(BaseModel):
@@ -28,14 +32,18 @@ class GitChangeProposal(BaseModel):
     rationale: str = Field(min_length=1, max_length=4000)
     paths: tuple[str, ...] = ()
     evidence: tuple[str, ...] = ()
+    validation_plan: tuple[str, ...] = ()
+    rollback_plan: tuple[str, ...] = ()
+    risk: GitRisk = "medium"
     requires_approval: bool = True
 
 class GitAuthorization(BaseModel):
     model_config = ConfigDict(extra="forbid")
     proposal_id: str
-    actor: str
+    actor: str = Field(min_length=1, max_length=200)
     approved: bool
     approval_reason: str = Field(default="", max_length=2000)
+    expires_at: int | None = Field(default=None, gt=0)
 
 def path_allowed(path: str, scope: GitScope) -> bool:
     normalized = path.replace("\\", "/").lstrip("/")
@@ -45,3 +53,9 @@ def path_allowed(path: str, scope: GitScope) -> bool:
         normalized == allowed or normalized.startswith(allowed.rstrip("/") + "/")
         for allowed in scope.allowed_paths
     )
+
+def proposal_paths_allowed(proposal: GitChangeProposal, scope: GitScope) -> bool:
+    return all(path_allowed(path, scope) for path in proposal.paths)
+
+def direct_main_commit_allowed(proposal: GitChangeProposal) -> bool:
+    return proposal.operation != "commit" or proposal.base_ref not in {"main", "master"}
