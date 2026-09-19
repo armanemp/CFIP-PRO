@@ -1,21 +1,51 @@
-"""Lifecycle contracts for the CFIP platform runtime.
-
-The runtime owns orchestration state only. Concrete adapters remain responsible for
-real external connectivity and must report it through explicit health signals.
-"""
+"""Provider-neutral lifecycle contracts for CFIP runtime orchestration."""
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import StrEnum
 from typing import Final
 
-from cfip.infrastructure.runtime import ComponentStatus, ComponentState
-
+RUNTIME_CHECK_CONTRACT: Final[str] = "cfip.runtime.check.v1"
 RuntimeStart = Callable[[], Awaitable[None]]
 RuntimeStop = Callable[[], Awaitable[None]]
 
-RUNTIME_CHECK_CONTRACT: Final[str] = "cfip.runtime.check.v1"
+
+class ComponentState(StrEnum):
+    STARTING = "starting"
+    READY = "ready"
+    DEGRADED = "degraded"
+    STOPPED = "stopped"
+
+
+@dataclass(slots=True)
+class ComponentStatus:
+    name: str
+    required: bool = True
+    state: ComponentState = ComponentState.STARTING
+    started_at: datetime | None = None
+    ready_at: datetime | None = None
+    detail: str = ""
+    checks: list[str] = field(default_factory=list)
+    error: str | None = None
+
+    def as_dict(self) -> dict[str, object]:
+        duration_ms = None
+        if self.started_at and self.ready_at:
+            duration_ms = round((self.ready_at - self.started_at).total_seconds() * 1000, 2)
+        return {
+            "name": self.name,
+            "required": self.required,
+            "state": self.state.value,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "ready_at": self.ready_at.isoformat() if self.ready_at else None,
+            "duration_ms": duration_ms,
+            "detail": self.detail,
+            "checks": list(self.checks),
+            "error": self.error,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +66,3 @@ class RuntimeComponent:
 
 def component_ready(status: ComponentStatus) -> bool:
     return status.state == ComponentState.READY
-
-
-def component_healthy(status: ComponentStatus) -> bool:
-    return status.state in {ComponentState.READY, ComponentState.DEGRADED}
