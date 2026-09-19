@@ -102,3 +102,17 @@ export async function postUnifiedAnalysis(
   if (!response.ok) throw new Error(`Unified analysis request failed: ${response.status}`);
   return UnifiedAnalysisSchema.parse(await response.json());
 }
+
+
+const ProviderSchema = z.object({
+  id: z.string(), name: z.string(), kind: z.enum(["market-data","broker","execution","news","fundamentals","ai","research"]),
+  status: z.enum(["catalog","adapter","verified"]), capabilities: z.array(z.string()),
+  credential_required: z.boolean(), notes: z.string(),
+});
+export type ProviderDescriptor = z.infer<typeof ProviderSchema>;
+
+export async function getProviderCatalog(): Promise<ProviderDescriptor[]> {
+  const response = await fetch(`${apiBaseUrl}/providers`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Provider catalog request failed: ${response.status}`);
+  return z.array(ProviderSchema).parse(await response.json());
+}
