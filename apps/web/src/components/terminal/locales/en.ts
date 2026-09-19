@@ -9,6 +9,12 @@ export const en = {
   indicatorEma: "Exponential moving average", indicatorSma: "Simple moving average", indicatorWma: "Weighted moving average", indicatorVwap: "Volume weighted average price",
   indicatorBollinger: "Volatility bands", indicatorRsi: "Relative strength index", indicatorMacd: "Moving average convergence/divergence", indicatorDmi: "Directional movement index",
   indicatorStochastic: "Stochastic oscillator", indicatorDonchian: "Donchian channel", indicatorKeltner: "Keltner channel", indicatorIchimoku: "Ichimoku cloud",
+  indicatorAtr: "Average true range",
+  indicatorObv: "On-balance volume",
+  notification: "Notifications", workspace: "Workspace", layouts: "Layouts", templates: "Templates",
+  depth: "Depth", timeSales: "Time & Sales", screener: "Screener", portfolio: "Portfolio",
+  execution: "Execution", providers: "Providers", dataQuality: "Data quality", provenance: "Provenance",
+  audit: "Audit", permissions: "Permissions", featureFlags: "Feature flags", plugins: "Plugins",
 } as const;
 
 export type TranslationKey = keyof typeof en;
