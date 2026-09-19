@@ -238,3 +238,12 @@
 - Added /api/authz/check for authorization-boundary introspection while real identity/session authentication remains a separate infrastructure integration.
 - Hardened the admin control-plane component after runtime-health integration so runtime state is passed explicitly and no undeclared UI state is referenced.
 - The platform remains modular: provider adapters, persistence, authentication, execution and intelligence promotion are independent boundaries rather than one monolithic service.
+
+
+## 2026-09-20 — Presentation-language isolation and intelligence/event contracts
+
+- Terminal/chart presentation is now explicitly EN/LTR. Application locale remains a separate preference and no longer mutates terminal/chart presentation state; terminal sidebar, symbol picker and attribution are fixed to English.
+- Added versioned cross-domain event-envelope contracts for market, analysis, intelligence, risk, order and system-health topics, preparing the process-local bus for a durable NATS JetStream transport without leaking transport-specific payloads into domain code.
+- Added a long-lived Elyrava intelligence runtime boundary with startup, heartbeat and shutdown state, and wired it into the server lifecycle rather than treating intelligence as a static UI feature.
+- Added provider-adapter and workspace persistence ports, plus typed authorization/RBAC boundaries, so external providers, persistence and identity implementations remain replaceable infrastructure.
+- No synthetic market data or fake provider connectivity was introduced. Catalog, adapter and verified-provider states remain distinct.
