@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAdminRuntime, type AdminRuntime } from "@/lib/admin-api";
 import { ADMIN_MODULES, type AdminSection } from "./admin-config";
+import { settingsForSection } from "./admin-settings";
 
 export function AdminControlPlane() {
   const [section, setSection] = useState<AdminSection>("overview");
@@ -62,9 +63,25 @@ function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: str
 }
 
 function ModuleView({ module }: { module: (typeof ADMIN_MODULES)[number] }) {
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{module.capabilities.map(capability =>
-    <Card key={capability} title={capability}><div className="text-xs text-[#9aa8ba]">Configuration contract reserved and isolated from presentation.</div><div className="mt-4 h-1 rounded bg-[#17212d]"><div className="h-1 w-1/3 rounded bg-[#42546a]" /></div><div className="mt-2 text-[9px] uppercase tracking-wider text-[#58677a]">contract surface</div></Card>
-  )}</div>;
+  const settings=settingsForSection(module.id);
+  return <div className="space-y-5">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{module.capabilities.map(capability =>
+      <Card key={capability} title={capability}><div className="text-xs text-[#9aa8ba]">Domain capability boundary.</div><div className="mt-3 h-1 rounded bg-[#17212d]"><div className="h-1 w-1/3 rounded bg-[#42546a]" /></div></Card>
+    )}</div>
+    <section>
+      <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#566579]">Settings contract</div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {settings.map(setting=><Card key={setting.id} title={setting.label}>
+          <div className="text-xs text-[#8492a5]">{setting.description}</div>
+          <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-wider">
+            <span className="text-[#59687b]">{setting.type}{setting.sensitive?" · sensitive":""}</span>
+            <span className={setting.mutable?"text-emerald-300":"text-amber-300"}>{setting.mutable?"guarded mutation":"read-only"}</span>
+          </div>
+        </Card>)}
+      </div>
+      {!settings.length && <div className="rounded-lg border border-dashed border-[#293748] p-5 text-xs text-[#66758a]">This domain is capability-only at the current maturity. No mutable setting is exposed.</div>}
+    </section>
+  </div>;
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
