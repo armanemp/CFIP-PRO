@@ -29,6 +29,8 @@ export const INDICATOR_REGISTRY = [
   { id: "WMA20", name: "WMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorWma" },
   { id: "VWAP", name: "VWAP", group: "volume", pane: "overlay", parameters: [], descriptionKey: "indicatorVwap" },
   { id: "BB20", name: "Bollinger Bands", group: "volatility", pane: "overlay", parameters: [p("period","period",20,1,500,1), p("stdDev","stdDev",2,0.1,10,0.1)], descriptionKey: "indicatorBollinger" },
+  { id: "ATR14", name: "ATR 14", group: "volatility", pane: "oscillator", parameters: [p("period","period",14,2,200,1)], descriptionKey: "indicatorAtr" },
+  { id: "OBV", name: "OBV", group: "volume", pane: "oscillator", parameters: [], descriptionKey: "indicatorObv" },
   { id: "RSI14", name: "RSI 14", group: "momentum", pane: "oscillator", parameters: [p("period","period",14,2,200,1)], descriptionKey: "indicatorRsi" },
   { id: "MACD", name: "MACD", group: "momentum", pane: "oscillator", parameters: [p("fast","fast",12,1,100,1), p("slow","slow",26,2,200,1), p("signal","signal",9,1,100,1)], descriptionKey: "indicatorMacd" },
   { id: "DMI14", name: "DMI / ADX 14", group: "momentum", pane: "oscillator", parameters: [p("period","period",14,2,200,1)], descriptionKey: "indicatorDmi" },
