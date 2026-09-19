@@ -130,7 +130,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   modules.push({
     module: "trend", bias: trendScore > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : trendScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral",
     score: trendScore, confidence: Math.min(1, trendPoints.length / 6),
-    summary: trendScore > .2 ? "Structure is skewed bullish." : trendScore < -.2 ? "Structure is skewed bearish." : "Structure is mixed.",
+    summary: trendScore > ANALYSIS_POLICY.neutralScoreThreshold ? "Structure is skewed bullish." : trendScore < -ANALYSIS_POLICY.neutralScoreThreshold ? "Structure is skewed bearish." : "Structure is mixed.",
     facts: trendPoints.slice(-3).map(p => p.label),
   });
 
@@ -191,7 +191,7 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
   const weighted = activeModules.reduce((s, m) => s + m.score * m.confidence, 0);
   const weight = activeModules.reduce((s, m) => s + m.confidence, 0);
   const score = weight ? clamp(weighted / weight) : 0;
-  const bias: AnalysisBias = score > .18 ? "bullish" : score < -.18 ? "bearish" : "neutral";
+  const bias: AnalysisBias = score > ANALYSIS_POLICY.neutralScoreThreshold ? "bullish" : score < -ANALYSIS_POLICY.neutralScoreThreshold ? "bearish" : "neutral";
   const confidence = weight ? Math.min(1, Math.abs(weighted) / weight * .65 + Math.min(1, weight / 5) * .35) : 0;
   const range = ctx.atr && last.high - last.low > ctx.atr * 1.5 ? "volatile" : Math.abs(score) > .35 ? "trending" : "ranging";
   const evidence = modules.flatMap(m => m.facts.map(f => `${m.module}: ${f}`)).slice(-ANALYSIS_POLICY.maximumEvidenceItems);
@@ -221,6 +221,6 @@ export function aggregateAnalysis(ctx: AnalysisContext): UnifiedAnalysis {
     premiumDiscount: ctx.premiumDiscount,
     mtf: ctx.mtf,
     evidence,
-    confluence: { score: confluenceScore, threshold: 84, accepted, gates },
+    confluence: { score: confluenceScore, threshold: ANALYSIS_POLICY.confluenceThreshold, accepted, gates },
   };
 }
