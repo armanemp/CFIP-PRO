@@ -11,7 +11,7 @@ import { forexSymbols } from "@/components/terminal/symbols";
 import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
-import "./terminal/terminal-theme.module.css";
+import "./terminal/terminal-theme.module.css";\nimport { TERMINAL_THEME } from "@/components/terminal/terminal-theme";
 import { toCandles, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks } from "@/components/terminal/chart-math";
 import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
@@ -212,7 +212,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     let active=true;
     const load=async()=>{
       try{
-        const next=await getMarketObservations(symbol,"reference",1000);
+        const next=await getMarketObservations(symbol,TERMINAL_DATA_DEFAULTS.venue,TERMINAL_DATA_DEFAULTS.initialObservationLimit);
         if(active){
           const version = `${next.length}:${next.at(-1)?.observed_at ?? ""}:${next.at(-1)?.last ?? ""}`;
           if (version !== marketVersionRef.current) { marketVersionRef.current = version; setRows(next); }
@@ -223,7 +223,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       }
     };
     void load();
-    const id=window.setInterval(load,2000);
+    const id=window.setInterval(load,TERMINAL_DATA_DEFAULTS.refreshMs);
     return()=>{active=false;window.clearInterval(id);};
   },[symbol]);
 
@@ -231,11 +231,11 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(!host.current)return;
     const c=createChart(host.current,{
       autoSize:true,
-      layout:{background:{type:ColorType.Solid,color:"#080b10"},textColor:"#b7c1ce",fontSize:13,fontFamily:"Inter,Segoe UI,Arial,sans-serif",attributionLogo:true},
-      grid:{vertLines:{color:prefs.showGrid?"#141b25":"transparent"},horzLines:{color:prefs.showGrid?"#141b25":"transparent"}},
-      rightPriceScale:{borderColor:"#2a3442",autoScale:true,alignLabels:true,minimumWidth:86},
-      timeScale:{borderColor:"#2a3442",timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
-      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"},horzLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"}},
+      layout:{background:{type:ColorType.Solid,color:TERMINAL_THEME.background},textColor:TERMINAL_THEME.chartText,fontSize:13,fontFamily:"Inter,Segoe UI,Arial,sans-serif",attributionLogo:true},
+      grid:{vertLines:{color:prefs.showGrid?TERMINAL_THEME.grid:"transparent"},horzLines:{color:prefs.showGrid?TERMINAL_THEME.grid:"transparent"}},
+      rightPriceScale:{borderColor:TERMINAL_THEME.borderSubtle,autoScale:true,alignLabels:true,minimumWidth:86},
+      timeScale:{borderColor:TERMINAL_THEME.borderSubtle,timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
+      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:TERMINAL_THEME.crosshair,width:1,style:3,labelBackgroundColor:TERMINAL_THEME.crosshairLabel},horzLine:{color:TERMINAL_THEME.crosshair,width:1,style:3,labelBackgroundColor:TERMINAL_THEME.crosshairLabel}},
       handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
       handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},
     });
@@ -246,8 +246,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   useEffect(() => {
     chartRef.current?.applyOptions({
       grid: {
-        vertLines: { color: prefs.showGrid ? "#141b25" : "transparent" },
-        horzLines: { color: prefs.showGrid ? "#141b25" : "transparent" },
+        vertLines: { color: prefs.showGrid ? TERMINAL_THEME.grid : "transparent" },
+        horzLines: { color: prefs.showGrid ? TERMINAL_THEME.grid : "transparent" },
       },
     });
   }, [prefs.showGrid]);
@@ -417,29 +417,29 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
             const x1=chartRef.current?.timeScale().timeToCoordinate(d.a.time), x2=chartRef.current?.timeScale().timeToCoordinate(d.b.time);
             const y1=mainRef.current?.priceToCoordinate(d.a.price), y2=mainRef.current?.priceToCoordinate(d.b.price);
             if(x1===null||x1===undefined||x2===null||x2===undefined||y1===null||y1===undefined||y2===null||y2===undefined)return null;
-            const selectedStroke=selectedDrawingId===d.id?"#fbbf24":"#94a3b8";
+            const selectedStroke=selectedDrawingId===d.id?TERMINAL_THEME.highlight:TERMINAL_THEME.chartText;
             const hit=(xA:number,yA:number,xB:number,yB:number)=><line x1={xA} y1={yA} x2={xB} y2={yB} stroke="transparent" strokeWidth="16" pointerEvents="stroke" onPointerDown={e=>startDrawingDrag(e,d)}/>;
             if(d.tool==="horizontal") return <g key={d.id}>{hit(0,y1,1000,y1)}<line x1={0} x2="100%" y1={y1} y2={y1} stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
             if(d.tool==="vertical") return <g key={d.id}>{hit(x1,0,x1,1000)}<line x1={x1} x2={x1} y1={0} y2="100%" stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
-            if(d.tool==="rectangle") return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke={selectedDrawingId===d.id?"#fbbf24":"#70a7ff"} strokeWidth={selectedDrawingId===d.id?2:1}/></g>;
-            if(d.tool==="fib"){const levels=[0,.236,.382,.5,.618,.786,1];return <g key={d.id}>{hit(x1,y1,x2,y2)}{levels.map(level=>{const yy=y1+(y2-y1)*level;return <g key={level}><line x1={0} x2="100%" y1={yy} y2={yy} stroke="#fbbf24" strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="3 3"/><text x={Math.max(x1,x2)+6} y={yy-3} fill="#d8e0ea" fontSize="9">{(level*100).toFixed(1)}% · {((d.a.price+(d.b.price-d.a.price)*level)).toFixed(meta?.digits??5)}</text></g>})}</g>};
-            const stroke=d.tool==="short"?"#ef5350":d.tool==="long"?"#22c55e":"#70a7ff";
+            if(d.tool==="rectangle") return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke={selectedDrawingId===d.id?TERMINAL_THEME.highlight:TERMINAL_THEME.volumeUp} strokeWidth={selectedDrawingId===d.id?2:1}/></g>;
+            if(d.tool==="fib"){const levels=[0,.236,.382,.5,.618,.786,1];return <g key={d.id}>{hit(x1,y1,x2,y2)}{levels.map(level=>{const yy=y1+(y2-y1)*level;return <g key={level}><line x1={0} x2="100%" y1={yy} y2={yy} stroke=TERMINAL_THEME.highlight strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="3 3"/><text x={Math.max(x1,x2)+6} y={yy-3} fill=TERMINAL_THEME.text fontSize="9">{(level*100).toFixed(1)}% · {((d.a.price+(d.b.price-d.a.price)*level)).toFixed(meta?.digits??5)}</text></g>})}</g>};
+            const stroke=d.tool==="short"?TERMINAL_THEME.volumeDown:d.tool==="long"?TERMINAL_THEME.bullish:TERMINAL_THEME.volumeUp;
             if(d.tool==="measure"){
               const distance=d.b.price-d.a.price;
               const pct=((d.b.price-d.a.price)/Math.max(Math.abs(d.a.price),Number.EPSILON))*100;
               const ia=candles.reduce((best,candle,i)=>Math.abs((candle.time as number)-(d.a.time as number))<Math.abs((candles[best]?.time as number ?? Infinity)-(d.a.time as number))?i:best,0);
               const ib=candles.reduce((best,candle,i)=>Math.abs((candle.time as number)-(d.b.time as number))<Math.abs((candles[best]?.time as number ?? Infinity)-(d.b.time as number))?i:best,0);
               const bars=Math.abs(ib-ia);
-              return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":"#94a3b8"} strokeWidth={2}/><text x={(x1+x2)/2} y={(y1+y2)/2-8} fill="#d8e0ea" fontSize="11" textAnchor="middle">{distance.toFixed(meta?.digits??5)} · {pct.toFixed(2)}% · {bars} bars</text></g>;
+              return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?TERMINAL_THEME.highlight:TERMINAL_THEME.chartText} strokeWidth={2}/><text x={(x1+x2)/2} y={(y1+y2)/2-8} fill=TERMINAL_THEME.text fontSize="11" textAnchor="middle">{distance.toFixed(meta?.digits??5)} · {pct.toFixed(2)}% · {bars} bars</text></g>;
             }
             if(d.tool==="long"||d.tool==="short"){
               const entry=d.a.price, target=d.b.price, risk=Math.abs(target-entry), stop=d.tool==="long"?entry-risk:entry+risk, reward=Math.abs(target-entry), rr=reward/Math.max(Math.abs(entry-stop),Number.EPSILON);
               const top=Math.min(y1,y2), bottom=Math.max(y1,y2);
-              return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={top} width={Math.max(40,Math.abs(x2-x1))} height={Math.max(1,bottom-top)} fill={d.tool==="long"?"rgba(34,197,94,.10)":"rgba(239,68,80,.10)"} stroke={stroke} strokeWidth={selectedDrawingId===d.id?2:1}/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={y1} y2={y1} stroke="#fbbf24" strokeWidth="2"/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} y2={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} stroke="#ef5350" strokeWidth="1" strokeDasharray="4 3"/><text x={Math.max(x1,x2)+45} y={y1-6} fill="#d8e0ea" fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {rr.toFixed(2)}</text></g>;
+              return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={top} width={Math.max(40,Math.abs(x2-x1))} height={Math.max(1,bottom-top)} fill={d.tool==="long"?"rgba(34,197,94,.10)":"rgba(239,68,80,.10)"} stroke={stroke} strokeWidth={selectedDrawingId===d.id?2:1}/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={y1} y2={y1} stroke=TERMINAL_THEME.highlight strokeWidth="2"/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} y2={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} stroke=TERMINAL_THEME.volumeDown strokeWidth="1" strokeDasharray="4 3"/><text x={Math.max(x1,x2)+45} y={y1-6} fill=TERMINAL_THEME.text fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {rr.toFixed(2)}</text></g>;
             }
-            return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
+            return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?TERMINAL_THEME.highlight:stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
           })}
-          {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
+          {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill=TERMINAL_THEME.highlight/>}
         </svg>
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
