@@ -21,6 +21,7 @@ import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 import { useTerminalMarketData } from "@/components/terminal/use-terminal-market-data";
+import { createDrawingHistory, recordDrawingChange, redoDrawingChange, undoDrawingChange } from "@/components/terminal/drawing-history";
 
 
 
@@ -39,8 +40,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
-  const drawingHistoryRef=useRef<Drawing[][]>([]);
-  const drawingRedoRef=useRef<Drawing[][]>([]);
+  const drawingHistoryRef=useRef(createDrawingHistory());
 
   const liveCandles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const [replay,setReplay]=useState<ReplayState>(()=>createReplayState(0));
@@ -155,28 +155,23 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
     setDrawings(current=>{
       const resolved=typeof next==="function" ? next(current) : next;
-      if(JSON.stringify(resolved)!==JSON.stringify(current)){
-        drawingHistoryRef.current=[...drawingHistoryRef.current.slice(-49),current];
-        drawingRedoRef.current=[];
-      }
+      drawingHistoryRef.current=recordDrawingChange(drawingHistoryRef.current,current,resolved);
       return resolved;
     });
   };
   const undoDrawing=()=>{
     setDrawings(current=>{
-      const previous=drawingHistoryRef.current.pop();
-      if(!previous)return current;
-      drawingRedoRef.current=[...drawingRedoRef.current,current];
-      setSelectedDrawingId(null);
-      return previous;
+      const result=undoDrawingChange(drawingHistoryRef.current,current);
+      drawingHistoryRef.current=result.history;
+      if(result.drawings!==current)setSelectedDrawingId(null);
+      return result.drawings;
     });
   };
   const redoDrawing=()=>{
     setDrawings(current=>{
-      const next=drawingRedoRef.current.pop();
-      if(!next)return current;
-      drawingHistoryRef.current=[...drawingHistoryRef.current,current];
-      return next;
+      const result=redoDrawingChange(drawingHistoryRef.current,current);
+      drawingHistoryRef.current=result.history;
+      return result.drawings;
     });
   };
   const toggleFullscreen=async()=>{
@@ -309,7 +304,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       }:d));
       setOverlayTick(v=>v+1);
     };
-    const up=()=>{const drag=drawingDragRef.current;if(drag&&JSON.stringify(drawingsRef.current)!==JSON.stringify(drag.before)){drawingHistoryRef.current=[...drawingHistoryRef.current.slice(-49),drag.before];drawingRedoRef.current=[];} drawingDragRef.current=null;};
+    const up=()=>{const drag=drawingDragRef.current;if(drag)drawingHistoryRef.current=recordDrawingChange(drawingHistoryRef.current,drag.before,drawingsRef.current); drawingDragRef.current=null;};
     window.addEventListener("pointermove",move);
     window.addEventListener("pointerup",up);
     return()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
