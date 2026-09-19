@@ -28,6 +28,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const drawingDragRef=useRef<{id:string;origin:Drawing;startTime:number;startPrice:number}|null>(null);
+  const drawingHistoryRef=useRef<Drawing[][]>([]);
+  const drawingRedoRef=useRef<Drawing[][]>([]);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -126,13 +128,29 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
-    setDrawings(current=>typeof next==="function" ? next(current) : next);
+    setDrawings(current=>{
+      const resolved=typeof next==="function" ? next(current) : next;
+      if(JSON.stringify(resolved)!==JSON.stringify(current)){
+        drawingHistoryRef.current=[...drawingHistoryRef.current.slice(-49),current];
+        drawingRedoRef.current=[];
+      }
+      return resolved;
+    });
   };
   const undoDrawing=()=>{
     setDrawings(current=>{
-      if(!current.length)return current;
-      const next=current.slice(0,-1);
+      const previous=drawingHistoryRef.current.pop();
+      if(!previous)return current;
+      drawingRedoRef.current=[...drawingRedoRef.current,current];
       setSelectedDrawingId(null);
+      return previous;
+    });
+  };
+  const redoDrawing=()=>{
+    setDrawings(current=>{
+      const next=drawingRedoRef.current.pop();
+      if(!next)return current;
+      drawingHistoryRef.current=[...drawingHistoryRef.current,current];
       return next;
     });
   };
@@ -147,6 +165,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (event.key === "Escape") { setPanel(null); setTool("cursor"); setPendingPoint(null); setSelectedDrawingId(null); return; }
+      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="z") { event.preventDefault(); if(event.shiftKey) redoDrawing(); else undoDrawing(); return; }
+      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="y") { event.preventDefault(); redoDrawing(); return; }
+      if ((event.key==="Delete"||event.key==="Backspace") && selectedDrawingId) { updateDrawings(current=>current.filter(d=>d.id!==selectedDrawingId)); setSelectedDrawingId(null); return; }
       if (event.key === "f" || event.key === "F") { void toggleFullscreen(); return; }
       if (event.key === "r" || event.key === "R") { resetView(); return; }
       if (event.key === "1") setTf("1m");
@@ -361,7 +382,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
       <div className="flex gap-1">{tfs.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-1"><button onClick={undoDrawing} title="Ctrl/Cmd+Z" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↶</button><button onClick={redoDrawing} title="Ctrl/Cmd+Y" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↷</button>
         <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"autoFit")}</button>
         <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
         <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"fullscreen")}</button>
@@ -411,7 +432,18 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
             if(d.tool==="vertical") return <g key={d.id}>{hit(x1,0,x1,1000)}<line x1={x1} x2={x1} y1={0} y2="100%" stroke={selectedStroke} strokeWidth={selectedDrawingId===d.id?2:1} strokeDasharray="5 4"/></g>;
             if(d.tool==="rectangle") return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={Math.min(y1,y2)} width={Math.abs(x2-x1)} height={Math.abs(y2-y1)} fill="rgba(112,167,255,.08)" stroke={selectedDrawingId===d.id?"#fbbf24":"#70a7ff"} strokeWidth={selectedDrawingId===d.id?2:1}/></g>;
             if(d.tool==="fib") return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.382} y2={y1+(y2-y1)*.382} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/><line x1={0} x2="100%" y1={y1+(y2-y1)*.618} y2={y1+(y2-y1)*.618} stroke="#fbbf24" strokeWidth="1" strokeDasharray="3 3"/></g>;
-            const stroke=d.tool==="short"?"#ef5350":"#70a7ff";
+            const stroke=d.tool==="short"?"#ef5350":d.tool==="long"?"#22c55e":"#70a7ff";
+            if(d.tool==="measure"){
+              const distance=d.b.price-d.a.price;
+              const pct=((d.b.price-d.a.price)/Math.max(Math.abs(d.a.price),Number.EPSILON))*100;
+              const bars=Math.abs((d.b.time as number)-(d.a.time as number));
+              return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":"#94a3b8"} strokeWidth={2}/><text x={(x1+x2)/2} y={(y1+y2)/2-8} fill="#d8e0ea" fontSize="11" textAnchor="middle">{distance.toFixed(meta?.digits??5)} · {pct.toFixed(2)}% · {bars} bars</text></g>;
+            }
+            if(d.tool==="long"||d.tool==="short"){
+              const entry=d.a.price, target=d.b.price, risk=Math.abs(target-entry), stop=d.tool==="long"?entry-risk:entry+risk, reward=Math.abs(target-entry), rr=reward/Math.max(Math.abs(entry-stop),Number.EPSILON);
+              const top=Math.min(y1,y2), bottom=Math.max(y1,y2);
+              return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={top} width={Math.max(40,Math.abs(x2-x1))} height={Math.max(1,bottom-top)} fill={d.tool==="long"?"rgba(34,197,94,.10)":"rgba(239,68,80,.10)"} stroke={stroke} strokeWidth={selectedDrawingId===d.id?2:1}/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={y1} y2={y1} stroke="#fbbf24" strokeWidth="2"/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} y2={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} stroke="#ef5350" strokeWidth="1" strokeDasharray="4 3"/><text x={Math.max(x1,x2)+45} y={y1-6} fill="#d8e0ea" fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {rr.toFixed(2)}</text></g>;
+            }
             return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
           })}
           {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
