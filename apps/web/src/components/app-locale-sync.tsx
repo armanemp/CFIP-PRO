@@ -19,11 +19,16 @@ export function detectOsLocale(): Locale {
 
 export function AppLocaleSync() {
   useEffect(() => {
-    const locale = detectOsLocale();
-    document.documentElement.lang = locale;
-    document.documentElement.dir = locale === "fa" || locale === "ar" ? "rtl" : "ltr";
-    try { window.localStorage.setItem(STORAGE_KEY, locale); } catch {}
-    window.dispatchEvent(new CustomEvent("cfip:app-locale", { detail: locale }));
+    const apply = (locale: Locale) => {
+      document.documentElement.lang = locale;
+      document.documentElement.dir = locale === "fa" || locale === "ar" ? "rtl" : "ltr";
+      try { window.localStorage.setItem(STORAGE_KEY, locale); } catch {}
+      window.dispatchEvent(new CustomEvent("cfip:app-locale", { detail: locale }));
+    };
+    apply(detectOsLocale());
+    const onLocale = (event: Event) => apply(normalize((event as CustomEvent<string>).detail));
+    window.addEventListener("cfip:set-app-locale", onLocale);
+    return () => window.removeEventListener("cfip:set-app-locale", onLocale);
   }, []);
   return null;
 }
