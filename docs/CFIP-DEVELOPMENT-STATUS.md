@@ -4,7 +4,7 @@ Updated: 2026-09-18
 
 ## Repository rule
 
-CFIP-PRO is an independent platform. CForex is a capability/reference source only. The abandoned `cforex-platform` repository is not an architecture or migration target.
+CFIP-PRO is an independent platform. CForex is a capability/reference source only. The abandoned `the abandoned legacy platform repository` repository is not an architecture or migration target.
 
 ## Implemented intelligence foundations
 
