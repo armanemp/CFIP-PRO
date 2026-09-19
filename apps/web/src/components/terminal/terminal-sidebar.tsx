@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Candle, Drawing, InspectorTab, Locale, ChartPreferences, OrderBlock, StructureEvent, StructurePoint } from "./types";
 import type { UnifiedAnalysis } from "./analysis-contracts";
 import { t } from "./i18n";
