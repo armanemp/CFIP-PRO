@@ -1,4 +1,4 @@
-import { createIndicatorInstance, updateIndicatorParameters } from "../../apps/web/src/components/terminal/indicator-instance";
+import { createIndicatorInstance, updateIndicatorParameters } from "./indicator-instance";
 
 describe("indicator instances", () => {
   it("creates registry-backed defaults", () => {
