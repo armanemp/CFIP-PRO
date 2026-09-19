@@ -15,11 +15,9 @@ import "./terminal/terminal-theme.module.css";
 import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
 import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
+import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 
-const tfs: Timeframe[] = ["1m","5m","15m","30m","1H","4H","1D","1W","1M"];
-const studies = ["EMA20","EMA50","EMA200","SMA20","WMA20","VWAP","BB20","RSI14","MACD","DMI14","STOCH14","DONCHIAN20","KELTNER20","ICHIMOKU"] as const;
-const tools: Tool[] = ["cursor","crosshair","trendline","ray","horizontal","vertical","rectangle","fib","measure","long","short"];
-const toolGlyph: Record<Tool,string> = {cursor:"•",crosshair:"✛",trendline:"╱",ray:"↗",horizontal:"—",vertical:"│",rectangle:"□",fib:"F",measure:"↔",long:"↗",short:"↘"};
+
 
 export function ProfessionalChartTerminalV3({ observations: initial, symbol: initialSymbol }: { observations: MarketObservation[]; symbol: string }) {
   const host=useRef<HTMLDivElement>(null);
@@ -386,7 +384,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
       {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
-      <div className="flex gap-1">{tfs.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
+      <div className="flex gap-1">{TIMEFRAMES.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
       <div className="ml-auto flex items-center gap-1"><button onClick={undoDrawing} title="Ctrl/Cmd+Z" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↶</button><button onClick={redoDrawing} title="Ctrl/Cmd+Y" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↷</button>
         <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"autoFit")}</button>
         <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
@@ -396,9 +394,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <button data-terminal-trigger onClick={()=>setPanel(panel==="language"?null:"language")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{locale.toUpperCase()}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="settings"?null:"settings")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"settings")}</button>
       </div>
-      {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{tfs.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
-      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(["candles","bars","line","area","baseline"] as ChartKind[]).map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
-      {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{studies.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div>}
+      {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{TIMEFRAMES.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
+      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
+      {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div>}
       {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{setLocale(x);setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
       {panel==="settings"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
         {([
@@ -407,7 +405,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       </div>}
     </header>
     <div className="flex min-h-0 flex-1">
-      {rail&&<nav className="cfip-terminal-rail flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{tools.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{toolGlyph[x]}</button>)}</nav>}
+      {rail&&<nav className="cfip-terminal-rail flex w-12 shrink-0 flex-col items-center gap-1 border-r border-[#27313d] bg-[#0b1017] py-2">{DRAWING_TOOLS.map(x=><button key={x} onClick={()=>setTool(x)} title={tt(x)} aria-label={tt(x)} className={`h-9 w-9 rounded text-xs ${tool===x?"bg-[#20354b] text-white":"text-[#8290a3] hover:bg-[#17202c]"}`}>{TOOL_GLYPHS[x]}</button>)}</nav>}
       <section className="relative min-w-0 flex-1" onClick={placeDrawing}>
 <div className="absolute left-3 top-8 z-20 flex gap-2 text-[10px] text-[#66758a]">
           {pivotPoints.at(-1) && <span>Structure: {pivotPoints.at(-1)?.high ? "swing high" : "swing low"}</span>}
