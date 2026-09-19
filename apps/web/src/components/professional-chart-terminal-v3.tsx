@@ -243,8 +243,10 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const visibleRange = c.timeScale().getVisibleLogicalRange();
     for(const pane of c.panes())for(const s of pane.getSeries())c.removeSeries(s);
     while (c.panes().length > 1) c.removePane(c.panes().length - 1);
-    const needsIndicatorPane = selected.some(x => ["RSI14","MACD","DMI14","STOCH14"].includes(x)) || prefs.showVolume;
-    if (needsIndicatorPane) c.addPane(true);
+    const hasOscillatorPane = selected.some(x => ["RSI14","MACD","DMI14","STOCH14"].includes(x));
+    const hasVolumePane = prefs.showVolume;
+    if (hasOscillatorPane) c.addPane(true);
+    if (hasVolumePane) c.addPane(true);
 
     const main=addMainSeries(c,kind,candles[0].close);
     setMainSeriesData(main,kind,candles);
@@ -294,8 +296,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.mid})),"#94a3b8","BB mid");
       addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.lower})),"#64748b","BB lower");
     }
-    if(prefs.showVolume)addVolumeSeries(c,candles,1);
-    if (c.panes().length > 1) c.panes()[1].setHeight(170);
+    if (hasOscillatorPane) c.panes()[1].setHeight(170);
+    if (hasVolumePane) addVolumeSeries(c,candles,hasOscillatorPane ? 2 : 1);
+    if (hasVolumePane) c.panes()[hasOscillatorPane ? 2 : 1].setHeight(110);
     if (visibleRange) c.timeScale().setVisibleLogicalRange(visibleRange); else c.timeScale().fitContent();
     setOverlayTick(v => v + 1);
   },[candles,kind,selected,prefs.showVolume]);
@@ -417,6 +420,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         {zones.length > 0 && <div className="pointer-events-none absolute left-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{zones.length} FVG zones</div>}
         {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
         {session && prefs.showSessions && <div className="pointer-events-none absolute left-3 bottom-20 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">Session {session.low.toFixed(meta?.digits??5)} — {session.high.toFixed(meta?.digits??5)}</div>}
+        {prefs.showBidAsk && last && (last.bid || last.ask) && <div className="pointer-events-none absolute right-3 top-8 z-20 rounded border border-[#334155] bg-[#0d131b]/90 px-2 py-1 text-[10px] tabular-nums text-[#c8d2df]">{last.bid && <span className="mr-3 text-[#60a5fa]">B {Number(last.bid).toFixed(meta?.digits??5)}</span>}{last.ask && <span className="text-[#f59e0b]">A {Number(last.ask).toFixed(meta?.digits??5)}</span>}</div>}
         <svg key={overlayTick} aria-label="Chart drawings" className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
           {zones.map((z,i)=>{
             const xa=chartRef.current?.timeScale().timeToCoordinate(z.a), xb=chartRef.current?.timeScale().timeToCoordinate(z.b);
@@ -438,7 +442,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
             if(d.tool==="measure"){
               const distance=d.b.price-d.a.price;
               const pct=((d.b.price-d.a.price)/Math.max(Math.abs(d.a.price),Number.EPSILON))*100;
-              const bars=Math.abs((d.b.time as number)-(d.a.time as number));
+              const ia=candles.reduce((best,candle,i)=>Math.abs((candle.time as number)-(d.a.time as number))<Math.abs((candles[best]?.time as number ?? Infinity)-(d.a.time as number))?i:best,0);
+              const ib=candles.reduce((best,candle,i)=>Math.abs((candle.time as number)-(d.b.time as number))<Math.abs((candles[best]?.time as number ?? Infinity)-(d.b.time as number))?i:best,0);
+              const bars=Math.abs(ib-ia);
               return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":"#94a3b8"} strokeWidth={2}/><text x={(x1+x2)/2} y={(y1+y2)/2-8} fill="#d8e0ea" fontSize="11" textAnchor="middle">{distance.toFixed(meta?.digits??5)} · {pct.toFixed(2)}% · {bars} bars</text></g>;
             }
             if(d.tool==="long"||d.tool==="short"){
