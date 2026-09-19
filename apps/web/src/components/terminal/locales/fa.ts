@@ -10,4 +10,5 @@ export const fa: Partial<Record<TranslationKey, string>> = {
   indicatorEma:"میانگین متحرک نمایی", indicatorSma:"میانگین متحرک ساده", indicatorWma:"میانگین متحرک وزنی", indicatorVwap:"میانگین وزنی حجمی",
   indicatorBollinger:"باندهای نوسان", indicatorRsi:"شاخص قدرت نسبی", indicatorMacd:"همگرایی/واگرایی میانگین‌های متحرک", indicatorDmi:"شاخص حرکت جهت‌دار",
   indicatorStochastic:"نوسانگر استوکاستیک", indicatorDonchian:"کانال دانچیان", indicatorKeltner:"کانال کلتنر", indicatorIchimoku:"ابر ایچیموکو",
+  indicatorAtr:"میانگین دامنه واقعی", indicatorObv:"حجم تعادلی", notification:"اعلان‌ها", workspace:"فضای کاری", layouts:"چیدمان‌ها", templates:"قالب‌ها", depth:"عمق بازار", timeSales:"زمان و معاملات", screener:"اسکرینر", portfolio:"پرتفوی", execution:"اجرا", providers:"ارائه‌دهندگان", dataQuality:"کیفیت داده", provenance:"منشأ داده", audit:"ممیزی", permissions:"مجوزها", featureFlags:"قابلیت‌ها", plugins:"افزونه‌ها",
 };
