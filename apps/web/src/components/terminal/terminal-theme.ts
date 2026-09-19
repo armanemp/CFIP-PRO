@@ -1,0 +1,27 @@
+export const TERMINAL_THEME = {
+  background: "#080b10",
+  surface: "#0d131b",
+  surfaceActive: "#17202c",
+  border: "#27313d",
+  borderStrong: "#334155",
+  borderSubtle: "#293342",
+  grid: "#141b25",
+  text: "#d8e0ea",
+  textStrong: "#ffffff",
+  textMuted: "#8391a4",
+  textFaint: "#66758a",
+  accent: "#23364d",
+  accentStrong: "#20354b",
+  chartText: "#b7c1ce",
+  crosshair: "#66758a",
+  crosshairLabel: "#354458",
+  bullish: "#22c55e",
+  bearish: "#ef4444",
+  warning: "#f59e0b",
+  highlight: "#fbbf24",
+  info: "#60a5fa",
+  volumeUp: "#70a7ff",
+  volumeDown: "#ef5350",
+} as const;
+
+export type TerminalTheme = typeof TERMINAL_THEME;
