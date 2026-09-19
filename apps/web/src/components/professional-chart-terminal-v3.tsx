@@ -24,7 +24,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const marketVersionRef=useRef(`${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
@@ -117,14 +117,16 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setSidebar(session.preferences.rightSidebar);
     setRail(session.preferences.leftRail);
     setDrawings(session.drawings);
+    setSessionReady(true);
   }, [initialSymbol]);
 
   useEffect(() => {
+    if (!sessionReady) return;
     saveTerminalSession({
       symbol, timeframe: tf, chartKind: kind, locale, tool,
       selectedStudies: selected, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail }, drawings,
     });
-  }, [symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
+  }, [sessionReady, symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
