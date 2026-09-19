@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getHealth, getMarketObservations, type MarketObservation } from "@/lib/api";
+import { getHealth, getMarketObservations, getPlans, type MarketObservation, type PlanDefinition } from "@/lib/api";
 
 const capabilities = [
   ["Professional terminal","Chart-first workspace with multi-pane indicators, drawings, replay, risk and analysis."],
@@ -14,7 +14,7 @@ const capabilities = [
 
 export default function Home() {
   const [health,setHealth]=useState("checking");
-  const [market,setMarket]=useState<MarketObservation|null>(null);
+  const [market,setMarket]=useState<MarketObservation|null>(null);\n  const [plans,setPlans]=useState<PlanDefinition[]>([]);
   useEffect(()=>{ getHealth().then(()=>setHealth("online")).catch(()=>setHealth("offline")); getMarketObservations("EUR/USD","reference",1).then(rows=>setMarket(rows.at(-1)??null)).catch(()=>{}); },[]);
   const price = market?.last ?? market?.bid ?? market?.ask;
   return <main className="min-h-dvh overflow-hidden bg-[#070a0f] text-[#d8e0ea]">

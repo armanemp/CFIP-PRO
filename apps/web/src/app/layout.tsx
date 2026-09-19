@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppLocaleSync } from "@/components/app-locale-sync";
 
 export const metadata: Metadata = {
   title: "CFIP-PRO",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" dir="ltr">
-      <body>{children}</body>
+      <body><AppLocaleSync />{children}</body>
     </html>
   );
 }

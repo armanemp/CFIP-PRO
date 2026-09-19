@@ -8,7 +8,7 @@ import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
-import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
+import { t, localeNames } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
@@ -27,7 +27,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const marketVersionRef=useRef(`${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
@@ -125,7 +125,6 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setSymbol(session.symbol);
     setTf(session.timeframe);
     setKind(session.chartKind);
-    setLocale(session.locale);
     setTool(session.tool);
     setSelected(session.selectedStudies);
     setPrefs(session.preferences);
@@ -138,10 +137,10 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   useEffect(() => {
     if (!sessionReady) return;
     saveTerminalSession({
-      symbol, timeframe: tf, chartKind: kind, locale, tool,
+      symbol, timeframe: tf, chartKind: kind, locale: "en", tool,
       selectedStudies: selected, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail }, drawings,
     });
-  }, [sessionReady, symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
+  }, [sessionReady, symbol, tf, kind, tool, selected, prefs, sidebar, rail, drawings]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
@@ -279,12 +278,12 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const toggleRail=(value:boolean)=>{setRail(value);setPrefs(p=>({...p,leftRail:value}));};
 
   const tt=(x:Tool)=>({
-    cursor:t(locale,"cursor"),crosshair:t(locale,"crosshair"),trendline:t(locale,"trendline"),ray:t(locale,"ray"),
-    horizontal:t(locale,"horizontal"),vertical:t(locale,"vertical"),rectangle:t(locale,"rectangle"),fib:t(locale,"fibonacci"),
-    measure:t(locale,"measure"),long:t(locale,"longPosition"),short:t(locale,"shortPosition")
+    cursor:t("en","cursor"),crosshair:t("en","crosshair"),trendline:t("en","trendline"),ray:t("en","ray"),
+    horizontal:t("en","horizontal"),vertical:t("en","vertical"),rectangle:t("en","rectangle"),fib:t("en","fibonacci"),
+    measure:t("en","measure"),long:t("en","longPosition"),short:t("en","shortPosition")
   }[x]);
 
-  const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);\n\n  // Terminal/chart presentation is intentionally EN/LTR and is not mutated by app-language selection.\n  // Locale is persisted as application preference for the surrounding product surfaces.\n
 
   useEffect(() => {
     const c = chartRef.current;
@@ -352,25 +351,25 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setPendingPoint(null);
   };
 
-  return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
+  return <div dir="ltr" data-terminal-locale="en" className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
     <header className="cfip-terminal-topbar relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
-      <button onClick={()=>toggleRail(!rail)} title={rail?t(locale,"hideRail"):t(locale,"showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
+      <button onClick={()=>toggleRail(!rail)} title={rail?t("en","hideRail"):t("en","showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
       <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
-      {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
+      {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale="en" value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
       <div className="flex gap-1">{TIMEFRAMES.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
       <div className="ml-auto flex items-center gap-1"><button onClick={undoDrawing} title="Ctrl/Cmd+Z" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↶</button><button onClick={redoDrawing} title="Ctrl/Cmd+Y" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↷</button>
-        <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"autoFit")}</button>
-        <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
-        <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"fullscreen")}</button>
-        <button data-terminal-trigger onClick={()=>setPanel(panel==="replay"?null:"replay")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"replay")}</button>
-        <button data-terminal-trigger onClick={()=>setPanel(panel==="indicators"?null:"indicators")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"indicators")}</button>
-        <button data-terminal-trigger onClick={()=>setPanel(panel==="chartType"?null:"chartType")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"chartType")}</button>
-        <button data-terminal-trigger onClick={()=>setPanel(panel==="language"?null:"language")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{locale.toUpperCase()}</button>
-        <button data-terminal-trigger onClick={()=>setPanel(panel==="settings"?null:"settings")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"settings")}</button>
+        <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","autoFit")}</button>
+        <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","screenshot")}</button>
+        <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","fullscreen")}</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="replay"?null:"replay")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t("en","replay")}</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="indicators"?null:"indicators")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t("en","indicators")}</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="chartType"?null:"chartType")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t("en","chartType")}</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="language"?null:"language")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">EN</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="settings"?null:"settings")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t("en","settings")}</button>
       </div>
       {panel==="replay"&&<div data-terminal-panel className="absolute right-72 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
-        <div className="mb-2 flex items-center justify-between text-xs"><span className="font-medium text-white">{t(locale,"replay")}</span><span className="tabular-nums text-[#64748b]">{replay.cursor + 1} / {Math.max(1,replay.end - replay.start + 1)}</span></div>
+        <div className="mb-2 flex items-center justify-between text-xs"><span className="font-medium text-white">{t("en","replay")}</span><span className="tabular-nums text-[#64748b]">{replay.cursor + 1} / {Math.max(1,replay.end - replay.start + 1)}</span></div>
         <div className="flex gap-1">
           <button onClick={()=>setReplay(replay.status==="playing"?replayPause(replay):replayPlay(replay))} className="rounded bg-[#20354b] px-3 py-2 text-xs text-white">{replay.status==="playing"?"Pause":"Play"}</button>
           <button onClick={()=>setReplay(replayStep(replay,1))} className="rounded border border-[#334155] px-3 py-2 text-xs">Step</button>
@@ -382,13 +381,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div className="mt-2 text-[10px] text-[#64748b]">Historical replay freezes the chart cursor while the live feed continues in the background.</div>
       </div>}
       {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{TIMEFRAMES.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
-      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
+      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t("en",x==="candles"?"candlestick":x)}</button>)}</div>}
       {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div>}
-      {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{setLocale(x);setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
+      {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{window.dispatchEvent(new CustomEvent("cfip:set-app-locale",{detail:x}));setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
       {panel==="settings"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
         {([
           ["showGrid","grid"],["showVolume","volume"],["showSessions","sessions"],["showBidAsk","bidAsk"],["magnet","magnet"]
-        ] as const).map(([key,label])=><label key={key} className="flex items-center justify-between border-b border-[#1f2937] px-2 py-2.5 text-xs last:border-0"><span>{t(locale,label)}</span><input type="checkbox" checked={prefs[key]} onChange={e=>setPrefs({...prefs,[key]:e.target.checked})}/></label>)}
+        ] as const).map(([key,label])=><label key={key} className="flex items-center justify-between border-b border-[#1f2937] px-2 py-2.5 text-xs last:border-0"><span>{t("en",label)}</span><input type="checkbox" checked={prefs[key]} onChange={e=>setPrefs({...prefs,[key]:e.target.checked})}/></label>)}
       </div>}
     </header>
     <div className="flex min-h-0 flex-1">
@@ -400,7 +399,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         </div>        <div className="absolute left-3 top-2 z-20 flex items-center gap-3 text-xs">
           <strong className="text-white">{symbol}</strong><span className="text-[#8492a5]">{tf}</span>
           {last&&<><span>O {last.open.toFixed(meta?.digits??5)}</span><span>H {last.high.toFixed(meta?.digits??5)}</span><span>L {last.low.toFixed(meta?.digits??5)}</span><span>C {last.close.toFixed(meta?.digits??5)}</span><span className={pct>=0?"text-emerald-400":"text-red-400"}>{pct>=0?"+":""}{pct.toFixed(2)}%</span></>}
-          <span className={live?"text-emerald-400":"text-amber-400"}>● {live?t(locale,"live"):error?t(locale,"dataOffline"):t(locale,"loading")}</span>
+          <span className={live?"text-emerald-400":"text-amber-400"}>● {live?t("en","live"):error?t("en","dataOffline"):t("en","loading")}</span>
         </div>
         {zones.length > 0 && <div className="pointer-events-none absolute left-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{zones.length} FVG zones</div>}
         {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
@@ -442,13 +441,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
           {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
         </svg>
         <div ref={host} className="absolute inset-0"/>
-        {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
+        {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t("en","noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
+      {sidebar&&<TerminalSidebar locale="en" tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
     </div>
     <footer className="cfip-terminal-footer flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
-      <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
-      <ChartAttribution locale={locale}/>
+      <span>{t("en","marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
+      <ChartAttribution locale="en"/>
     </footer>
   </div>;
 }

@@ -197,3 +197,61 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+
+## 2026-09-19 — Modular platform foundation expansion
+
+- Added a backend-owned indicator registry/calculation service backed by TA-Lib for EMA, SMA, WMA, RSI, ATR, ADX, OBV, Bollinger Bands and MACD. Indicator outputs are normalized into provider-neutral contracts so presentation code is not the source of calculation truth.
+- Added canonical market-data contracts for instruments, OHLCV, quotes, provenance, quality and bounded historical requests.
+- Added typed workspace, alert, execution, intelligence-governance, platform-settings and payment contracts.
+- Added terminal control-plane endpoints for feature manifest and workspace/alert contract validation.
+- Added indicator catalog/calculation, risk position-sizing, subscription-plan and bootstrap-manifest API boundaries.
+- Wired the new routers into the main API composition.
+- Moved the terminal default symbol into backend-owned typed configuration and changed TerminalShell bootstrap to consume the platform manifest instead of owning that default.
+- Expanded the terminal command registry to cover screener, compare, templates, paper trading, orders, positions, portfolio, journal, research and Elyrava intelligence in addition to chart/market/replay/alert controls.
+- Added deterministic bootstrap identities for user, admin and service roles using secret references only; no credentials are committed.
+- Added exactly two subscription plans (free, pro) and a crypto-only payment boundary. Payment provider settlement is intentionally adapter/governance work, not a fake completed payment integration.
+- Added unit coverage for indicator calculation, risk sizing, platform settings, execution, intelligence governance, subscriptions, seed metadata and terminal feature composition.
+- Hardened the workspace viewport default with default_factory to avoid shared mutable model state.
+- Opened draft PR #4 for this batch. The branch is deliberately not represented as production-ready until the repository CI and native frontend/runtime gates are actually verified.
+- No new dependency, cache purge, database reset or forced rebuild was introduced by this batch.
+
+
+## 2026-09-19 — Runtime lifecycle, realtime boundary, paper OMS and control-plane health
+
+- Added a typed runtime lifecycle contract and dependency-aware RuntimeSupervisor; application startup now initializes the event boundary, provider registry, Elyrava intelligence runtime, canonical market-data boundary and terminal orchestration before serving traffic, and shuts them down in reverse order.
+- Added a process-local event bus as the transport-neutral realtime boundary. It is deliberately replaceable by the existing NATS JetStream architecture without coupling terminal code to a broker implementation.
+- Added /api/runtime/status so the control plane can observe every initialized component and its dependency/status metadata.
+- Added /api/ws/terminal/{topic} for normalized realtime event delivery and connected market observation ingestion to the event boundary.
+- Added an idempotent paper OMS at /api/orders/paper; live/simulation execution is rejected by this boundary and remains an explicitly authorized adapter concern.
+- Extended the admin control plane to display runtime component health and retained the existing modular provider/settings/governance inventory.
+- Added unit coverage for lifecycle ordering, event-bus round trip and paper-order idempotency/safety.
+- No new dependency, forced rebuild, cache purge or database reset was introduced.
+- This batch establishes the startup/runtime spine; external provider connections remain configuration- and adapter-gated rather than pretending that catalog entries are live integrations.
+
+
+## 2026-09-19 — Provider/workspace/auth contract hardening
+
+- Added a transport-neutral MarketDataProvider adapter protocol so EODHD/Twelve Data/Finnhub/Polygon/Alpha Vantage/Dukascopy/TrueFX/CCXT and future adapters must normalize into CFIP-owned market-data contracts; catalog entries remain distinct from verified connectivity.
+- Added WorkspaceRepository + WorkspaceService ports for persistent chart-first workspaces, keeping storage implementation out of the domain and application use case boundary.
+- Added typed Principal/AuthorizationDecision/RBAC contracts with explicit permissions for terminal, research, intelligence, governed Git and admin settings. Authorization is deny-by-default for unknown permissions.
+- Added /api/authz/check for authorization-boundary introspection while real identity/session authentication remains a separate infrastructure integration.
+- Hardened the admin control-plane component after runtime-health integration so runtime state is passed explicitly and no undeclared UI state is referenced.
+- The platform remains modular: provider adapters, persistence, authentication, execution and intelligence promotion are independent boundaries rather than one monolithic service.
+
+
+## 2026-09-20 — Presentation-language isolation and intelligence/event contracts
+
+- Terminal/chart presentation is now explicitly EN/LTR. Application locale remains a separate preference and no longer mutates terminal/chart presentation state; terminal sidebar, symbol picker and attribution are fixed to English.
+- Added versioned cross-domain event-envelope contracts for market, analysis, intelligence, risk, order and system-health topics, preparing the process-local bus for a durable NATS JetStream transport without leaking transport-specific payloads into domain code.
+- Added a long-lived Elyrava intelligence runtime boundary with startup, heartbeat and shutdown state, and wired it into the server lifecycle rather than treating intelligence as a static UI feature.
+- Added provider-adapter and workspace persistence ports, plus typed authorization/RBAC boundaries, so external providers, persistence and identity implementations remain replaceable infrastructure.
+- No synthetic market data or fake provider connectivity was introduced. Catalog, adapter and verified-provider states remain distinct.
+
+
+## 2026-09-20 — Terminal presentation consistency and provider configuration
+
+- Enforced EN/LTR terminal labels independently of the application locale across drawing/tool controls, rail controls, sidebar, symbol picker and chart attribution. Language selection is now a product-surface concern and does not alter terminal/chart state.
+- Extended typed PlatformSettings with provider configurations so provider enablement, priority, secret references and provider-specific scalar settings have a backend-owned home rather than UI hardcoding.
+- Added a strict unit test for provider-aware platform settings.
+- Kept terminal typography proportional: the existing chart uses a readable 13px chart font and compact 10–13px chrome rather than extreme sizing; future visual changes should follow the same hierarchy.

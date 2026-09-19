@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+const RuntimeComponentSchema = z.object({ component:z.string(), status:z.enum(["starting","ready","degraded","failed","stopped"]), started_at:z.number().nullable(), detail:z.string(), dependencies:z.array(z.string()) });
+export const RuntimeSnapshotSchema = z.object({ status:z.enum(["starting","ready","degraded","failed","stopped"]), components:z.array(RuntimeComponentSchema) });
+export type RuntimeSnapshot = z.infer<typeof RuntimeSnapshotSchema>;
+
 const HealthSchema = z.object({ status: z.string(), service: z.string(), timestamp: z.string() });
 export const MarketObservationSchema = z.object({ id: z.string().uuid(), instrument_id: z.string().uuid(), observed_at: z.string(), bid: z.string().nullable(), ask: z.string().nullable(), last: z.string().nullable(), volume: z.string().nullable(), source: z.string(), source_event_id: z.string().nullable(), created_at: z.string() });
 export type MarketObservation = z.infer<typeof MarketObservationSchema>;
@@ -9,7 +13,11 @@ const DemoMarketSchema = z.object({ provider: z.string(), symbol: z.string(), ti
 export type DemoMarket = z.infer<typeof DemoMarketSchema>;
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
-export async function getHealth() { const response = await fetch(`${apiBaseUrl}/health`, { cache: "no-store" }); if (!response.ok) throw new Error(`API health request failed: ${response.status}`); return HealthSchema.parse(await response.json()); }
+export async function getHealth() { const response = await fetch(`${apiBaseUrl}/health`, { cache:"no-store" }); if(!response.ok) throw new Error(`API health request failed: ${response.status}`); return HealthSchema.parse(await response.json()); }
+export async function getRuntimeStatus(): Promise<RuntimeSnapshot> { const response=await fetch(`${apiBaseUrl}/runtime/status`,{cache:"no-store"}); if(!response.ok) throw new Error(`Runtime status request failed: ${response.status}`); return RuntimeSnapshotSchema.parse(await response.json()); }
+export async function getDemoEurusd(limit=500):Promise<DemoMarket>{const response=await fetch(`${apiBaseUrl}/market/demo/eurusd?limit=${limit}`,{cache:"no-store"});if(!response.ok)throw new Error(`Demo market provider failed: ${response.status}`);return DemoMarketSchema.parse(await response.json());}
+export async function getMarketObservations(symbol:string,venue:string,limit=500){const params=new URLSearchParams({symbol,venue,limit:String(limit)});const response=await fetch(`${apiBaseUrl}/market/observations?${params}`,{cache:"no-store"});if(!response.ok)throw new Error(`Market observations request failed: ${response.status}`);const databaseRows=MarketObservationListSchema.parse(await response.json());if(databaseRows.length||symbol!=="EUR/USD")return databaseRows;const demo=await getDemoEurusd(Math.min(limit,1000));const instrumentId="00000000-0000-4000-8000-000000000001";const rows:MarketObservation[]=demo.bars.map((bar,index)=>({id:`00000000-0000-4000-8000-${String(index+1).padStart(12,"0")}`,instrument_id:instrumentId,observed_at:new Date(bar.time.replace(" ","T")+"Z").toISOString(),bid:null,ask:null,last:String(bar.close),volume:String(bar.volume),source:demo.provider,source_event_id:`demo-bar-${bar.time}`,created_at:new Date().toISOString()}));if(demo.last!==null)rows.push({id:"00000000-0000-4000-8000-999999999999",instrument_id:instrumentId,observed_at:demo.observed_at,bid:demo.bid===null?null:String(demo.bid),ask:demo.ask===null?null:String(demo.ask),last:String(demo.last),volume:null,source:demo.provider,source_event_id:`demo-quote-${demo.observed_at}`,created_at:new Date().toISOString()});return rows;}
+
 export async function getDemoEurusd(limit = 500): Promise<DemoMarket> { const response = await fetch(`${apiBaseUrl}/market/demo/eurusd?limit=${limit}`, { cache: "no-store" }); if (!response.ok) throw new Error(`Demo market provider failed: ${response.status}`); return DemoMarketSchema.parse(await response.json()); }
 export async function getMarketObservations(symbol: string, venue: string, limit = 500) {
   const params = new URLSearchParams({ symbol, venue, limit: String(limit) });
@@ -115,4 +123,49 @@ export async function getProviderCatalog(): Promise<ProviderDescriptor[]> {
   const response = await fetch(`${apiBaseUrl}/providers`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Provider catalog request failed: ${response.status}`);
   return z.array(ProviderSchema).parse(await response.json());
+}
+
+
+const IndicatorDefinitionSchema = z.object({
+  id: z.string(), name: z.string(), kind: z.string(),
+  parameters: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
+  output_names: z.array(z.string()), source: z.string(), version: z.string(),
+});
+export type IndicatorDefinition = z.infer<typeof IndicatorDefinitionSchema>;
+
+export async function getIndicatorDefinitions(): Promise<IndicatorDefinition[]> {
+  const response = await fetch(`${apiBaseUrl}/indicators/definitions`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Indicator catalog request failed: ${response.status}`);
+  return z.array(IndicatorDefinitionSchema).parse(await response.json());
+}
+
+const PlanSchema = z.object({
+  id: z.enum(["free","pro"]), name: z.string(), price_minor: z.number().int().nonnegative(),
+  currency: z.string(), billing_period: z.enum(["month","year"]),
+  entitlements: z.array(z.string()), limits: z.record(z.string(), z.union([z.number(), z.boolean()])),
+});
+export type PlanDefinition = z.infer<typeof PlanSchema>;
+
+export async function getPlans(): Promise<PlanDefinition[]> {
+  const response = await fetch(`${apiBaseUrl}/subscriptions/plans`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Subscription plan request failed: ${response.status}`);
+  return z.array(PlanSchema).parse(await response.json());
+}
+
+export async function getPlatformManifest(): Promise<{
+  schema_version: number;
+  capabilities: Array<Record<string, unknown>>;
+  providers: ProviderDescriptor[];
+  defaults: { default_symbol: string; default_timeframe: string; default_chart_type: string };
+  governance: Record<string, unknown>;
+}> {
+  const response = await fetch(`${apiBaseUrl}/platform/manifest`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Platform manifest request failed: ${response.status}`);
+  return z.object({
+    schema_version: z.number(),
+    capabilities: z.array(z.record(z.string(), z.unknown())),
+    providers: z.array(ProviderSchema),
+    defaults: z.object({ default_symbol: z.string(), default_timeframe: z.string(), default_chart_type: z.string() }),
+    governance: z.record(z.string(), z.unknown()),
+  }).parse(await response.json());
 }
