@@ -1,12 +1,9 @@
-"""Built-in runtime components.
-
-External integrations remain adapter boundaries: startup verifies configuration and
-registers services without inventing credentials or opening uncontrolled connections.
-"""
+"""Built-in runtime components."""
 from datetime import UTC, datetime
 from cfip.application.event_bus import EventBus
+from cfip.application.intelligence_runtime import IntelligenceRuntime
 from cfip.domain.platform_settings import PlatformSettings
-from cfip.domain.runtime_contracts import ComponentHealth\nfrom cfip.application.intelligence_runtime import IntelligenceRuntime
+from cfip.domain.runtime_contracts import ComponentHealth
 
 def _now() -> int:
     return int(datetime.now(UTC).timestamp())
@@ -36,12 +33,14 @@ class IntelligenceRuntimeComponent:
     dependencies = ("event-bus", "provider-registry")
     def __init__(self) -> None:
         self.settings = PlatformSettings()
+        self.runtime = IntelligenceRuntime()
     async def start(self) -> ComponentHealth:
-        state = "ready" if self.settings.intelligence.learning_enabled else "degraded"
+        health = await self.runtime.start()
+        state = "ready" if health.status == "healthy" and self.settings.intelligence.learning_enabled else "degraded"
         detail = "evidence-first intelligence runtime ready" if state == "ready" else "learning disabled by configuration"
-        return ComponentHealth(component=self.name, status=state, started_at=_now(), detail=detail)
+        return ComponentHealth(component=self.name, status=state, started_at=health.last_verified_at, detail=detail)
     async def stop(self) -> None:
-        return None
+        await self.runtime.stop()
 
 class MarketRuntimeComponent:
     name = "market-data"
