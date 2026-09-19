@@ -18,7 +18,7 @@ export function TerminalSidebar({
 }: {
   locale: Locale; tab: InspectorTab; setTab: (v: InspectorTab) => void; symbol: string; candles: Candle[];
   collapsed: boolean; setCollapsed: (v: boolean) => void; preferences: ChartPreferences;
-  setPreferences: (v: ChartPreferences) => void; drawings: Drawing[]; setDrawings: (v: Drawing[]) => void;
+  setPreferences: (v: ChartPreferences) => void; drawings: Drawing[]; setDrawings: (v: Drawing[] | ((current: Drawing[]) => Drawing[])) => void;
   structurePoints: StructurePoint[]; structureEvents: StructureEvent[]; orderBlocks: OrderBlock[];
   analysis: UnifiedAnalysis;
 }) {
