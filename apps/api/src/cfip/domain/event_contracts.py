@@ -16,4 +16,4 @@ class EventEnvelope(BaseModel):
     correlation_id: str = Field(min_length=1, max_length=128)
     producer: str = Field(min_length=1, max_length=100)
     schema_version: int = Field(default=1, ge=1)
-    payload: dict[str, object] = {}
+    payload: dict[str, object] = Field(default_factory=dict)
