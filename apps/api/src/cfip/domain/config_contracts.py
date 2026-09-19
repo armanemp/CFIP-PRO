@@ -34,6 +34,7 @@ class IntelligenceConfig(BaseModel):
 
 class ChartConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    default_symbol: str = "EUR/USD"
     default_timeframe: str = "1m"
     default_chart_type: str = "candles"
     max_visible_indicators: int = Field(default=12, ge=1, le=100)

@@ -8,7 +8,7 @@ import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
-import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
+import { t, localeNames } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
@@ -279,12 +279,12 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const toggleRail=(value:boolean)=>{setRail(value);setPrefs(p=>({...p,leftRail:value}));};
 
   const tt=(x:Tool)=>({
-    cursor:t(locale,"cursor"),crosshair:t(locale,"crosshair"),trendline:t(locale,"trendline"),ray:t(locale,"ray"),
-    horizontal:t(locale,"horizontal"),vertical:t(locale,"vertical"),rectangle:t(locale,"rectangle"),fib:t(locale,"fibonacci"),
-    measure:t(locale,"measure"),long:t(locale,"longPosition"),short:t(locale,"shortPosition")
+    cursor:t("en","cursor"),crosshair:t("en","crosshair"),trendline:t("en","trendline"),ray:t("en","ray"),
+    horizontal:t("en","horizontal"),vertical:t("en","vertical"),rectangle:t("en","rectangle"),fib:t("en","fibonacci"),
+    measure:t("en","measure"),long:t("en","longPosition"),short:t("en","shortPosition")
   }[x]);
 
-  const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);\n\n  // Terminal/chart presentation is intentionally EN/LTR and is not mutated by app-language selection.\n  // Locale is persisted as application preference for the surrounding product surfaces.\n
 
   useEffect(() => {
     const c = chartRef.current;
@@ -352,15 +352,15 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setPendingPoint(null);
   };
 
-  return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
+  return <div dir="ltr" data-terminal-locale="en" className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
     <header className="cfip-terminal-topbar relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
-      <button onClick={()=>toggleRail(!rail)} title={rail?t(locale,"hideRail"):t(locale,"showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
+      <button onClick={()=>toggleRail(!rail)} title={rail?t("en","hideRail"):t("en","showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
       <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
-      {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
+      {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale="en" value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
       <div className="flex gap-1">{TIMEFRAMES.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
       <div className="ml-auto flex items-center gap-1"><button onClick={undoDrawing} title="Ctrl/Cmd+Z" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↶</button><button onClick={redoDrawing} title="Ctrl/Cmd+Y" className="rounded px-2 py-1.5 text-xs hover:bg-[#17202c]">↷</button>
-        <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"autoFit")}</button>
+        <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t("en","autoFit")}</button>
         <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
         <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"fullscreen")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="replay"?null:"replay")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"replay")}</button>
@@ -444,11 +444,11 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
+      {sidebar&&<TerminalSidebar locale="en" tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
     </div>
     <footer className="cfip-terminal-footer flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
       <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
-      <ChartAttribution locale={locale}/>
+      <ChartAttribution locale="en"/>
     </footer>
   </div>;
 }

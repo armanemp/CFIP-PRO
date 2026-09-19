@@ -27,7 +27,7 @@ PROVIDER_CATALOG: tuple[ProviderDescriptor, ...] = (
     ProviderDescriptor(id="alphavantage",name="Alpha Vantage",kind="market-data",capabilities=("forex","historical","fundamentals")),
     ProviderDescriptor(id="dukascopy",name="Dukascopy",kind="market-data",capabilities=("forex","historical","ticks")),
     ProviderDescriptor(id="truefx",name="TrueFX",kind="market-data",capabilities=("forex","ticks")),
-    ProviderDescriptor(id="ccxt",name="CCXT",kind="market-data",status="adapter",capabilities=("crypto","ohlcv","orderbook")),
+    ProviderDescriptor(id="ccxt",name="CCXT",kind="market-data",status="adapter",capabilities=("crypto","ohlcv","orderbook","forex")),
     ProviderDescriptor(id="oanda",name="OANDA",kind="broker",capabilities=("forex","pricing","orders","accounts")),
     ProviderDescriptor(id="fxcm",name="FXCM",kind="broker",capabilities=("forex","pricing","orders","accounts")),
     ProviderDescriptor(id="ig",name="IG",kind="broker",capabilities=("forex","pricing","orders","accounts")),

@@ -6,7 +6,7 @@ export type CommandAction =
   | { type: "panel"; value: "symbol" | "timeframe" | "chartType" | "indicators" | "settings" | "language" }
   | { type: "navigate"; value: "/terminal" | "/admin" }
   | { type: "system"; value: "fullscreen" | "reset-view" | "screenshot" | "command-palette" }
-  | { type: "terminal"; value: "replay" | "alerts" | "objects" | "watchlist" | "depth" | "time-sales" };
+  | { type: "terminal"; value: "replay" | "alerts" | "objects" | "watchlist" | "depth" | "time-sales" | "screener" | "compare" | "templates" | "paper-trading" | "orders" | "positions" | "portfolio" | "journal" | "research" | "intelligence" };
 
 export interface TerminalCommand {
   id: string;
@@ -45,6 +45,16 @@ export const TERMINAL_COMMANDS: readonly TerminalCommand[] = [
   { id: "terminal.watchlist", label: "Watchlist", keywords: ["watchlist", "symbols"], action: { type: "terminal", value: "watchlist" } },
   { id: "terminal.depth", label: "Market depth", keywords: ["depth", "dom", "orderbook"], action: { type: "terminal", value: "depth" } },
   { id: "terminal.time-sales", label: "Time & Sales", keywords: ["time", "sales", "tape"], action: { type: "terminal", value: "time-sales" } },
+  { id: "terminal.screener", label: "Market screener", keywords: ["screener", "scan", "scanner"], action: { type: "terminal", value: "screener" } },
+  { id: "terminal.compare", label: "Compare symbols", keywords: ["compare", "relative"], action: { type: "terminal", value: "compare" } },
+  { id: "terminal.templates", label: "Workspace templates", keywords: ["templates", "layout", "workspace"], action: { type: "terminal", value: "templates" } },
+  { id: "terminal.paper-trading", label: "Paper trading", keywords: ["paper", "simulation"], action: { type: "terminal", value: "paper-trading" } },
+  { id: "terminal.orders", label: "Orders", keywords: ["orders", "oms"], action: { type: "terminal", value: "orders" } },
+  { id: "terminal.positions", label: "Positions", keywords: ["positions", "open"], action: { type: "terminal", value: "positions" } },
+  { id: "terminal.portfolio", label: "Portfolio", keywords: ["portfolio", "account"], action: { type: "terminal", value: "portfolio" } },
+  { id: "terminal.journal", label: "Trading journal", keywords: ["journal", "trades"], action: { type: "terminal", value: "journal" } },
+  { id: "terminal.research", label: "Research fabric", keywords: ["research", "sources", "evidence"], action: { type: "terminal", value: "research" } },
+  { id: "terminal.intelligence", label: "Elyrava intelligence", keywords: ["ai", "intelligence", "elyrava"], action: { type: "terminal", value: "intelligence" } },
 ];
 
 export function searchTerminalCommands(query: string): TerminalCommand[] {
