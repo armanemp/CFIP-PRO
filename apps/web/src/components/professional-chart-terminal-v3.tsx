@@ -13,7 +13,9 @@ import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawin
 import { aggregateAnalysis, type UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
 import { ema, bollinger, sma, wma, vwap, toCandles, rsi, macd, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks, liquidityAnalysis, displacementAnalysis, premiumDiscount, mtfStructure, atr, dmi, stochastic, donchian, keltner, ichimoku } from "@/components/terminal/chart-math";
-import { addIndicatorSeries, addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
+import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
+import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
+import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 
@@ -39,22 +41,12 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const session=useMemo(()=>sessionRange(candles),[candles]);
   const structure=useMemo(()=>marketStructure(candles),[candles]);
   const blocks=useMemo(()=>orderBlocks(candles),[candles]);
+  const analysisSnapshot = useMemo(() => computeAnalysisSnapshot(candles, tf), [candles, tf]);
   const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
-  const analysisZones = useMemo(() => fvg(analysisCandles), [analysisCandles]);
-  const analysisStructure = useMemo(() => marketStructure(analysisCandles), [analysisCandles]);
-  const analysisBlocks = useMemo(() => orderBlocks(analysisCandles), [analysisCandles]);
-  const analysisLiquidity = useMemo(() => liquidityAnalysis(analysisCandles), [analysisCandles]);
-  const analysisDisplacement = useMemo(() => displacementAnalysis(analysisCandles), [analysisCandles]);
-  const analysisPd = useMemo(() => premiumDiscount(analysisCandles), [analysisCandles]);
-  const analysisMtf = useMemo(() => mtfStructure(analysisCandles, tf), [analysisCandles, tf]);
-  const analysisRsi = useMemo(() => rsi(analysisCandles,14).at(-1)?.value ?? null, [analysisCandles]);
-  const analysisMacd = useMemo(() => macd(analysisCandles).histogram.at(-1)?.value ?? null, [analysisCandles]);
-  const analysisAtr = useMemo(() => atr(analysisCandles,14).at(-1)?.value ?? null, [analysisCandles]);
-  const analysis=useMemo<UnifiedAnalysis>(()=>aggregateAnalysis({
-    candles:analysisCandles,zones:analysisZones,structurePoints:analysisStructure.points,structureEvents:analysisStructure.events,orderBlocks:analysisBlocks,
-    liquidityPools:analysisLiquidity.pools,liquiditySweeps:analysisLiquidity.sweeps,displacement:analysisDisplacement,premiumDiscount:analysisPd,mtf:analysisMtf,
-    rsi:analysisRsi,macdHistogram:analysisMacd,atr:analysisAtr,
-  }),[analysisCandles,analysisZones,analysisStructure,analysisBlocks,analysisLiquidity,analysisDisplacement,analysisPd,analysisMtf,analysisRsi,analysisMacd,analysisAtr]);
+  const analysis = analysisSnapshot.analysis;
+  const analysisRsi = analysisSnapshot.rsi;
+  const analysisMacd = analysisSnapshot.macdHistogram;
+  const analysisAtr = analysisSnapshot.atr;
   const closedBarKey = analysisCandles.at(-1)?.time ?? null;
   useEffect(() => {
     if (analysisCandles.length < 5) {
@@ -252,50 +244,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setMainSeriesData(main,kind,candles);
     mainRef.current=main;
 
-    if(selected.includes("EMA20"))addIndicatorSeries(c,ema(candles,20),"#60a5fa","EMA 20");
-    if(selected.includes("EMA50"))addIndicatorSeries(c,ema(candles,50),"#c084fc","EMA 50");
-    if(selected.includes("EMA200"))addIndicatorSeries(c,ema(candles,200),"#f97316","EMA 200");
-    if(selected.includes("SMA20"))addIndicatorSeries(c,sma(candles,20),"#fbbf24","SMA 20");
-    if(selected.includes("WMA20"))addIndicatorSeries(c,wma(candles,20),"#fb923c","WMA 20");
-    if(selected.includes("VWAP"))addIndicatorSeries(c,vwap(candles),"#34d399","VWAP");
-    if(selected.includes("RSI14")) addIndicatorSeries(c, rsi(candles,14), "#e879f9", "RSI 14", 1);
-    if(selected.includes("MACD")) {
-      const m=macd(candles);
-      addIndicatorSeries(c,m.macd,"#38bdf8","MACD",1);
-      addIndicatorSeries(c,m.signal,"#f59e0b","MACD signal",1);
-    }
-    if(selected.includes("DMI14")) {
-      const d=dmi(candles,14);
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.plus})), "#22c55e", "DMI +DI", 1);
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.minus})), "#ef4444", "DMI -DI", 1);
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.adx})), "#a78bfa", "ADX", 1);
-    }
-    if(selected.includes("STOCH14")) addIndicatorSeries(c,stochastic(candles,14,3),"#f472b6","Stochastic 14",1);
-    if(selected.includes("DONCHIAN20")) {
-      const d=donchian(candles,20);
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.upper})),"#64748b","Donchian upper");
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.middle})),"#94a3b8","Donchian mid");
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.lower})),"#64748b","Donchian lower");
-    }
-    if(selected.includes("KELTNER20")) {
-      const k=keltner(candles,20,14,1.5);
-      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.upper})),"#0ea5e9","Keltner upper");
-      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.middle})),"#38bdf8","Keltner mid");
-      addIndicatorSeries(c,k.map(x=>({time:x.time,value:x.lower})),"#0ea5e9","Keltner lower");
-    }
-    if(selected.includes("ICHIMOKU")) {
-      const i=ichimoku(candles);
-      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.tenkan})),"#f43f5e","Ichimoku Tenkan");
-      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.kijun})),"#f59e0b","Ichimoku Kijun");
-      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.senkouA})),"#22c55e","Ichimoku Span A");
-      addIndicatorSeries(c,i.map(x=>({time:x.time,value:x.senkouB})),"#a855f7","Ichimoku Span B");
-    }
-    if(selected.includes("BB20")){
-      const b=bollinger(candles);
-      addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.upper})),"#64748b","BB upper");
-      addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.mid})),"#94a3b8","BB mid");
-      addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.lower})),"#64748b","BB lower");
-    }
+    renderRegisteredIndicators(c, candles, selected, 1);
     if (hasOscillatorPane) c.panes()[1].setHeight(170);
     if (hasVolumePane) addVolumeSeries(c,candles,hasOscillatorPane ? 2 : 1);
     if (hasVolumePane) c.panes()[hasOscillatorPane ? 2 : 1].setHeight(110);
