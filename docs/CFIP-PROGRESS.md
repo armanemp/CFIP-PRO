@@ -1,3 +1,11 @@
+# 2026-09-20 — Chart engine tokenization and modular indicator boundary
+
+- Routed the chart engine's main-series, area/baseline and volume visual values through the centralized terminal theme.
+- Routed registered-indicator visual tokens through the same theme boundary instead of keeping a second palette inside the indicator renderer.
+- This keeps chart rendering and indicator computation separate: mathematical indicator implementations remain in chart-math, registry metadata remains in indicator-registry, and rendering remains in indicator-renderer.
+- The terminal market-data lifecycle remains isolated in its dedicated hook, leaving the main terminal component responsible for workspace/chart behavior rather than transport polling.
+- Preserved the existing indicator catalog and chart capabilities; this pass changes architecture and configuration boundaries rather than replacing working calculations with static placeholders.
+
 # 2026-09-20 — Terminal data boundary and runtime lifecycle verification coverage
 
 - Extracted terminal market-data acquisition and refresh lifecycle into `apps/web/src/components/terminal/use-terminal-market-data.ts`. The professional chart terminal now consumes a focused market-data hook instead of owning fetch/polling/error/version state.
