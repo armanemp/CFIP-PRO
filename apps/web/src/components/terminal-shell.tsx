@@ -14,9 +14,7 @@ export function TerminalShell() {
     const bootstrap = async () => {
       try {
         const manifest = await getPlatformManifest();
-        const configuredSymbol = typeof manifest.governance.default_symbol === "string"
-          ? manifest.governance.default_symbol
-          : "EUR/USD";
+        const configuredSymbol = manifest.defaults.default_symbol;
         if (!active) return;
         setSymbol(configuredSymbol);
         const data = await getMarketObservations(configuredSymbol, "reference", 5000);
