@@ -1,6 +1,6 @@
 # CFIP-PRO Chart Terminal Capability Audit
 
-Updated 2026-09-18.
+Updated 2026-09-19.
 
 ## External capability baseline reviewed
 
@@ -18,10 +18,13 @@ The project does **not** copy proprietary TradingView/cTrader code or UI assets.
 - 1m, 5m, 15m, 30m, 1H, 4H, 1D, 1W and 1M timeframe selector.
 - Modular symbol catalogue covering major, minor and exotic FX pairs.
 - Symbol picker with search.
-- 2-second polling of normalized market observations when a provider-backed API is available.
+- 2-second polling of normalized market observations with client-side version gating to avoid redundant chart rebuilds when the market payload has not changed.
 - Explicit no-synthetic-data empty state.
 - EMA/SMA/WMA/VWAP/Bollinger overlay foundation.
-- Volume histogram.
+- Volume histogram in a dedicated secondary pane.
+- RSI, MACD, DMI/ADX and Stochastic in a dedicated secondary indicator pane; overlay studies remain on the main price pane.
+- Viewport preservation across indicator/chart/data refreshes rather than forced `fitContent` on every refresh.
+- Drawing/FVG overlay coordinate refresh synchronized with time-scale pan/zoom and chart resize.
 - Crosshair, scroll, zoom, pinch and axis scaling.
 - Modular tool rail.
 - Modular inspector/sidebar with collapse/show controls.
@@ -35,7 +38,7 @@ The project does **not** copy proprietary TradingView/cTrader code or UI assets.
 1. Real provider adapter(s) and websocket/tick streaming into the normalized market-observation contract.
 2. Full drawing object model: selection, handles, move/resize, lock/hide, object tree, undo/redo and persistence.
 3. Full TradingView/cTrader-class drawing catalogue: channels, pitchfork/Gann, Fibonacci variants, patterns, text/annotations, measurement and position tools.
-4. Full indicator engine with oscillator panes and parameter dialogs rather than overlay-only foundations.
+4. Full indicator engine parameter dialogs, pane-specific scaling and richer oscillator visualization beyond the current shared secondary pane.
 5. Market structure and intelligence rendering: BOS/CHoCH/MSS, liquidity, FVG/IFVG, OB/Breaker/Mitigation, sessions/kill zones and MTF confluence.
 6. Replay engine with deterministic historical cursor, play/pause/step/speed and return-to-live.
 7. Alert engine with price/drawing/indicator conditions and notification delivery.
