@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ColorType, CrosshairMode, createChart, type IChartApi, type ISeriesApi, type SeriesType, type UTCTimestamp } from "lightweight-charts";
+import { createChart, type IChartApi, type ISeriesApi, type SeriesType, type UTCTimestamp } from "lightweight-charts";
 import type { MarketObservation } from "@/lib/api";
 import { postUnifiedAnalysis, type UnifiedAnalysisRead } from "@/lib/api";
 import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
@@ -13,16 +13,17 @@ import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawin
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
 import { TERMINAL_THEME } from "@/components/terminal/terminal-theme";
-import { toCandles, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks } from "@/components/terminal/chart-math";
+import { toCandles } from "@/components/terminal/chart-math";
 import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
-import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 import { useTerminalMarketData } from "@/components/terminal/use-terminal-market-data";
 import { useTerminalKeyboard } from "@/components/terminal/use-terminal-keyboard";
 import { createDrawingHistory, recordDrawingChange, redoDrawingChange, undoDrawingChange } from "@/components/terminal/drawing-history";
+import { terminalChartOptions } from "@/components/terminal/chart-options";
+import { computeTerminalOverlayState } from "@/components/terminal/terminal-overlay-state";
 
 
 
@@ -70,14 +71,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     return () => window.clearInterval(interval);
   }, [replay.status, replay.speed]);
   const last=candles.at(-1),prev=candles.at(-2);
-  const zones=useMemo(()=>fvg(candles),[candles]);
-  const pivotPoints=useMemo(()=>pivots(candles),[candles]);
-  const levels=useMemo(()=>supportResistance(candles),[candles]);
-  const session=useMemo(()=>sessionRange(candles),[candles]);
-  const structure=useMemo(()=>marketStructure(candles),[candles]);
-  const blocks=useMemo(()=>orderBlocks(candles),[candles]);
-  const analysisSnapshot = useMemo(() => computeAnalysisSnapshot(candles, tf), [candles, tf]);
-  const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
+  const overlayState = useMemo(() => computeTerminalOverlayState(candles, tf), [candles, tf]);
+  const { zones, pivotPoints, levels, session, structure, blocks, analysisSnapshot, analysisCandles } = overlayState;
   const analysis = analysisSnapshot.analysis;
   const closedBarKey = analysisCandles.at(-1)?.time ?? null;
   useEffect(() => {
@@ -217,27 +212,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   useEffect(()=>{
     if(!host.current)return;
-    const c=createChart(host.current,{
-      autoSize:true,
-      layout:{background:{type:ColorType.Solid,color:TERMINAL_THEME.background},textColor:TERMINAL_THEME.chartText,fontSize:13,fontFamily:"Inter,Segoe UI,Arial,sans-serif",attributionLogo:true},
-      grid:{vertLines:{color:prefs.showGrid?TERMINAL_THEME.grid:"transparent"},horzLines:{color:prefs.showGrid?TERMINAL_THEME.grid:"transparent"}},
-      rightPriceScale:{borderColor:TERMINAL_THEME.borderSubtle,autoScale:true,alignLabels:true,minimumWidth:86},
-      timeScale:{borderColor:TERMINAL_THEME.borderSubtle,timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
-      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:TERMINAL_THEME.crosshair,width:1,style:3,labelBackgroundColor:TERMINAL_THEME.crosshairLabel},horzLine:{color:TERMINAL_THEME.crosshair,width:1,style:3,labelBackgroundColor:TERMINAL_THEME.crosshairLabel}},
-      handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
-      handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},
-    });
+    const c=createChart(host.current, terminalChartOptions(prefs));
     chartRef.current=c;
     return()=>{c.remove();chartRef.current=null;};
   },[]);
 
   useEffect(() => {
-    chartRef.current?.applyOptions({
-      grid: {
-        vertLines: { color: prefs.showGrid ? TERMINAL_THEME.grid : "transparent" },
-        horzLines: { color: prefs.showGrid ? TERMINAL_THEME.grid : "transparent" },
-      },
-    });
+    chartRef.current?.applyOptions(terminalChartOptions(prefs));
   }, [prefs.showGrid]);
 
   useEffect(()=>{
