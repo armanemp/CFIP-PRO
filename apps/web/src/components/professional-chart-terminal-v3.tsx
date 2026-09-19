@@ -25,7 +25,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const host=useRef<HTMLDivElement>(null);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
 
   const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
   const last=candles.at(-1),prev=candles.at(-2);
@@ -153,7 +153,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     let active=true;
     const load=async()=>{
       try{
-        const next=await getMarketObservations(symbol,"reference",5000);
+        const next=await getMarketObservations(symbol,"reference",1000);
         if(active){setRows(next);setLive(next.length>0);setError(false);}
       }catch{
         if(active){setLive(false);setError(true);}
@@ -183,7 +183,11 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   useEffect(()=>{
     const c=chartRef.current;
     if(!c||!candles.length)return;
+    const visibleRange = c.timeScale().getVisibleLogicalRange();
     for(const pane of c.panes())for(const s of pane.getSeries())c.removeSeries(s);
+    while (c.panes().length > 1) c.removePane(c.panes().length - 1);
+    const needsIndicatorPane = selected.some(x => ["RSI14","MACD","DMI14","STOCH14"].includes(x)) || prefs.showVolume;
+    if (needsIndicatorPane) c.addPane(true);
 
     const main=addMainSeries(c,kind,candles[0].close);
     setMainSeriesData(main,kind,candles);
@@ -195,19 +199,19 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(selected.includes("SMA20"))addIndicatorSeries(c,sma(candles,20),"#fbbf24","SMA 20");
     if(selected.includes("WMA20"))addIndicatorSeries(c,wma(candles,20),"#fb923c","WMA 20");
     if(selected.includes("VWAP"))addIndicatorSeries(c,vwap(candles),"#34d399","VWAP");
-    if(selected.includes("RSI14")) addIndicatorSeries(c, rsi(candles,14), "#e879f9", "RSI 14");
+    if(selected.includes("RSI14")) addIndicatorSeries(c, rsi(candles,14), "#e879f9", "RSI 14", 1);
     if(selected.includes("MACD")) {
       const m=macd(candles);
-      addIndicatorSeries(c,m.macd,"#38bdf8","MACD");
-      addIndicatorSeries(c,m.signal,"#f59e0b","MACD signal");
+      addIndicatorSeries(c,m.macd,"#38bdf8","MACD",1);
+      addIndicatorSeries(c,m.signal,"#f59e0b","MACD signal",1);
     }
     if(selected.includes("DMI14")) {
       const d=dmi(candles,14);
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.plus})), "#22c55e", "DMI +DI");
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.minus})), "#ef4444", "DMI -DI");
-      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.adx})), "#a78bfa", "ADX");
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.plus})), "#22c55e", "DMI +DI", 1);
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.minus})), "#ef4444", "DMI -DI", 1);
+      addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.adx})), "#a78bfa", "ADX", 1);
     }
-    if(selected.includes("STOCH14")) addIndicatorSeries(c,stochastic(candles,14,3),"#f472b6","Stochastic 14");
+    if(selected.includes("STOCH14")) addIndicatorSeries(c,stochastic(candles,14,3),"#f472b6","Stochastic 14",1);
     if(selected.includes("DONCHIAN20")) {
       const d=donchian(candles,20);
       addIndicatorSeries(c,d.map(x=>({time:x.time,value:x.upper})),"#64748b","Donchian upper");
@@ -233,8 +237,10 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.mid})),"#94a3b8","BB mid");
       addIndicatorSeries(c,b.map(x=>({time:x.time,value:x.lower})),"#64748b","BB lower");
     }
-    if(prefs.showVolume)addVolumeSeries(c,candles);
-    c.timeScale().fitContent();
+    if(prefs.showVolume)addVolumeSeries(c,candles,1);
+    if (c.panes().length > 1) c.panes()[1].setHeight(170);
+    if (visibleRange) c.timeScale().setVisibleLogicalRange(visibleRange); else c.timeScale().fitContent();
+    setOverlayTick(v => v + 1);
   },[candles,kind,selected,prefs.showVolume]);
 
   const toggleSidebar=(value:boolean)=>{setSidebar(value);setPrefs(p=>({...p,rightSidebar:value}));};
@@ -248,7 +254,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
-  const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
+  useEffect(() => {\n    const c = chartRef.current;\n    if (!c) return;\n    const redraw = () => setOverlayTick(v => v + 1);\n    const scale = c.timeScale();\n    scale.subscribeVisibleLogicalRangeChange(redraw);\n    scale.subscribeSizeChange(redraw);\n    window.addEventListener("resize", redraw);\n    return () => {\n      scale.unsubscribeVisibleLogicalRangeChange(redraw);\n      scale.unsubscribeSizeChange(redraw);\n      window.removeEventListener("resize", redraw);\n    };\n  }, []);\n\n  const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
     if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
     const rect=event.currentTarget.getBoundingClientRect();
     const x=event.clientX-rect.left, y=event.clientY-rect.top;
@@ -303,7 +309,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         {zones.length > 0 && <div className="pointer-events-none absolute left-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{zones.length} FVG zones</div>}
         {levels.length > 0 && <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">{levels.length} S/R levels</div>}
         {session && prefs.showSessions && <div className="pointer-events-none absolute left-3 bottom-20 z-10 rounded border border-[#334155] bg-[#0d131b]/85 px-2 py-1 text-[10px] text-[#94a3b8]">Session {session.low.toFixed(meta?.digits??5)} — {session.high.toFixed(meta?.digits??5)}</div>}
-        <svg aria-label="Chart drawings" className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+        <svg key={overlayTick} aria-label="Chart drawings" className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
           {zones.map((z,i)=>{
             const xa=chartRef.current?.timeScale().timeToCoordinate(z.a), xb=chartRef.current?.timeScale().timeToCoordinate(z.b);
             const ya=mainRef.current?.priceToCoordinate(z.high), yb=mainRef.current?.priceToCoordinate(z.low);
