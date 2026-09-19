@@ -247,3 +247,11 @@
 - Added a long-lived Elyrava intelligence runtime boundary with startup, heartbeat and shutdown state, and wired it into the server lifecycle rather than treating intelligence as a static UI feature.
 - Added provider-adapter and workspace persistence ports, plus typed authorization/RBAC boundaries, so external providers, persistence and identity implementations remain replaceable infrastructure.
 - No synthetic market data or fake provider connectivity was introduced. Catalog, adapter and verified-provider states remain distinct.
+
+
+## 2026-09-20 — Terminal presentation consistency and provider configuration
+
+- Enforced EN/LTR terminal labels independently of the application locale across drawing/tool controls, rail controls, sidebar, symbol picker and chart attribution. Language selection is now a product-surface concern and does not alter terminal/chart state.
+- Extended typed PlatformSettings with provider configurations so provider enablement, priority, secret references and provider-specific scalar settings have a backend-owned home rather than UI hardcoding.
+- Added a strict unit test for provider-aware platform settings.
+- Kept terminal typography proportional: the existing chart uses a readable 13px chart font and compact 10–13px chrome rather than extreme sizing; future visual changes should follow the same hierarchy.
