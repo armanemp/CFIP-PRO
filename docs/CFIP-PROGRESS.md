@@ -1,3 +1,12 @@
+## 2026-09-20 — platform-wide startup lifecycle orchestration
+
+- Added a single in-process platform runtime lifecycle boundary covering API, market-data, indicators, analysis, intelligence, research, risk, notifications, replay, self-healing, self-development and governed Git.
+- FastAPI now uses an explicit lifespan hook so the complete platform capability set is initialized together when the server starts and stopped together on shutdown.
+- Added `GET /ready` with per-component readiness state and timestamps; the endpoint distinguishes platform degradation from a simple HTTP process-health check.
+- Extended `/admin/runtime` with the same platform lifecycle snapshot while preserving the no-secrets/no-unauthorized-mutation boundary.
+- This is orchestration/readiness infrastructure, not a false claim that external providers are credentialed or connected. Provider adapters must independently report real connectivity before a component can claim external readiness.
+- No new dependency, Docker rebuild, database reset, generated artifact or cache invalidation was introduced.
+
 ## 2026-09-19 — platform-wide modularization pass
 
 - Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Elyrava intelligence, research, platform governance and admin boundaries.
