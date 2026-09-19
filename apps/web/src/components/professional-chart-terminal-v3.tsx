@@ -8,7 +8,7 @@ import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
-import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
+import { t, localeNames } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
@@ -444,7 +444,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div ref={host} className="absolute inset-0"/>
         {!candles.length&&<div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="rounded-lg border border-[#293748] bg-[#0d131b]/95 px-8 py-6 text-center shadow-xl"><div className="text-lg font-semibold">{t(locale,"noData")}</div><div className="mt-2 max-w-lg text-xs leading-5 text-[#718096]">CFIP renders normalized market observations only. No synthetic candles are generated.</div></div></div>}
       </section>
-      {sidebar&&<TerminalSidebar locale={locale} tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
+      {sidebar&&<TerminalSidebar locale="en" tab={tab} setTab={setTab} symbol={symbol} candles={candles} analysis={canonicalAnalysis} collapsed={false} setCollapsed={toggleSidebar} preferences={prefs} setPreferences={setPrefs} drawings={drawings} setDrawings={updateDrawings} structurePoints={structure.points} structureEvents={structure.events} orderBlocks={blocks} selectedDrawingId={selectedDrawingId} setSelectedDrawingId={setSelectedDrawingId} setSymbol={setSymbol}/>}
     </div>
     <footer className="cfip-terminal-footer flex h-7 shrink-0 items-center justify-between border-t border-[#27313d] bg-[#0d131b] px-3 text-[10px] text-[#687689]">
       <span>{t(locale,"marketData")} · {live?"LIVE":"WAITING"} · {candles.length} bars</span>
