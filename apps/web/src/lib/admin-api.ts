@@ -1,9 +1,30 @@
 import { z } from "zod";
 
+const ComponentSchema = z.object({
+  name: z.string(),
+  required: z.boolean(),
+  state: z.enum(["starting", "ready", "degraded", "stopped"]),
+  started_at: z.string().nullable(),
+  ready_at: z.string().nullable(),
+  duration_ms: z.number().nullable(),
+  detail: z.string(),
+  checks: z.array(z.string()),
+  error: z.string().nullable(),
+});
+
 const AdminRuntimeSchema = z.object({
   app: z.object({ name: z.string(), version: z.string(), environment: z.string() }),
   endpoints: z.object({ api_host: z.string(), api_port: z.number() }),
   dependencies: z.object({ postgres: z.boolean(), nats: z.boolean(), redis: z.boolean() }),
+  platform: z.object({
+    status: z.enum(["ready", "degraded"]),
+    generation: z.number(),
+    started_at: z.string().nullable(),
+    component_count: z.number(),
+    ready_count: z.number(),
+    degraded_count: z.number(),
+    components: z.array(ComponentSchema),
+  }),
   security: z.object({ secrets_exposed: z.boolean(), mutation_enabled: z.boolean(), note: z.string() }),
 });
 export type AdminRuntime = z.infer<typeof AdminRuntimeSchema>;
