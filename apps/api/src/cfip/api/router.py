@@ -19,6 +19,7 @@ from cfip.api.routes.indicators import router as indicators_router
 from cfip.api.routes.risk import router as risk_router
 from cfip.api.routes.subscriptions import router as subscriptions_router
 from cfip.api.routes.seed import router as seed_router
+from cfip.api.routes.terminal import router as terminal_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
@@ -38,3 +39,5 @@ api_router.include_router(indicators_router)
 api_router.include_router(risk_router)
 api_router.include_router(subscriptions_router)
 api_router.include_router(seed_router)
+
+api_router.include_router(terminal_router)
