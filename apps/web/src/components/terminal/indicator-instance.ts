@@ -1,5 +1,7 @@
 import { defaultIndicatorParameters, getIndicatorDefinition, normalizeIndicatorParameters, type IndicatorId } from "./indicator-registry";
 
+export type IndicatorLineStyle = "solid" | "dashed" | "dotted";
+
 export interface IndicatorInstance {
   id: string;
   indicatorId: IndicatorId;
@@ -8,6 +10,8 @@ export interface IndicatorInstance {
   locked: boolean;
   pane: "overlay" | "oscillator" | "volume";
   order: number;
+  lineWidth: number;
+  lineStyle: IndicatorLineStyle;
 }
 
 export function createIndicatorInstance(indicatorId: IndicatorId, id = crypto.randomUUID()): IndicatorInstance {
@@ -20,6 +24,8 @@ export function createIndicatorInstance(indicatorId: IndicatorId, id = crypto.ra
     locked: false,
     pane: definition?.pane ?? "overlay",
     order: 0,
+    lineWidth: definition?.visual?.lineWidth ?? 2,
+    lineStyle: definition?.visual?.style ?? "solid",
   };
 }
 
@@ -27,6 +33,7 @@ export function normalizeIndicatorInstance(instance: IndicatorInstance): Indicat
   return {
     ...instance,
     parameters: normalizeIndicatorParameters(instance.indicatorId, instance.parameters),
+    lineWidth: Math.min(6, Math.max(1, Math.round(instance.lineWidth))),
   };
 }
 
