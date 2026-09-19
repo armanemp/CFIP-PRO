@@ -4,7 +4,7 @@ from cfip.application.runtime_components import EventBusComponent, IntelligenceR
 from cfip.application.runtime_supervisor import RuntimeSupervisor
 from cfip.domain.execution_contracts import OrderRequest
 
-import pytest
+import asyncio\nimport pytest
 
 @pytest.mark.asyncio
 async def test_runtime_starts_dependency_ordered_components():
