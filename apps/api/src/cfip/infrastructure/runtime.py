@@ -1,98 +1,122 @@
 """Platform lifecycle orchestration.
 
-The lifecycle boundary starts every local CFIP subsystem together and exposes explicit
-readiness state. It does not claim external providers are connected unless an adapter
-successfully reports readiness.
+Registered local components are started concurrently at application startup. This is
+an orchestration/readiness boundary; external connectivity is only reported when a
+real adapter explicitly marks its component healthy.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import asyncio
 from datetime import UTC, datetime
-from enum import StrEnum
 from typing import Final
 
+from cfip.domain.runtime_contracts import ComponentState, ComponentStatus, RuntimeComponent
 
-class ComponentState(StrEnum):
-    STARTING = "starting"
-    READY = "ready"
-    DEGRADED = "degraded"
-    STOPPED = "stopped"
-
-
-@dataclass(slots=True)
-class ComponentStatus:
-    name: str
-    state: ComponentState = ComponentState.STARTING
-    started_at: datetime | None = None
-    detail: str = ""
-    checks: list[str] = field(default_factory=list)
-
-    def as_dict(self) -> dict[str, object]:
-        return {
-            "name": self.name,
-            "state": self.state.value,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "detail": self.detail,
-            "checks": list(self.checks),
-        }
-
-
-DEFAULT_COMPONENTS: Final[tuple[str, ...]] = (
-    "api",
-    "market-data",
-    "analysis",
-    "indicators",
-    "intelligence",
-    "research",
-    "risk",
-    "notifications",
-    "replay",
-    "self-healing",
-    "self-development",
-    "git-governance",
+DEFAULT_COMPONENTS: Final[tuple[RuntimeComponent, ...]] = tuple(
+    RuntimeComponent(name=name)
+    for name in (
+        "api",
+        "market-data",
+        "analysis",
+        "indicators",
+        "intelligence",
+        "research",
+        "risk",
+        "notifications",
+        "replay",
+        "self-healing",
+        "self-development",
+        "git-governance",
+    )
 )
 
 
 class PlatformRuntime:
-    """In-process lifecycle registry shared by API and background orchestration."""
+    """Shared in-process lifecycle registry for API and platform orchestration."""
 
-    def __init__(self, components: tuple[str, ...] = DEFAULT_COMPONENTS) -> None:
-        self._components = {name: ComponentStatus(name=name) for name in components}
+    def __init__(self, components: tuple[RuntimeComponent, ...] = DEFAULT_COMPONENTS) -> None:
+        self._components = {item.name: item for item in components}
+        self._status = {
+            item.name: ComponentStatus(name=item.name, required=item.required)
+            for item in components
+        }
         self._started_at: datetime | None = None
+        self._generation = 0
 
     async def start(self) -> None:
-        now = datetime.now(UTC)
-        self._started_at = now
-        for component in self._components.values():
-            component.state = ComponentState.READY
-            component.started_at = now
-            component.detail = "local lifecycle boundary initialized"
-            component.checks = ["contract-loaded"]
+        self._generation += 1
+        self._started_at = datetime.now(UTC)
+        for status in self._status.values():
+            status.state = ComponentState.STARTING
+            status.started_at = self._started_at
+            status.ready_at = None
+            status.error = None
+            status.detail = "startup orchestration in progress"
+            status.checks = ["contract-loaded"]
+
+        async def start_one(component: RuntimeComponent) -> None:
+            status = self._status[component.name]
+            try:
+                await component.start_component()
+            except Exception as exc:
+                status.state = ComponentState.DEGRADED
+                status.detail = "component startup failed"
+                status.error = type(exc).__name__
+                status.checks.append("startup-failed")
+                return
+            status.state = ComponentState.READY
+            status.ready_at = datetime.now(UTC)
+            status.detail = "local lifecycle boundary initialized"
+            status.checks.append("startup-complete")
+
+        await asyncio.gather(*(start_one(item) for item in self._components.values()))
 
     async def stop(self) -> None:
-        for component in self._components.values():
-            component.state = ComponentState.STOPPED
+        async def stop_one(component: RuntimeComponent) -> None:
+            status = self._status[component.name]
+            try:
+                await component.stop_component()
+            finally:
+                status.state = ComponentState.STOPPED
+                status.detail = "shutdown complete"
+
+        await asyncio.gather(*(stop_one(item) for item in self._components.values()))
 
     def snapshot(self) -> dict[str, object]:
-        states = [item.state for item in self._components.values()]
+        statuses = tuple(self._status.values())
+        required = tuple(item for item in statuses if item.required)
         overall = (
             ComponentState.READY.value
-            if all(state == ComponentState.READY for state in states)
+            if required and all(item.state == ComponentState.READY for item in required)
             else ComponentState.DEGRADED.value
         )
         return {
             "status": overall,
+            "generation": self._generation,
             "started_at": self._started_at.isoformat() if self._started_at else None,
-            "components": [item.as_dict() for item in self._components.values()],
+            "component_count": len(statuses),
+            "ready_count": sum(item.state == ComponentState.READY for item in statuses),
+            "degraded_count": sum(item.state == ComponentState.DEGRADED for item in statuses),
+            "components": [item.as_dict() for item in statuses],
         }
 
-    def mark(self, name: str, state: ComponentState, detail: str = "", checks: list[str] | None = None) -> None:
-        component = self._components[name]
-        component.state = state
-        component.detail = detail
+    def mark(
+        self,
+        name: str,
+        state: ComponentState,
+        detail: str = "",
+        checks: list[str] | None = None,
+        error: str | None = None,
+    ) -> None:
+        status = self._status[name]
+        status.state = state
+        status.detail = detail
+        status.error = error
+        if state == ComponentState.READY and status.ready_at is None:
+            status.ready_at = datetime.now(UTC)
         if checks is not None:
-            component.checks = checks
+            status.checks = list(checks)
 
 
 platform_runtime = PlatformRuntime()
