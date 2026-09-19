@@ -16,7 +16,7 @@ class ProviderConfig(BaseModel):
     enabled: bool = True
     priority: int = Field(default=100, ge=0, le=1000)
     secret_refs: tuple[SecretRef, ...] = ()
-    settings: dict[str, str | int | float | bool] = {}
+    settings: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
 class RiskConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
