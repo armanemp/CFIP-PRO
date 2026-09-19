@@ -148,7 +148,8 @@ export async function getPlatformManifest(): Promise<{
   schema_version: number;
   capabilities: Array<Record<string, unknown>>;
   providers: ProviderDescriptor[];
-  governance: Record<string, boolean>;
+  defaults: { default_symbol: string; default_timeframe: string; default_chart_type: string };
+  governance: Record<string, unknown>;
 }> {
   const response = await fetch(`${apiBaseUrl}/platform/manifest`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Platform manifest request failed: ${response.status}`);
@@ -156,6 +157,7 @@ export async function getPlatformManifest(): Promise<{
     schema_version: z.number(),
     capabilities: z.array(z.record(z.string(), z.unknown())),
     providers: z.array(ProviderSchema),
-    governance: z.record(z.string(), z.boolean()),
+    defaults: z.object({ default_symbol: z.string(), default_timeframe: z.string(), default_chart_type: z.string() }),
+    governance: z.record(z.string(), z.unknown()),
   }).parse(await response.json());
 }
