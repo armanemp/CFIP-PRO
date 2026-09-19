@@ -1,3 +1,16 @@
+# 2026-09-20 — Runtime orchestration, provider boundaries and terminal tokenization
+
+- Strengthened the startup lifecycle from a passive status registry into a typed runtime orchestration boundary: each platform component has an explicit lifecycle contract, required/optional semantics, startup completion/error state, readiness timestamp and startup duration.
+- Platform components are initialized concurrently through the FastAPI lifespan boundary. A component failure is isolated as `degraded` rather than preventing unrelated local components from reporting readiness.
+- Moved lifecycle state/contracts into `apps/api/src/cfip/domain/runtime_contracts.py` so domain contracts remain separate from the infrastructure orchestrator.
+- Expanded `GET /ready` and `GET /admin/runtime` payloads with generation, component counts, per-component state, timing, checks and safe error type metadata. No credentials or raw secrets are exposed.
+- Added `GET /providers/status` as an explicit provider-connectivity boundary. Catalog maturity (`catalog`, `adapter`, `verified`) is never treated as live connectivity; until a real configured adapter reports health, connection state is `unknown`.
+- Expanded `GET /config/defaults` to expose typed chart, notification and governed-Git defaults alongside risk and Elyrava intelligence defaults, keeping mutation disabled until authenticated persistence/audit is wired.
+- Extended the admin control plane to show the actual platform component lifecycle rather than only aggregate dependency configuration.
+- Centralized terminal chart/UI color tokens in `terminal-theme.ts` and routed the active professional terminal's polling interval, venue and observation limit through `TERMINAL_DATA_DEFAULTS`, reducing operational hardcoding while keeping the chart visual system consistent.
+- No new runtime dependency, database reset, generated artifact or unconditional rebuild was introduced.
+- Verification status: GitHub Actions has not yet produced a run for this feature branch, so CI green is not claimed. The next gate is frontend lint/typecheck/build plus backend import/unit tests after the branch is reviewed.
+
 ## 2026-09-20 — platform-wide startup lifecycle orchestration
 
 - Added a single in-process platform runtime lifecycle boundary covering API, market-data, indicators, analysis, intelligence, research, risk, notifications, replay, self-healing, self-development and governed Git.
