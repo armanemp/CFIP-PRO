@@ -19,15 +19,15 @@ const valueSeries = (values: Array<{ time: Candle["time"]; value: number }>): Li
   values.filter(point => Number.isFinite(point.value));
 
 const RUNTIME: Partial<Record<IndicatorId, Runtime>> = {
-  EMA20: ({ candles }) => [{ data: ema(candles, 20), color: TERMINAL_THEME.info, title: "EMA 20" }],
-  EMA50: ({ candles }) => [{ data: ema(candles, 50), color: TERMINAL_THEME.highlight, title: "EMA 50" }],
-  EMA200: ({ candles }) => [{ data: ema(candles, 200), color: TERMINAL_THEME.warning, title: "EMA 200" }],
-  SMA20: ({ candles }) => [{ data: sma(candles, 20), color: TERMINAL_THEME.highlight, title: "SMA 20" }],
-  WMA20: ({ candles }) => [{ data: wma(candles, 20), color: TERMINAL_THEME.warning, title: "WMA 20" }],
+  EMA20: ({ candles }, p) => [{ data: ema(candles, p.period ?? 20), color: TERMINAL_THEME.info, title: `EMA ${p.period ?? 20}` }],
+  EMA50: ({ candles }, p) => [{ data: ema(candles, p.period ?? 50), color: TERMINAL_THEME.highlight, title: `EMA ${p.period ?? 50}` }],
+  EMA200: ({ candles }, p) => [{ data: ema(candles, p.period ?? 200), color: TERMINAL_THEME.warning, title: `EMA ${p.period ?? 200}` }],
+  SMA20: ({ candles }, p) => [{ data: sma(candles, p.period ?? 20), color: TERMINAL_THEME.highlight, title: `SMA ${p.period ?? 20}` }],
+  WMA20: ({ candles }, p) => [{ data: wma(candles, p.period ?? 20), color: TERMINAL_THEME.warning, title: `WMA ${p.period ?? 20}` }],
   VWAP: ({ candles }) => [{ data: vwap(candles), color: TERMINAL_THEME.bullish, title: "VWAP" }],
-  ATR14: ({ candles, paneIndex }) => [{ data: atr(candles, 14), color: TERMINAL_THEME.bearish, title: "ATR 14", pane: paneIndex }],
+  ATR14: ({ candles, paneIndex }, p) => [{ data: atr(candles, p.period ?? 14), color: TERMINAL_THEME.bearish, title: `ATR ${p.period ?? 14}`, pane: paneIndex }],
   OBV: ({ candles, paneIndex }) => [{ data: obv(candles), color: TERMINAL_THEME.bullish, title: "OBV", pane: paneIndex }],
-  RSI14: ({ candles, paneIndex }) => [{ data: rsi(candles, 14), color: TERMINAL_THEME.info, title: "RSI 14", pane: paneIndex }],
+  RSI14: ({ candles, paneIndex }, p) => [{ data: rsi(candles, p.period ?? 14), color: TERMINAL_THEME.info, title: `RSI ${p.period ?? 14}`, pane: paneIndex }],
   MACD: ({ candles, paneIndex }) => {
     const value = macd(candles);
     return [
@@ -43,7 +43,7 @@ const RUNTIME: Partial<Record<IndicatorId, Runtime>> = {
       { data: valueSeries(value.map(x => ({ time: x.time, value: x.adx })), color: TERMINAL_THEME.highlight, title: "ADX", pane: paneIndex },
     ];
   },
-  STOCH14: ({ candles, paneIndex }) => [{ data: stochastic(candles, 14, 3), color: TERMINAL_THEME.highlight, title: "Stochastic 14", pane: paneIndex }],
+  STOCH14: ({ candles, paneIndex }, p) => [{ data: stochastic(candles, p.period ?? 14, p.smooth ?? 3), color: TERMINAL_THEME.highlight, title: `Stochastic ${p.period ?? 14}`, pane: paneIndex }],
   DONCHIAN20: ({ candles }) => {
     const value = donchian(candles, 20);
     return [
