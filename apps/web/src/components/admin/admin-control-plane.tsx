@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getAdminRuntime, type AdminRuntime } from "@/lib/admin-api";
+import { getProviderCatalog, type ProviderDescriptor } from "@/lib/api";
 import { ADMIN_MODULES, type AdminSection } from "./admin-config";
 import { settingsForSection } from "./admin-settings";
 
 export function AdminControlPlane() {
   const [section, setSection] = useState<AdminSection>("overview");
   const [runtime, setRuntime] = useState<AdminRuntime | null>(null);
+  const [providers, setProviders] = useState<ProviderDescriptor[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getAdminRuntime().then(setRuntime).catch((e: unknown) => setError(e instanceof Error ? e.message : "Runtime unavailable"));
+    getProviderCatalog().then(setProviders).catch(() => setProviders([]));
   }, []);
 
   const active = ADMIN_MODULES.find(x => x.id === section) ?? ADMIN_MODULES[0];
@@ -19,8 +22,7 @@ export function AdminControlPlane() {
   return <main className="min-h-dvh bg-[#070a0f] text-[#d8e0ea]">
     <header className="sticky top-0 z-20 flex h-12 items-center border-b border-[#1d2734] bg-[#0b1017]/95 px-4 backdrop-blur">
       <a href="/" className="font-semibold tracking-[0.14em] text-white">CFIP-PRO</a>
-      <span className="mx-3 text-[#3d4a5a]">/</span>
-      <span className="text-xs text-[#8190a3]">CONTROL PLANE</span>
+      <span className="mx-3 text-[#3d4a5a]">/</span><span className="text-xs text-[#8190a3]">CONTROL PLANE</span>
       <div className="ml-auto text-[10px] uppercase tracking-wider text-[#64748b]">{runtime?.app.environment ?? "loading"}</div>
     </header>
     <div className="mx-auto flex max-w-[1500px] min-h-[calc(100dvh-3rem)]">
@@ -38,7 +40,7 @@ export function AdminControlPlane() {
           <span className="rounded-full border border-[#273649] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#8190a3]">{active.maturity}</span>
         </div>
         {section==="overview" && <Overview runtime={runtime} error={error} />}
-        {section!=="overview" && <ModuleView module={active} />}
+        {section!=="overview" && <ModuleView module={active} providers={providers} />}
       </section>
     </div>
   </main>;
@@ -62,28 +64,22 @@ function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: str
   </div>;
 }
 
-function ModuleView({ module }: { module: (typeof ADMIN_MODULES)[number] }) {
+function ModuleView({ module, providers }: { module: (typeof ADMIN_MODULES)[number]; providers: readonly ProviderDescriptor[] }) {
   const settings=settingsForSection(module.id);
+  const visibleProviders=providers.filter(p => module.id === "market-data" ? p.kind === "market-data" : module.id === "brokers" ? p.kind === "broker" : module.id === "intelligence" ? p.kind === "ai" : false);
   return <div className="space-y-5">
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{module.capabilities.map(capability =>
       <Card key={capability} title={capability}><div className="text-xs text-[#9aa8ba]">Domain capability boundary.</div><div className="mt-3 h-1 rounded bg-[#17212d]"><div className="h-1 w-1/3 rounded bg-[#42546a]" /></div></Card>
     )}</div>
+    {visibleProviders.length > 0 && <section><div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#566579]">Provider catalog</div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visibleProviders.map(provider => <Card key={provider.id} title={provider.name}><div className="text-xs text-[#8492a5]">{provider.capabilities.join(" · ")}</div><div className="mt-3 flex justify-between text-[10px] uppercase tracking-wider"><span className="text-[#59687b]">{provider.status}</span><span className="text-[#7f8da0]">{provider.credential_required ? "credentialed" : "public"}</span></div></Card>)}</div></section>}
     <section>
       <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#566579]">Settings contract</div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {settings.map(setting=><Card key={setting.id} title={setting.label}>
-          <div className="text-xs text-[#8492a5]">{setting.description}</div>
-          <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-wider">
-            <span className="text-[#59687b]">{setting.type}{setting.sensitive?" · sensitive":""}</span>
-            <span className={setting.mutable?"text-emerald-300":"text-amber-300"}>{setting.mutable?"guarded mutation":"read-only"}</span>
-          </div>
-        </Card>)}
-      </div>
-      {!settings.length && <div className="rounded-lg border border-dashed border-[#293748] p-5 text-xs text-[#66758a]">This domain is capability-only at the current maturity. No mutable setting is exposed.</div>}
+      <div className="grid gap-3 md:grid-cols-2">{settings.map(setting=><Card key={setting.id} title={setting.label}><div className="text-xs text-[#8492a5]">{setting.description}</div><div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-wider"><span className="text-[#59687b]">{setting.type}{setting.sensitive?" · sensitive":""}</span><span className={setting.mutable?"text-emerald-300":"text-amber-300"}>{setting.mutable?"guarded mutation":"read-only"}</span></div></Card>)}</div>
+      {!settings.length && <div className="rounded-lg border border-dashed border-[#293748] p-5 text-xs text-[#66758a]">No mutable setting is exposed for this domain yet.</div>}
     </section>
   </div>;
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children }: { title: string; children: ReactNode }) {
   return <article className="rounded-xl border border-[#1d2938] bg-[#0c121a] p-4 shadow-[0_12px_40px_rgba(0,0,0,.16)]"><div className="mb-3 text-[11px] uppercase tracking-[0.12em] text-[#68778b]">{title}</div>{children}</article>;
 }
