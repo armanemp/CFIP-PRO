@@ -6,7 +6,7 @@ export type CommandAction =
   | { type: "panel"; value: "symbol" | "timeframe" | "chartType" | "indicators" | "settings" | "language" }
   | { type: "navigate"; value: "/terminal" | "/admin" }
   | { type: "system"; value: "fullscreen" | "reset-view" | "screenshot" | "command-palette" }
-  | { type: "terminal"; value: "replay" | "alerts" | "objects" | "watchlist" | "depth" | "time-sales" };
+  | { type: "terminal"; value: "replay" | "alerts" | "objects" | "watchlist" | "depth" | "time-sales" | "compare" | "templates" | "screener" | "paper-trading" | "orders" | "positions" | "portfolio" | "journal" };
 
 export interface TerminalCommand {
   id: string;
@@ -45,6 +45,14 @@ export const TERMINAL_COMMANDS: readonly TerminalCommand[] = [
   { id: "terminal.watchlist", label: "Watchlist", keywords: ["watchlist", "symbols"], action: { type: "terminal", value: "watchlist" } },
   { id: "terminal.depth", label: "Market depth", keywords: ["depth", "dom", "orderbook"], action: { type: "terminal", value: "depth" } },
   { id: "terminal.time-sales", label: "Time & Sales", keywords: ["time", "sales", "tape"], action: { type: "terminal", value: "time-sales" } },
+  { id: "terminal.compare", label: "Compare symbols", keywords: ["compare", "overlay", "symbols"], action: { type: "terminal", value: "compare" } },
+  { id: "terminal.templates", label: "Chart templates", keywords: ["template", "layout", "workspace"], action: { type: "terminal", value: "templates" } },
+  { id: "terminal.screener", label: "Market screener", keywords: ["screener", "scan", "filter"], action: { type: "terminal", value: "screener" } },
+  { id: "terminal.paper-trading", label: "Paper trading", keywords: ["paper", "simulation", "practice"], action: { type: "terminal", value: "paper-trading" } },
+  { id: "terminal.orders", label: "Orders", keywords: ["orders", "order", "entry"], action: { type: "terminal", value: "orders" } },
+  { id: "terminal.positions", label: "Positions", keywords: ["positions", "open", "trades"], action: { type: "terminal", value: "positions" } },
+  { id: "terminal.portfolio", label: "Portfolio", keywords: ["portfolio", "exposure", "pnl"], action: { type: "terminal", value: "portfolio" } },
+  { id: "terminal.journal", label: "Trading journal", keywords: ["journal", "notes", "review"], action: { type: "terminal", value: "journal" } },
 ];
 
 export function searchTerminalCommands(query: string): TerminalCommand[] {
