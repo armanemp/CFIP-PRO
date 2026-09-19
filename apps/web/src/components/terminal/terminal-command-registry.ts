@@ -4,7 +4,7 @@ export type CommandAction =
   | { type: "tool"; value: Tool }
   | { type: "timeframe"; value: Timeframe }
   | { type: "panel"; value: "symbol" | "timeframe" | "chartType" | "indicators" | "settings" | "language" }
-  | { type: "navigate"; value: "/terminal" | "/admin" };
+  | { type: "navigate"; value: "/terminal" | "/admin" }\n  | { type: "system"; value: "fullscreen" | "reset-view" | "screenshot" | "command-palette" }\n  | { type: "terminal"; value: "replay" | "alerts" | "objects" | "watchlist" | "depth" | "time-sales" };
 
 export interface TerminalCommand {
   id: string;
@@ -28,6 +28,16 @@ export const TERMINAL_COMMANDS: readonly TerminalCommand[] = [
   { id: "panel.indicators", label: "Indicators", keywords: ["indicator","study"], action: { type: "panel", value: "indicators" } },
   { id: "panel.settings", label: "Chart settings", keywords: ["settings","preferences"], action: { type: "panel", value: "settings" } },
   { id: "nav.admin", label: "Admin control plane", keywords: ["admin","control"], action: { type: "navigate", value: "/admin" } },
+  { id: "system.fullscreen", label: "Fullscreen chart", keywords: ["fullscreen","full","screen"], action: { type: "system", value: "fullscreen" } },
+  { id: "system.reset-view", label: "Reset chart view", keywords: ["reset","view","fit"], action: { type: "system", value: "reset-view" } },
+  { id: "system.screenshot", label: "Capture chart", keywords: ["screenshot","capture","export"], action: { type: "system", value: "screenshot" } },
+  { id: "terminal.replay", label: "Bar Replay", keywords: ["replay","history","backtest"], action: { type: "terminal", value: "replay" } },
+  { id: "terminal.alerts", label: "Alerts", keywords: ["alert","notification","price"], action: { type: "terminal", value: "alerts" } },
+  { id: "terminal.objects", label: "Object manager", keywords: ["objects","drawings","studies"], action: { type: "terminal", value: "objects" } },
+  { id: "terminal.watchlist", label: "Watchlist", keywords: ["watchlist","symbols"], action: { type: "terminal", value: "watchlist" } },
+  { id: "terminal.depth", label: "Market depth", keywords: ["depth","dom","orderbook"], action: { type: "terminal", value: "depth" } },
+  { id: "terminal.time-sales", label: "Time & Sales", keywords: ["time","sales","tape"], action: { type: "terminal", value: "time-sales" } },
+
 ];
 
 export function searchTerminalCommands(query: string): TerminalCommand[] {
