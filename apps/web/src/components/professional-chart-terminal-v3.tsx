@@ -16,6 +16,7 @@ import { toCandles, fvg, pivots, supportResistance, sessionRange, marketStructur
 import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
 import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
 import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
+import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 
@@ -33,7 +34,32 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const drawingHistoryRef=useRef<Drawing[][]>([]);
   const drawingRedoRef=useRef<Drawing[][]>([]);
 
-  const candles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
+  const liveCandles=useMemo(()=>toCandles(rows,tf),[rows,tf]);
+  const [replay,setReplay]=useState<ReplayState>(()=>createReplayState(0));
+  const candles=useMemo(
+    ()=>replay.status==="idle" ? liveCandles : replaySlice(liveCandles,replay),
+    [liveCandles,replay],
+  );
+
+  useEffect(() => {
+    if (replay.status === "idle") {
+      setReplay(createReplayState(liveCandles.length));
+      return;
+    }
+    setReplay(current => ({
+      ...current,
+      end: Math.max(current.start, liveCandles.length - 1),
+      cursor: Math.min(current.cursor, Math.max(current.start, liveCandles.length - 1)),
+    }));
+  }, [liveCandles.length]);
+
+  useEffect(() => {
+    if (replay.status !== "playing") return;
+    const interval = window.setInterval(() => {
+      setReplay(current => replayStep(current, 1));
+    }, Math.max(50, 500 / replay.speed));
+    return () => window.clearInterval(interval);
+  }, [replay.status, replay.speed]);
   const last=candles.at(-1),prev=candles.at(-2);
   const zones=useMemo(()=>fvg(candles),[candles]);
   const pivotPoints=useMemo(()=>pivots(candles),[candles]);
@@ -337,11 +363,24 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <button onClick={resetView} title="R" className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"autoFit")}</button>
         <button onClick={()=>{const c=chartRef.current;if(!c)return;const canvas=c.takeScreenshot();const link=document.createElement("a");link.download=`cfip-${symbol.replace("/","-")}-${tf}.png`;link.href=canvas.toDataURL("image/png");link.click();}} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"screenshot")}</button>
         <button onClick={toggleFullscreen} className="rounded px-2.5 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"fullscreen")}</button>
+        <button data-terminal-trigger onClick={()=>setPanel(panel==="replay"?null:"replay")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"replay")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="indicators"?null:"indicators")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"indicators")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="chartType"?null:"chartType")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"chartType")}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="language"?null:"language")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{locale.toUpperCase()}</button>
         <button data-terminal-trigger onClick={()=>setPanel(panel==="settings"?null:"settings")} className="rounded px-3 py-1.5 text-xs hover:bg-[#17202c]">{t(locale,"settings")}</button>
       </div>
+      {panel==="replay"&&<div data-terminal-panel className="absolute right-72 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
+        <div className="mb-2 flex items-center justify-between text-xs"><span className="font-medium text-white">{t(locale,"replay")}</span><span className="tabular-nums text-[#64748b]">{replay.cursor + 1} / {Math.max(1,replay.end - replay.start + 1)}</span></div>
+        <div className="flex gap-1">
+          <button onClick={()=>setReplay(replay.status==="playing"?replayPause(replay):replayPlay(replay))} className="rounded bg-[#20354b] px-3 py-2 text-xs text-white">{replay.status==="playing"?"Pause":"Play"}</button>
+          <button onClick={()=>setReplay(replayStep(replay,1))} className="rounded border border-[#334155] px-3 py-2 text-xs">Step</button>
+          <button onClick={()=>setReplay(replayReset(replay))} className="rounded border border-[#334155] px-3 py-2 text-xs">Reset</button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1">
+          {[0.5,1,2,4,8].map(speed=><button key={speed} onClick={()=>setReplay(replaySetSpeed(replay,speed))} className={`rounded px-2 py-1 text-[10px] ${replay.speed===speed?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{speed}×</button>)}
+        </div>
+        <div className="mt-2 text-[10px] text-[#64748b]">Historical replay freezes the chart cursor while the live feed continues in the background.</div>
+      </div>}
       {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{TIMEFRAMES.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
       {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
       {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div>}
