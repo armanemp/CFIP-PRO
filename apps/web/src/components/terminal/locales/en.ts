@@ -10,3 +10,5 @@ export const en = {
   indicatorBollinger: "Volatility bands", indicatorRsi: "Relative strength index", indicatorMacd: "Moving average convergence/divergence", indicatorDmi: "Directional movement index",
   indicatorStochastic: "Stochastic oscillator", indicatorDonchian: "Donchian channel", indicatorKeltner: "Keltner channel", indicatorIchimoku: "Ichimoku cloud",
 } as const;
+
+export type TranslationKey = keyof typeof en;
