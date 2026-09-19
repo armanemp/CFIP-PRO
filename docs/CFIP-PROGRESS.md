@@ -1,3 +1,12 @@
+# 2026-09-20 — Terminal surface extraction and startup bootstrap
+
+- Extracted Lightweight Charts configuration into `apps/web/src/components/terminal/chart-options.ts`; the V3 component no longer owns the complete chart option object.
+- Extracted terminal overlay/analysis state calculation into `terminal-overlay-state.ts`, keeping FVG, pivots, S/R, sessions, structure, order blocks and the analysis snapshot behind one reusable computation boundary.
+- Centralized frontend analysis thresholds in `analysis-policy.ts` and routed the unified frontend aggregator through that policy instead of scattering confluence/neutral thresholds.
+- Added explicit local platform startup bootstrap in `apps/api/src/cfip/infrastructure/bootstrap.py`. Every registered runtime component now receives a real in-process start/stop lifecycle hook at server startup/shutdown. This is local initialization only; external provider connectivity remains adapter-reported.
+- Runtime snapshots now expose `local_bootstrap` state, and unit coverage verifies that the full default component set is initialized.
+- No new runtime dependency or generated artifact was introduced.
+
 # 2026-09-20 — Cross-platform contracts, provider expansion and hardcode audit
 
 - Added `apps/api/src/cfip/domain/stream_contracts.py` as the transport-neutral realtime boundary for WebSocket/polling/NATS/replay adapters. It defines stream identity, event envelopes, cursors and deterministic duplicate/out-of-order classification.
