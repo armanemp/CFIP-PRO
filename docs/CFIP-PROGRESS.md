@@ -1,3 +1,10 @@
+# 2026-09-20 — Terminal semantic theme boundary
+
+- Moved the professional terminal's remaining UI color literals onto semantic CSS custom properties backed by the terminal theme contract.
+- Extended the terminal theme module with explicit border, surface, muted text, chart text, accent, info and warning tokens so visual tuning can happen without editing the chart/workspace component.
+- Kept computational chart colors in the shared TypeScript theme and presentation-level UI colors in the CSS theme boundary.
+- This preserves the compact professional-terminal proportions while reducing visual hardcoding and making future light/dark or accessibility themes possible without rewriting terminal behavior.
+
 # 2026-09-20 — Chart engine tokenization and modular indicator boundary
 
 - Routed the chart engine's main-series, area/baseline and volume visual values through the centralized terminal theme.
