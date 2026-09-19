@@ -31,3 +31,25 @@ class IntelligenceConfig(BaseModel):
     min_confidence: float = Field(default=0.0, ge=0, le=1)
     auto_promotion: bool = False
     learning_enabled: bool = True
+
+class ChartConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    default_timeframe: str = "1m"
+    default_chart_type: str = "candles"
+    max_visible_indicators: int = Field(default=12, ge=1, le=100)
+    persist_workspace: bool = True
+    enable_replay: bool = True
+
+class NotificationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = True
+    cooldown_seconds: int = Field(default=60, ge=0)
+    max_active_rules: int = Field(default=100, ge=0, le=10000)
+
+class GitGovernanceConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = True
+    require_human_approval: bool = True
+    allow_pull_requests: bool = True
+    allow_direct_main_commit: bool = False
+    protected_paths: tuple[str, ...] = (".github/workflows/", ".env", ".env.")
