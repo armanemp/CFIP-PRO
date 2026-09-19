@@ -197,3 +197,21 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+
+## 2026-09-19 — Modular platform foundation expansion
+
+- Added a backend-owned indicator registry/calculation service backed by TA-Lib for EMA, SMA, WMA, RSI, ATR, ADX, OBV, Bollinger Bands and MACD. Indicator outputs are normalized into provider-neutral contracts so presentation code is not the source of calculation truth.
+- Added canonical market-data contracts for instruments, OHLCV, quotes, provenance, quality and bounded historical requests.
+- Added typed workspace, alert, execution, intelligence-governance, platform-settings and payment contracts.
+- Added terminal control-plane endpoints for feature manifest and workspace/alert contract validation.
+- Added indicator catalog/calculation, risk position-sizing, subscription-plan and bootstrap-manifest API boundaries.
+- Wired the new routers into the main API composition.
+- Moved the terminal default symbol into backend-owned typed configuration and changed TerminalShell bootstrap to consume the platform manifest instead of owning that default.
+- Expanded the terminal command registry to cover screener, compare, templates, paper trading, orders, positions, portfolio, journal, research and Elyrava intelligence in addition to chart/market/replay/alert controls.
+- Added deterministic bootstrap identities for user, admin and service roles using secret references only; no credentials are committed.
+- Added exactly two subscription plans (free, pro) and a crypto-only payment boundary. Payment provider settlement is intentionally adapter/governance work, not a fake completed payment integration.
+- Added unit coverage for indicator calculation, risk sizing, platform settings, execution, intelligence governance, subscriptions, seed metadata and terminal feature composition.
+- Hardened the workspace viewport default with default_factory to avoid shared mutable model state.
+- Opened draft PR #4 for this batch. The branch is deliberately not represented as production-ready until the repository CI and native frontend/runtime gates are actually verified.
+- No new dependency, cache purge, database reset or forced rebuild was introduced by this batch.
