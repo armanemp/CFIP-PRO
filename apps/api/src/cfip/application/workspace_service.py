@@ -1,5 +1,5 @@
-"""Workspace use cases kept independent from persistence implementation."""
-from cfip.domain.workspace_contracts import Workspace
+"""ChartWorkspace use cases kept independent from persistence implementation."""
+from cfip.domain.workspace_contracts import ChartWorkspace
 from cfip.domain.workspace_service_contracts import WorkspaceRepository
 
 class WorkspaceService:
