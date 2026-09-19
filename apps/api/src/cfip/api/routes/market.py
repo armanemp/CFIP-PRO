@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,7 +56,7 @@ async def ingest_observation(
     service: MarketServiceDependency,
 ) -> MarketObservationRead:
     try:
-        return await service.ingest_observation(command)
+        result = await service.ingest_observation(command)\n        bus = getattr(request.app.state, "event_bus", None)\n        if bus is not None:\n            await bus.publish(f"market.quote.{command.instrument_id}", result.model_dump(mode="json"))\n        return result
     except ValueError as exc:
         await service.session.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
