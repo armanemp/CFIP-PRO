@@ -54,6 +54,7 @@ async def list_instruments(service: MarketServiceDependency) -> list[InstrumentR
 async def ingest_observation(
     command: MarketObservationCreate,
     service: MarketServiceDependency,
+    request: Request,
 ) -> MarketObservationRead:
     try:
         result = await service.ingest_observation(command)\n        bus = getattr(request.app.state, "event_bus", None)\n        if bus is not None:\n            await bus.publish(f"market.quote.{command.instrument_id}", result.model_dump(mode="json"))\n        return result
