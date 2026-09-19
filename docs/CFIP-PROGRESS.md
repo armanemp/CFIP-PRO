@@ -1,3 +1,11 @@
+# 2026-09-20 — Terminal data boundary and runtime lifecycle verification coverage
+
+- Extracted terminal market-data acquisition and refresh lifecycle into `apps/web/src/components/terminal/use-terminal-market-data.ts`. The professional chart terminal now consumes a focused market-data hook instead of owning fetch/polling/error/version state.
+- The extracted market-data boundary preserves the existing behavior: immediate refresh, configured venue/observation limit/refresh interval, stale-result protection, live/error state and deduplicated row updates.
+- Added backend unit coverage for concurrent runtime startup and component-failure isolation in `tests/unit/test_runtime.py`.
+- Kept the terminal rendering component focused on chart state/rendering, analysis, drawings, replay and workspace behavior; market acquisition is now independently replaceable by a future WebSocket/NATS-backed adapter.
+- No new dependency was introduced.
+
 # 2026-09-20 — Runtime orchestration, provider boundaries and terminal tokenization
 
 - Strengthened the startup lifecycle from a passive status registry into a typed runtime orchestration boundary: each platform component has an explicit lifecycle contract, required/optional semantics, startup completion/error state, readiness timestamp and startup duration.
