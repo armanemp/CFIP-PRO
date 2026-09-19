@@ -11,22 +11,27 @@ export interface IndicatorParameter<T = number> {
   step?: number;
 }
 
+export interface IndicatorVisual { lineWidth?: number; style?: "solid" | "dashed" | "dotted"; }
+
 export interface IndicatorDefinition extends StudyDefinition {
   pane: IndicatorPane;
   parameters: readonly IndicatorParameter[];
   descriptionKey: string;
+  visual?: IndicatorVisual;
 }
+
+const visual = (lineWidth = 2, style: IndicatorVisual["style"] = "solid"): IndicatorVisual => ({ lineWidth, style });
 
 const p = (key: string, labelKey: string, defaultValue: number, min?: number, max?: number, step?: number): IndicatorParameter => ({
   key, labelKey, defaultValue, min, max, step,
 });
 
 export const INDICATOR_REGISTRY = [
-  { id: "EMA20", name: "EMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorEma" },
+  { id: "EMA20", name: "EMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorEma", visual: visual(2) },
   { id: "EMA50", name: "EMA 50", group: "trend", pane: "overlay", parameters: [p("period","period",50,1,500,1)], descriptionKey: "indicatorEma" },
   { id: "EMA200", name: "EMA 200", group: "trend", pane: "overlay", parameters: [p("period","period",200,1,1000,1)], descriptionKey: "indicatorEma" },
-  { id: "SMA20", name: "SMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorSma" },
-  { id: "WMA20", name: "WMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorWma" },
+  { id: "SMA20", name: "SMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorSma", visual: visual(2) },
+  { id: "WMA20", name: "WMA 20", group: "trend", pane: "overlay", parameters: [p("period","period",20,1,500,1)], descriptionKey: "indicatorWma", visual: visual(2) },
   { id: "VWAP", name: "VWAP", group: "volume", pane: "overlay", parameters: [], descriptionKey: "indicatorVwap" },
   { id: "BB20", name: "Bollinger Bands", group: "volatility", pane: "overlay", parameters: [p("period","period",20,1,500,1), p("stdDev","stdDev",2,0.1,10,0.1)], descriptionKey: "indicatorBollinger" },
   { id: "ATR14", name: "ATR 14", group: "volatility", pane: "oscillator", parameters: [p("period","period",14,2,200,1)], descriptionKey: "indicatorAtr" },
