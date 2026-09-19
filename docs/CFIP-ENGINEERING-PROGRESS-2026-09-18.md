@@ -33,7 +33,7 @@ Repository: armanemp/CFIP-PRO
 
 ## Current architectural truth
 
-CForex remains the capability/reference source only. CFIP-PRO is independent. The abandoned cforex-platform repository is not used.
+CForex remains the capability/reference source only. CFIP-PRO is independent. The abandoned the abandoned legacy platform repository repository is not used.
 
 The terminal remains chart-first. Frontend analysis is currently retained for visual overlays and UI context, while the backend owns the canonical decision.
 
