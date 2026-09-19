@@ -58,3 +58,15 @@
 @media (max-width: 820px) {
   :global(:root) { --cfip-terminal-sidebar-width: 248px; --cfip-terminal-rail-width: 44px; }
 }
+
+:global(:root) {
+  --cfip-terminal-border-strong: #334155;
+  --cfip-terminal-border-subtle: #293342;
+  --cfip-terminal-surface-active: #17202c;
+  --cfip-terminal-text-muted: #8391a4;
+  --cfip-terminal-text-faint: #66758a;
+  --cfip-terminal-chart-text: #b7c1ce;
+  --cfip-terminal-accent-strong: #20354b;
+  --cfip-terminal-info: #60a5fa;
+  --cfip-terminal-warning: #f59e0b;
+}
