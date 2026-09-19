@@ -5,7 +5,7 @@ Date: 2026-09-18
 
 ## Source boundary
 
-CForex is the capability/reference source. CFIP-PRO remains an independent implementation. The abandoned cforex-platform repository is not a migration target or architecture baseline.
+CForex is the capability/reference source. CFIP-PRO remains an independent implementation. The abandoned the abandoned legacy platform repository repository is not a migration target or architecture baseline.
 
 ## Verified CForex intelligence surface
 
