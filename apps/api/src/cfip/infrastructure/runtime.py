@@ -12,10 +12,9 @@ from datetime import UTC, datetime
 from typing import Final
 
 from cfip.domain.runtime_contracts import ComponentState, ComponentStatus, RuntimeComponent
+from cfip.infrastructure.bootstrap import platform_bootstrap
 
-DEFAULT_COMPONENTS: Final[tuple[RuntimeComponent, ...]] = tuple(
-    RuntimeComponent(name=name)
-    for name in (
+_COMPONENT_NAMES: Final[tuple[str, ...]] = (
         "api",
         "market-data",
         "analysis",
@@ -28,7 +27,15 @@ DEFAULT_COMPONENTS: Final[tuple[RuntimeComponent, ...]] = tuple(
         "self-healing",
         "self-development",
         "git-governance",
+)
+
+DEFAULT_COMPONENTS: Final[tuple[RuntimeComponent, ...]] = tuple(
+    RuntimeComponent(
+        name=name,
+        start=lambda name=name: platform_bootstrap.start(name),
+        stop=lambda name=name: platform_bootstrap.stop(name),
     )
+    for name in _COMPONENT_NAMES
 )
 
 
