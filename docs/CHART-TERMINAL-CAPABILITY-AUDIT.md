@@ -21,10 +21,15 @@ The project does **not** copy proprietary TradingView/cTrader code or UI assets.
 - 2-second polling of normalized market observations with client-side version gating to avoid redundant chart rebuilds when the market payload has not changed.
 - Explicit no-synthetic-data empty state.
 - EMA/SMA/WMA/VWAP/Bollinger overlay foundation.
-- Volume histogram in a dedicated secondary pane.
-- RSI, MACD, DMI/ADX and Stochastic in a dedicated secondary indicator pane; overlay studies remain on the main price pane.
+- Oscillator studies (RSI, MACD, DMI/ADX, Stochastic) use a dedicated secondary indicator pane; volume uses its own separate secondary pane when enabled.
+- Overlay studies remain on the main price pane.
+- Measurement tool reports price delta, percentage change and actual candle distance (bar count) based on the current candle series.
+- Bid/ask visibility control is wired to the latest normalized observation and shows available bid/ask values in the chart HUD.
+- Watchlist entries are actionable and switch the active chart symbol.
+- Risk inspector contains a client-side sizing estimator for equity, risk %, leverage, contract size, entry, stop and target, including risk cash, capped units, lots and R:R.
 - Viewport preservation across indicator/chart/data refreshes rather than forced `fitContent` on every refresh.
 - Drawing/FVG overlay coordinate refresh synchronized with time-scale pan/zoom and chart resize.
+- Drawing selection, drag movement, lock/hide/delete, object selection from the inspector, undo/redo and keyboard deletion are wired.
 - Crosshair, scroll, zoom, pinch and axis scaling.
 - Modular tool rail.
 - Modular inspector/sidebar with collapse/show controls.
@@ -36,15 +41,24 @@ The project does **not** copy proprietary TradingView/cTrader code or UI assets.
 ## Next implementation layers — explicitly not claimed complete yet
 
 1. Real provider adapter(s) and websocket/tick streaming into the normalized market-observation contract.
-2. Full drawing object model: selection, handles, move/resize, lock/hide, object tree, undo/redo and persistence.
+2. Expand the drawing object model with endpoint handles and per-tool resize semantics (current implementation supports selection/move plus lock/hide/delete and undo/redo).
 3. Full TradingView/cTrader-class drawing catalogue: channels, pitchfork/Gann, Fibonacci variants, patterns, text/annotations, measurement and position tools.
-4. Full indicator engine parameter dialogs, pane-specific scaling and richer oscillator visualization beyond the current shared secondary pane.
+4. Full indicator engine parameter dialogs, per-indicator parameter persistence, pane-specific scaling and richer oscillator visualization.
 5. Market structure and intelligence rendering: BOS/CHoCH/MSS, liquidity, FVG/IFVG, OB/Breaker/Mitigation, sessions/kill zones and MTF confluence.
 6. Replay engine with deterministic historical cursor, play/pause/step/speed and return-to-live.
+
+## Latest hardening pass — 2026-09-19
+
+- Separated oscillator and volume panes so volume no longer shares the oscillator scale.
+- Corrected Measure bar count to use candle indices rather than raw Unix timestamp seconds.
+- Wired Bid/Ask preference to real normalized observation fields when available.
+- Made the built-in watchlist switch the active symbol.
+- Added a local risk-sizing estimator with explicit account inputs and broker/execution-layer caveat.
+- Kept provider streaming, replay, alerting, multi-chart, advanced drawing handles and account integration explicitly outside the current completion claim.
 7. Alert engine with price/drawing/indicator conditions and notification delivery.
 8. Multi-chart layouts, synchronization groups and workspace persistence.
 9. Full scale controls: left/right scales, percent/indexed/log, precision, timezone, bar spacing and offsets.
-10. Account-aware risk/position overlays connected to broker/account state.
+10. Connect the risk/position estimator to broker/account state, contract specifications and account-currency conversion; current sizing is explicitly an offline estimate.
 11. Command palette and keyboard-shortcut registry.
 12. Chart templates and saved indicator/layout profiles.
 
