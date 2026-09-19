@@ -46,3 +46,28 @@ class MarketDataRequest(BaseModel):
     end_time: int | None = Field(default=None, gt=0)
     limit: int = Field(default=500, ge=1, le=10000)
     provider_id: str | None = None
+
+
+class MarketDataPage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    request: MarketDataRequest
+    bars: tuple[OHLCVBar, ...] = ()
+    next_cursor: str | None = None
+
+class ProviderHealth(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider_id: str
+    status: Literal["healthy","degraded","down","unknown"] = "unknown"
+    latency_ms: float | None = Field(default=None, ge=0)
+    last_success_at: int | None = Field(default=None, gt=0)
+    freshness_seconds: float | None = Field(default=None, ge=0)
+    message: str = ""
+
+class DataFeedCapabilities(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    historical: bool = False
+    realtime: bool = False
+    ticks: bool = False
+    quotes: bool = False
+    depth: bool = False
+    trades: bool = False
