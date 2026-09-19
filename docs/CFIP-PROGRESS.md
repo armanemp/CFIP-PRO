@@ -1,3 +1,11 @@
+# 2026-09-20 — Terminal modular runtime expansion
+
+- Extracted terminal drawing undo/redo history into `apps/web/src/components/terminal/drawing-history.ts`. The component no longer owns raw history-array mutation; the boundary now provides bounded undo/redo stacks, redo invalidation and structural no-op detection.
+- Extracted terminal keyboard/command handling into `apps/web/src/components/terminal/use-terminal-keyboard.ts`. The command surface now covers Escape, undo/redo, delete, fullscreen, fit/reset and all nine configured timeframes (1–9), while inputs/textareas remain isolated from terminal shortcuts.
+- Replaced the indicator renderer's monolithic switch with `indicator-runtime.ts`, a versioned `terminal.indicator.runtime.v1` plugin boundary. Indicator definitions remain in the registry, mathematical implementations remain in chart-math, and rendering consumes runtime series descriptors.
+- Indicator parameters are now passed through the runtime boundary for period-based studies, Bollinger deviation, stochastic smoothing, Keltner inputs and Ichimoku periods; Bollinger's math contract was extended accordingly without adding a dependency.
+- No new runtime package, generated artifact, database reset, unconditional rebuild or cache invalidation was introduced.
+
 # 2026-09-20 — Elyrava governed improvement boundary audit
 
 - Re-read the existing self-development contracts before extending autonomous behavior. The current safe boundary is preserved: Elyrava may observe/diagnose/propose, but promotion requires evidence, validation and rollback information; high/critical proposals explicitly require human approval.
