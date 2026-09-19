@@ -21,6 +21,7 @@ import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
 import { useTerminalMarketData } from "@/components/terminal/use-terminal-market-data";
+import { useTerminalKeyboard } from "@/components/terminal/use-terminal-keyboard";
 import { createDrawingHistory, recordDrawingChange, redoDrawingChange, undoDrawingChange } from "@/components/terminal/drawing-history";
 
 
@@ -180,26 +181,27 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(document.fullscreenElement)await document.exitFullscreen();
     else await element.requestFullscreen();
   };
+  useTerminalKeyboard({
+    closePanels: () => setPanel(null),
+    setTool,
+    setPendingPoint,
+    setSelectedDrawingId,
+    undoDrawing,
+    redoDrawing,
+    deleteSelectedDrawing: () => {
+      if (!selectedDrawingId) return;
+      updateDrawings(current => current.filter(d => d.id !== selectedDrawingId));
+      setSelectedDrawingId(null);
+    },
+    toggleFullscreen,
+    resetView,
+    setTimeframe: setTf,
+    selectedDrawingId,
+  });
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
-      if (event.key === "Escape") { setPanel(null); setTool("cursor"); setPendingPoint(null); setSelectedDrawingId(null); return; }
-      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="z") { event.preventDefault(); if(event.shiftKey) redoDrawing(); else undoDrawing(); return; }
-      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="y") { event.preventDefault(); redoDrawing(); return; }
-      if ((event.key==="Delete"||event.key==="Backspace") && selectedDrawingId) { updateDrawings(current=>current.filter(d=>d.id!==selectedDrawingId)); setSelectedDrawingId(null); return; }
-      if (event.key === "f" || event.key === "F") { void toggleFullscreen(); return; }
-      if (event.key === "r" || event.key === "R") { resetView(); return; }
-      if (event.key === "1") setTf("1m");
-      if (event.key === "2") setTf("5m");
-      if (event.key === "3") setTf("15m");
-      if (event.key === "4") setTf("30m");
-      if (event.key === "5") setTf("1H");
-      if (event.key === "6") setTf("4H");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+
+
+
   
   useEffect(()=>{
     if(!panel)return;
