@@ -37,7 +37,7 @@ class ChartWorkspace(BaseModel):
     panes: tuple[Pane, ...] = ()
     drawings: tuple[DrawingObject, ...] = ()
     compare_symbols: tuple[str, ...] = ()
-    viewport: ChartViewport = ChartViewport()
+    viewport: ChartViewport = Field(default_factory=ChartViewport)
     locale: str = "en-US"
     rtl: bool = False
     version: int = Field(default=1, ge=1)
