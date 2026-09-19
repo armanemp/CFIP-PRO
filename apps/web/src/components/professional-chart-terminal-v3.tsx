@@ -279,9 +279,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const toggleRail=(value:boolean)=>{setRail(value);setPrefs(p=>({...p,leftRail:value}));};
 
   const tt=(x:Tool)=>({
-    cursor:t("en","cursor"),crosshair:t(locale,"crosshair"),trendline:t(locale,"trendline"),ray:t(locale,"ray"),
-    horizontal:t(locale,"horizontal"),vertical:t(locale,"vertical"),rectangle:t(locale,"rectangle"),fib:t(locale,"fibonacci"),
-    measure:t(locale,"measure"),long:t(locale,"longPosition"),short:t(locale,"shortPosition")
+    cursor:t("en","cursor"),crosshair:t("en","crosshair"),trendline:t("en","trendline"),ray:t("en","ray"),
+    horizontal:t("en","horizontal"),vertical:t("en","vertical"),rectangle:t("en","rectangle"),fib:t("en","fibonacci"),
+    measure:t("en","measure"),long:t("en","longPosition"),short:t("en","shortPosition")
   }[x]);
 
   const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);\n\n  // Terminal/chart presentation is intentionally EN/LTR and is not mutated by app-language selection.\n  // Locale is persisted as application preference for the surrounding product surfaces.\n
@@ -354,7 +354,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   return <div dir="ltr" data-terminal-locale="en" className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
     <header className="cfip-terminal-topbar relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
-      <button onClick={()=>toggleRail(!rail)} title={rail?t(locale,"hideRail"):t(locale,"showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
+      <button onClick={()=>toggleRail(!rail)} title={rail?t("en","hideRail"):t("en","showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
       <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
       {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale="en" value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
