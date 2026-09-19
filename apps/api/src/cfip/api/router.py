@@ -14,6 +14,7 @@ from cfip.api.routes.config import router as config_router
 from cfip.api.routes.control import router as control_router
 from cfip.api.routes.capabilities import router as capabilities_router
 from cfip.api.routes.outcomes import router as outcomes_router
+from cfip.api.routes.terminal import router as terminal_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
@@ -28,3 +29,4 @@ api_router.include_router(market_router, tags=["market"])
 api_router.include_router(providers_router, tags=["providers"])
 api_router.include_router(config_router, tags=["config"])
 api_router.include_router(outcomes_router, tags=["outcomes"])
+api_router.include_router(terminal_router, tags=["terminal"])

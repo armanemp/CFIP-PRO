@@ -116,3 +116,45 @@ export async function getProviderCatalog(): Promise<ProviderDescriptor[]> {
   if (!response.ok) throw new Error(`Provider catalog request failed: ${response.status}`);
   return z.array(ProviderSchema).parse(await response.json());
 }
+
+
+const TerminalManifestSchema = z.object({
+  schema_version: z.number(),
+  capabilities: z.array(z.object({
+    id: z.string(), kind: z.string(), maturity: z.string(), contract: z.string(),
+    dependencies: z.array(z.string()), configurable: z.boolean(), evidence_required: z.boolean(),
+  })),
+  providers: z.array(ProviderSchema),
+  chart: z.object({
+    default_timeframe: z.string(),
+    default_chart_type: z.string(),
+    max_visible_indicators: z.number(),
+    persist_workspace: z.boolean(),
+    enable_replay: z.boolean(),
+  }),
+  notifications: z.object({
+    enabled: z.boolean(),
+    cooldown_seconds: z.number(),
+    max_active_rules: z.number(),
+  }),
+  workspace_preferences: z.object({
+    grid: z.boolean(), volume: z.boolean(), sessions: z.boolean(), bid_ask: z.boolean(),
+    magnet: z.boolean(), auto_fit: z.boolean(), show_last_price: z.boolean(),
+  }),
+  datafeed_defaults: z.object({
+    symbol: z.string(), venue: z.string(), timeframe: z.string(), start_time: z.number().nullable(),
+    end_time: z.number().nullable(), limit: z.number(), feed: z.enum(["historical","realtime"]),
+  }),
+  terminal: z.object({
+    default_symbol: z.string(), default_venue: z.string(), refresh_ms: z.number(), max_panels: z.number(),
+  }),
+  mutation_enabled: z.boolean(),
+  secrets_exposed: z.boolean(),
+});
+export type TerminalManifest = z.infer<typeof TerminalManifestSchema>;
+
+export async function getTerminalManifest(): Promise<TerminalManifest> {
+  const response = await fetch(`${apiBaseUrl}/terminal/manifest`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Terminal manifest request failed: ${response.status}`);
+  return TerminalManifestSchema.parse(await response.json());
+}

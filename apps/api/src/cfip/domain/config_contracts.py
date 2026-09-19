@@ -32,6 +32,13 @@ class IntelligenceConfig(BaseModel):
     auto_promotion: bool = False
     learning_enabled: bool = True
 
+class TerminalConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    default_symbol: str = Field(default="EUR/USD", min_length=1, max_length=64)
+    default_venue: str = Field(default="reference", min_length=1, max_length=64)
+    refresh_ms: int = Field(default=2000, ge=250, le=60000)
+    max_panels: int = Field(default=4, ge=1, le=16)
+
 class ChartConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     default_timeframe: str = "1m"

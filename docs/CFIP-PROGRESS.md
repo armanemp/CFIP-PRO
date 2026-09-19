@@ -197,3 +197,16 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+
+## 2026-09-19 — Modular terminal/data/control vertical slice
+
+- Added backend-owned terminal configuration and a read-only `GET /terminal/manifest` contract so the terminal boot path can consume configuration, capabilities, provider catalog, notification policy, workspace preferences and datafeed defaults from one typed boundary.
+- Added `workspace_contracts.py` for multi-panel layouts, pane types, synchronization groups and chart preferences. Reference validation rejects dangling panel references.
+- Added `alert_contracts.py` separating alert semantics from notification delivery, with price/indicator/analysis/data-quality/spread conditions and explicit channel/severity/cooldown policy.
+- Added `datafeed_contracts.py` for provider-neutral historical/realtime requests, normalized bars and feed health.
+- Added deterministic `provider_selection.py` with capability and health gating; degraded providers require explicit opt-in.
+- Added unit coverage for workspace references, alert validation and provider selection.
+- Expanded terminal command search with compare, templates, screener, paper trading, orders, positions, portfolio and journal surfaces.
+- TerminalShell now bootstraps from the backend manifest instead of directly owning its market-data defaults.
+- This slice intentionally exposes contracts and safe read-only composition; live provider mutation, authenticated admin persistence and live execution remain behind their existing governance boundaries.
