@@ -10,11 +10,13 @@ from cfip.api.routes.intelligence import router as intelligence_router
 from cfip.api.routes.market import router as market_router
 from cfip.api.routes.providers import router as providers_router
 from cfip.api.routes.config import router as config_router
+from cfip.api.routes.control import router as control_router
 from cfip.api.routes.outcomes import router as outcomes_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(git_router, tags=["git"])
+api_router.include_router(control_router, tags=["control"])
 api_router.include_router(admin_router, tags=["admin"])
 api_router.include_router(analysis_router, tags=["analysis"])
 api_router.include_router(intelligence_router, tags=["intelligence"])
