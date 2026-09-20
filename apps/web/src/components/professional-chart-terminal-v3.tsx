@@ -459,7 +459,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
                 <text x={right+5} y={y1-6} fill="#d8e0ea" fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {validRisk?rr.toFixed(2):"—"}</text>
               </g>;
             }
-            return <g key={d.id}>{hit(x1,y1,x2,y2)<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
+            return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
           })}
           {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
         </svg>
