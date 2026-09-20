@@ -33,7 +33,8 @@ export function setMainSeriesData(series: ChartMainSeries, kind: ChartKind, cand
 }
 
 export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: string, title: string, paneIndex = 0, lineWidth = 1): ISeriesApi<"Line"> {
-  const series = chart.addSeries(LineSeries, { color, lineWidth: Math.max(1, Math.min(4, lineWidth)), title, priceScaleId: paneIndex === 0 ? "right" : "indicator" }, paneIndex);
+  const width = Math.max(1, Math.min(4, Math.round(lineWidth))) as 1 | 2 | 3 | 4;
+  const series = chart.addSeries(LineSeries, { color, lineWidth: width, title, priceScaleId: paneIndex === 0 ? "right" : "indicator" }, paneIndex);
   try {
     series.setData(data.length ? data : []);
   } catch {
