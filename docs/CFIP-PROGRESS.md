@@ -1,3 +1,13 @@
+## 2026-09-21 — governed learning, dataset leakage and artifact integrity hardening
+
+- Added a deterministic temporal dataset-split contract with explicit `as_of` boundaries and fail-closed overlap/future-example checks. This makes train/validation/test separation a platform invariant rather than a convention.
+- Added real SHA-256 artifact digest computation and constant-time verification using the Python standard library. Signature/key verification remains explicitly delegated to a configured cryptographic verifier; the platform does not pretend that an unverified signature is trustworthy.
+- Added a governed learning-promotion policy requiring a healthy platform, independent evidence, minimum outcome volume, minimum confidence and zero contradictions by default.
+- Added focused unit coverage for temporal leakage, artifact tampering and learning-promotion failure modes.
+- Corrected the OSS contract import boundary to use `collections.abc.Sequence` and normalized the OSS roadmap so no retired intelligence name remains there.
+- Current OSS strategy remains adapter-first: NautilusTrader for trading/backtest, MLflow for model lifecycle, Qdrant/pgvector for retrieval, OpenTelemetry for observability and OpenBB for research/data, with integration gates for licensing, semantics, performance, security, cancellation and rollback.
+- GitHub connector currently reports repository push permission. The newest commits do not yet expose a completed CI status through the connector, so CI green is not claimed.
+
 ## 2026-09-20 — deep terminal hardening and intelligence naming cleanup
 
 - Market observation requests now support end-to-end cancellation, including the real market endpoint and the EUR/USD demo fallback.
