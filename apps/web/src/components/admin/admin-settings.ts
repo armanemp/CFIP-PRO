@@ -19,7 +19,7 @@ export const ADMIN_SETTINGS: readonly AdminSettingDefinition[] = [
   {id:"risk.max_account_risk",section:"risk",label:"Maximum account risk",type:"number",mutable:true,sensitive:false,description:"Hard risk boundary enforced before execution."},
   {id:"risk.max_open_positions",section:"risk",label:"Maximum open positions",type:"number",mutable:true,sensitive:false,description:"Portfolio-level position-count limit."},
   {id:"risk.kill_switch",section:"risk",label:"Kill switch",type:"boolean",mutable:true,sensitive:false,description:"Emergency execution gate."},
-  {id:"intelligence.provider",section:"intelligence",label:"Intelligence provider",type:"select",mutable:true,sensitive:false,description:"Elyrava provider adapter.",options:["deterministic","openai","anthropic","gemini","deepseek","groq","openrouter","ollama","lm-studio"]},
+  {id:"intelligence.provider",section:"intelligence",label:"Intelligence provider",type:"select",mutable:true,sensitive:false,description:"Pipvara provider adapter.",options:["deterministic","openai","anthropic","gemini","deepseek","groq","openrouter","ollama","lm-studio"]},
   {id:"intelligence.require_evidence",section:"intelligence",label:"Require evidence",type:"boolean",mutable:true,sensitive:false,description:"Reject intelligence responses without provenance."},
   {id:"intelligence.min_confidence",section:"intelligence",label:"Minimum confidence",type:"number",mutable:true,sensitive:false,description:"Governance threshold for surfaced intelligence."},
   {id:"intelligence.learning_enabled",section:"intelligence",label:"Learning pipeline",type:"boolean",mutable:true,sensitive:false,description:"Enable governed outcome learning and calibration workflows."},
