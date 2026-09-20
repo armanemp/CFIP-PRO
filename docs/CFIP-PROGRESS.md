@@ -215,3 +215,14 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+
+## 2026-09-20 — governed OSS adapter fabric + capability roadmap
+
+- Added CFIP-owned vendor-neutral adapter contracts for market data, research retrieval, model registry, trading/backtest, retrieval index and observability.
+- Added runtime-checkable contract tests and fail-closed capability validation so an integration cannot be treated as available merely because a package is installed.
+- Added the canonical OSS adapter roadmap covering Lightweight Charts, TA-Lib, pyvsmc, CCXT, Polars, PydanticAI, NautilusTrader, MLflow, Qdrant/pgvector, OpenTelemetry, OpenBB, LangGraph/Haystack, Feast, DVC, Evidently, QuickFIX and Qlib.
+- Added a separate capability progress chart; percentages are engineering roadmap estimates, not production-readiness scores.
+- External verification confirms NautilusTrader currently provides event-driven research, deterministic simulation, portfolio/risk and live execution with modular adapters; MLflow provides model versioning, lineage, aliases and metadata; Qdrant supports dense/sparse hybrid and multi-stage retrieval; OpenTelemetry Python provides stable traces and metrics. These capabilities will be integrated only through the CFIP-owned contracts.
+- Implementation commits: f45819833f32fc8fad9b00b305c3f83f14e89fcf, 9e0315d3245f06412d15d178c5e16b982c7bd303, c1356e9658d1751cbba5cebb6e187d72ed3ef109, a57ee7f89c36ed8d403763878ca65bdc33d6e64b.
+- CI verification for the latest contract commit is required before claiming the new batch green.
