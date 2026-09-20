@@ -9,7 +9,7 @@ from hashlib import sha256
 from json import dumps
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 ProposalKind = Literal["bug-fix", "performance", "security", "data-quality", "model", "ux", "dependency"]
 ProposalRisk = Literal["low", "medium", "high", "critical"]
@@ -29,21 +29,22 @@ class ImprovementProposal(BaseModel):
     requires_approval: bool = True
     risk: ProposalRisk = "medium"
 
-    @model_validator(mode="after")
-    def validate_governance(self) -> "ImprovementProposal":
+    def governance_issues(self) -> tuple[str, ...]:
+        """Return deterministic fail-closed reasons before promotion."""
+        reasons: list[str] = []
         if not self.evidence_ids:
-            raise ValueError("improvement proposals require evidence_ids")
+            reasons.append("missing_evidence")
         if not self.validation_plan:
-            raise ValueError("improvement proposals require a validation_plan")
+            reasons.append("missing_validation_plan")
         if self.risk != "low" and not self.rollback_plan:
-            raise ValueError("material improvements require a rollback_plan")
+            reasons.append("missing_rollback_plan")
         if len(set(self.evidence_ids)) != len(self.evidence_ids):
-            raise ValueError("evidence_ids must be unique")
+            reasons.append("duplicate_evidence")
         if len(set(self.affected_paths)) != len(self.affected_paths):
-            raise ValueError("affected_paths must be unique")
+            reasons.append("duplicate_paths")
         if self.risk in {"high", "critical"} and not self.requires_approval:
-            raise ValueError("high-risk improvements must require approval")
-        return self
+            reasons.append("human_approval_required")
+        return tuple(reasons)
 
     def fingerprint(self) -> str:
         """Return a deterministic identity for the immutable proposal payload."""
