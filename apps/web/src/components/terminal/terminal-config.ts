@@ -11,3 +11,15 @@ export const LOCALES: Locale[] = ["en","fa","de","ar","tr","fr","es","pt","ru","
 
 export interface TerminalDataDefaults { symbol: string; venue: string; initialObservationLimit: number; refreshMs: number; }
 export const TERMINAL_DATA_DEFAULTS: TerminalDataDefaults = { symbol: DEFAULT_WATCHLIST[0], venue: "reference", initialObservationLimit: 5000, refreshMs: 2000 };
+
+export const TERMINAL_CHART_LAYOUT = Object.freeze({
+  fontSize: 13,
+  fontFamily: "Inter,Segoe UI,Arial,sans-serif",
+  priceScaleMinWidth: 86,
+  rightOffset: 10,
+  barSpacing: 9,
+  minBarSpacing: 2,
+  maxBarSpacing: 30,
+  oscillatorPaneHeight: 170,
+  volumePaneHeight: 110,
+});

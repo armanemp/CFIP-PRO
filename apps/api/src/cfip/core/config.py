@@ -5,6 +5,8 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from cfip.domain.intelligence_identity import DEFAULT_INTELLIGENCE_NAME
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -20,6 +22,7 @@ class Settings(BaseSettings):
     )
     nats_url: str = Field(default="nats://127.0.0.1:4222", alias="NATS_URL")
     redis_url: str = Field(default="redis://127.0.0.1:6379/0", alias="REDIS_URL")
+    intelligence_name: str = Field(default=DEFAULT_INTELLIGENCE_NAME, alias="INTELLIGENCE_NAME")
 
     @property
     def cors_origin_list(self) -> list[str]:

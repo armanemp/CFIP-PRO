@@ -1,6 +1,8 @@
 """FastAPI application entry point and same-origin web serving boundary."""
 
+from contextlib import asynccontextmanager
 from pathlib import Path
+from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,9 +11,21 @@ from fastapi.staticfiles import StaticFiles
 
 from cfip.api.router import api_router
 from cfip.core.config import get_settings
+from cfip.infrastructure.runtime import platform_runtime
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    await platform_runtime.start()
+    try:
+        yield
+    finally:
+        await platform_runtime.stop()
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

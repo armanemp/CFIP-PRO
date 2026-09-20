@@ -1,3 +1,80 @@
+# 2026-09-20 — Terminal surface extraction and startup bootstrap
+
+- Extracted Lightweight Charts configuration into `apps/web/src/components/terminal/chart-options.ts`; the V3 component no longer owns the complete chart option object.
+- Extracted terminal overlay/analysis state calculation into `terminal-overlay-state.ts`, keeping FVG, pivots, S/R, sessions, structure, order blocks and the analysis snapshot behind one reusable computation boundary.
+- Centralized frontend analysis thresholds in `analysis-policy.ts` and routed the unified frontend aggregator through that policy instead of scattering confluence/neutral thresholds.
+- Added explicit local platform startup bootstrap in `apps/api/src/cfip/infrastructure/bootstrap.py`. Every registered runtime component now receives a real in-process start/stop lifecycle hook at server startup/shutdown. This is local initialization only; external provider connectivity remains adapter-reported.
+- Runtime snapshots now expose `local_bootstrap` state, and unit coverage verifies that the full default component set is initialized.
+- No new runtime dependency or generated artifact was introduced.
+
+# 2026-09-20 — Cross-platform contracts, provider expansion and hardcode audit
+
+- Added `apps/api/src/cfip/domain/stream_contracts.py` as the transport-neutral realtime boundary for WebSocket/polling/NATS/replay adapters. It defines stream identity, event envelopes, cursors and deterministic duplicate/out-of-order classification.
+- Added focused unit coverage for first-event acceptance, duplicate identity, sequence ordering and timestamp ordering.
+- Expanded the provider catalog beyond market/broker/AI/research into identity (Google OAuth), crypto payments (BTCPay Server/Coinbase Commerce), storage (PostgreSQL/ClickHouse/Redis), messaging (NATS JetStream) and observability/lifecycle (OpenTelemetry/MLflow/Prometheus/Grafana). Catalog presence is not treated as live connectivity.
+- Audited the active professional terminal for remaining presentation hardcodes and moved its remaining status/overlay/replay visual tokens into the semantic CSS theme boundary. The active V3 file now has no targeted hex/RGB/Tailwind status-color literals.
+- Current feature branch is 48 commits ahead of `main`, 0 behind. GitHub Actions currently reports no workflow run for the latest commit, so CI green is not claimed.
+
+# 2026-09-20 — Terminal modular runtime expansion
+
+- Extracted terminal drawing undo/redo history into `apps/web/src/components/terminal/drawing-history.ts`. The component no longer owns raw history-array mutation; the boundary now provides bounded undo/redo stacks, redo invalidation and structural no-op detection.
+- Extracted terminal keyboard/command handling into `apps/web/src/components/terminal/use-terminal-keyboard.ts`. The command surface now covers Escape, undo/redo, delete, fullscreen, fit/reset and all nine configured timeframes (1–9), while inputs/textareas remain isolated from terminal shortcuts.
+- Replaced the indicator renderer's monolithic switch with `indicator-runtime.ts`, a versioned `terminal.indicator.runtime.v1` plugin boundary. Indicator definitions remain in the registry, mathematical implementations remain in chart-math, and rendering consumes runtime series descriptors.
+- Indicator parameters are now passed through the runtime boundary for period-based studies, Bollinger deviation, stochastic smoothing, Keltner inputs and Ichimoku periods; Bollinger's math contract was extended accordingly without adding a dependency.
+- No new runtime package, generated artifact, database reset, unconditional rebuild or cache invalidation was introduced.
+
+# 2026-09-20 — Elyrava governed improvement boundary audit
+
+- Re-read the existing self-development contracts before extending autonomous behavior. The current safe boundary is preserved: Elyrava may observe/diagnose/propose, but promotion requires evidence, validation and rollback information; high/critical proposals explicitly require human approval.
+- Kept Git mutation behind the existing governed Git boundary rather than granting the intelligence unrestricted shell or production-write access.
+- The improvement endpoint remains a validation boundary only and reports `mutation_performed: false`; this avoids a false impression that self-development is already changing production.
+- This is intentional architecture: the next implementation layer should add durable evidence/proposal/validation records and sandbox execution, then connect them to the governed Git proposal lifecycle rather than bypassing it.
+
+# 2026-09-20 — Terminal semantic theme boundary
+
+- Moved the professional terminal's remaining UI color literals onto semantic CSS custom properties backed by the terminal theme contract.
+- Extended the terminal theme module with explicit border, surface, muted text, chart text, accent, info and warning tokens so visual tuning can happen without editing the chart/workspace component.
+- Kept computational chart colors in the shared TypeScript theme and presentation-level UI colors in the CSS theme boundary.
+- This preserves the compact professional-terminal proportions while reducing visual hardcoding and making future light/dark or accessibility themes possible without rewriting terminal behavior.
+
+# 2026-09-20 — Chart engine tokenization and modular indicator boundary
+
+- Routed the chart engine's main-series, area/baseline and volume visual values through the centralized terminal theme.
+- Routed registered-indicator visual tokens through the same theme boundary instead of keeping a second palette inside the indicator renderer.
+- This keeps chart rendering and indicator computation separate: mathematical indicator implementations remain in chart-math, registry metadata remains in indicator-registry, and rendering remains in indicator-renderer.
+- The terminal market-data lifecycle remains isolated in its dedicated hook, leaving the main terminal component responsible for workspace/chart behavior rather than transport polling.
+- Preserved the existing indicator catalog and chart capabilities; this pass changes architecture and configuration boundaries rather than replacing working calculations with static placeholders.
+
+# 2026-09-20 — Terminal data boundary and runtime lifecycle verification coverage
+
+- Extracted terminal market-data acquisition and refresh lifecycle into `apps/web/src/components/terminal/use-terminal-market-data.ts`. The professional chart terminal now consumes a focused market-data hook instead of owning fetch/polling/error/version state.
+- The extracted market-data boundary preserves the existing behavior: immediate refresh, configured venue/observation limit/refresh interval, stale-result protection, live/error state and deduplicated row updates.
+- Added backend unit coverage for concurrent runtime startup and component-failure isolation in `tests/unit/test_runtime.py`.
+- Kept the terminal rendering component focused on chart state/rendering, analysis, drawings, replay and workspace behavior; market acquisition is now independently replaceable by a future WebSocket/NATS-backed adapter.
+- No new dependency was introduced.
+
+# 2026-09-20 — Runtime orchestration, provider boundaries and terminal tokenization
+
+- Strengthened the startup lifecycle from a passive status registry into a typed runtime orchestration boundary: each platform component has an explicit lifecycle contract, required/optional semantics, startup completion/error state, readiness timestamp and startup duration.
+- Platform components are initialized concurrently through the FastAPI lifespan boundary. A component failure is isolated as `degraded` rather than preventing unrelated local components from reporting readiness.
+- Moved lifecycle state/contracts into `apps/api/src/cfip/domain/runtime_contracts.py` so domain contracts remain separate from the infrastructure orchestrator.
+- Expanded `GET /ready` and `GET /admin/runtime` payloads with generation, component counts, per-component state, timing, checks and safe error type metadata. No credentials or raw secrets are exposed.
+- Added `GET /providers/status` as an explicit provider-connectivity boundary. Catalog maturity (`catalog`, `adapter`, `verified`) is never treated as live connectivity; until a real configured adapter reports health, connection state is `unknown`.
+- Expanded `GET /config/defaults` to expose typed chart, notification and governed-Git defaults alongside risk and Elyrava intelligence defaults, keeping mutation disabled until authenticated persistence/audit is wired.
+- Extended the admin control plane to show the actual platform component lifecycle rather than only aggregate dependency configuration.
+- Centralized terminal chart/UI color tokens in `terminal-theme.ts` and routed the active professional terminal's polling interval, venue and observation limit through `TERMINAL_DATA_DEFAULTS`, reducing operational hardcoding while keeping the chart visual system consistent.
+- No new runtime dependency, database reset, generated artifact or unconditional rebuild was introduced.
+- Verification status: GitHub Actions has not yet produced a run for this feature branch, so CI green is not claimed. The next gate is frontend lint/typecheck/build plus backend import/unit tests after the branch is reviewed.
+
+## 2026-09-20 — platform-wide startup lifecycle orchestration
+
+- Added a single in-process platform runtime lifecycle boundary covering API, market-data, indicators, analysis, intelligence, research, risk, notifications, replay, self-healing, self-development and governed Git.
+- FastAPI now uses an explicit lifespan hook so the complete platform capability set is initialized together when the server starts and stopped together on shutdown.
+- Added `GET /ready` with per-component readiness state and timestamps; the endpoint distinguishes platform degradation from a simple HTTP process-health check.
+- Extended `/admin/runtime` with the same platform lifecycle snapshot while preserving the no-secrets/no-unauthorized-mutation boundary.
+- This is orchestration/readiness infrastructure, not a false claim that external providers are credentialed or connected. Provider adapters must independently report real connectivity before a component can claim external readiness.
+- No new dependency, Docker rebuild, database reset, generated artifact or cache invalidation was introduced.
+
 ## 2026-09-19 — platform-wide modularization pass
 
 - Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Elyrava intelligence, research, platform governance and admin boundaries.
