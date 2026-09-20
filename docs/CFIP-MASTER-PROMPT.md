@@ -190,7 +190,7 @@ The product is expected to cover the complete capability set required for a glob
 - calibration;
 - drift detection;
 - AI assistant capabilities;
-- Pipvara intelligence capabilities;
+- Elyrava intelligence capabilities;
 - research intelligence and external knowledge ingestion;
 - datasets and provenance;
 - model/provider governance;
@@ -216,9 +216,9 @@ This catalog is a planning scope, not permission to implement everything at once
 
 ## 5. Intelligence and Governance
 
-The internal intelligence subsystem is named **Pipvara**.
+The internal intelligence subsystem is named **Elyrava**.
 
-Pipvara must be governed as an auditable intelligence system, not as an uncontrolled autonomous actor.
+Elyrava must be governed as an auditable intelligence system, not as an uncontrolled autonomous actor.
 
 Important intelligence artifacts must retain, as applicable:
 
