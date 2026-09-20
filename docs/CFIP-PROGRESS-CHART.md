@@ -12,16 +12,16 @@ Progress is capability maturity, not a claim of production readiness.
 | Signal/outcome/calibration | 69% | Outcome-driven learning loop expanding |
 | Risk/execution safeguards | 72% | Governed foundation |
 | Training/data lineage | 68% | Temporal split and immutable dataset controls |
-| Model registry/lifecycle | 43% | MLflow adapter implemented; runtime gate pending |
-| Retrieval/research memory | 43% | Qdrant + OpenBB adapters implemented; benchmarks pending |
+| Model registry/lifecycle | 48% | MLflow adapter implemented; runtime gate pending |
+| Retrieval/research memory | 50% | Qdrant + OpenBB adapters implemented; benchmarks pending |
 | Agent orchestration | 45% | PydanticAI integrated; orchestration adapters benchmarked next |
 | Self-healing | 77% | Health observation + gated execution boundary |
 | Self-development | 68% | Governed proposal/validation/promotion path |
 | Observability | 61% | OpenTelemetry adapter implemented; propagation/export pending |
-| Backtest/replay | 53% | NautilusTrader adapter implemented; deterministic runtime benchmark pending |
+| Backtest/replay | 55% | NautilusTrader adapter implemented; deterministic runtime benchmark pending |
 | Journal/outcome feedback | 55% | Outcome contracts active |
 | Security/governance | 74% | Evidence, headers, artifact integrity and approval gates active |
-| OSS integration fabric | 69% | Five major optional adapters implemented; runtime gates active |
+| OSS integration fabric | 74% | Nine major optional adapters implemented; runtime gates active |
 | Documentation/provenance | 80% | Canonical progress and OSS ledgers maintained |
 
 ## Overall capability maturity
