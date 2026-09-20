@@ -29,10 +29,28 @@ const AdminRuntimeSchema = z.object({
 });
 export type AdminRuntime = z.infer<typeof AdminRuntimeSchema>;
 
+const ConfigDefaultsSchema = z.object({
+  intelligence_identity: z.object({
+    name: z.string(),
+    short_name: z.string(),
+    domain: z.string(),
+    description: z.string(),
+  }),
+  mutation_enabled: z.boolean(),
+  secrets_exposed: z.boolean(),
+});
+export type ConfigDefaults = z.infer<typeof ConfigDefaultsSchema>;
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
 export async function getAdminRuntime(): Promise<AdminRuntime> {
   const response = await fetch(`${apiBaseUrl}/admin/runtime`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Admin runtime request failed: ${response.status}`);
   return AdminRuntimeSchema.parse(await response.json());
+}
+
+export async function getConfigDefaults(): Promise<ConfigDefaults> {
+  const response = await fetch(`${apiBaseUrl}/config/defaults`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Config defaults request failed: ${response.status}`);
+  return ConfigDefaultsSchema.parse(await response.json());
 }
