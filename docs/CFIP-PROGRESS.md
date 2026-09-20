@@ -226,3 +226,12 @@
 - External verification confirms NautilusTrader currently provides event-driven research, deterministic simulation, portfolio/risk and live execution with modular adapters; MLflow provides model versioning, lineage, aliases and metadata; Qdrant supports dense/sparse hybrid and multi-stage retrieval; OpenTelemetry Python provides stable traces and metrics. These capabilities will be integrated only through the CFIP-owned contracts.
 - Implementation commits: f45819833f32fc8fad9b00b305c3f83f14e89fcf, 9e0315d3245f06412d15d178c5e16b982c7bd303, c1356e9658d1751cbba5cebb6e187d72ed3ef109, a57ee7f89c36ed8d403763878ca65bdc33d6e64b.
 - CI verification for the latest contract commit is required before claiming the new batch green.
+
+
+## 2026-09-21 — API security boundary hardening
+
+- Fixed CI Ruff failure in the OSS adapter contract (Sequence now comes from collections.abc).
+- Added conservative browser security headers at the FastAPI/web boundary: content-type sniffing protection, frame protection, strict referrer policy, permissions policy and CSP frame-ancestor protection.
+- Reduced CORS from wildcard methods/headers to the explicit methods and request headers currently required by the terminal/API.
+- Added regression coverage for the security headers.
+- CI run 35540052132 exposed the lint failure; frontend was green. The corrective commit is d0f7c8625fa88f51ee7c20eea4953159a9f42ad0, followed by security commits 48e39af8af038535d0f035ca07a6ad9c5f625e19 and e8f5f7f3917468d679275c5b69cd99ea668952da. New CI must be green before this batch is considered verified.
