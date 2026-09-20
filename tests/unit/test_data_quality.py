@@ -35,6 +35,8 @@ def test_quality_treats_calendar_months_as_variable_length() -> None:
         int(datetime(2025, 1, 1, tzinfo=UTC).timestamp()),
         int(datetime(2025, 2, 1, tzinfo=UTC).timestamp()),
         int(datetime(2025, 3, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 4, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 5, 1, tzinfo=UTC).timestamp()),
     ]
     report = assess_data_quality(times, policy)
     assert report.status == "ok"
@@ -51,8 +53,10 @@ def test_quality_detects_missing_calendar_month() -> None:
     )
     times = [
         int(datetime(2025, 1, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 2, 1, tzinfo=UTC).timestamp()),
         int(datetime(2025, 3, 1, tzinfo=UTC).timestamp()),
-        int(datetime(2025, 4, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 5, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 6, 1, tzinfo=UTC).timestamp()),
     ]
     report = assess_data_quality(times, policy)
     assert report.contiguous_gap_count == 1
