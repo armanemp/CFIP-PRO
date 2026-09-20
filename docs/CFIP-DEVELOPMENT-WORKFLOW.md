@@ -313,9 +313,9 @@ Each analytical module must have:
 
 ---
 
-# 8. Phase 5 — Intelligence / Elyrava
+# 8. Phase 5 — Intelligence / Cortex
 
-Elyrava is the internal intelligence subsystem.
+Cortex is the internal intelligence subsystem.
 
 Build it as a governed pipeline rather than a single opaque model call.
 
