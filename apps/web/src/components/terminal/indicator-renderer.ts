@@ -68,7 +68,7 @@ export function renderRegisteredIndicators(
         break;
       }
       case "ICHIMOKU": {
-        const value = ichimoku(candles);
+        const value = ichimoku(candles, Math.round(p.conversion ?? 9), Math.round(p.base ?? 26), Math.round(p.span ?? 52));
         add(id, value.map(x => ({ time: x.time, value: x.tenkan })), "#f43f5e", "Ichimoku Tenkan");
         add(id, value.map(x => ({ time: x.time, value: x.kijun })), "#f59e0b", "Ichimoku Kijun");
         add(id, value.map(x => ({ time: x.time, value: x.senkouA })), "#22c55e", "Ichimoku Span A");
@@ -76,7 +76,7 @@ export function renderRegisteredIndicators(
         break;
       }
       case "BB20": {
-        const value = bollinger(candles, Math.round(p.period ?? 20));
+        const value = bollinger(candles, Math.round(p.period ?? 20), p.stdDev ?? 2);
         add(id, value.map(x => ({ time: x.time, value: x.upper })), "#64748b", "BB upper");
         add(id, value.map(x => ({ time: x.time, value: x.mid })), "#94a3b8", "BB mid");
         add(id, value.map(x => ({ time: x.time, value: x.lower })), "#64748b", "BB lower");
