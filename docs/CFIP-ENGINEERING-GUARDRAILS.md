@@ -10,7 +10,7 @@ Indicators, analysis, intelligence, market data, risk, alerts, notifications, wo
 Do not hardcode user-configurable values in UI components. Symbol lists, timeframes, indicator definitions, risk limits, provider choices, locales and feature flags belong to registries/configuration contracts. Secrets never belong in source.
 
 ## Intelligence
-Elyrava may research, diagnose, evaluate and propose. Code/model/data changes must carry evidence, provenance, validation, rollback information and an explicit promotion boundary.
+Pipvara may research, diagnose, evaluate and propose. Code/model/data changes must carry evidence, provenance, validation, rollback information and an explicit promotion boundary.
 
 ## Git boundary
 Repository inspection may be automated. Mutations are represented as governed proposals and require authorization. Protected CI/security/environment files are not mutable through the generic AI change boundary. Shell execution is outside the domain contract.
