@@ -235,3 +235,13 @@
 - Reduced CORS from wildcard methods/headers to the explicit methods and request headers currently required by the terminal/API.
 - Added regression coverage for the security headers.
 - CI run 35540052132 exposed the lint failure; frontend was green. The corrective commit is d0f7c8625fa88f51ee7c20eea4953159a9f42ad0, followed by security commits 48e39af8af038535d0f035ca07a6ad9c5f625e19 and e8f5f7f3917468d679275c5b69cd99ea668952da. New CI must be green before this batch is considered verified.
+
+
+## 2026-09-21 — intelligence identity consistency + security OSS boundaries
+
+- Standardized the intelligence presentation name across the active repository from MarketCortex/Elyrava to **Cortex**; the internal capability identifier remains the brand-neutral `intelligence.core` contract so presentation naming cannot change API semantics.
+- Migrated the browser-stored intelligence identity to a v2 key and automatically converts legacy MarketCortex/Elyrava values to Cortex, preventing stale names from surviving in existing sessions.
+- Repository search now has no active source occurrence of MarketCortex or Elyrava after the rename; historical Pipvara wording is being kept only where it describes a retired name in the progress ledger.
+- Added CFIP-owned `SecurityScannerAdapter` and `ArtifactVerifier` contracts and regression tests. Added Bandit/pip-audit/Semgrep/OWASP ZAP and Sigstore/cryptographic verification as governed OSS candidates rather than silently adding dependencies.
+- Public-name check: Cortex is **not** clear as an exclusive software brand. Current web records show multiple live/active CORTEX marks and Cortex-branded software/AI businesses, including a registered CORTEX mark in software/services and an active Cortex Labs trading name. Therefore CFIP now uses Cortex as the requested internal/presentation working name, but the repository does **not** claim trademark exclusivity or legal clearance. A final public commercial name requires jurisdiction-specific trademark/domain clearance.
+- Security/identity implementation commits: 6d0bf655da46b4da266ea520a420d679034431d1, 16edafb678bbdd64073c8353fe8994fa86aa1535, df21e8ac7024a639effb924f3381b65ac1b4367d, 92fd0aa47e302ea7acc4e5a4cf98d25b6b532aad, f2382aea061ed095726b89663946ec2eefcdbf76, b4267b2e36d5cb7ab275240dc19322334057f73b, 4085224f84d19f2c075628a1f6de014adfa60cfc, f8da5f2d4fa85fb92885a7eded61dd4fa1272a18, a5e47daa533842dfdc4092fd30474574fd894ac6, 6a69a1a69cf21c62ada009ff29d058e297b18bce, 24d93a29ffa3a0b972112a43a9a89d8c3fccfdc6, de43f169e383d2d60b63a9eb7ce5732ad109e548.
