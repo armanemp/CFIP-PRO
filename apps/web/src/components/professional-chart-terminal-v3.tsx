@@ -83,7 +83,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     let active = true;
     const run = async () => {
       try {
-        const result = await postUnifiedAnalysis(symbol, tf, analysisCandles, controller.signal);
+        const result = await postUnifiedAnalysis(symbol, tf, candles, controller.signal);
         if (active) setBackendAnalysis(result);
       } catch {
         if (active && !controller.signal.aborted) setBackendAnalysis(null);
