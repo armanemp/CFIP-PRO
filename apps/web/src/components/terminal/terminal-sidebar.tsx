@@ -47,8 +47,21 @@ export function TerminalSidebar({
           <div key={String(k)} className="rounded border border-[#263241] bg-[#0a0f16] p-2"><div className="text-[10px] uppercase text-[#64748b]">{k}</div><div className="mt-1 tabular-nums">{typeof v === "number" ? v.toFixed(5) : "—"}</div></div>)}</div>
       </div>}
 
-      {tab === "watchlist" && <div className="space-y-1.5">{DEFAULT_WATCHLIST.map(s =>
-        <button type="button" key={s} onClick={() => setSymbol(s)} className={`flex min-h-9 w-full items-center justify-between rounded border px-3 py-2 text-left ${s === symbol ? "border-[#3b82f6] bg-[#132033] text-white" : "border-[#263241] hover:bg-[#111a25]"}`}><span>{s}</span><span className="text-xs text-[#64748b]">{s === symbol && last ? last.close.toFixed(5) : "—"}</span></button>)}</div>
+      {tab === "watchlist" && (
+        <div className="space-y-1.5">
+          {DEFAULT_WATCHLIST.map(s => (
+            <button
+              type="button"
+              key={s}
+              onClick={() => setSymbol(s)}
+              className={`flex min-h-9 w-full items-center justify-between rounded border px-3 py-2 text-left ${s === symbol ? "border-[#3b82f6] bg-[#132033] text-white" : "border-[#263241] hover:bg-[#111a25]"}`}
+            >
+              <span>{s}</span>
+              <span className="text-xs text-[#64748b]">{s === symbol && last ? last.close.toFixed(5) : "—"}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {tab === "structure" && <div className="space-y-3">
         <div className="rounded border border-[#263241] bg-[#0a0f16] p-3">
