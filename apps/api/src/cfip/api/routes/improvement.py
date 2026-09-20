@@ -1,4 +1,4 @@
-"""Governed Elyrava improvement proposal endpoint.
+"""Governed Cortex improvement proposal endpoint.
 
 This creates a proposal record in the request boundary only; persistence and promotion
 must be connected to authenticated control-plane storage before production use.
