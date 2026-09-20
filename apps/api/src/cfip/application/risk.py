@@ -10,6 +10,11 @@ from cfip.domain.risk import (
 )
 
 
+def _step_down(quantity: float, step: float) -> float:
+    """Round a broker quantity down while avoiding binary-float step drift."""
+    return max(0.0, floor((quantity / step) + 1e-12) * step)
+
+
 class RiskService:
     @staticmethod
     def plan(
@@ -55,10 +60,28 @@ class RiskService:
                 stop=stop,
                 risk_distance=distance,
             )
+
         risk_amount = account.equity * account.risk_fraction
         value_per_price_unit = instrument.tick_value_per_unit / instrument.tick_size
-        quantity = risk_amount / (distance * value_per_price_unit * quote_to_account_rate)
-        stepped = floor(quantity / instrument.quantity_step) * instrument.quantity_step
+        denominator = distance * value_per_price_unit * quote_to_account_rate
+        if denominator <= 0 or not isfinite(denominator):
+            return RiskTargetPlan(
+                available=False,
+                reason="invalid_risk_denominator",
+                direction=request.direction,
+                entry=request.entry,
+                stop=stop,
+                tp1=targets[0],
+                tp2=targets[1],
+                tp3=targets[2],
+                risk_distance=distance,
+                risk_amount=risk_amount,
+            )
+
+        quantity = risk_amount / denominator
+        stepped = _step_down(quantity, instrument.quantity_step)
+        max_stepped = _step_down(instrument.max_quantity, instrument.quantity_step)
+        stepped = min(stepped, max_stepped)
         if stepped < instrument.min_quantity:
             return RiskTargetPlan(
                 available=False,
@@ -72,8 +95,23 @@ class RiskService:
                 risk_distance=distance,
                 risk_amount=risk_amount,
             )
-        stepped = min(stepped, instrument.max_quantity)
+
         margin_required = (stepped * request.entry * quote_to_account_rate) / account.leverage
+        if not isfinite(margin_required) or margin_required > account.equity:
+            return RiskTargetPlan(
+                available=False,
+                reason="margin_exceeds_equity",
+                direction=request.direction,
+                entry=request.entry,
+                stop=stop,
+                tp1=targets[0],
+                tp2=targets[1],
+                tp3=targets[2],
+                risk_distance=distance,
+                risk_amount=risk_amount,
+                quantity=stepped,
+                margin_required=margin_required,
+            )
 
         return RiskTargetPlan(
             available=True,
