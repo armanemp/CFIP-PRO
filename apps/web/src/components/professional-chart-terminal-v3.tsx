@@ -107,7 +107,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
           threshold: backendAnalysis.confluence_threshold,
           accepted: backendAnalysis.confluence_accepted,
           gates: backendAnalysis.gates.filter((gate): gate is UnifiedAnalysis["confluence"]["gates"][number] =>
-            ["htf_alignment","liquidity_or_fvg","zone_or_premium","displacement_or_structure"].includes(gate.id),
+            ["htf_alignment","liquidity_or_fvg","zone_or_premium","displacement_or_structure","data_quality"].includes(gate.id),
           ).map(gate => ({ id: gate.id, passed: gate.passed, detail: gate.detail })),
         },
       }
