@@ -32,6 +32,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<IndicatorId[]>(["EMA20"]),[indicatorParameters,setIndicatorParameters]=useState<Record<string,Record<string,number>>>(()=>Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)]))),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const { brand: intelligenceBrand } = useIntelligenceBrand();
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
+  const selectedDrawingIdRef=useRef<string|null>(selectedDrawingId);
+  selectedDrawingIdRef.current=selectedDrawingId;
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
   const drawingHistoryRef=useRef<Drawing[][]>([]);
@@ -54,7 +56,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       end: Math.max(current.start, liveCandles.length - 1),
       cursor: Math.min(current.cursor, Math.max(current.start, liveCandles.length - 1)),
     }));
-  }, [liveCandles.length]);
+  }, [liveCandles.length, replay.status]);
 
   useEffect(() => {
     if (replay.status !== "playing") return;
@@ -73,7 +75,9 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const analysisSnapshot = useMemo(() => computeAnalysisSnapshot(candles, tf), [candles, tf]);
   const analysisCandles = candles.length > 1 ? candles.slice(0, -1) : candles;
   const analysis = analysisSnapshot.analysis;
-  const closedBarKey = analysisCandles.at(-1)?.time ?? null;
+  const requestCandlesRef=useRef(candles);
+  requestCandlesRef.current=candles;
+  const closedBarKey = String(analysisCandles.length) + ":" + String(analysisCandles.at(-1)?.time ?? "");
   useEffect(() => {
     if (analysisCandles.length < 5) {
       setBackendAnalysis(null);
@@ -83,7 +87,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     let active = true;
     const run = async () => {
       try {
-        const result = await postUnifiedAnalysis(symbol, tf, candles, controller.signal);
+        const result = await postUnifiedAnalysis(symbol, tf, requestCandlesRef.current, controller.signal);
         if (active) setBackendAnalysis(result);
       } catch {
         if (active && !controller.signal.aborted) setBackendAnalysis(null);
@@ -195,16 +199,30 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(document.fullscreenElement)await document.exitFullscreen();
     else await element.requestFullscreen();
   };
+  const drawingActionsRef=useRef<{
+    resetView:()=>void;
+    updateDrawings:(next:Drawing[] | ((current:Drawing[])=>Drawing[]))=>void;
+    undoDrawing:()=>void;
+    redoDrawing:()=>void;
+    toggleFullscreen:()=>Promise<void>;
+  }>({
+    resetView:()=>undefined,
+    updateDrawings:()=>undefined,
+    undoDrawing:()=>undefined,
+    redoDrawing:()=>undefined,
+    toggleFullscreen:async()=>undefined,
+  });
+  drawingActionsRef.current={resetView,updateDrawings,undoDrawing,redoDrawing,toggleFullscreen};
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (event.key === "Escape") { setPanel(null); setTool("cursor"); setPendingPoint(null); setSelectedDrawingId(null); return; }
-      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="z") { event.preventDefault(); if(event.shiftKey) redoDrawing(); else undoDrawing(); return; }
-      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="y") { event.preventDefault(); redoDrawing(); return; }
-      if ((event.key==="Delete"||event.key==="Backspace") && selectedDrawingId) { updateDrawings(current=>current.filter(d=>d.id!==selectedDrawingId)); setSelectedDrawingId(null); return; }
-      if (event.key === "f" || event.key === "F") { void toggleFullscreen(); return; }
-      if (event.key === "r" || event.key === "R") { resetView(); return; }
+      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="z") { event.preventDefault(); if(event.shiftKey) drawingActionsRef.current.redoDrawing(); else drawingActionsRef.current.undoDrawing(); return; }
+      if ((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==="y") { event.preventDefault(); drawingActionsRef.current.redoDrawing(); return; }
+      if ((event.key==="Delete"||event.key==="Backspace") && selectedDrawingIdRef.current) { const id=selectedDrawingIdRef.current; drawingActionsRef.current.updateDrawings(current=>current.filter(d=>d.id!==id)); setSelectedDrawingId(null); return; }
+      if (event.key === "f" || event.key === "F") { void drawingActionsRef.current.toggleFullscreen(); return; }
+      if (event.key === "r" || event.key === "R") { drawingActionsRef.current.resetView(); return; }
       if (event.key === "1") setTf("1m");
       if (event.key === "2") setTf("5m");
       if (event.key === "3") setTf("15m");
@@ -262,14 +280,15 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     return()=>{c.remove();chartRef.current=null;};
   },[]);
 
+  const showGrid=prefs.showGrid;
   useEffect(() => {
     chartRef.current?.applyOptions({
       grid: {
-        vertLines: { color: prefs.showGrid ? "#141b25" : "transparent" },
-        horzLines: { color: prefs.showGrid ? "#141b25" : "transparent" },
+        vertLines: { color: showGrid ? "#141b25" : "transparent" },
+        horzLines: { color: showGrid ? "#141b25" : "transparent" },
       },
     });
-  }, [prefs.showGrid]);
+  }, [showGrid]);
 
   useEffect(()=>{
     const c=chartRef.current;
