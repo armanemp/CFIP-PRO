@@ -27,7 +27,7 @@ import { useIntelligenceBrand } from "@/lib/use-intelligence-brand";
 
 export function ProfessionalChartTerminalV3({ observations: initial, symbol: initialSymbol }: { observations: MarketObservation[]; symbol: string }) {
   const host=useRef<HTMLDivElement>(null);
-  const marketVersionRef=useRef(`${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
+  const marketVersionRef=useRef(`${initialSymbol}:${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<IndicatorId[]>(["EMA20"]),[indicatorParameters,setIndicatorParameters]=useState<Record<string,Record<string,number>>>(()=>Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)]))),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
@@ -247,22 +247,25 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
 
   useEffect(()=>{
     let active=true;
+    let controller:AbortController|null=null;
     const load=async()=>{
+      controller?.abort();
+      controller=new AbortController();
       try{
-        const next=await getMarketObservations(symbol,"reference",1000);
-        if(active){
+        const next=await getMarketObservations(symbol,TERMINAL_DATA_DEFAULTS.venue,TERMINAL_DATA_DEFAULTS.initialObservationLimit,controller.signal);
+        if(active && !controller.signal.aborted){
           const latest = next.at(-1);
-          const version = latest ? `${next.length}:${latest.observed_at}:${latest.bid ?? ""}:${latest.ask ?? ""}:${latest.last ?? ""}:${latest.volume ?? ""}` : "0";
+          const version = latest ? symbol + ":" + next.length + ":" + latest.observed_at + ":" + (latest.bid ?? "") + ":" + (latest.ask ?? "") + ":" + (latest.last ?? "") + ":" + (latest.volume ?? "") : symbol + ":0";
           if (version !== marketVersionRef.current) { marketVersionRef.current = version; setRows(next); }
           setLive(next.length>0);setError(false);
         }
       }catch{
-        if(active){setLive(false);setError(true);}
+        if(active && !controller.signal.aborted){setLive(false);setError(true);}
       }
     };
     void load();
     const id=window.setInterval(load,TERMINAL_DATA_DEFAULTS.refreshMs);
-    return()=>{active=false;window.clearInterval(id);};
+    return()=>{active=false;controller?.abort();window.clearInterval(id);};
   },[symbol]);
 
   useEffect(()=>{
