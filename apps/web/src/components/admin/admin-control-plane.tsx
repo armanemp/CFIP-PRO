@@ -60,7 +60,7 @@ function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: str
     {checks.map(([label,ok,detail])=><Card key={label} title={label}><div className={`text-xl font-semibold ${ok?"text-emerald-300":"text-amber-300"}`}>{ok?"READY":"GUARDED"}</div><div className="mt-1 text-[11px] text-[#718096]">{detail}</div></Card>)}
     <Card title="Release posture"><div className="text-xl font-semibold text-white">Governed</div><div className="mt-1 text-[11px] text-[#718096]">Production mutation stays behind explicit control-plane authorization.</div></Card>
     <Card title="Terminal"><div className="text-xl font-semibold text-white">Chart-first</div><div className="mt-1 text-[11px] text-[#718096]">Indicators, analysis, risk and replay are modular domains.</div></Card>
-    <Card title="Intelligence"><div className="text-xl font-semibold text-white">Elyrava</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
+    <Card title="Intelligence"><div className="text-xl font-semibold text-white">Pipvara</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
   </div>;
 }
 
