@@ -7,6 +7,7 @@ export interface TerminalSession {
   locale: Locale;
   tool: Tool;
   selectedStudies: string[];
+  indicatorParameters: Record<string, Record<string, number>>;
   preferences: ChartPreferences;
   drawings: Drawing[];
 }
@@ -23,6 +24,7 @@ export function loadTerminalSession(fallback: TerminalSession): TerminalSession 
       ...fallback,
       ...value,
       selectedStudies: Array.isArray(value.selectedStudies) ? value.selectedStudies : fallback.selectedStudies,
+      indicatorParameters: value.indicatorParameters && typeof value.indicatorParameters === "object" ? value.indicatorParameters : fallback.indicatorParameters,
       preferences: { ...fallback.preferences, ...(value.preferences ?? {}) },
       drawings: Array.isArray(value.drawings) ? value.drawings : fallback.drawings,
     };
