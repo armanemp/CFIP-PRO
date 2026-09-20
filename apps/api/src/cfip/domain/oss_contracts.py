@@ -4,7 +4,8 @@ The platform depends on these stable interfaces, never on vendor-specific
 objects. Concrete OSS integrations live in infrastructure adapters.
 """
 
-from typing import Any, Protocol, Sequence, runtime_checkable
+from collections.abc import Sequence
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
