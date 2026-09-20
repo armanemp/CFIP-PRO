@@ -79,6 +79,17 @@
 - Implementation commits: `30ce82a707589d9bd8e86c14b282e2e209e7ba8e`, `7c05376192f6ca803a421f3c589d9041d04e5733`, `7533a6a28202e1c3b7cbfc3bf1f5686ddb806586`.
 - CI verification is pending GitHub Actions execution for the latest commit; no local build result is claimed here.
 
+# 2026-09-20 — Terminal intelligence identity + indicator pane hardening
+
+- Added a reactive `useIntelligenceBrand` presentation hook so the configured intelligence name/tagline propagates immediately across terminal surfaces without coupling runtime contracts to branding.
+- Changed the Admin Intelligence Identity editor from per-keystroke persistence to explicit **Save identity / Reset default** controls with unsaved-state feedback; browser storage remains the current persistence boundary.
+- Surfaced the configured intelligence identity in the terminal header/footer and Intelligence inspector card.
+- Corrected oscillator-pane detection to use the indicator registry's declared pane type. ATR/OBV and future oscillator studies now receive the dedicated oscillator pane instead of colliding with the volume pane.
+- Kept internal intelligence capability identity brand-neutral (`intelligence.core`); changing the display name does not alter providers, contracts or API identifiers.
+- Removed a redundant indicator-renderer argument that was unused after parameter-aware rendering was introduced.
+- Implementation commits: `dc6ec9e6560ba5d133f9075773a0de8e9178d0c2`, `4a9e8162ade0697b7bcfde6e1275e75f0a262106`, `270aa3401765f4667df9715c70a7ca2402e7ead0`, `8e54628ebf6b32fb40cb02314fc235919d8ffd54`, `1b4a42847fcaca963dc77eddf2c54b95f67721d6`.
+- GitHub repository permissions currently report push access for the connected integration. Frontend lint/typecheck/build has **not** been executed in this turn, so no green CI/local verification is claimed.
+
 # CFIP-PRO Canonical Progress Record
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
