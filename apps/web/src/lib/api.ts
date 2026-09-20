@@ -40,7 +40,6 @@ export async function getMarketObservations(symbol: string, venue: string, limit
   return rows;
 }
 
-
 const AnalysisModuleSchema = z.object({
   module: z.string(),
   bias: z.enum(["bullish","bearish","neutral"]),
@@ -56,16 +55,17 @@ const AnalysisGateSchema = z.object({
 });
 const RiskTargetSchema = z.object({
   available: z.boolean(),
-  reason: z.string().nullable(),
-  entry: z.number().nullable(),
+  reason: z.string(),
+  direction: z.enum(["long","short"]),
+  entry: z.number(),
   stop: z.number().nullable(),
-  risk_distance: z.number().nullable(),
   tp1: z.number().nullable(),
   tp2: z.number().nullable(),
   tp3: z.number().nullable(),
-  rr1: z.number().nullable(),
-  rr2: z.number().nullable(),
-  rr3: z.number().nullable(),
+  risk_distance: z.number().nullable(),
+  risk_amount: z.number().nullable(),
+  quantity: z.number().nullable(),
+  margin_required: z.number().nullable(),
 });
 export const UnifiedAnalysisSchema = z.object({
   symbol: z.string(),
@@ -116,7 +116,6 @@ export async function postUnifiedAnalysis(
   if (!response.ok) throw new Error(`Unified analysis request failed: ${response.status}`);
   return UnifiedAnalysisSchema.parse(await response.json());
 }
-
 
 const ProviderSchema = z.object({
   id: z.string(), name: z.string(), kind: z.enum(["market-data","broker","execution","news","fundamentals","ai","research"]),
