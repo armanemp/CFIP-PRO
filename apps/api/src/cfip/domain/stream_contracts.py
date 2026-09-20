@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 StreamKind = Literal["tick", "bar", "orderbook", "news", "analysis", "alert"]
-StreamDecision = Literal["accept", "duplicate", "out_of_order", "invalid"]
+StreamDecision = Literal["accept", "duplicate", "out_of_order"]
 
 
 class StreamKey(BaseModel):
