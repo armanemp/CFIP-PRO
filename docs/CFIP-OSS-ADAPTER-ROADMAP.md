@@ -26,7 +26,7 @@ application/domain boundary.
 | Agent orchestration | LangGraph / Haystack | MIOS agent contract | Benchmark |
 | Feature store | Feast | training feature contract | Benchmark |
 | Dataset versioning | DVC | dataset manifest contract | Benchmark |
-| Drift/evaluation | Evidently | evaluation/drift contract | Benchmark |
+| Drift/evaluation | Evidently | EvaluationAdapter | Adapter implemented; runtime benchmark pending |
 | FIX execution | QuickFIX | execution adapter | Benchmark |
 | Quant research | Qlib | research/backtest adapter | Benchmark |
 
