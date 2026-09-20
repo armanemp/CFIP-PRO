@@ -344,7 +344,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   };
 
   const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
-    if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
+    if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;\n    if((event.target as Element).closest("svg"))return;
     const rect=event.currentTarget.getBoundingClientRect();
     const x=event.clientX-rect.left, y=event.clientY-rect.top;
     const time=chartRef.current.timeScale().coordinateToTime(x);
@@ -438,12 +438,28 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
               const bars=Math.abs(ib-ia);
               return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":"#94a3b8"} strokeWidth={2}/><text x={(x1+x2)/2} y={(y1+y2)/2-8} fill="#d8e0ea" fontSize="11" textAnchor="middle">{distance.toFixed(meta?.digits??5)} · {pct.toFixed(2)}% · {bars} bars</text></g>;
             }
+
             if(d.tool==="long"||d.tool==="short"){
-              const entry=d.a.price, target=d.b.price, risk=Math.abs(target-entry), stop=d.tool==="long"?entry-risk:entry+risk, reward=Math.abs(target-entry), rr=reward/Math.max(Math.abs(entry-stop),Number.EPSILON);
-              const top=Math.min(y1,y2), bottom=Math.max(y1,y2);
-              return <g key={d.id}>{hit(x1,y1,x2,y2)}<rect x={Math.min(x1,x2)} y={top} width={Math.max(40,Math.abs(x2-x1))} height={Math.max(1,bottom-top)} fill={d.tool==="long"?"rgba(34,197,94,.10)":"rgba(239,68,80,.10)"} stroke={stroke} strokeWidth={selectedDrawingId===d.id?2:1}/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={y1} y2={y1} stroke="#fbbf24" strokeWidth="2"/><line x1={Math.min(x1,x2)} x2={Math.max(x1,x2)+40} y1={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} y2={d.tool==="long"?mainRef.current?.priceToCoordinate(stop)??y1:mainRef.current?.priceToCoordinate(stop)??y1} stroke="#ef5350" strokeWidth="1" strokeDasharray="4 3"/><text x={Math.max(x1,x2)+45} y={y1-6} fill="#d8e0ea" fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {rr.toFixed(2)}</text></g>;
+              const entry=d.a.price;
+              const stop=d.b.price;
+              const risk=Math.abs(stop-entry);
+              const validRisk=risk>Number.EPSILON;
+              const target=d.tool==="long"?entry+risk*2:entry-risk*2;
+              const stopY=mainRef.current?.priceToCoordinate(stop) ?? y2;
+              const targetY=mainRef.current?.priceToCoordinate(target) ?? y1;
+              const rr=validRisk?Math.abs(target-entry)/risk:0;
+              const left=Math.min(x1,x2), right=Math.max(x1,x2)+48;
+              const rewardTop=Math.min(y1,targetY), rewardBottom=Math.max(y1,targetY);
+              return <g key={d.id}>{hit(x1,y1,x2,y2)}
+                <rect x={left} y={Math.min(y1,stopY)} width={Math.max(48,right-left)} height={Math.max(1,Math.abs(stopY-y1))} fill="rgba(239,83,80,.09)" stroke="#ef5350" strokeWidth={selectedDrawingId===d.id?2:1}/>
+                <rect x={left} y={rewardTop} width={Math.max(48,right-left)} height={Math.max(1,rewardBottom-rewardTop)} fill={d.tool==="long"?"rgba(34,197,94,.10)":"rgba(239,68,80,.06)"} stroke={stroke} strokeWidth={selectedDrawingId===d.id?2:1}/>
+                <line x1={left} x2={right} y1={y1} y2={y1} stroke="#fbbf24" strokeWidth="2"/>
+                <line x1={left} x2={right} y1={stopY} y2={stopY} stroke="#ef5350" strokeWidth="1" strokeDasharray="4 3"/>
+                <line x1={left} x2={right} y1={targetY} y2={targetY} stroke="#22c55e" strokeWidth="1" strokeDasharray="4 3"/>
+                <text x={right+5} y={y1-6} fill="#d8e0ea" fontSize="10">{d.tool==="long"?"LONG":"SHORT"} · R:R {validRisk?rr.toFixed(2):"—"}</text>
+              </g>;
             }
-            return <g key={d.id}>{hit(x1,y1,x2,y2)}<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
+            return <g key={d.id}>{hit(x1,y1,x2,y2)<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selectedDrawingId===d.id?"#fbbf24":stroke} strokeWidth={selectedDrawingId===d.id?3:(d.tool==="trendline"||d.tool==="ray"||d.tool==="long"||d.tool==="short"?2:1)}/></g>;
           })}
           {pendingPoint && <circle cx={chartRef.current?.timeScale().timeToCoordinate(pendingPoint.time) ?? 0} cy={mainRef.current?.priceToCoordinate(pendingPoint.price) ?? 0} r="4" fill="#fbbf24"/>}
         </svg>
