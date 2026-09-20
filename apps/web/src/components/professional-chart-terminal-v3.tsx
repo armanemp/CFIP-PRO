@@ -8,7 +8,7 @@ import { TerminalSidebar } from "@/components/terminal/terminal-sidebar";
 import { SymbolPicker } from "@/components/terminal/symbol-picker";
 import { ChartAttribution } from "@/components/terminal/chart-attribution";
 import { forexSymbols } from "@/components/terminal/symbols";
-import { t, localeNames, rtlLocales } from "@/components/terminal/i18n";
+import { t, localeNames, rtlLocales, type TranslationKey } from "@/components/terminal/i18n";
 import { DEFAULT_PREFERENCES, type ChartKind, type ChartPreferences, type Drawing, type InspectorTab, type Locale, type Point, type Timeframe, type Tool } from "@/components/terminal/types";
 import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
@@ -19,7 +19,7 @@ import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS, TERMINAL_DATA_DEFAULTS } from "@/components/terminal/terminal-config";
-import { INDICATOR_REGISTRY, defaultIndicatorParameters, getIndicatorDefinition, normalizeIndicatorParameters } from "@/components/terminal/indicator-registry";
+import { INDICATOR_REGISTRY, defaultIndicatorParameters, getIndicatorDefinition, normalizeIndicatorParameters, type IndicatorId } from "@/components/terminal/indicator-registry";
 import { useIntelligenceBrand } from "@/lib/use-intelligence-brand";
 
 
@@ -29,7 +29,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const marketVersionRef=useRef(`${initial.length}:${initial.at(-1)?.observed_at ?? ""}:${initial.at(-1)?.last ?? ""}`);
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
-  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[indicatorParameters,setIndicatorParameters]=useState<Record<string,Record<string,number>>>(()=>Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)]))),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<IndicatorId[]>(["EMA20"]),[indicatorParameters,setIndicatorParameters]=useState<Record<string,Record<string,number>>>(()=>Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)]))),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
   const { brand: intelligenceBrand } = useIntelligenceBrand();
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
@@ -303,7 +303,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     measure:t(locale,"measure"),long:t(locale,"longPosition"),short:t(locale,"shortPosition")
   }[x]);
 
-  const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const toggle=(id:IndicatorId)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
   useEffect(() => {
     const c = chartRef.current;
@@ -332,8 +332,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       const dt=time-drag.startTime, dp=price-drag.startPrice;
       setDrawings(current=>current.map(d=>d.id===drag.id?{
         ...d,
-        a:{...drag.origin.a,time:(drag.origin.a.time as number)+dt,price:drag.origin.a.price+dp},
-        b:{...drag.origin.b,time:(drag.origin.b.time as number)+dt,price:drag.origin.b.price+dp}
+        a:{...drag.origin.a,time:((drag.origin.a.time as number)+dt) as UTCTimestamp,price:drag.origin.a.price+dp},
+        b:{...drag.origin.b,time:((drag.origin.b.time as number)+dt) as UTCTimestamp,price:drag.origin.b.price+dp}
       }:d));
       setOverlayTick(v=>v+1);
     };
@@ -402,13 +402,13 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
         <div className="mt-2 text-[10px] text-[#64748b]">Historical replay freezes the chart cursor while the live feed continues in the background.</div>
       </div>}
       {panel==="timeframe"&&<div data-terminal-panel className="absolute right-52 top-11 z-50 grid w-60 grid-cols-3 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{TIMEFRAMES.map(x=><button key={x} onClick={()=>{setTf(x);setPanel(null)}} className="rounded px-2 py-2 text-xs hover:bg-[#17202c]">{x}</button>)}</div>}
-      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,x==="candles"?"candlestick":x)}</button>)}</div>}
-      {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 w-80 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl"><div className="grid grid-cols-2 gap-1">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div><div className="mt-2 max-h-72 space-y-2 overflow-auto border-t border-[#1f2937] pt-2">{selected.map(id=>{const def=INDICATOR_REGISTRY.find(item=>item.id===id);if(!def?.parameters.length)return null;return <div key={id} className="rounded border border-[#263241] p-2"><div className="mb-1 text-[10px] font-medium text-[#cbd5e1]">{def.name}</div>{def.parameters.map(parameter=>{const value=indicatorParameters[id]?.[parameter.key] ?? parameter.defaultValue;return <label key={parameter.key} className="mb-1 flex items-center justify-between gap-2 text-[10px] text-[#718096]"><span>{t(locale,parameter.labelKey)}</span><input type="number" min={parameter.min} max={parameter.max} step={parameter.step ?? 1} value={value} onChange={event=>setIndicatorParameters(current=>({...current,[id]:normalizeIndicatorParameters(id,{...(current[id] ?? {}),[parameter.key]:Number(event.target.value)})}))} className="w-20 rounded border border-[#334155] bg-[#111821] px-2 py-1 text-right text-[10px] text-[#d8e0ea] outline-none"/></label>})}</div>})}</div></div>}
+      {panel==="chartType"&&<div data-terminal-panel className="absolute right-40 top-11 z-50 w-44 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{CHART_KINDS.map(x=><button key={x} onClick={()=>{setKind(x);setPanel(null)}} className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{t(locale,(x==="candles"?"candlestick":x) as TranslationKey)}</button>)}</div>}
+      {panel==="indicators"&&<div data-terminal-panel className="absolute right-28 top-11 z-50 w-80 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl"><div className="grid grid-cols-2 gap-1">{INDICATORS.map(x=><button key={x} onClick={()=>toggle(x)} className={`rounded px-3 py-2 text-left text-xs ${selected.includes(x)?"bg-[#20354b] text-white":"hover:bg-[#17202c]"}`}>{x}</button>)}</div><div className="mt-2 max-h-72 space-y-2 overflow-auto border-t border-[#1f2937] pt-2">{selected.map(id=>{const def=INDICATOR_REGISTRY.find(item=>item.id===id);if(!def?.parameters.length)return null;return <div key={id} className="rounded border border-[#263241] p-2"><div className="mb-1 text-[10px] font-medium text-[#cbd5e1]">{def.name}</div>{def.parameters.map(parameter=>{const value=indicatorParameters[id]?.[parameter.key] ?? parameter.defaultValue;return <label key={parameter.key} className="mb-1 flex items-center justify-between gap-2 text-[10px] text-[#718096]"><span>{t(locale,parameter.labelKey as TranslationKey)}</span><input type="number" min={parameter.min} max={parameter.max} step={parameter.step ?? 1} value={value} onChange={event=>setIndicatorParameters(current=>({...current,[id]:normalizeIndicatorParameters(id,{...(current[id] ?? {}),[parameter.key]:Number(event.target.value)})}))} className="w-20 rounded border border-[#334155] bg-[#111821] px-2 py-1 text-right text-[10px] text-[#d8e0ea] outline-none"/></label>})}</div>})}</div></div>}
       {panel==="language"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 grid w-64 grid-cols-2 gap-1 rounded-lg border border-[#334155] bg-[#0d131b] p-2 shadow-2xl">{(Object.keys(localeNames) as Locale[]).map(x=><button key={x} onClick={()=>{setLocale(x);setPanel(null)}} className="rounded px-3 py-2 text-left text-xs hover:bg-[#17202c]">{localeNames[x]}</button>)}</div>}
       {panel==="settings"&&<div data-terminal-panel className="absolute right-2 top-11 z-50 w-72 rounded-lg border border-[#334155] bg-[#0d131b] p-3 shadow-2xl">
         {([
           ["showGrid","grid"],["showVolume","volume"],["showSessions","sessions"],["showBidAsk","bidAsk"],["magnet","magnet"]
-        ] as const).map(([key,label])=><label key={key} className="flex items-center justify-between border-b border-[#1f2937] px-2 py-2.5 text-xs last:border-0"><span>{t(locale,label)}</span><input type="checkbox" checked={prefs[key]} onChange={e=>setPrefs({...prefs,[key]:e.target.checked})}/></label>)}
+        ] as const).map(([key,label])=><label key={key} className="flex items-center justify-between border-b border-[#1f2937] px-2 py-2.5 text-xs last:border-0"><span>{t(locale,label as TranslationKey)}</span><input type="checkbox" checked={prefs[key]} onChange={e=>setPrefs({...prefs,[key]:e.target.checked})}/></label>)}
       </div>}
     </header>
     <div className="flex min-h-0 flex-1">
