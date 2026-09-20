@@ -1,5 +1,5 @@
 import type { Timeframe, Candle } from "./types";
-import { atr, dmi, fvg, liquidityAnalysis, displacementAnalysis, marketStructure, mtfStructure, orderBlocks, premiumDiscount, rsi, macd } from "./chart-math";
+import { atr, fvg, liquidityAnalysis, displacementAnalysis, marketStructure, mtfStructure, orderBlocks, premiumDiscount, rsi, macd } from "./chart-math";
 import { aggregateAnalysis, type UnifiedAnalysis } from "./analysis-contracts";
 
 export interface AnalysisSnapshot {
