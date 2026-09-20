@@ -28,17 +28,18 @@ class PromotionPolicy(BaseModel):
 
 def evaluate_learning_promotion(
     validation: LearningValidation,
-    policy: PromotionPolicy = PromotionPolicy(),
+    policy: PromotionPolicy | None = None,
 ) -> tuple[bool, tuple[str, ...]]:
+    effective_policy = policy or PromotionPolicy()
     reasons: list[str] = []
     if not validation.health_green:
         reasons.append("health_gate_failed")
-    if validation.outcome_count < policy.minimum_outcomes:
+    if validation.outcome_count < effective_policy.minimum_outcomes:
         reasons.append("insufficient_outcomes")
-    if len(set(validation.independent_evidence_ids)) < policy.minimum_independent_evidence:
+    if len(set(validation.independent_evidence_ids)) < effective_policy.minimum_independent_evidence:
         reasons.append("insufficient_independent_evidence")
-    if validation.confidence < policy.minimum_confidence:
+    if validation.confidence < effective_policy.minimum_confidence:
         reasons.append("confidence_below_threshold")
-    if validation.contradictions > policy.max_contradictions:
+    if validation.contradictions > effective_policy.max_contradictions:
         reasons.append("contradictory_evidence")
     return not reasons, tuple(reasons)
