@@ -313,9 +313,9 @@ Each analytical module must have:
 
 ---
 
-# 8. Phase 5 — Intelligence / Pipvara
+# 8. Phase 5 — Intelligence / Elyrava
 
-Pipvara is the internal intelligence subsystem.
+Elyrava is the internal intelligence subsystem.
 
 Build it as a governed pipeline rather than a single opaque model call.
 
