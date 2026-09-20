@@ -1,6 +1,6 @@
 """Deterministic signal lifecycle and outcome analytics services."""
 from hashlib import sha256
-from math import log
+from math import isfinite, log
 
 from cfip.domain.outcomes import (
     CalibrationBin,
@@ -152,6 +152,8 @@ class OutcomeService:
     ) -> CalibrationReport:
         if not predictions:
             return CalibrationReport(sample_count=0)
+        if any(not isfinite(probability) or not 0 <= probability <= 1 for probability, _ in predictions):
+            raise ValueError("calibration_probability_out_of_range")
         bins = max(1, min(50, bins))
         sample_count = len(predictions)
         brier = sum((probability - float(outcome)) ** 2 for probability, outcome in predictions) / sample_count
@@ -203,6 +205,10 @@ class OutcomeService:
         *,
         minimum_sample_count: int = 50,
     ) -> DriftReport:
+        if minimum_sample_count < 1:
+            raise ValueError("minimum_sample_count_must_be_positive")
+        if any(not isfinite(value) for value in (*baseline, *current)):
+            raise ValueError("drift_values_must_be_finite")
         if (
             len(baseline) < minimum_sample_count
             or len(current) < minimum_sample_count
