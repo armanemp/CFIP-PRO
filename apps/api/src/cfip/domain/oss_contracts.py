@@ -56,6 +56,7 @@ class ArtifactVerifier(Protocol):
 
 
 @runtime_checkable
+@runtime_checkable
 class EvaluationAdapter(Protocol):
     provider_id: str
     async def evaluate_drift(self, current_data: Any, reference_data: Any) -> dict[str, Any]: ...
