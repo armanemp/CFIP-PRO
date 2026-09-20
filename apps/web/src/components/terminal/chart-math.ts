@@ -22,6 +22,30 @@ function bucketTimestamp(timestamp: number, tf: Timeframe): number {
   return Math.floor(timestamp / seconds) * seconds;
 }
 
+function aggregateCandles(candles: Candle[], tf: Timeframe): Candle[] {
+  const out = new Map<number, Candle>();
+  for (const candle of candles) {
+    const key = bucketTimestamp(Number(candle.time), tf);
+    const current = out.get(key);
+    if (!current) {
+      out.set(key, {
+        time: key as Candle["time"],
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+        volume: Math.max(0, candle.volume),
+      });
+    } else {
+      current.high = Math.max(current.high, candle.high);
+      current.low = Math.min(current.low, candle.low);
+      current.close = candle.close;
+      current.volume += Math.max(0, candle.volume);
+    }
+  }
+  return [...out.values()].sort((a, b) => Number(a.time) - Number(b.time));
+}
+
 export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
   const out = new Map<number, Candle>();
   for (const row of [...rows].sort((a,b)=>a.observed_at.localeCompare(b.observed_at))) {
@@ -206,7 +230,7 @@ export function mtfStructure(c: Candle[], currentTf: Timeframe): MTFStructureSum
   const index = order.indexOf(currentTf);
   const targets = order.slice(Math.max(0, index - 2), Math.min(order.length, index + 3));
   return targets.map(timeframe => {
-    const candles = toCandles(c.map(x => ({ observed_at: new Date(Number(x.time) * 1000).toISOString(), last: x.close, bid: null, ask: null, volume: x.volume } as never)), timeframe);
+    const candles = aggregateCandles(c, timeframe);
     const structure = marketStructure(candles);
     const points = structure.points.slice(-6);
     const bull = points.filter(p => p.label === "HH" || p.label === "HL").length;
