@@ -1,17 +1,19 @@
 """Optional Qdrant retrieval adapter with a vendor-neutral result shape."""
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 
 class QdrantRetrievalAdapter:
     provider_id = "qdrant"
 
-    def __init__(self, url: str, collection: str, *, api_key: str | None = None) -> None:
+    def __init__(self, url: str, collection: str, *, api_key: str | None = None, vector_name: str | None = None, embed: Callable[[str], Sequence[float]] | Callable[[str], Awaitable[Sequence[float]]] | None = None) -> None:
         self._url = url
         self._collection = collection
         self._api_key = api_key
+        self._vector_name = vector_name
+        self._embed = embed
         self._client: Any | None = None
 
     async def _get_client(self) -> Any:
@@ -41,9 +43,23 @@ class QdrantRetrievalAdapter:
             await client.upsert(collection_name=self._collection, points=points, wait=True)
 
     async def query(self, query: str, *, limit: int = 10) -> Sequence[dict[str, Any]]:
-        raise NotImplementedError(
-            "qdrant_query_requires_embedding_provider:inject_embedding_and_query_contract"
+        if self._embed is None:
+            raise RuntimeError("embedding_provider_required:qdrant_query")
+        client = await self._get_client()
+        vector = self._embed(query)
+        if hasattr(vector, "__await__"):
+            vector = await vector
+        response = await client.query_points(
+            collection_name=self._collection,
+            query=list(vector),
+            using=self._vector_name,
+            limit=limit,
+            with_payload=True,
         )
+        return [
+            {"id": str(point.id), "score": float(point.score), "payload": point.payload or {}}
+            for point in response.points
+        ]
 
     async def close(self) -> None:
         if self._client is not None:
