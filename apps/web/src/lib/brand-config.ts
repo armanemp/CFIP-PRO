@@ -4,12 +4,12 @@ export interface IntelligenceBrandConfig {
 }
 
 export const DEFAULT_INTELLIGENCE_BRAND: IntelligenceBrandConfig = {
-  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "Noverith",
+  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "MIOS",
   tagline: process.env.NEXT_PUBLIC_INTELLIGENCE_TAGLINE?.trim() || "Financial Market Intelligence",
 };
 
-const STORAGE_KEY = "cfip-pro:intelligence-brand:v2";
-const LEGACY_STORAGE_KEY = "cfip-pro:intelligence-brand:v1";
+const STORAGE_KEY = "cfip-pro:intelligence-brand:v3";
+const LEGACY_STORAGE_KEY = "cfip-pro:intelligence-brand:v2";
 
 export function loadIntelligenceBrand(): IntelligenceBrandConfig {
   if (typeof window === "undefined") return DEFAULT_INTELLIGENCE_BRAND;
@@ -17,7 +17,7 @@ export function loadIntelligenceBrand(): IntelligenceBrandConfig {
     const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return DEFAULT_INTELLIGENCE_BRAND;
     const value = JSON.parse(raw) as Partial<IntelligenceBrandConfig>;
-    const migratedName = ["MarketCortex","MarketAevrix","Aevrix","Cortex","Elyrava","Noverith"].includes(value.name?.trim() ?? "") ? DEFAULT_INTELLIGENCE_BRAND.name : value.name?.trim();
+    const migratedName = ["MarketCortex","MarketAevrix","Aevrix","Cortex","Elyrava","Noverith","MIOS"].includes(value.name?.trim() ?? "") ? DEFAULT_INTELLIGENCE_BRAND.name : value.name?.trim();
     const result = {
       name: typeof migratedName === "string" && migratedName ? migratedName : DEFAULT_INTELLIGENCE_BRAND.name,
       tagline: typeof value.tagline === "string" && value.tagline.trim() ? value.tagline.trim() : DEFAULT_INTELLIGENCE_BRAND.tagline,
