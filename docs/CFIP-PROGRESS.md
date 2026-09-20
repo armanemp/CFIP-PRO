@@ -1,3 +1,11 @@
+## 2026-09-21 — broker-aware risk planning API vertical slice
+
+- Exposed the existing deterministic RiskService through POST /api/risk/plan, with explicit account context, instrument/broker constraints and quote-to-account conversion.
+- The API returns the canonical RiskTargetPlan; missing context, invalid conversion, broker minimums and margin constraints remain fail-closed.
+- Added endpoint regression tests for unavailable-without-context and a complete EUR/USD-style broker-aware sizing plan.
+- Removed the superseded duplicate domain/risk_contracts.py contract so the canonical domain/risk.py boundary is the only risk contract.
+- Next completion focus remains connecting real broker/instrument registries to this API and wiring Entry/SL/TP/risk output into the terminal without inventing broker metadata.
+
 ## 2026-09-21 — OSS adapter fabric and evidence-backed health boundary
 
 - Added optional infrastructure adapters for MLflow Model Registry, Qdrant retrieval and OpenTelemetry observability. They use lazy vendor imports so the core native development environment remains lightweight.
