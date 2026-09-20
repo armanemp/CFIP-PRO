@@ -313,9 +313,9 @@ Each analytical module must have:
 
 ---
 
-# 8. Phase 5 — Intelligence / Aevrix
+# 8. Phase 5 — Intelligence / Noverith
 
-Aevrix is the internal intelligence subsystem.
+Noverith is the internal intelligence subsystem.
 
 Build it as a governed pipeline rather than a single opaque model call.
 
