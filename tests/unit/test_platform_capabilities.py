@@ -6,7 +6,7 @@ def test_capability_registry_has_single_contract_for_major_domains() -> None:
     assert "terminal.chart" in ids
     assert "analysis.unified" in ids
     assert "trading.risk" in ids
-    assert "intelligence.elyrava" in ids
+    assert "intelligence.pipvara" in ids
     assert "platform.git-governance" in ids
 
 def test_capability_contracts_are_unique() -> None:
