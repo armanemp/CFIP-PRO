@@ -27,7 +27,7 @@ No candidate becomes production knowledge merely because an LLM generated it.
 
 TrainingPreparationService converts the canonical UnifiedAnalysisRead plus auditable evidence into a deterministic TrainingExample. The feature vector currently captures analysis score/confidence, confluence score, trend/momentum/structure scores, FVG and order-block counts, liquidity-pool count, and aligned MTF count.
 
-This is model-agnostic. A later trainer can consume these examples using a separately governed ML dataset/model registry without coupling the core platform to a specific vendor.
+Training examples remain model-agnostic. `DatasetManifest` now provides an immutable dataset-level lineage boundary: unique example IDs and source hashes, an explicit feature schema, a label policy and a provenance hash are required. This keeps future trainers decoupled from the core platform while making dataset identity and reproducibility explicit.
 
 ## Evidence requirements
 
@@ -73,6 +73,12 @@ CFIP treats self-healing as a controlled engineering feedback loop rather than u
 
 Self-development follows the same boundary. The intelligence layer can research the codebase, identify architecture or quality gaps, generate candidate changes, build experiments and collect evidence. It cannot silently mutate production code or production risk controls. Every promoted change must have provenance, tests, verification evidence, a rollback path and an auditable lifecycle.
 
+### Protected health invariants
+
+The self-healing execution boundary now has a deterministic `HealthInvariantReport`. The protected snapshot covers tests, security, market-data quality/freshness, risk-gate integrity, audit-chain integrity and authorization integrity. Missing observations are treated as blocking rather than healthy, and duplicate observations are rejected. Repair and self-development gates can consume this report and refuse promotion whenever a protected invariant is failing.
+
+This is intentionally an evaluation contract, not an executor. A future runtime health collector must provide signed/auditable evidence to it; the evaluator itself performs no process, shell, network or production mutation.
+
 ### Autonomous improvement domains
 
 - code quality and type safety
@@ -98,8 +104,8 @@ The repository now includes a deterministic signal/outcome boundary in `cfip.dom
 
 ## Implemented self-healing execution boundary
 
-Self-healing is now split into diagnosis/proposal and execution authorization. `self_healing_execution` defines artifact digests, rollback digests, safety invariants, test evidence, canary requirements, approval boundaries, repair budgets and cooldown/circuit-breaker controls. The application service is a pure policy gate: it does not execute shell commands or mutate production. Code changes require explicit approval; self-development remains branch/sandbox-oriented and production application is denied unless an explicit production grant exists. This separation is intentional so a future executor can be independently sandboxed, audited, canaried and rolled back.
+Self-healing is now split into diagnosis/proposal and execution authorization. `self_healing_execution` defines artifact digests, rollback digests, safety invariants, test evidence, canary requirements, approval boundaries, repair budgets and cooldown/circuit-breaker controls. The application service is a pure policy gate: it does not execute shell commands or mutate production. Code changes require explicit approval; self-development remains branch/sandbox-oriented and production application is denied unless an explicit production grant exists. Before execution, an optional health-invariant report can now add a hard blocking reason for every failed or missing protected invariant.
 
 ## Required next hardening layers
 
-Before autonomous execution is enabled, the platform still needs persistent event/audit storage, signed artifact verification, isolated worktrees/containers, a restricted action registry, health-invariant evaluation, canary telemetry, automatic rollback, incident locking/escalation, dependency/security/test-generation agents, dataset manifests and model evaluation/registry. These are release gates, not optional AI features.
+Before autonomous execution is enabled, the platform still needs persistent event/audit storage, cryptographic artifact/signature verification, isolated worktrees/containers, a restricted action registry, a runtime health collector feeding the invariant evaluator, canary telemetry, automatic rollback, incident locking/escalation, dependency/security/test-generation agents, durable dataset manifests and model evaluation/registry. These are release gates, not optional AI features.
