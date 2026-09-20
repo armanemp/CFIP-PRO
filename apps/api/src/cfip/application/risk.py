@@ -57,12 +57,21 @@ class RiskService:
             )
         risk_amount = account.equity * account.risk_fraction
         value_per_price_unit = instrument.tick_value_per_unit / instrument.tick_size
-        quantity = risk_amount / (distance * value_per_price_unit * quote_to_account_rate)
+        quantity_by_risk = risk_amount / (distance * value_per_price_unit * quote_to_account_rate)
+        quantity_by_leverage = (
+            account.equity * account.leverage
+        ) / (request.entry * quote_to_account_rate)
+        quantity = min(quantity_by_risk, quantity_by_leverage, instrument.max_quantity)
         stepped = floor(quantity / instrument.quantity_step) * instrument.quantity_step
         if stepped < instrument.min_quantity:
+            reason = (
+                "leverage_limit_below_minimum_quantity"
+                if quantity_by_leverage < instrument.min_quantity
+                else "risk_budget_below_minimum_quantity"
+            )
             return RiskTargetPlan(
                 available=False,
-                reason="risk_budget_below_minimum_quantity",
+                reason=reason,
                 direction=request.direction,
                 entry=request.entry,
                 stop=stop,
@@ -72,12 +81,15 @@ class RiskService:
                 risk_distance=distance,
                 risk_amount=risk_amount,
             )
-        stepped = min(stepped, instrument.max_quantity)
         margin_required = (stepped * request.entry * quote_to_account_rate) / account.leverage
 
         return RiskTargetPlan(
             available=True,
-            reason="calculated",
+            reason=(
+                "calculated_leverage_capped"
+                if quantity_by_leverage < quantity_by_risk
+                else "calculated"
+            ),
             direction=request.direction,
             entry=request.entry,
             stop=round(stop, 10),
