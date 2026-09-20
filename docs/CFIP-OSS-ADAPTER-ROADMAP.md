@@ -19,7 +19,7 @@ application/domain boundary.
 | Trading/backtest | NautilusTrader | TradingEngineAdapter | Adapter next |
 | ML lifecycle | MLflow | ModelRegistryAdapter | Adapter next |
 | Retrieval | Qdrant / pgvector | RetrievalIndexAdapter | Adapter next |
-| Observability | OpenTelemetry | ObservabilityAdapter | Adapter next |
+| Observability | OpenTelemetry | ObservabilityAdapter | Adapter next |\n| Security scanning | Bandit / pip-audit / Semgrep / OWASP ZAP | SecurityScannerAdapter | Contract added; integration gated |\n| Artifact integrity | Sigstore / cryptographic verification tooling | ArtifactVerifier | Contract added; key-management integration gated |
 | Research/data | OpenBB | ResearchRetriever | Adapter next |
 | Agent orchestration | LangGraph / Haystack | Elyrava agent contract | Benchmark |
 | Feature store | Feast | training feature contract | Benchmark |
