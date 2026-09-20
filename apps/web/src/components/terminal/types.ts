@@ -25,6 +25,8 @@ export interface Candle {
   low: number;
   close: number;
   volume: number;
+  bid?: number;
+  ask?: number;
 }
 
 export interface Point { time: UTCTimestamp; price: number }
