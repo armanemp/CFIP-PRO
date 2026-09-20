@@ -14,7 +14,6 @@ from cfip.domain.config_contracts import (
     NotificationConfig,
     RiskConfig,
 )
-from cfip.domain.intelligence_identity import DEFAULT_INTELLIGENCE_IDENTITY
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -22,11 +21,13 @@ router = APIRouter(prefix="/config", tags=["config"])
 @router.get("/defaults")
 async def defaults() -> dict[str, object]:
     settings = get_settings()
-    identity = DEFAULT_INTELLIGENCE_IDENTITY.model_copy(update={"name": settings.intelligence_name})
+    intelligence = IntelligenceConfig(
+        identity=IntelligenceConfig().identity.model_copy(update={"name": settings.intelligence_name})
+    )
     return {
         "risk": RiskConfig().model_dump(),
-        "intelligence": IntelligenceConfig().model_dump(),
-        "intelligence_identity": identity.model_dump(),
+        "intelligence": intelligence.model_dump(),
+        "intelligence_identity": intelligence.identity.model_dump(),
         "chart": ChartConfig().model_dump(),
         "notifications": NotificationConfig().model_dump(),
         "git_governance": GitGovernanceConfig().model_dump(),
