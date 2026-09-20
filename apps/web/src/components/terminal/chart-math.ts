@@ -54,8 +54,18 @@ export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
     if (!Number.isFinite(timestamp) || !Number.isFinite(value)) continue;
     const key = bucketTimestamp(timestamp, tf);
     const volume = Math.max(0, Number(row.volume ?? 0)); const current = out.get(key);
-    if (!current) out.set(key,{time:key as Candle["time"],open:value,high:value,low:value,close:value,volume:Number.isFinite(volume)?volume:0});
-    else { current.high=Math.max(current.high,value); current.low=Math.min(current.low,value); current.close=value; if(Number.isFinite(volume)) current.volume+=volume; }
+    const bid = row.bid === null ? undefined : Number(row.bid);
+    const ask = row.ask === null ? undefined : Number(row.ask);
+    if (!current) {
+      out.set(key,{time:key as Candle["time"],open:value,high:value,low:value,close:value,volume:Number.isFinite(volume)?volume:0,bid:Number.isFinite(bid)?bid:undefined,ask:Number.isFinite(ask)?ask:undefined});
+    } else {
+      current.high=Math.max(current.high,value);
+      current.low=Math.min(current.low,value);
+      current.close=value;
+      if(Number.isFinite(volume)) current.volume+=volume;
+      if(Number.isFinite(bid)) current.bid=bid;
+      if(Number.isFinite(ask)) current.ask=ask;
+    }
   }
   return [...out.values()];
 }
