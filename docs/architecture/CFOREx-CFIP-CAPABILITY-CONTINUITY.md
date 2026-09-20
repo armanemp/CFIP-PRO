@@ -11,7 +11,7 @@ CForex v0.9.154 is a capability reference for CFIP-PRO, not a code migration tar
 - Journal, outcomes, attribution and calibration.
 - Replay and deterministic evaluation.
 - Research Intelligence Fabric with provenance and point-in-time evidence.
-- Elyrava as a governed intelligence layer; AI cannot directly mutate production.
+- Pipvara as a governed intelligence layer; AI cannot directly mutate production.
 - Sandboxed autonomous research/development with explicit promotion.
 - Dataset/source freshness and rights governance.
 - Release gates, auditability, observability and rollback.
