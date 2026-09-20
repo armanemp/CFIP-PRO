@@ -14,6 +14,7 @@ import type { UnifiedAnalysis } from "@/components/terminal/analysis-contracts";
 import "./terminal/terminal-theme.module.css";
 import { toCandles, fvg, pivots, supportResistance, sessionRange, marketStructure, orderBlocks } from "@/components/terminal/chart-math";
 import { addMainSeries, addVolumeSeries, setMainSeriesData } from "@/components/terminal/chart-engine";
+import { CHART_FONT, CHART_THEME } from "@/components/terminal/chart-theme";
 import { renderRegisteredIndicators } from "@/components/terminal/indicator-renderer";
 import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
@@ -268,11 +269,11 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     if(!host.current)return;
     const c=createChart(host.current,{
       autoSize:true,
-      layout:{background:{type:ColorType.Solid,color:"#080b10"},textColor:"#b7c1ce",fontSize:13,fontFamily:"Inter,Segoe UI,Arial,sans-serif",attributionLogo:true},
-      grid:{vertLines:{color:prefs.showGrid?"#141b25":"transparent"},horzLines:{color:prefs.showGrid?"#141b25":"transparent"}},
-      rightPriceScale:{borderColor:"#2a3442",autoScale:true,alignLabels:true,minimumWidth:86},
+      layout:{background:{type:ColorType.Solid,color:CHART_THEME.background},textColor:CHART_THEME.text,fontSize:13,fontFamily:CHART_FONT,attributionLogo:true},
+      grid:{vertLines:{color:prefs.showGrid?CHART_THEME.grid:"transparent"},horzLines:{color:prefs.showGrid?"#141b25":"transparent"}},
+      rightPriceScale:{borderColor:CHART_THEME.border,autoScale:true,alignLabels:true,minimumWidth:86},
       timeScale:{borderColor:"#2a3442",timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
-      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"},horzLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"}},
+      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:CHART_THEME.crosshair,width:1,style:3,labelBackgroundColor:CHART_THEME.crosshairLabel},horzLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"}},
       handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
       handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},
     });
