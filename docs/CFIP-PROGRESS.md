@@ -1,6 +1,6 @@
 ## 2026-09-19 — platform-wide modularization pass
 
-- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Pipvara intelligence, research, platform governance and admin boundaries.
+- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Elyrava intelligence, research, platform governance and admin boundaries.
 - Exposed the capability registry through `GET /capabilities` so the web/admin surfaces can consume one platform capability truth instead of duplicating feature lists.
 - Expanded configuration contracts for chart defaults, notifications and governed Git operations while retaining provider-neutral secret references.
 - Hardened Git governance contracts: protected CI/security/environment paths, explicit validation/rollback plans, risk classification, approval metadata and prohibition of direct main/master commits through the governed change boundary.
