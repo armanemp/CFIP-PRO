@@ -1,4 +1,4 @@
-from cfip.domain.learning_promotion import LearningValidation, PromotionPolicy, evaluate_learning_promotion
+from cfip.domain.learning_promotion import LearningValidation, evaluate_learning_promotion
 
 
 def test_learning_promotion_requires_independent_evidence_and_health() -> None:
