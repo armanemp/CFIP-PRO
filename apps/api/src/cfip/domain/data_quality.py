@@ -21,6 +21,7 @@ class DataQualityPolicy(BaseModel):
     expected_interval_seconds: int = Field(gt=0)
     max_contiguous_gap_intervals: int = Field(default=2, ge=1, le=12)
     minimum_coverage: float = Field(default=0.95, gt=0, le=1)
+    calendar_month: bool = False
 
 
 class DataQualityReport(BaseModel):
@@ -43,6 +44,15 @@ def _is_same_utc_day(left: int, right: int) -> bool:
     return left_day == right_day
 
 
+def _month_index(timestamp: int) -> int:
+    value = datetime.fromtimestamp(timestamp, tz=UTC)
+    return value.year * 12 + value.month
+
+
+def _calendar_month_delta(left: int, right: int) -> int:
+    return max(1, _month_index(right) - _month_index(left))
+
+
 def assess_data_quality(times: list[int], policy: DataQualityPolicy) -> DataQualityReport:
     ordered = sorted(set(int(value) for value in times if int(value) > 0))
     if not ordered:
@@ -59,15 +69,21 @@ def assess_data_quality(times: list[int], policy: DataQualityPolicy) -> DataQual
     expected = policy.expected_interval_seconds
     threshold = expected * policy.max_contiguous_gap_intervals
     gaps: list[int] = []
+    missing_intervals = 0
     for previous, current in zip(ordered, ordered[1:], strict=False):
         delta = current - previous
-        if delta > threshold and _is_same_utc_day(previous, current):
+        if policy.calendar_month:
+            interval_count = _calendar_month_delta(previous, current)
+            expected_delta = max(expected, delta if interval_count == 1 else expected)
+            if interval_count > policy.max_contiguous_gap_intervals and delta > expected_delta:
+                gaps.append(delta)
+                missing_intervals += interval_count - 1
+        elif delta > threshold and _is_same_utc_day(previous, current):
             gaps.append(delta)
+            missing_intervals += max(0, (delta // expected) - 1)
 
     covered_intervals = max(0, len(ordered) - 1)
-    expected_intervals = covered_intervals + sum(
-        max(0, (gap // expected) - 1) for gap in gaps
-    )
+    expected_intervals = covered_intervals + missing_intervals
     coverage = (
         covered_intervals / expected_intervals
         if expected_intervals > 0
