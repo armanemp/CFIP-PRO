@@ -313,9 +313,9 @@ Each analytical module must have:
 
 ---
 
-# 8. Phase 5 — Intelligence / Cortex
+# 8. Phase 5 — Intelligence / Aevrix
 
-Cortex is the internal intelligence subsystem.
+Aevrix is the internal intelligence subsystem.
 
 Build it as a governed pipeline rather than a single opaque model call.
 
