@@ -5,6 +5,8 @@ import pytest
 from cfip.domain.oss_contracts import (
     MarketDataAdapter,
     ModelRegistryAdapter,
+    SecurityScannerAdapter,
+    ArtifactVerifier,
     require_adapter_capability,
 )
 
@@ -37,3 +39,22 @@ def test_model_registry_adapter_is_runtime_checkable() -> None:
 def test_missing_capability_fails_closed() -> None:
     with pytest.raises(TypeError, match="adapter_missing_contract"):
         require_adapter_capability(object(), MarketDataAdapter)
+
+
+class FakeSecurityScanner:
+    provider_id = "fake"
+
+    async def scan(self, target: str):
+        return []
+
+
+class FakeArtifactVerifier:
+    provider_id = "fake"
+
+    def verify(self, artifact: bytes, digest: str, signature: bytes | None = None):
+        return True
+
+
+def test_security_scanner_and_artifact_verifier_contracts() -> None:
+    assert isinstance(FakeSecurityScanner(), SecurityScannerAdapter)
+    assert isinstance(FakeArtifactVerifier(), ArtifactVerifier)
