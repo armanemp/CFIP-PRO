@@ -1,5 +1,6 @@
 """Pure policy gate for self-healing execution; executors remain outside the domain."""
 
+from cfip.domain.health_invariants import HealthInvariantReport
 from cfip.domain.self_healing_execution import (
     ExecutionGateResult,
     RepairExecutionRequest,
@@ -19,6 +20,7 @@ class SelfHealingExecutionService:
         consecutive_repairs: int,
         consecutive_failures: int = 0,
         cooldown_elapsed: bool,
+        health_report: HealthInvariantReport | None = None,
     ) -> ExecutionGateResult:
         reasons: list[str] = []
         mutation_requires_approval = request.artifact_kind in {
@@ -60,6 +62,9 @@ class SelfHealingExecutionService:
             reasons.append("circuit_breaker_open")
         if not cooldown_elapsed:
             reasons.append("repair_cooldown")
+        if health_report is not None and not health_report.healthy:
+            reasons.append("health_invariants_blocking")
+            reasons.extend(f"health_invariant:{item}" for item in health_report.blocking_invariants)
         return ExecutionGateResult(allowed=not reasons, reasons=reasons)
 
     @staticmethod
@@ -68,6 +73,7 @@ class SelfHealingExecutionService:
         *,
         approval_present: bool,
         signed_artifact: bool,
+        health_report: HealthInvariantReport | None = None,
     ) -> ExecutionGateResult:
         reasons: list[str] = []
         if change.review_required and not approval_present:
@@ -82,4 +88,7 @@ class SelfHealingExecutionService:
             reasons.append("security_evidence_required")
         if not change.production_apply_allowed:
             reasons.append("production_apply_not_granted")
+        if health_report is not None and not health_report.healthy:
+            reasons.append("health_invariants_blocking")
+            reasons.extend(f"health_invariant:{item}" for item in health_report.blocking_invariants)
         return ExecutionGateResult(allowed=not reasons, reasons=reasons)
