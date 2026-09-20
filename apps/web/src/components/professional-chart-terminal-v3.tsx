@@ -272,8 +272,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       layout:{background:{type:ColorType.Solid,color:CHART_THEME.background},textColor:CHART_THEME.text,fontSize:13,fontFamily:CHART_FONT,attributionLogo:true},
       grid:{vertLines:{color:prefs.showGrid?CHART_THEME.grid:"transparent"},horzLines:{color:prefs.showGrid?"#141b25":"transparent"}},
       rightPriceScale:{borderColor:CHART_THEME.border,autoScale:true,alignLabels:true,minimumWidth:86},
-      timeScale:{borderColor:"#2a3442",timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
-      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:CHART_THEME.crosshair,width:1,style:3,labelBackgroundColor:CHART_THEME.crosshairLabel},horzLine:{color:"#66758a",width:1,style:3,labelBackgroundColor:"#354458"}},
+      timeScale:{borderColor:CHART_THEME.border,timeVisible:true,secondsVisible:false,rightOffset:10,barSpacing:9,minBarSpacing:2,maxBarSpacing:30},
+      crosshair:{mode:CrosshairMode.Normal,vertLine:{color:CHART_THEME.crosshair,width:1,style:3,labelBackgroundColor:CHART_THEME.crosshairLabel},horzLine:{color:CHART_THEME.crosshair,width:1,style:3,labelBackgroundColor:CHART_THEME.crosshairLabel}},
       handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:true},
       handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true,axisDoubleClickReset:true},
     });
