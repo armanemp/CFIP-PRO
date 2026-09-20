@@ -38,7 +38,7 @@ PLATFORM_CAPABILITIES: tuple[PlatformCapability, ...] = (
     PlatformCapability(id="trading.risk", kind="trading", maturity="integrated", contract="risk.target.v1"),
     PlatformCapability(id="trading.outcomes", kind="trading", maturity="integrated", contract="signal.outcome.v1", evidence_required=True),
     PlatformCapability(id="trading.journal", kind="trading", maturity="contract", contract="trading.journal.v1"),
-    PlatformCapability(id="intelligence.pipvara", kind="intelligence", maturity="contract", contract="intelligence.pipvara.v1", evidence_required=True),
+    PlatformCapability(id="intelligence.core", kind="intelligence", maturity="contract", contract="intelligence.core.v1", evidence_required=True),
     PlatformCapability(id="intelligence.learning", kind="intelligence", maturity="integrated", contract="learning.feedback.v1", evidence_required=True),
     PlatformCapability(id="intelligence.self-development", kind="intelligence", maturity="contract", contract="evolution.change.v1", evidence_required=True),
     PlatformCapability(id="intelligence.self-healing", kind="intelligence", maturity="integrated", contract="health.remediation.v1", evidence_required=True),
