@@ -96,6 +96,7 @@ export const UnifiedAnalysisSchema = z.object({
   })),
   risk_target: RiskTargetSchema,
   closed_bar_time: z.number().nullable(),
+  data_quality: DataQualitySchema,
 });
 export type UnifiedAnalysisRead = z.infer<typeof UnifiedAnalysisSchema>;
 
@@ -103,11 +104,13 @@ export async function postUnifiedAnalysis(
   symbol: string,
   timeframe: string,
   candles: Array<{ time: number; open: number; high: number; low: number; close: number; volume: number }>,
+  signal?: AbortSignal,
 ): Promise<UnifiedAnalysisRead> {
   const response = await fetch(`${apiBaseUrl}/analysis/unified`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     cache: "no-store",
+    signal,
     body: JSON.stringify({ symbol, timeframe, candles, closed_bar_only: true }),
   });
   if (!response.ok) throw new Error(`Unified analysis request failed: ${response.status}`);
