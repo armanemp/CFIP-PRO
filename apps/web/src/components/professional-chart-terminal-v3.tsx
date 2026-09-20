@@ -19,7 +19,8 @@ import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
-import { INDICATOR_REGISTRY, defaultIndicatorParameters, normalizeIndicatorParameters } from "@/components/terminal/indicator-registry";
+import { INDICATOR_REGISTRY, defaultIndicatorParameters, getIndicatorDefinition, normalizeIndicatorParameters } from "@/components/terminal/indicator-registry";
+import { useIntelligenceBrand } from "@/lib/use-intelligence-brand";
 
 
 
@@ -29,6 +30,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   const chartRef=useRef<IChartApi|null>(null);
   const mainRef=useRef<ISeriesApi<SeriesType>|null>(null);
   const [symbol,setSymbol]=useState(initialSymbol),[rows,setRows]=useState(initial),[tf,setTf]=useState<Timeframe>("1m"),[kind,setKind]=useState<ChartKind>("candles"),[locale,setLocale]=useState<Locale>("en"),[sidebar,setSidebar]=useState(DEFAULT_PREFERENCES.rightSidebar),[rail,setRail]=useState(DEFAULT_PREFERENCES.leftRail),[tab,setTab]=useState<InspectorTab>("market"),[panel,setPanel]=useState<string|null>(null),[tool,setTool]=useState<Tool>("cursor"),[selected,setSelected]=useState<string[]>(["EMA20"]),[indicatorParameters,setIndicatorParameters]=useState<Record<string,Record<string,number>>>(()=>Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)]))),[prefs,setPrefs]=useState<ChartPreferences>(DEFAULT_PREFERENCES),[drawings,setDrawings]=useState<Drawing[]>([]),[pendingPoint,setPendingPoint]=useState<Drawing["a"]|null>(null),[selectedDrawingId,setSelectedDrawingId]=useState<string|null>(null),[sessionReady,setSessionReady]=useState(false),[live,setLive]=useState(false),[error,setError]=useState(false),[backendAnalysis,setBackendAnalysis]=useState<UnifiedAnalysisRead|null>(null),[overlayTick,setOverlayTick]=useState(0);
+  const { brand: intelligenceBrand } = useIntelligenceBrand();
   const drawingDragRef=useRef<{id:string;origin:Drawing;before:Drawing[];startTime:number;startPrice:number}|null>(null);
   const drawingsRef=useRef<Drawing[]>(drawings);
   drawingsRef.current=drawings;
@@ -261,7 +263,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     const visibleRange = c.timeScale().getVisibleLogicalRange();
     for(const pane of c.panes())for(const s of pane.getSeries())c.removeSeries(s);
     while (c.panes().length > 1) c.removePane(c.panes().length - 1);
-    const hasOscillatorPane = selected.some(x => ["RSI14","MACD","DMI14","STOCH14"].includes(x));
+    const hasOscillatorPane = selected.some(x => getIndicatorDefinition(x)?.pane === "oscillator");
     const hasVolumePane = prefs.showVolume;
     if (hasOscillatorPane) c.addPane(true);
     if (hasVolumePane) c.addPane(true);
@@ -270,7 +272,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
     setMainSeriesData(main,kind,candles);
     mainRef.current=main;
 
-    renderRegisteredIndicators(c, candles, selected, 1, indicatorParameters);
+    renderRegisteredIndicators(c, candles, selected, hasOscillatorPane ? 1 : 0, indicatorParameters);
     if (hasOscillatorPane) c.panes()[1].setHeight(170);
     if (hasVolumePane) addVolumeSeries(c,candles,hasOscillatorPane ? 2 : 1);
     if (hasVolumePane) c.panes()[hasOscillatorPane ? 2 : 1].setHeight(110);
@@ -358,7 +360,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   return <div dir={rtlLocales.has(locale)?"rtl":"ltr"} className="cfip-terminal relative flex h-full min-h-0 flex-col bg-[#080b10] text-[#d8e0ea]">
     <header className="cfip-terminal-topbar relative flex h-12 shrink-0 items-center border-b border-[#27313d] bg-[#0d131b] px-2">
       <button onClick={()=>toggleRail(!rail)} title={rail?t(locale,"hideRail"):t(locale,"showRail")} className="mr-2 rounded border border-[#334155] px-2 py-1.5 text-xs">☰</button>
-      <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span></button>
+      <button data-terminal-trigger onClick={()=>setPanel(panel==="symbol"?null:"symbol")} className="flex min-w-[180px] items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-[#17202c]"><strong className="text-[15px]">{symbol}</strong><span className="text-[10px] text-[#66758a]">{meta?.name??"Forex"}</span><span className="hidden xl:inline text-[10px] text-[#536174]">· {intelligenceBrand.name}</span></button>
       {panel==="symbol"&&<div data-terminal-panel className="absolute left-2 top-11 z-50"><SymbolPicker locale={locale} value={symbol} onChange={s=>{setSymbol(s.symbol);setPanel(null)}}/></div>}
       <span className="mx-2 h-5 w-px bg-[#293342]"/>
       <div className="flex gap-1">{TIMEFRAMES.map(x=><button key={x} onClick={()=>setTf(x)} className={`rounded px-2.5 py-1.5 text-xs ${tf===x?"bg-[#23364d] text-white":"text-[#8391a4] hover:bg-[#17202c]"}`}>{x}</button>)}<button data-terminal-trigger onClick={()=>setPanel(panel==="timeframe"?null:"timeframe")} className="rounded px-2 text-[#8391a4]">⋯</button></div>
