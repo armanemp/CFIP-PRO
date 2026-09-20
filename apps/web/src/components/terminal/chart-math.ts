@@ -109,8 +109,9 @@ export function macd(c: Candle[], fast=12, slow=26, signal=9) {
     return f === undefined ? [] : [{ time: x.time, value: f - x.value }];
   });
   const signalLine = ema(macdLine.map(x => ({ ...x, open: x.value, high: x.value, low: x.value, close: x.value, volume: 0 })), signal);
+  const signalByTime = new Map(signalLine.map(x => [x.time, x.value]));
   return { macd: macdLine, signal: signalLine, histogram: macdLine.flatMap(x => {
-    const s = signalLine.find(q => q.time === x.time)?.value;
+    const s = signalByTime.get(x.time);
     return s === undefined ? [] : [{ time: x.time, value: x.value - s }];
   }) };
 }
