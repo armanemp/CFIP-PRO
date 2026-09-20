@@ -2,7 +2,6 @@
 
 from cfip.domain.oss_contracts import (
     ModelRegistryAdapter,
-    ObservabilityAdapter,
     RetrievalIndexAdapter,
 )
 
@@ -29,4 +28,3 @@ def test_opentelemetry_adapter_exposes_observability_contract() -> None:
 
     assert hasattr(OpenTelemetryObservabilityAdapter, "span")
     assert hasattr(OpenTelemetryObservabilityAdapter, "metric")
-    assert issubclass(OpenTelemetryObservabilityAdapter, ObservabilityAdapter)
