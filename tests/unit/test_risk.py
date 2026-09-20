@@ -59,6 +59,7 @@ def test_risk_calculates_stop_targets_and_quantity() -> None:
     assert result.tp1 == 1.1015
     assert result.tp2 == 1.103
     assert result.tp3 == 1.1045
+    assert result.quantity == 100_000
     assert result.quantity is not None and result.quantity > 0
 
 
@@ -100,3 +101,37 @@ def test_risk_rejects_non_positive_computed_stop() -> None:
     )
     assert result.available is False
     assert result.reason == "stop_price_non_positive"
+
+
+def test_risk_caps_quantity_on_a_valid_broker_step() -> None:
+    account, instrument = _contexts()
+    instrument = instrument.model_copy(update={"max_quantity": 99_999.5, "quantity_step": 100})
+    request = RiskTargetRequest(
+        direction="long",
+        entry=1.1,
+        atr=0.001,
+        stop_atr_multiplier=1.5,
+        target_rr=(1.0, 2.0, 3.0),
+        minimum_rr=1.0,
+    )
+    result = RiskService.plan(request, account=account, instrument=instrument, quote_to_account_rate=1.0)
+    assert result.available is True
+    assert result.quantity == 99_900
+    assert result.quantity % instrument.quantity_step == 0
+
+
+def test_risk_rejects_when_margin_exceeds_equity() -> None:
+    account, instrument = _contexts()
+    account = account.model_copy(update={"equity": 100, "risk_fraction": 0.01})
+    request = RiskTargetRequest(
+        direction="long",
+        entry=1.1,
+        atr=0.001,
+        stop_atr_multiplier=1.5,
+        target_rr=(1.0, 2.0, 3.0),
+        minimum_rr=1.0,
+    )
+    result = RiskService.plan(request, account=account, instrument=instrument, quote_to_account_rate=1.0)
+    assert result.available is False
+    assert result.reason == "margin_exceeds_equity"
+    assert result.margin_required is not None and result.margin_required > account.equity
