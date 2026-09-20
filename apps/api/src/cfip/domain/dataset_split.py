@@ -4,7 +4,6 @@ The training fabric must never infer future labels or allow the same example to
 cross train/validation/test boundaries. Splits are deterministic and evaluated
 against an explicit as-of boundary.
 """
-from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -31,7 +30,11 @@ class TemporalDatasetSplit(BaseModel):
         }
         if any(not ids for ids in groups.values()):
             raise ValueError("dataset_split_requires_all_partitions")
-        if (groups["train"] & groups["validation"]) or (groups["train"] & groups["test"]) or (groups["validation"] & groups["test"]):
+        if (
+            (groups["train"] & groups["validation"])
+            or (groups["train"] & groups["test"])
+            or (groups["validation"] & groups["test"])
+        ):
             raise ValueError("dataset_split_overlap")
         return self
 
@@ -55,6 +58,15 @@ def build_temporal_split(
         if example.observed_at > as_of:
             raise ValueError("future_example_after_as_of")
     train = tuple(e.example_id for e in examples if e.observed_at <= train_end)
-    validation = tuple(e.example_id for e in examples if train_end < e.observed_at <= validation_end)
-    test = tuple(e.example_id for e in examples if validation_end < e.observed_at <= as_of)
-    return TemporalDatasetSplit(train_ids=train, validation_ids=validation, test_ids=test, as_of=as_of)
+    validation = tuple(
+        e.example_id for e in examples if train_end < e.observed_at <= validation_end
+    )
+    test = tuple(
+        e.example_id for e in examples if validation_end < e.observed_at <= as_of
+    )
+    return TemporalDatasetSplit(
+        train_ids=train,
+        validation_ids=validation,
+        test_ids=test,
+        as_of=as_of,
+    )
