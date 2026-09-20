@@ -1,4 +1,4 @@
-import type { IChartApi } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import type { Candle } from "./types";
 import { getIndicatorDefinition, normalizeIndicatorParameters, type IndicatorId } from "./indicator-registry";
 import { atr, ema, bollinger, sma, wma, vwap, obv, rsi, macd, dmi, stochastic, donchian, keltner, ichimoku } from "./chart-math";
@@ -11,6 +11,7 @@ const COLORS: Record<string, string> = {
 };
 
 export type IndicatorParameterMap = Readonly<Record<string, Readonly<Record<string, number>>>>;
+export type RenderedIndicatorSeries = ISeriesApi<SeriesType>[];
 
 export function renderRegisteredIndicators(
   chart: IChartApi,
@@ -18,9 +19,12 @@ export function renderRegisteredIndicators(
   selected: readonly string[],
   oscillatorPaneIndex = 1,
   parameterMap: IndicatorParameterMap = {},
-): void {
-  const add = (data: Parameters<typeof addIndicatorSeries>[1], color: string, title: string, pane = 0, width = 1) =>
-    addIndicatorSeries(chart, data, color, title, pane, width);
+): RenderedIndicatorSeries {
+  const rendered: RenderedIndicatorSeries = [];
+  const add = (data: Parameters<typeof addIndicatorSeries>[1], color: string, title: string, pane = 0, width = 1) => {
+    const series = addIndicatorSeries(chart, data, color, title, pane, width);
+    rendered.push(series);
+  };
   const params = (id: IndicatorId) => normalizeIndicatorParameters(id, parameterMap[id] ?? {});
 
   for (const rawId of selected) {
@@ -42,7 +46,7 @@ export function renderRegisteredIndicators(
         const value = macd(candles, Math.round(p.fast ?? 12), Math.round(p.slow ?? 26), Math.round(p.signal ?? 9));
         add(value.macd, "#38bdf8", "MACD", oscillatorPaneIndex, 2);
         add(value.signal, "#f59e0b", "MACD signal", oscillatorPaneIndex, 1);
-        addIndicatorHistogram(chart, value.histogram, "MACD histogram", oscillatorPaneIndex);
+        rendered.push(addIndicatorHistogram(chart, value.histogram, "MACD histogram", oscillatorPaneIndex));
         break;
       }
       case "DMI14": {
@@ -84,4 +88,5 @@ export function renderRegisteredIndicators(
       }
     }
   }
+  return rendered;
 }
