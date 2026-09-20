@@ -1,6 +1,7 @@
 import { ColorType, CrosshairMode } from "lightweight-charts";
 import type { ChartPreferences } from "./types";
 import { TERMINAL_THEME } from "./terminal-theme";
+import { TERMINAL_CHART_LAYOUT } from "./terminal-config";
 
 export function terminalChartOptions(prefs: ChartPreferences) {
   return {
@@ -8,8 +9,8 @@ export function terminalChartOptions(prefs: ChartPreferences) {
     layout: {
       background: { type: ColorType.Solid, color: TERMINAL_THEME.background },
       textColor: TERMINAL_THEME.chartText,
-      fontSize: 13,
-      fontFamily: "Inter,Segoe UI,Arial,sans-serif",
+      fontSize: TERMINAL_CHART_LAYOUT.fontSize,
+      fontFamily: TERMINAL_CHART_LAYOUT.fontFamily,
       attributionLogo: true,
     },
     grid: {
@@ -20,16 +21,16 @@ export function terminalChartOptions(prefs: ChartPreferences) {
       borderColor: TERMINAL_THEME.borderSubtle,
       autoScale: true,
       alignLabels: true,
-      minimumWidth: 86,
+      minimumWidth: TERMINAL_CHART_LAYOUT.priceScaleMinWidth,
     },
     timeScale: {
       borderColor: TERMINAL_THEME.borderSubtle,
       timeVisible: true,
       secondsVisible: false,
-      rightOffset: 10,
-      barSpacing: 9,
-      minBarSpacing: 2,
-      maxBarSpacing: 30,
+      rightOffset: TERMINAL_CHART_LAYOUT.rightOffset,
+      barSpacing: TERMINAL_CHART_LAYOUT.barSpacing,
+      minBarSpacing: TERMINAL_CHART_LAYOUT.minBarSpacing,
+      maxBarSpacing: TERMINAL_CHART_LAYOUT.maxBarSpacing,
     },
     crosshair: {
       mode: CrosshairMode.Normal,
