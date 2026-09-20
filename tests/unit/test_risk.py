@@ -36,6 +36,8 @@ def test_risk_requires_explicit_context() -> None:
     )
     result = RiskService.plan(request, account=None, instrument=None, quote_to_account_rate=None)
     assert result.available is False
+    assert result.direction == "long"
+    assert result.entry == 1.1
 
 
 def test_risk_calculates_stop_targets_and_quantity() -> None:
@@ -59,7 +61,7 @@ def test_risk_calculates_stop_targets_and_quantity() -> None:
     assert result.tp1 == 1.1015
     assert result.tp2 == 1.103
     assert result.tp3 == 1.1045
-    assert result.quantity == 100_000
+    assert result.quantity == 66_666
     assert result.quantity is not None and result.quantity > 0
 
 
@@ -116,13 +118,13 @@ def test_risk_caps_quantity_on_a_valid_broker_step() -> None:
     )
     result = RiskService.plan(request, account=account, instrument=instrument, quote_to_account_rate=1.0)
     assert result.available is True
-    assert result.quantity == 99_900
+    assert result.quantity == 66_600
     assert result.quantity % instrument.quantity_step == 0
 
 
 def test_risk_rejects_when_margin_exceeds_equity() -> None:
     account, instrument = _contexts()
-    account = account.model_copy(update={"equity": 100, "risk_fraction": 0.01})
+    account = account.model_copy(update={"equity": 100, "leverage": 5, "risk_fraction": 0.01})
     request = RiskTargetRequest(
         direction="long",
         entry=1.1,
