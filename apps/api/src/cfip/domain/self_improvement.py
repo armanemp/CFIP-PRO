@@ -1,4 +1,4 @@
-"""Governed self-development contracts for Elyrava.
+"""Governed self-development contracts for Pipvara.
 
 The platform can observe, diagnose and propose improvements. Promotion remains a
 separate authorization boundary and must carry evidence plus rollback information.
