@@ -15,7 +15,7 @@ def test_nautilus_adapter_implements_trading_contract() -> None:
 @pytest.mark.asyncio
 async def test_nautilus_adapter_rejects_incomplete_request() -> None:
     adapter = NautilusTraderEngineAdapter()
-    with pytest.raises(ValueError, match="data_required"):
+    with pytest.raises(ValueError, match="request_required"):
         await adapter.backtest({})
 
 
