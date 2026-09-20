@@ -4,7 +4,6 @@ The collector does not invent health. Every protected invariant must be supplied
 by an explicit signal with its own observation timestamp and evidence IDs.
 """
 
-from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from cfip.domain.health_invariants import HealthInvariantObservation, InvariantId
