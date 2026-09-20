@@ -19,7 +19,7 @@ import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
 import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
-import { INDICATOR_REGISTRY, defaultIndicatorParameters, normalizeIndicatorParameters, type IndicatorId } from "@/components/terminal/indicator-registry";
+import { INDICATOR_REGISTRY, defaultIndicatorParameters, normalizeIndicatorParameters } from "@/components/terminal/indicator-registry";
 
 
 
@@ -120,6 +120,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       locale: "en",
       tool: "cursor",
       selectedStudies: ["EMA20"],
+      indicatorParameters: Object.fromEntries(INDICATOR_REGISTRY.map(def=>[def.id,defaultIndicatorParameters(def.id)])),
       preferences: DEFAULT_PREFERENCES,
       drawings: [],
     });
@@ -143,7 +144,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       symbol, timeframe: tf, chartKind: kind, locale, tool,
       selectedStudies: selected, indicatorParameters, preferences: { ...prefs, rightSidebar: sidebar, leftRail: rail }, drawings,
     });
-  }, [sessionReady, symbol, tf, kind, locale, tool, selected, prefs, sidebar, rail, drawings]);
+  }, [sessionReady, symbol, tf, kind, locale, tool, selected, indicatorParameters, prefs, sidebar, rail, drawings]);
 
   const resetView=()=>chartRef.current?.timeScale().fitContent();
   const updateDrawings=(next: Drawing[] | ((current: Drawing[]) => Drawing[]))=>{
