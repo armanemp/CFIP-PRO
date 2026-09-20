@@ -1,5 +1,7 @@
 """Tests for causal signal lifecycle and outcome analytics."""
 
+import pytest
+
 from cfip.application.outcomes import OutcomeService
 from cfip.domain.outcomes import OutcomeObservation, SignalGatePolicy, SignalLifecycle
 
@@ -105,6 +107,22 @@ def test_calibration_and_drift_have_sample_guards() -> None:
     drift = service.drift([0.5] * 49, [0.9] * 50)
     assert not drift.detected
     assert drift.reason == "insufficient_samples"
+
+
+@pytest.mark.parametrize("probability", [-0.01, 1.01, float("nan"), float("inf")])
+def test_calibration_rejects_invalid_probabilities(probability: float) -> None:
+    with pytest.raises(ValueError, match="calibration_probability_out_of_range"):
+        OutcomeService.calibration([(probability, True)])
+
+
+def test_drift_rejects_non_finite_values() -> None:
+    with pytest.raises(ValueError, match="drift_values_must_be_finite"):
+        OutcomeService.drift([0.5] * 49 + [float("nan")], [0.9] * 50)
+
+
+def test_drift_rejects_invalid_sample_threshold() -> None:
+    with pytest.raises(ValueError, match="minimum_sample_count_must_be_positive"):
+        OutcomeService.drift([0.5], [0.9], minimum_sample_count=0)
 
 
 def test_outcome_marks_same_bar_stop_and_target_as_ambiguous() -> None:
