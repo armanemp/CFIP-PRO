@@ -4,6 +4,17 @@ const HealthSchema = z.object({ status: z.string(), service: z.string(), timesta
 export const MarketObservationSchema = z.object({ id: z.string().uuid(), instrument_id: z.string().uuid(), observed_at: z.string(), bid: z.string().nullable(), ask: z.string().nullable(), last: z.string().nullable(), volume: z.string().nullable(), source: z.string(), source_event_id: z.string().nullable(), created_at: z.string() });
 export type MarketObservation = z.infer<typeof MarketObservationSchema>;
 const MarketObservationListSchema = z.array(MarketObservationSchema);
+const DataQualitySchema = z.object({
+  status: z.enum(["ok","degraded","insufficient"]),
+  expected_interval_seconds: z.number(),
+  candle_count: z.number(),
+  contiguous_gap_count: z.number(),
+  largest_contiguous_gap_seconds: z.number(),
+  coverage_ratio: z.number(),
+  first_bar_time: z.number().nullable(),
+  last_bar_time: z.number().nullable(),
+  reasons: z.array(z.string()),
+});
 const DemoBarSchema = z.object({ time: z.string(), open: z.number(), high: z.number(), low: z.number(), close: z.number(), volume: z.number() });
 const DemoMarketSchema = z.object({ provider: z.string(), symbol: z.string(), ticker: z.string(), delay_note: z.string(), observed_at: z.string(), bid: z.number().nullable(), ask: z.number().nullable(), last: z.number().nullable(), bars: z.array(DemoBarSchema) });
 export type DemoMarket = z.infer<typeof DemoMarketSchema>;
