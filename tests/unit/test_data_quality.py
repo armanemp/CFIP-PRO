@@ -25,3 +25,36 @@ def test_quality_reports_insufficient_history() -> None:
     report = assess_data_quality([1726740000, 1726740060], policy)
     assert report.status == "insufficient"
     assert "too_few_bars" in report.reasons
+
+
+def test_quality_treats_calendar_months_as_variable_length() -> None:
+    from datetime import UTC, datetime
+
+    policy = DataQualityPolicy(expected_interval_seconds=30 * 86400, calendar_month=True)
+    times = [
+        int(datetime(2025, 1, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 2, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 3, 1, tzinfo=UTC).timestamp()),
+    ]
+    report = assess_data_quality(times, policy)
+    assert report.status == "ok"
+    assert report.contiguous_gap_count == 0
+
+
+def test_quality_detects_missing_calendar_month() -> None:
+    from datetime import UTC, datetime
+
+    policy = DataQualityPolicy(
+        expected_interval_seconds=30 * 86400,
+        max_contiguous_gap_intervals=1,
+        calendar_month=True,
+    )
+    times = [
+        int(datetime(2025, 1, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 3, 1, tzinfo=UTC).timestamp()),
+        int(datetime(2025, 4, 1, tzinfo=UTC).timestamp()),
+    ]
+    report = assess_data_quality(times, policy)
+    assert report.contiguous_gap_count == 1
+    assert report.status == "degraded"
+    assert report.coverage_ratio < 1.0
