@@ -2,12 +2,12 @@
 
 - Market observation requests now support end-to-end cancellation, including the real market endpoint and the EUR/USD demo fallback.
 - MACD histogram calculation was changed from repeated linear searches to a time-indexed map, removing the avoidable O(n²) lookup path during indicator rendering/analysis.
-- Audited the repository for the retired **Pipvara** intelligence name and migrated active documentation, governance text, self-improvement contracts, admin capability labels and master workflow references to **Cortex**.
+- Audited the repository for the retired **Pipvara** intelligence name and migrated active documentation, governance text, self-improvement contracts, admin capability labels and master workflow references to **Aevrix**.
 - The terminal remains provider-neutral: Lightweight Charts receives normalized application data, while provider integration stays behind the market-data boundary. TradingView documents that Lightweight Charts has no built-in market data or indicators, so this separation remains intentional. citeturn0search4turn0search0
 
 ## 2026-09-19 — platform-wide modularization pass
 
-- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Cortex intelligence, research, platform governance and admin boundaries.
+- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Aevrix intelligence, research, platform governance and admin boundaries.
 - Exposed the capability registry through `GET /capabilities` so the web/admin surfaces can consume one platform capability truth instead of duplicating feature lists.
 - Expanded configuration contracts for chart defaults, notifications and governed Git operations while retaining provider-neutral secret references.
 - Hardened Git governance contracts: protected CI/security/environment paths, explicit validation/rollback plans, risk classification, approval metadata and prohibition of direct main/master commits through the governed change boundary.
@@ -239,9 +239,9 @@
 
 ## 2026-09-21 — intelligence identity consistency + security OSS boundaries
 
-- Standardized the intelligence presentation name across the active repository from MarketCortex/Elyrava to **Cortex**; the internal capability identifier remains the brand-neutral `intelligence.core` contract so presentation naming cannot change API semantics.
-- Migrated the browser-stored intelligence identity to a v2 key and automatically converts legacy MarketCortex/Elyrava values to Cortex, preventing stale names from surviving in existing sessions.
-- Repository search now has no active source occurrence of MarketCortex or Elyrava after the rename; historical Pipvara wording is being kept only where it describes a retired name in the progress ledger.
+- Standardized the intelligence presentation name across the active repository from MarketAevrix/Elyrava to **Aevrix**; the internal capability identifier remains the brand-neutral `intelligence.core` contract so presentation naming cannot change API semantics.
+- Migrated the browser-stored intelligence identity to a v2 key and automatically converts legacy MarketAevrix/Elyrava values to Aevrix, preventing stale names from surviving in existing sessions.
+- Repository search now has no active source occurrence of MarketAevrix or Elyrava after the rename; historical Pipvara wording is being kept only where it describes a retired name in the progress ledger.
 - Added CFIP-owned `SecurityScannerAdapter` and `ArtifactVerifier` contracts and regression tests. Added Bandit/pip-audit/Semgrep/OWASP ZAP and Sigstore/cryptographic verification as governed OSS candidates rather than silently adding dependencies.
-- Public-name check: Cortex is **not** clear as an exclusive software brand. Current web records show multiple live/active CORTEX marks and Cortex-branded software/AI businesses, including a registered CORTEX mark in software/services and an active Cortex Labs trading name. Therefore CFIP now uses Cortex as the requested internal/presentation working name, but the repository does **not** claim trademark exclusivity or legal clearance. A final public commercial name requires jurisdiction-specific trademark/domain clearance.
+- Public-name check: Aevrix is **not** clear as an exclusive software brand. Current web records show multiple live/active CORTEX marks and Aevrix-branded software/AI businesses, including a registered CORTEX mark in software/services and an active Aevrix Labs trading name. Therefore CFIP now uses Aevrix as the requested internal/presentation working name, but the repository does **not** claim trademark exclusivity or legal clearance. A final public commercial name requires jurisdiction-specific trademark/domain clearance.
 - Security/identity implementation commits: 6d0bf655da46b4da266ea520a420d679034431d1, 16edafb678bbdd64073c8353fe8994fa86aa1535, df21e8ac7024a639effb924f3381b65ac1b4367d, 92fd0aa47e302ea7acc4e5a4cf98d25b6b532aad, f2382aea061ed095726b89663946ec2eefcdbf76, b4267b2e36d5cb7ab275240dc19322334057f73b, 4085224f84d19f2c075628a1f6de014adfa60cfc, f8da5f2d4fa85fb92885a7eded61dd4fa1272a18, a5e47daa533842dfdc4092fd30474574fd894ac6, 6a69a1a69cf21c62ada009ff29d058e297b18bce, 24d93a29ffa3a0b972112a43a9a89d8c3fccfdc6, de43f169e383d2d60b63a9eb7ce5732ad109e548.
