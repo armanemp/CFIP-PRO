@@ -87,8 +87,8 @@ class RiskTargetPlan(BaseModel):
 
     available: bool
     reason: str
-    direction: Direction
-    entry: float
+    direction: Direction | None = None
+    entry: float | None = None
     stop: float | None = None
     tp1: float | None = None
     tp2: float | None = None
