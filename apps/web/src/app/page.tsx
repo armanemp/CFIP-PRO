@@ -6,7 +6,7 @@ import { getHealth, getMarketObservations, type MarketObservation } from "@/lib/
 
 const capabilities = [
   ["Professional terminal","Chart-first workspace with multi-pane indicators, drawings, replay, risk and analysis."],
-  ["Pipvara Intelligence","Evidence-grounded market intelligence with deterministic analysis, provenance and governed learning."],
+  ["Market intelligence","Evidence-grounded market intelligence with deterministic analysis, provenance and governed learning."],
   ["Research Fabric","OSS discovery, license boundaries, benchmarks and adapter contracts without vendor lock-in."],
   ["Risk & execution","Broker-aware sizing, account rules, margin and execution safeguards behind explicit authorization."],
   ["Realtime data","Normalized observations, provider abstraction, event-driven architecture and quality controls."],
@@ -29,7 +29,7 @@ export default function Home() {
       <div className="max-w-4xl">
         <div className="mb-5 inline-flex rounded-full border border-[#26364a] bg-[#0c141e] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[#8a9ab0]">AI-native • modular • governed</div>
         <h1 className="text-5xl font-semibold tracking-[-0.04em] text-white md:text-7xl">Market intelligence,<br/><span className="text-[#8aa9c8]">built as a workstation.</span></h1>
-        <p className="mt-6 max-w-2xl text-base leading-7 text-[#8492a5] md:text-lg">CFIP-PRO combines professional charting, deterministic market analysis, broker-aware risk, realtime data and Pipvara intelligence in a modular platform designed for evidence, reproducibility and control.</p>
+        <p className="mt-6 max-w-2xl text-base leading-7 text-[#8492a5] md:text-lg">CFIP-PRO combines professional charting, deterministic market analysis, broker-aware risk, realtime data and market intelligence in a modular platform designed for evidence, reproducibility and control.</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/terminal" className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-[#071018] transition hover:bg-[#d9e5f0]">Open terminal</Link>
           <Link href="/admin" className="rounded-lg border border-[#314154] bg-[#0d141d] px-5 py-3 text-sm font-medium text-white hover:bg-[#131d28]">Control plane</Link>
