@@ -32,10 +32,29 @@ export function setMainSeriesData(series: ChartMainSeries, kind: ChartKind, cand
   }
 }
 
-export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: string, title: string, paneIndex = 0): ISeriesApi<"Line"> {
-  const series = chart.addSeries(LineSeries, { color, lineWidth: 1, title, priceScaleId: paneIndex === 0 ? "right" : "indicator" }, paneIndex);
+export function addIndicatorSeries(chart: IChartApi, data: LinePoint[], color: string, title: string, paneIndex = 0, lineWidth = 1): ISeriesApi<"Line"> {
+  const series = chart.addSeries(LineSeries, { color, lineWidth: Math.max(1, Math.min(4, lineWidth)), title, priceScaleId: paneIndex === 0 ? "right" : "indicator" }, paneIndex);
   try {
     series.setData(data.length ? data : []);
+  } catch {
+    series.setData([]);
+  }
+  return series;
+}
+
+export function addIndicatorHistogram(
+  chart: IChartApi,
+  data: LinePoint[],
+  title: string,
+  paneIndex = 1,
+): ISeriesApi<"Histogram"> {
+  const series = chart.addSeries(
+    HistogramSeries,
+    { priceFormat: { type: "price", precision: 4, minMove: 0.0001 }, title, priceScaleId: "indicator" },
+    paneIndex,
+  );
+  try {
+    series.setData(data.length ? data.map(point => ({ time: point.time, value: point.value })) : []);
   } catch {
     series.setData([]);
   }
