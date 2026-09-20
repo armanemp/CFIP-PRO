@@ -18,7 +18,7 @@ import { renderRegisteredIndicators } from "@/components/terminal/indicator-rend
 import { computeAnalysisSnapshot } from "@/components/terminal/analysis-engine";
 import { createReplayState, replayPause, replayPlay, replayReset, replaySetSpeed, replaySlice, replayStep, type ReplayState } from "@/components/terminal/replay-engine";
 import { loadTerminalSession, saveTerminalSession } from "@/components/terminal/session-storage";
-import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS } from "@/components/terminal/terminal-config";
+import { TIMEFRAMES, INDICATORS, DRAWING_TOOLS, TOOL_GLYPHS, CHART_KINDS, TERMINAL_DATA_DEFAULTS } from "@/components/terminal/terminal-config";
 import { INDICATOR_REGISTRY, defaultIndicatorParameters, getIndicatorDefinition, normalizeIndicatorParameters } from "@/components/terminal/indicator-registry";
 import { useIntelligenceBrand } from "@/lib/use-intelligence-brand";
 
@@ -79,17 +79,18 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       setBackendAnalysis(null);
       return;
     }
+    const controller = new AbortController();
     let active = true;
     const run = async () => {
       try {
-        const result = await postUnifiedAnalysis(symbol, tf, analysisCandles);
+        const result = await postUnifiedAnalysis(symbol, tf, analysisCandles, controller.signal);
         if (active) setBackendAnalysis(result);
       } catch {
-        if (active) setBackendAnalysis(null);
+        if (active && !controller.signal.aborted) setBackendAnalysis(null);
       }
     };
     void run();
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [closedBarKey, symbol, tf]);
 
   const canonicalAnalysis: UnifiedAnalysis = backendAnalysis
@@ -219,7 +220,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       try{
         const next=await getMarketObservations(symbol,"reference",1000);
         if(active){
-          const version = `${next.length}:${next.at(-1)?.observed_at ?? ""}:${next.at(-1)?.last ?? ""}`;
+          const latest = next.at(-1);\n          const version = latest ? `${next.length}:${latest.observed_at}:${latest.bid ?? ""}:${latest.ask ?? ""}:${latest.last ?? ""}:${latest.volume ?? ""}` : "0";
           if (version !== marketVersionRef.current) { marketVersionRef.current = version; setRows(next); }
           setLive(next.length>0);setError(false);
         }
@@ -228,7 +229,7 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       }
     };
     void load();
-    const id=window.setInterval(load,2000);
+    const id=window.setInterval(load,TERMINAL_DATA_DEFAULTS.refreshMs);
     return()=>{active=false;window.clearInterval(id);};
   },[symbol]);
 
