@@ -11,15 +11,16 @@ import {
 } from "lightweight-charts";
 import type { Candle, ChartKind } from "./types";
 import type { LinePoint } from "./chart-series";
+import { CHART_THEME } from "./chart-theme";
 
 export type ChartMainSeries = ISeriesApi<SeriesType>;
 
 export function addMainSeries(chart: IChartApi, kind: ChartKind, firstClose: number): ChartMainSeries {
-  if (kind === "candles") return chart.addSeries(CandlestickSeries, { upColor: "#22b39b", downColor: "#ef5350", borderUpColor: "#22b39b", borderDownColor: "#ef5350", wickUpColor: "#22b39b", wickDownColor: "#ef5350", priceScaleId: "right" }) as ChartMainSeries;
-  if (kind === "bars") return chart.addSeries(BarSeries, { upColor: "#22b39b", downColor: "#ef5350", priceScaleId: "right" }) as ChartMainSeries;
-  if (kind === "area") return chart.addSeries(AreaSeries, { lineColor: "#70a7ff", lineWidth: 2, topColor: "rgba(112,167,255,.25)", bottomColor: "rgba(112,167,255,.02)", priceScaleId: "right" }) as ChartMainSeries;
-  if (kind === "baseline") return chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: firstClose }, topLineColor: "#22b39b", bottomLineColor: "#ef5350", topFillColor1: "rgba(34,179,155,.18)", topFillColor2: "rgba(34,179,155,.02)", bottomFillColor1: "rgba(239,83,80,.02)", bottomFillColor2: "rgba(239,83,80,.18)", priceScaleId: "right" }) as ChartMainSeries;
-  return chart.addSeries(LineSeries, { color: "#70a7ff", lineWidth: 2, priceScaleId: "right" }) as ChartMainSeries;
+  if (kind === "candles") return chart.addSeries(CandlestickSeries, { upColor: CHART_THEME.positive, downColor: CHART_THEME.negative, borderUpColor: CHART_THEME.positive, borderDownColor: CHART_THEME.negative, wickUpColor: CHART_THEME.positive, wickDownColor: CHART_THEME.negative, priceScaleId: "right" }) as ChartMainSeries;
+  if (kind === "bars") return chart.addSeries(BarSeries, { upColor: CHART_THEME.positive, downColor: CHART_THEME.negative, priceScaleId: "right" }) as ChartMainSeries;
+  if (kind === "area") return chart.addSeries(AreaSeries, { lineColor: CHART_THEME.accent, lineWidth: 2, topColor: CHART_THEME.areaTop, bottomColor: CHART_THEME.areaBottom, priceScaleId: "right" }) as ChartMainSeries;
+  if (kind === "baseline") return chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: firstClose }, topLineColor: CHART_THEME.positive, bottomLineColor: CHART_THEME.negative, topFillColor1: CHART_THEME.baselinePositive, topFillColor2: CHART_THEME.baselineNeutral, bottomFillColor1: CHART_THEME.baselineNeutral, bottomFillColor2: CHART_THEME.baselineNegative, priceScaleId: "right" }) as ChartMainSeries;
+  return chart.addSeries(LineSeries, { color: CHART_THEME.accent, lineWidth: 2, priceScaleId: "right" }) as ChartMainSeries;
 }
 
 export function setMainSeriesData(series: ChartMainSeries, kind: ChartKind, candles: Candle[]): void {
@@ -66,7 +67,7 @@ export function addVolumeSeries(chart: IChartApi, candles: Candle[], paneIndex =
   const series = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume" }, paneIndex);
   series.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   try {
-    series.setData(candles.map(({ time, open, close, volume }) => ({ time, value: volume ?? 0, color: close >= open ? "rgba(34,179,155,.32)" : "rgba(239,83,80,.32)" })));
+    series.setData(candles.map(({ time, open, close, volume }) => ({ time, value: volume ?? 0, color: close >= open ? CHART_THEME.volumePositive : CHART_THEME.volumeNegative })));
   } catch {
     series.setData([]);
   }
