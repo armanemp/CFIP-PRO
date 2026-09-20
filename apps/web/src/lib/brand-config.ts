@@ -4,7 +4,7 @@ export interface IntelligenceBrandConfig {
 }
 
 export const DEFAULT_INTELLIGENCE_BRAND: IntelligenceBrandConfig = {
-  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "Aevrix",
+  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "Noverith",
   tagline: process.env.NEXT_PUBLIC_INTELLIGENCE_TAGLINE?.trim() || "Financial Market Intelligence",
 };
 
@@ -17,7 +17,7 @@ export function loadIntelligenceBrand(): IntelligenceBrandConfig {
     const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return DEFAULT_INTELLIGENCE_BRAND;
     const value = JSON.parse(raw) as Partial<IntelligenceBrandConfig>;
-    const migratedName = value.name?.trim() === "MarketAevrix" || value.name?.trim() === "Elyrava" ? DEFAULT_INTELLIGENCE_BRAND.name : value.name?.trim();
+    const migratedName = value.name?.trim() === "Noverith" || value.name?.trim() === "Elyrava" ? DEFAULT_INTELLIGENCE_BRAND.name : value.name?.trim();
     const result = {
       name: typeof migratedName === "string" && migratedName ? migratedName : DEFAULT_INTELLIGENCE_BRAND.name,
       tagline: typeof value.tagline === "string" && value.tagline.trim() ? value.tagline.trim() : DEFAULT_INTELLIGENCE_BRAND.tagline,
