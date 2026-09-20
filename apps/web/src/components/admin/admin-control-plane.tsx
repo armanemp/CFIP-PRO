@@ -5,6 +5,7 @@ import { getAdminRuntime, type AdminRuntime } from "@/lib/admin-api";
 import { getProviderCatalog, type ProviderDescriptor } from "@/lib/api";
 import { ADMIN_MODULES, type AdminSection } from "./admin-config";
 import { settingsForSection } from "./admin-settings";
+import { DEFAULT_INTELLIGENCE_BRAND, loadIntelligenceBrand, saveIntelligenceBrand, type IntelligenceBrandConfig } from "@/lib/brand-config";
 
 export function AdminControlPlane() {
   const [section, setSection] = useState<AdminSection>("overview");
@@ -60,14 +61,14 @@ function Overview({ runtime, error }: { runtime: AdminRuntime | null; error: str
     {checks.map(([label,ok,detail])=><Card key={label} title={label}><div className={`text-xl font-semibold ${ok?"text-emerald-300":"text-amber-300"}`}>{ok?"READY":"GUARDED"}</div><div className="mt-1 text-[11px] text-[#718096]">{detail}</div></Card>)}
     <Card title="Release posture"><div className="text-xl font-semibold text-white">Governed</div><div className="mt-1 text-[11px] text-[#718096]">Production mutation stays behind explicit control-plane authorization.</div></Card>
     <Card title="Terminal"><div className="text-xl font-semibold text-white">Chart-first</div><div className="mt-1 text-[11px] text-[#718096]">Indicators, analysis, risk and replay are modular domains.</div></Card>
-    <Card title="Intelligence"><div className="text-xl font-semibold text-white">Pipvara</div><div className="mt-1 text-[11px] text-[#718096]">Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
+    <Card title="Intelligence"><div className="text-xl font-semibold text-white">{loadIntelligenceBrand().name}</div><div className="mt-1 text-[11px] text-[#718096]">{loadIntelligenceBrand().tagline}. Evidence, provenance, evaluation and promotion remain separate concerns.</div></Card>
   </div>;
 }
 
 function ModuleView({ module, providers }: { module: (typeof ADMIN_MODULES)[number]; providers: readonly ProviderDescriptor[] }) {
   const settings=settingsForSection(module.id);
   const visibleProviders=providers.filter(p => module.id === "market-data" ? p.kind === "market-data" : module.id === "brokers" ? p.kind === "broker" : module.id === "intelligence" ? p.kind === "ai" : false);
-  return <div className="space-y-5">
+  const [brand,setBrand]=useState<IntelligenceBrandConfig>(()=>DEFAULT_INTELLIGENCE_BRAND);\n  const [saved,setSaved]=useState(false);\n  useEffect(()=>{ if(module.id==="intelligence") setBrand(loadIntelligenceBrand()); },[module.id]);\n  const updateBrand=(next:IntelligenceBrandConfig)=>{ const value={name:next.name.slice(0,64),tagline:next.tagline.slice(0,120)}; setBrand(value); saveIntelligenceBrand(value); setSaved(true); window.setTimeout(()=>setSaved(false),1600); window.dispatchEvent(new CustomEvent("cfip:intelligence-brand-changed",{detail:value})); };\n\n  return <div className="space-y-5">
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{module.capabilities.map(capability =>
       <Card key={capability} title={capability}><div className="text-xs text-[#9aa8ba]">Domain capability boundary.</div><div className="mt-3 h-1 rounded bg-[#17212d]"><div className="h-1 w-1/3 rounded bg-[#42546a]" /></div></Card>
     )}</div>
