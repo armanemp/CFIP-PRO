@@ -1,3 +1,5 @@
+import pytest
+
 """Contract-level tests for optional OSS adapters without installing heavy vendors."""
 
 from cfip.domain.oss_contracts import (
