@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { getAdminRuntime, type AdminRuntime } from "@/lib/admin-api";
 import { getProviderCatalog, type ProviderDescriptor } from "@/lib/api";
@@ -22,7 +23,7 @@ export function AdminControlPlane() {
 
   return <main className="min-h-dvh bg-[#070a0f] text-[#d8e0ea]">
     <header className="sticky top-0 z-20 flex h-12 items-center border-b border-[#1d2734] bg-[#0b1017]/95 px-4 backdrop-blur">
-      <a href="/" className="font-semibold tracking-[0.14em] text-white">CFIP-PRO</a>
+      <Link href="/" className="font-semibold tracking-[0.14em] text-white">CFIP-PRO</Link>
       <span className="mx-3 text-[#3d4a5a]">/</span><span className="text-xs text-[#8190a3]">CONTROL PLANE</span>
       <div className="ml-auto text-[10px] uppercase tracking-wider text-[#64748b]">{runtime?.app.environment ?? "loading"}</div>
     </header>
