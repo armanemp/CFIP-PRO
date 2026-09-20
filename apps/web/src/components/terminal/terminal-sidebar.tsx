@@ -6,6 +6,7 @@ import { t } from "./i18n";
 import "./terminal-theme.module.css";
 import { DEFAULT_WATCHLIST } from "./terminal-config";
 import { RiskCalculator } from "./risk-calculator";
+import { useIntelligenceBrand } from "@/lib/use-intelligence-brand";
 
 const tabsA: InspectorTab[] = ["market", "watchlist", "structure"];
 const tabsB: InspectorTab[] = ["intelligence", "risk", "objects"];
@@ -24,6 +25,7 @@ export function TerminalSidebar({
   structurePoints: StructurePoint[]; structureEvents: StructureEvent[]; orderBlocks: OrderBlock[];
   analysis: UnifiedAnalysis; setSymbol: (symbol: string) => void;
 }) {
+  const { brand: intelligenceBrand } = useIntelligenceBrand();
   const last = candles.at(-1);
   const prev = candles.at(-2);
   const change = last && prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
