@@ -19,9 +19,11 @@ application/domain boundary.
 | Trading/backtest | NautilusTrader | TradingEngineAdapter | Adapter next |
 | ML lifecycle | MLflow | ModelRegistryAdapter | Adapter next |
 | Retrieval | Qdrant / pgvector | RetrievalIndexAdapter | Adapter next |
-| Observability | OpenTelemetry | ObservabilityAdapter | Adapter next |\n| Security scanning | Bandit / pip-audit / Semgrep / OWASP ZAP | SecurityScannerAdapter | Contract added; integration gated |\n| Artifact integrity | Sigstore / cryptographic verification tooling | ArtifactVerifier | Contract added; key-management integration gated |
+| Observability | OpenTelemetry | ObservabilityAdapter | Adapter next |
+| Security scanning | Bandit / pip-audit / Semgrep / OWASP ZAP | SecurityScannerAdapter | Contract added; integration gated |
+| Artifact integrity | Sigstore / cryptographic verification tooling | ArtifactVerifier | Contract added; key-management integration gated |
 | Research/data | OpenBB | ResearchRetriever | Adapter next |
-| Agent orchestration | LangGraph / Haystack | Elyrava agent contract | Benchmark |
+| Agent orchestration | LangGraph / Haystack | Noverith agent contract | Benchmark |
 | Feature store | Feast | training feature contract | Benchmark |
 | Dataset versioning | DVC | dataset manifest contract | Benchmark |
 | Drift/evaluation | Evidently | evaluation/drift contract | Benchmark |
@@ -40,8 +42,10 @@ Installation alone never marks a capability complete.
 ## Selected OSS roles
 
 NautilusTrader is the primary candidate for deterministic research/backtest/live
-execution. MLflow is the model-lifecycle candidate. Qdrant is the retrieval candidate.
-OpenTelemetry is the observability baseline. OpenBB is the research/data candidate.
+execution; MLflow is the model-lifecycle candidate; Qdrant is the retrieval candidate;
+OpenTelemetry is the observability baseline; OpenBB is the research/data candidate.
 
-All remain behind CFIP-owned contracts and are not hard dependencies until their gates
-pass.
+The current architecture keeps these as optional adapters rather than hard dependencies.
+This is deliberate for the native Windows development target and the project's limited
+local resources. Integration work should add one adapter at a time with deterministic
+contract tests and a measured resource/performance baseline.
