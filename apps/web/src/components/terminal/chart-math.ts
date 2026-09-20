@@ -1,7 +1,26 @@
 import type { MarketObservation } from "@/lib/api";
 import type { Candle, OrderBlock, StructureEvent, StructurePoint, Timeframe, Zone } from "./types";
 import type { Displacement, LiquidityPool, LiquiditySweep, MTFStructureSummary, PremiumDiscountRange } from "./analysis-contracts";
-import { timeframeSeconds } from "./types";
+import { timeframeSeconds, type Timeframe } from "./types";
+
+function bucketTimestamp(timestamp: number, tf: Timeframe): number {
+  if (tf === "1W") {
+    const date = new Date(timestamp * 1000);
+    const day = date.getUTCDay();
+    const daysSinceMonday = (day + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+    date.setUTCHours(0, 0, 0, 0);
+    return Math.floor(date.getTime() / 1000);
+  }
+  if (tf === "1M") {
+    const date = new Date(timestamp * 1000);
+    date.setUTCDate(1);
+    date.setUTCHours(0, 0, 0, 0);
+    return Math.floor(date.getTime() / 1000);
+  }
+  const seconds = timeframeSeconds[tf];
+  return Math.floor(timestamp / seconds) * seconds;
+}
 
 export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
   const out = new Map<number, Candle>();
@@ -9,7 +28,7 @@ export function toCandles(rows: MarketObservation[], tf: Timeframe): Candle[] {
     const timestamp = Math.floor(new Date(row.observed_at).getTime()/1000);
     const value = Number(row.last ?? row.bid ?? row.ask);
     if (!Number.isFinite(timestamp) || !Number.isFinite(value)) continue;
-    const key = Math.floor(timestamp/timeframeSeconds[tf])*timeframeSeconds[tf];
+    const key = bucketTimestamp(timestamp, tf);
     const volume = Math.max(0, Number(row.volume ?? 0)); const current = out.get(key);
     if (!current) out.set(key,{time:key as Candle["time"],open:value,high:value,low:value,close:value,volume:Number.isFinite(volume)?volume:0});
     else { current.high=Math.max(current.high,value); current.low=Math.min(current.low,value); current.close=value; if(Number.isFinite(volume)) current.volume+=volume; }
