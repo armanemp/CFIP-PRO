@@ -2,13 +2,28 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
+from math import isfinite
 from typing import Any
 
 
 class QdrantRetrievalAdapter:
     provider_id = "qdrant"
 
-    def __init__(self, url: str, collection: str, *, api_key: str | None = None, vector_name: str | None = None, embed: Callable[[str], Sequence[float]] | Callable[[str], Awaitable[Sequence[float]]] | None = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        collection: str,
+        *,
+        api_key: str | None = None,
+        vector_name: str | None = None,
+        embed: Callable[[str], Sequence[float]]
+        | Callable[[str], Awaitable[Sequence[float]]]
+        | None = None,
+    ) -> None:
+        if not url:
+            raise ValueError("qdrant_url_required")
+        if not collection:
+            raise ValueError("qdrant_collection_required")
         self._url = url
         self._collection = collection
         self._api_key = api_key
@@ -31,24 +46,39 @@ class QdrantRetrievalAdapter:
             from qdrant_client.models import PointStruct
         except ImportError as exc:
             raise RuntimeError("oss_dependency_missing:qdrant-client") from exc
-        points = [
-            PointStruct(
-                id=str(record["id"]),
-                vector=record["vector"],
-                payload=record.get("payload", {}),
+        points = []
+        for record in records:
+            vector = record["vector"]
+            if not vector:
+                raise ValueError("qdrant_vector_required")
+            if any(not isinstance(value, (int, float)) or not isfinite(float(value)) for value in vector):
+                raise ValueError("qdrant_vector_non_finite")
+            points.append(
+                PointStruct(
+                    id=str(record["id"]),
+                    vector=vector,
+                    payload=record.get("payload", {}),
+                )
             )
-            for record in records
-        ]
         if points:
             await client.upsert(collection_name=self._collection, points=points, wait=True)
 
     async def query(self, query: str, *, limit: int = 10) -> Sequence[dict[str, Any]]:
+        if not query.strip():
+            raise ValueError("qdrant_query_required")
+        if not 1 <= limit <= 100:
+            raise ValueError("qdrant_limit_out_of_range")
         if self._embed is None:
             raise RuntimeError("embedding_provider_required:qdrant_query")
         client = await self._get_client()
         vector = self._embed(query)
         if hasattr(vector, "__await__"):
             vector = await vector
+        if not vector or any(
+            not isinstance(value, (int, float)) or not isfinite(float(value))
+            for value in vector
+        ):
+            raise ValueError("qdrant_query_vector_invalid")
         response = await client.query_points(
             collection_name=self._collection,
             query=list(vector),
