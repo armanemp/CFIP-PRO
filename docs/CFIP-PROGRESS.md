@@ -4,7 +4,7 @@
 - Qdrant adapter now performs real vector query/upsert operations when an embedding provider is explicitly injected; it fails closed if embeddings are not configured.
 - Added typed health signals with freshness checks and explicit evidence IDs. Self-healing can now consume evidence-backed observations rather than synthetic health claims.
 - Added adapter contract tests and health freshness/duplicate-signal tests.
-- OSS selection remains capability-specific: NautilusTrader for deterministic trading/backtest/live semantics, MLflow for model lifecycle and lineage, Qdrant for hybrid/vector retrieval, and OpenTelemetry for vendor-neutral traces/metrics. NautilusTrader explicitly supports common backtest/live semantics, MLflow provides model versions/aliases/lineage, Qdrant supports hybrid multi-stage queries, and OpenTelemetry Python has stable traces/metrics. citeturn0search4turn0search1turn0search8turn0search0
+- OSS selection remains capability-specific: NautilusTrader for deterministic trading/backtest/live semantics, MLflow for model lifecycle and lineage, Qdrant for hybrid/vector retrieval, and OpenTelemetry for vendor-neutral traces/metrics. NautilusTrader explicitly supports common backtest/live semantics, MLflow provides model versions/aliases/lineage, Qdrant supports hybrid multi-stage queries, and OpenTelemetry Python has stable traces/metrics.
 - Heavy OSS packages remain optional rather than forced into the native Windows environment; each adapter must still pass compatibility, semantic, resource, security and rollback gates before becoming a core dependency.
 
 ## 2026-09-21 — governed learning, dataset leakage and artifact integrity hardening
