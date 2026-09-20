@@ -1,6 +1,6 @@
 import type { ChartKind, ChartPreferences, Drawing, Locale, Timeframe, Tool } from "./types";
 import { CHART_KINDS, LOCALES, TIMEFRAMES } from "./terminal-config";
-import { INDICATOR_IDS } from "./indicator-registry";
+import { INDICATOR_IDS, type IndicatorId } from "./indicator-registry";
 
 export interface TerminalSession {
   symbol: string;
@@ -8,7 +8,7 @@ export interface TerminalSession {
   chartKind: ChartKind;
   locale: Locale;
   tool: Tool;
-  selectedStudies: string[];
+  selectedStudies: IndicatorId[];
   indicatorParameters: Record<string, Record<string, number>>;
   preferences: ChartPreferences;
   drawings: Drawing[];
@@ -30,7 +30,7 @@ export function loadTerminalSession(fallback: TerminalSession): TerminalSession 
     if (!raw) return fallback;
     const value = JSON.parse(raw) as Partial<TerminalSession>;
     const selectedStudies = Array.isArray(value.selectedStudies)
-      ? value.selectedStudies.filter((id): id is string => typeof id === "string" && INDICATOR_IDS.includes(id as typeof INDICATOR_IDS[number]))
+      ? value.selectedStudies.filter((id): id is IndicatorId => typeof id === "string" && INDICATOR_IDS.includes(id as IndicatorId))
       : fallback.selectedStudies;
     return {
       ...fallback,
