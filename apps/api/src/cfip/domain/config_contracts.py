@@ -3,7 +3,6 @@
 Values are validated at the boundary. Secrets are represented by references rather than
 raw values, and mutable configuration is expected to be persisted/audited by the control plane.
 """
-from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 class SecretRef(BaseModel):
