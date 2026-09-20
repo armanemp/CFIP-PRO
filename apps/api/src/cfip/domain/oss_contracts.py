@@ -56,6 +56,12 @@ class ArtifactVerifier(Protocol):
 
 
 @runtime_checkable
+class EvaluationAdapter(Protocol):
+    provider_id: str
+    async def evaluate_drift(self, current_data: Any, reference_data: Any) -> dict[str, Any]: ...
+
+
+@runtime_checkable
 class ObservabilityAdapter(Protocol):
     provider_id: str
     def span(self, name: str, attributes: dict[str, Any] | None = None) -> Any: ...
