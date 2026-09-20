@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cfip.domain.data_quality import DataQualityReport
+from cfip.domain.risk import RiskTargetPlan
 
 Bias = Literal["bullish", "bearish", "neutral"]
 Recommendation = Literal["long", "short", "wait"]
@@ -135,22 +136,6 @@ class MTFContext(BaseModel):
     confidence: float = Field(ge=0, le=1)
     candle_count: int = Field(ge=0)
     completeness: float = Field(ge=0, le=1)
-
-
-class RiskTargetPlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    available: bool = False
-    reason: str | None = None
-    entry: float | None = None
-    stop: float | None = None
-    risk_distance: float | None = None
-    tp1: float | None = None
-    tp2: float | None = None
-    tp3: float | None = None
-    rr1: float | None = None
-    rr2: float | None = None
-    rr3: float | None = None
 
 
 class UnifiedAnalysisRead(BaseModel):
