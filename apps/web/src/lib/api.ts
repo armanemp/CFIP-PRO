@@ -21,14 +21,14 @@ export type DemoMarket = z.infer<typeof DemoMarketSchema>;
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
 export async function getHealth() { const response = await fetch(`${apiBaseUrl}/health`, { cache: "no-store" }); if (!response.ok) throw new Error(`API health request failed: ${response.status}`); return HealthSchema.parse(await response.json()); }
-export async function getDemoEurusd(limit = 500): Promise<DemoMarket> { const response = await fetch(`${apiBaseUrl}/market/demo/eurusd?limit=${limit}`, { cache: "no-store" }); if (!response.ok) throw new Error(`Demo market provider failed: ${response.status}`); return DemoMarketSchema.parse(await response.json()); }
+export async function getDemoEurusd(limit = 500, signal?: AbortSignal): Promise<DemoMarket> { const response = await fetch(`${apiBaseUrl}/market/demo/eurusd?limit=${limit}`, { cache: "no-store", signal }); if (!response.ok) throw new Error(`Demo market provider failed: ${response.status}`); return DemoMarketSchema.parse(await response.json()); }
 export async function getMarketObservations(symbol: string, venue: string, limit = 500, signal?: AbortSignal) {
   const params = new URLSearchParams({ symbol, venue, limit: String(limit) });
   const response = await fetch(`${apiBaseUrl}/market/observations?${params}`, { cache: "no-store", signal });
   if (!response.ok) throw new Error(`Market observations request failed: ${response.status}`);
   const databaseRows = MarketObservationListSchema.parse(await response.json());
   if (databaseRows.length || symbol !== "EUR/USD") return databaseRows;
-  const demo = await getDemoEurusd(Math.min(limit, 1000));
+  const demo = await getDemoEurusd(Math.min(limit, 1000), signal);
   const instrumentId = "00000000-0000-4000-8000-000000000001";
   const rows: MarketObservation[] = demo.bars.map((bar, index) => ({
     id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
