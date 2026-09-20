@@ -44,7 +44,7 @@ export const TERMINAL_CAPABILITIES: readonly TerminalCapability[] = [
   {id:"analysis.backtest",labelKey:"backtest",kind:"analysis",status:"contract"},
   {id:"analysis.confluence",labelKey:"confluence",kind:"analysis",status:"contract"},
   {id:"analysis.liquidity",labelKey:"liquidity",kind:"analysis",status:"native"},
-  {id:"intelligence.elyrava",labelKey:"intelligence",kind:"intelligence",status:"contract"},
+  {id:"intelligence.pipvara",labelKey:"intelligence",kind:"intelligence",status:"contract"},
   {id:"intelligence.research",labelKey:"research",kind:"research",status:"contract"},
   {id:"intelligence.proposals",labelKey:"proposals",kind:"intelligence",status:"contract"},
   {id:"intelligence.self-healing",labelKey:"selfHealing",kind:"intelligence",status:"contract"},
