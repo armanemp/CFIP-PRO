@@ -387,7 +387,7 @@ def analyze(request: AnalysisRequest, as_of: str) -> UnifiedAnalysisRead:
     else:
         data_quality = assess_data_quality(
             [candle.time for candle in candles],
-            DataQualityPolicy(expected_interval_seconds=expected_interval),
+            DataQualityPolicy(expected_interval_seconds=expected_interval, calendar_month=request.timeframe == "1M"),
         )
     opens, highs, lows, closes, volumes = _arr(request)
     if request.closed_bar_only:
