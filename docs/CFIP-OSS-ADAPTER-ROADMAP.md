@@ -23,7 +23,7 @@ application/domain boundary.
 | Security scanning | Bandit / pip-audit / Semgrep / OWASP ZAP | SecurityScannerAdapter | Contract added; integration gated |
 | Artifact integrity | Sigstore / cryptographic verification tooling | ArtifactVerifier | SHA-256 verification integrated; signature/key-management gated |
 | Research/data | OpenBB | ResearchRetriever | Adapter implemented; provider benchmark pending |
-| Agent orchestration | LangGraph / Haystack | Noverith agent contract | Benchmark |
+| Agent orchestration | LangGraph / Haystack | MIOS agent contract | Benchmark |
 | Feature store | Feast | training feature contract | Benchmark |
 | Dataset versioning | DVC | dataset manifest contract | Benchmark |
 | Drift/evaluation | Evidently | evaluation/drift contract | Benchmark |
