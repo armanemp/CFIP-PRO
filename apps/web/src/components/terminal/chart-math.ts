@@ -1,7 +1,7 @@
 import type { MarketObservation } from "@/lib/api";
 import type { Candle, OrderBlock, StructureEvent, StructurePoint, Timeframe, Zone } from "./types";
 import type { Displacement, LiquidityPool, LiquiditySweep, MTFStructureSummary, PremiumDiscountRange } from "./analysis-contracts";
-import { timeframeSeconds, type Timeframe } from "./types";
+import { timeframeSeconds } from "./types";
 
 function bucketTimestamp(timestamp: number, tf: Timeframe): number {
   if (tf === "1W") {
