@@ -1,4 +1,4 @@
-from cfip.domain.config_contracts import IntelligenceConfig, ProviderConfig, RiskConfig
+from cfip.domain.config_contracts import ProviderConfig, RiskConfig
 
 def test_risk_bounds_are_validated() -> None:
     assert RiskConfig(max_account_risk_percent=2).max_account_risk_percent == 2
