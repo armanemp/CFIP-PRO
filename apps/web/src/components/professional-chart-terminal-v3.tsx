@@ -232,7 +232,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
       try{
         const next=await getMarketObservations(symbol,"reference",1000);
         if(active){
-          const latest = next.at(-1);\n          const version = latest ? `${next.length}:${latest.observed_at}:${latest.bid ?? ""}:${latest.ask ?? ""}:${latest.last ?? ""}:${latest.volume ?? ""}` : "0";
+          const latest = next.at(-1);
+          const version = latest ? `${next.length}:${latest.observed_at}:${latest.bid ?? ""}:${latest.ask ?? ""}:${latest.last ?? ""}:${latest.volume ?? ""}` : "0";
           if (version !== marketVersionRef.current) { marketVersionRef.current = version; setRows(next); }
           setLive(next.length>0);setError(false);
         }
@@ -356,7 +357,8 @@ export function ProfessionalChartTerminalV3({ observations: initial, symbol: ini
   };
 
   const placeDrawing=(event: React.MouseEvent<HTMLElement>)=>{
-    if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;\n    if((event.target as Element).closest("svg"))return;
+    if(tool==="cursor"||tool==="crosshair"||!chartRef.current||!mainRef.current)return;
+    if((event.target as Element).closest("svg"))return;
     const rect=event.currentTarget.getBoundingClientRect();
     const x=event.clientX-rect.left, y=event.clientY-rect.top;
     const time=chartRef.current.timeScale().coordinateToTime(x);
