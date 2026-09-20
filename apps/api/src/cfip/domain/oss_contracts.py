@@ -41,6 +41,20 @@ class RetrievalIndexAdapter(Protocol):
 
 
 @runtime_checkable
+class SecurityScannerAdapter(Protocol):
+    provider_id: str
+
+    async def scan(self, target: str) -> Sequence[dict[str, Any]]: ...
+
+
+@runtime_checkable
+class ArtifactVerifier(Protocol):
+    provider_id: str
+
+    def verify(self, artifact: bytes, digest: str, signature: bytes | None = None) -> bool: ...
+
+
+@runtime_checkable
 class ObservabilityAdapter(Protocol):
     provider_id: str
     def span(self, name: str, attributes: dict[str, Any] | None = None) -> Any: ...
