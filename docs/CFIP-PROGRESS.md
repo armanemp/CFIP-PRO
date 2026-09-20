@@ -2,12 +2,12 @@
 
 - Market observation requests now support end-to-end cancellation, including the real market endpoint and the EUR/USD demo fallback.
 - MACD histogram calculation was changed from repeated linear searches to a time-indexed map, removing the avoidable O(n²) lookup path during indicator rendering/analysis.
-- Audited the repository for the retired **Pipvara** intelligence name and migrated active documentation, governance text, self-improvement contracts, admin capability labels and master workflow references to **Elyrava**.
+- Audited the repository for the retired **Pipvara** intelligence name and migrated active documentation, governance text, self-improvement contracts, admin capability labels and master workflow references to **Cortex**.
 - The terminal remains provider-neutral: Lightweight Charts receives normalized application data, while provider integration stays behind the market-data boundary. TradingView documents that Lightweight Charts has no built-in market data or indicators, so this separation remains intentional. citeturn0search4turn0search0
 
 ## 2026-09-19 — platform-wide modularization pass
 
-- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Elyrava intelligence, research, platform governance and admin boundaries.
+- Added a canonical backend platform capability registry covering terminal, market data, analysis, trading, Cortex intelligence, research, platform governance and admin boundaries.
 - Exposed the capability registry through `GET /capabilities` so the web/admin surfaces can consume one platform capability truth instead of duplicating feature lists.
 - Expanded configuration contracts for chart defaults, notifications and governed Git operations while retaining provider-neutral secret references.
 - Hardened Git governance contracts: protected CI/security/environment paths, explicit validation/rollback plans, risk classification, approval metadata and prohibition of direct main/master commits through the governed change boundary.
