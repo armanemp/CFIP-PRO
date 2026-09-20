@@ -4,7 +4,7 @@ export interface IntelligenceBrandConfig {
 }
 
 export const DEFAULT_INTELLIGENCE_BRAND: IntelligenceBrandConfig = {
-  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "MarketCortex",
+  name: process.env.NEXT_PUBLIC_INTELLIGENCE_NAME?.trim() || "Cortex",
   tagline: process.env.NEXT_PUBLIC_INTELLIGENCE_TAGLINE?.trim() || "Financial Market Intelligence",
 };
 
