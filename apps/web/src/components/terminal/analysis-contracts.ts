@@ -64,7 +64,7 @@ export interface MTFStructureSummary {
 }
 
 export interface ConfluenceGate {
-  id: "htf_alignment" | "liquidity_or_fvg" | "zone_or_premium" | "displacement_or_structure";
+  id: "htf_alignment" | "liquidity_or_fvg" | "zone_or_premium" | "displacement_or_structure" | "data_quality";
   passed: boolean;
   detail: string;
 }
