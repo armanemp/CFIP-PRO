@@ -1,60 +1,37 @@
-# CFIP-PRO OSS Integration Roadmap
+# MIOS OSS Integration Roadmap
 
-Updated: 2026-09-21
+Updated: 2026-09-22
 
-CFIP-PRO uses an OSS-first strategy: CFIP owns contracts, governance, product UX and domain-specific orchestration; mature open-source projects provide implementation engines behind adapters. No library is accepted solely because it is popular. Every integration must pass compatibility, licensing, resource, security, deterministic-behavior and maintenance gates.
+MIOS uses an OSS-first strategy: MIOS owns contracts, governance, provenance, safety and product UX; mature open-source projects provide implementation engines behind adapters.
 
-## Target capability map
-
-| Capability | OSS candidate | CFIP role | Integration status |
+| Capability | OSS candidate | MIOS role | Status |
 |---|---|---|---|
-| Financial data / research | OpenBB | Provider-neutral data/research adapter | Candidate; wire after provider contract audit |
-| Market/exchange connectivity | ccxt | Crypto/venue adapter where applicable | Dependency present; adapter health gate required |
-| Trading/backtest/execution engine | NautilusTrader | Deterministic simulation/live execution adapter | Candidate; isolate optional dependency |
+| Financial data / research | OpenBB | Provider-neutral research/data adapter | Boundary established; provider-specific coverage remains explicit |
+| Market/exchange connectivity | CCXT | Crypto/exchange market-data adapter | Adapter implemented; live credentials/connectivity remain health-gated |
+| Trading/backtest/execution | NautilusTrader | Deterministic simulation/execution adapter | Boundary established; typed strategy binding remains |
+| Technical indicators | TA-Lib | Indicator adapter | Integrated boundary; parity/coverage expansion remains |
+| Columnar analytics | Polars / Arrow | Dataframe/feature computation | Polars present; Arrow adoption benchmarked before expansion |
 | Quant research / ML | Qlib | Research/training adapter | Candidate; benchmark before runtime dependency |
-| Technical indicators | TA-Lib | Indicator adapter | Dependency present; migrate native calculations behind adapter contract |
-| Columnar analytics | Polars / Arrow | Dataframe/feature computation | Polars present; Arrow boundary to be evaluated |
-| Experiment lifecycle | MLflow | Experiment/model registry adapter | Planned |
-| Feature store | Feast | Online/offline feature contract adapter | Planned |
-| Drift / monitoring | Evidently | Data/model drift evaluation adapter | Planned |
-| Observability | OpenTelemetry | Traces/metrics/log correlation | Planned |
-| LLM observability | Langfuse / Phoenix | Intelligence tracing/evaluation | Planned; choose one primary after benchmark |
-| Agent orchestration | PydanticAI / LangGraph / Haystack | MIOS adapter layer | PydanticAI present; benchmark alternatives before adding overlap |
-| Vector retrieval | pgvector / Qdrant | Evidence retrieval adapter | Planned; PostgreSQL-first default |
-| Search | OpenSearch | Research/evidence search adapter | Planned only if PostgreSQL search is insufficient |
-| Web acquisition | trafilatura / Scrapy / Playwright / Firecrawl | Research acquisition adapters | Planned; use least-powerful sufficient adapter |
-| Graph | Apache AGE / Kuzu / Neo4j | Relationship/evidence graph adapter | Deferred until benchmark demonstrates need |
-| Authorization | OpenFGA / OPA / Keycloak | Policy/IAM adapters | Planned; fail-closed governance remains CFIP-owned |
+| Experiment/model lifecycle | MLflow | Experiment/model registry | Optional profile defined; runtime integration pending |
+| Feature store | Feast | Online/offline feature contract | Optional profile defined; integration pending |
+| Drift / monitoring | Evidently | Data/model drift evaluation | Optional profile defined; integration pending |
+| Observability | OpenTelemetry | Traces/metrics correlation | Optional profile defined; propagation/export pending |
+| LLM observability | Langfuse / Phoenix | Intelligence tracing/evaluation | Choose one primary after benchmark |
+| Agent orchestration | PydanticAI / LangGraph / Haystack | MIOS agent adapter layer | PydanticAI present; alternatives remain benchmark candidates |
+| Vector retrieval | PostgreSQL/pgvector / Qdrant | Evidence retrieval | PostgreSQL-first; Qdrant optional |
+| Search | OpenSearch | Research/evidence search | Optional; add only after measured retrieval need |
+| Web acquisition | trafilatura / Scrapy / Playwright / Firecrawl | Research acquisition | trafilatura boundary implemented with SSRF policy |
+| Graph | AGE / Kuzu / Neo4j | Relationship/evidence graph | Deferred until benchmarked need |
+| Authorization | OpenFGA / OPA / Keycloak | Policy/IAM adapters | Planned; MIOS governance remains fail-closed |
 
-## Integration rule
+## Mandatory integration rules
 
-OSS components never bypass CFIP contracts. The dependency direction is:
-
-`OSS implementation -> CFIP adapter -> CFIP domain contract -> application orchestration -> API/UI`
-
-Not:
-
-`UI -> OSS library` or `domain -> vendor-specific API`.
-
-## Acceptance gates
-
-1. Python 3.14 compatibility and Windows development viability where applicable.
-2. License compatibility documented before adoption.
-3. Security/advisory review and dependency pinning.
-4. Resource budget appropriate for the user's lightweight development environment.
-5. Deterministic behavior for backtest/replay paths.
-6. Typed input/output mapping with provenance and timestamps.
-7. Failure isolation: optional integrations must not prevent CFIP core startup.
-8. Health/readiness reporting must distinguish installed, configured, reachable and operational.
-9. No duplicate engine is added when an existing adapter can provide the capability.
-10. Benchmark evidence is recorded before replacing a stable native path.
-
-## Immediate sequence
-
-- TA-Lib adapter: move terminal indicator calculation behind the existing registry contract and add parity tests.
-- OpenBB adapter: implement research/market-data normalization without forcing all providers to be installed.
-- NautilusTrader adapter: establish backtest/replay/execution boundary without coupling the terminal to the engine.
-- MLflow + Evidently: connect experiment/outcome/drift lifecycle to MIOS learning contracts.
-- OpenTelemetry + intelligence tracing: make every analysis and self-development proposal traceable.
-- Retrieval stack: PostgreSQL/pgvector first; add Qdrant/OpenSearch only after measured need.
-- Research acquisition: trafilatura first, Playwright only for pages requiring browser execution.
+1. OSS dependencies never bypass MIOS contracts.
+2. Optional engines are lazy-loaded and must not prevent core startup.
+3. Health must distinguish installed, configured, reachable and operational.
+4. Provenance and timestamps are preserved at adapter boundaries.
+5. Deterministic replay/backtest behavior is required before an engine controls a production workflow.
+6. License, security advisory, resource and maintenance review precede adoption.
+7. Do not add duplicate engines without benchmark evidence.
+8. External research acquisition must pass the SSRF-safe URL policy and content-rights/provenance checks.
+9. Low/medium-risk autonomous changes remain inside the governed change budget; high/critical changes require approval.
