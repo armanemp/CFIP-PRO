@@ -33,3 +33,11 @@ Active development branch: `feat/platform-runtime-orchestration-2026-09-20`
 Latest branch commit at chart creation: `5d5382c72fbb5891029969a6bd73edd1b1364e70`
 
 The branch is a draft PR against `main`. No CI-green claim is made until GitHub Actions produces a result.
+
+## 2026-09-21 autonomy/security pass
+
+- MIOS autonomy policy: low/medium risk may self-apply; high/critical requires human approval.
+- Protected Git surfaces automatically escalate to high risk.
+- Direct main commits remain forbidden.
+- Local Git adapter now uses argv-only subprocess execution, path traversal checks and bounded timeouts.
+- API adds trusted-host enforcement, request correlation and baseline security headers.
