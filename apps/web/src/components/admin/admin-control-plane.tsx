@@ -5,6 +5,7 @@ import { getAdminRuntime, getConfigDefaults, type AdminRuntime, type ConfigDefau
 import { getProviderCatalog, type ProviderDescriptor } from "@/lib/api";
 import { ADMIN_MODULES, type AdminSection } from "./admin-config";
 import { settingsForSection } from "./admin-settings";
+import { updatePlatformIdentity } from "@/lib/identity";
 
 export function AdminControlPlane() {
   const [section, setSection] = useState<AdminSection>("overview");
@@ -12,12 +13,26 @@ export function AdminControlPlane() {
   const [config, setConfig] = useState<ConfigDefaults | null>(null);
   const [providers, setProviders] = useState<ProviderDescriptor[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [adminToken, setAdminToken] = useState("");
+  const [identityDraft, setIdentityDraft] = useState("");
+  const [identitySaving, setIdentitySaving] = useState(false);
+  const [identityMessage, setIdentityMessage] = useState<string | null>(null);
   useEffect(() => {
     getAdminRuntime().then(setRuntime).catch((e: unknown) => setError(e instanceof Error ? e.message : "Runtime unavailable"));
-    getConfigDefaults().then(setConfig).catch(() => setConfig(null));
+    getConfigDefaults().then((value) => { setConfig(value); setIdentityDraft(value.intelligence_identity.name); }).catch(() => setConfig(null));
     getProviderCatalog().then(setProviders).catch(() => setProviders([]));
   }, []);
   const active = ADMIN_MODULES.find(x => x.id === section) ?? ADMIN_MODULES[0];
+  const saveIdentity = async () => {
+    setIdentitySaving(true); setIdentityMessage(null);
+    try {
+      const identity = await updatePlatformIdentity(identityDraft.trim(), adminToken);
+      setConfig((current) => current ? { ...current, intelligence_identity: identity } : current);
+      window.dispatchEvent(new CustomEvent("platform-identity-change", { detail: identity }));
+      setIdentityMessage("Identity updated across the runtime. Reloaded clients will pick it up automatically.");
+    } catch (reason: unknown) { setIdentityMessage(reason instanceof Error ? reason.message : "Identity update failed"); }
+    finally { setIdentitySaving(false); }
+  };
   return <main className="min-h-dvh bg-[var(--cfip-terminal-bg)] text-[var(--cfip-terminal-text)]">
     <header className="sticky top-0 z-20 flex h-12 items-center border-b border-[var(--cfip-terminal-border)] bg-[var(--cfip-terminal-surface)]/95 px-4 backdrop-blur">
       <a href="/" className="font-semibold tracking-[0.14em] text-white">CFIP-PRO</a><span className="mx-3 text-[var(--cfip-terminal-border-strong)]">/</span><span className="text-xs text-[var(--cfip-terminal-text-muted)]">CONTROL PLANE</span>
@@ -29,7 +44,14 @@ export function AdminControlPlane() {
         <nav className="space-y-1">{ADMIN_MODULES.map(item => <button key={item.id} onClick={()=>setSection(item.id)} className={`w-full rounded-md px-3 py-2 text-left text-xs transition ${section===item.id?"bg-[var(--cfip-terminal-surface-active)] text-white":"text-[var(--cfip-terminal-text-muted)] hover:bg-[var(--cfip-terminal-surface-active)] hover:text-white"}`}><div className="font-medium">{item.id === "intelligence" && config ? config.intelligence_identity.name : item.title}</div><div className="mt-0.5 text-[10px] opacity-60">{item.description}</div></button>)}</nav>
       </aside>
       <section className="min-w-0 flex-1 p-5 md:p-8">
-        <div className="mb-6 flex items-start justify-between gap-4"><div><div className="text-[10px] uppercase tracking-[0.2em] text-[var(--cfip-terminal-text-faint)]">CFIP control plane</div><h1 className="mt-1 text-2xl font-semibold text-white">{active.id === "intelligence" && config ? config.intelligence_identity.name : active.title}</h1><p className="mt-1 max-w-3xl text-sm text-[var(--cfip-terminal-text-muted)]">{active.description}</p></div><span className="rounded-full border border-[var(--cfip-terminal-border-strong)] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--cfip-terminal-text-muted)]">{active.maturity}</span></div>
+        <Card title="Platform identity">
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+            <label className="text-xs text-[var(--cfip-terminal-text-muted)]">Name<input value={identityDraft} onChange={(event)=>setIdentityDraft(event.target.value)} className="mt-1 w-full rounded-md border border-[var(--cfip-terminal-border-strong)] bg-[var(--cfip-terminal-bg)] px-3 py-2 text-sm text-white outline-none" /></label>
+            <label className="text-xs text-[var(--cfip-terminal-text-muted)]">Admin control token<input value={adminToken} onChange={(event)=>setAdminToken(event.target.value)} type="password" autoComplete="off" className="mt-1 w-full rounded-md border border-[var(--cfip-terminal-border-strong)] bg-[var(--cfip-terminal-bg)] px-3 py-2 text-sm text-white outline-none" /></label>
+            <button disabled={identitySaving || !identityDraft.trim() || !adminToken} onClick={saveIdentity} className="self-end rounded-md bg-white px-4 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40">{identitySaving ? "Saving…" : "Apply identity"}</button>
+          </div>
+          {identityMessage && <div className="mt-3 text-xs text-[var(--cfip-terminal-text-muted)]">{identityMessage}</div>}
+        </Card><div className="mb-6 flex items-start justify-between gap-4"><div><div className="text-[10px] uppercase tracking-[0.2em] text-[var(--cfip-terminal-text-faint)]">CFIP control plane</div><h1 className="mt-1 text-2xl font-semibold text-white">{active.id === "intelligence" && config ? config.intelligence_identity.name : active.title}</h1><p className="mt-1 max-w-3xl text-sm text-[var(--cfip-terminal-text-muted)]">{active.description}</p></div><span className="rounded-full border border-[var(--cfip-terminal-border-strong)] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[var(--cfip-terminal-text-muted)]">{active.maturity}</span></div>
         {section==="overview" ? <Overview runtime={runtime} config={config} error={error} /> : <ModuleView module={active} providers={providers} config={config} />}
       </section>
     </div>
