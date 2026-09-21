@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import pytest
 
 from cfip.domain.market_data_contracts import HistoricalMarketDataRequest
