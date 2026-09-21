@@ -19,6 +19,7 @@ _CAPABILITIES = (
     ("trafilatura", "trafilatura", "web-acquisition"),
     ("qdrant-client", "qdrant_client", "vector-retrieval"),
     ("opensearch-py", "opensearchpy", "search"),
+    ("feast", "feast", "feature-store"),
 )
 
 def capability_snapshot() -> list[dict[str, object]]:
