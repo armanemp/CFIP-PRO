@@ -1,10 +1,10 @@
-# MIOS OSS Integration Roadmap
+# MIOSAI OSS Integration Roadmap
 
 Updated: 2026-09-22
 
-MIOS uses an OSS-first strategy: MIOS owns contracts, governance, provenance, safety and product UX; mature open-source projects provide implementation engines behind adapters.
+MIOSAI uses an OSS-first strategy: MIOSAI owns contracts, governance, provenance, safety and product UX; mature open-source projects provide implementation engines behind adapters.
 
-| Capability | OSS candidate | MIOS role | Status |
+| Capability | OSS candidate | MIOSAI role | Status |
 |---|---|---|---|
 | Financial data / research | OpenBB | Provider-neutral research/data adapter | Boundary established; provider-specific coverage remains explicit |
 | Market/exchange connectivity | CCXT | Crypto/exchange market-data adapter | Adapter implemented; live credentials/connectivity remain health-gated |
@@ -17,16 +17,16 @@ MIOS uses an OSS-first strategy: MIOS owns contracts, governance, provenance, sa
 | Drift / monitoring | Evidently | Data/model drift evaluation | Optional profile defined; integration pending |
 | Observability | OpenTelemetry | Traces/metrics correlation | Optional profile defined; propagation/export pending |
 | LLM observability | Langfuse / Phoenix | Intelligence tracing/evaluation | Choose one primary after benchmark |
-| Agent orchestration | PydanticAI / LangGraph / Haystack | MIOS agent adapter layer | PydanticAI present; alternatives remain benchmark candidates |
+| Agent orchestration | PydanticAI / LangGraph / Haystack | MIOSAI agent adapter layer | PydanticAI present; alternatives remain benchmark candidates |
 | Vector retrieval | PostgreSQL/pgvector / Qdrant | Evidence retrieval | PostgreSQL-first; Qdrant optional |
 | Search | OpenSearch | Research/evidence search | Optional; add only after measured retrieval need |
 | Web acquisition | trafilatura / Scrapy / Playwright / Firecrawl | Research acquisition | trafilatura boundary implemented with SSRF policy |
 | Graph | AGE / Kuzu / Neo4j | Relationship/evidence graph | Deferred until benchmarked need |
-| Authorization | OpenFGA / OPA / Keycloak | Policy/IAM adapters | Planned; MIOS governance remains fail-closed |
+| Authorization | OpenFGA / OPA / Keycloak | Policy/IAM adapters | Planned; MIOSAI governance remains fail-closed |
 
 ## Mandatory integration rules
 
-1. OSS dependencies never bypass MIOS contracts.
+1. OSS dependencies never bypass MIOSAI contracts.
 2. Optional engines are lazy-loaded and must not prevent core startup.
 3. Health must distinguish installed, configured, reachable and operational.
 4. Provenance and timestamps are preserved at adapter boundaries.
