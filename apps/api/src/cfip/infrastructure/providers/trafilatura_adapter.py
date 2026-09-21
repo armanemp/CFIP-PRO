@@ -1,14 +1,18 @@
 """Optional trafilatura research adapter with fail-closed URL policy."""
 from __future__ import annotations
+
 import hashlib
 import ipaddress
 import socket
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
+
 from cfip.domain.research_contracts import ResearchDocument, ResearchRequest
+
 
 class TrafilaturaUnavailable(RuntimeError):
     pass
+
 
 def _safe_url(url: str) -> None:
     parsed = urlparse(url)
@@ -26,11 +30,14 @@ def _safe_url(url: str) -> None:
         if address.is_private or address.is_loopback or address.is_link_local or address.is_reserved:
             raise ValueError("blocked_private_research_address")
 
+
 def _version(module: object) -> str:
     return str(getattr(module, "__version__", "unknown"))
 
+
 class TrafilaturaResearchAdapter:
     id = "trafilatura"
+
     def available(self) -> bool:
         try:
             import trafilatura  # type: ignore
@@ -65,5 +72,5 @@ class TrafilaturaResearchAdapter:
             content_digest=digest,
             extractor=self.id,
             extractor_version=self.version,
-            fetched_at_epoch=int(datetime.now(timezone.utc).timestamp()),
+            fetched_at_epoch=int(datetime.now(UTC).timestamp()),
         )
