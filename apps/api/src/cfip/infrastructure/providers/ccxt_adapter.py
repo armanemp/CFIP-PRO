@@ -47,7 +47,7 @@ class CCXTMarketDataAdapter:
                         asyncio.run(result)
                     except RuntimeError:
                         pass
-        candles = [CandleInput(timestamp=int(row[0] // 1000), open=float(row[1]), high=float(row[2]), low=float(row[3]), close=float(row[4]), volume=float(row[5])) for row in rows]
+        candles = [CandleInput(time=int(row[0] // 1000), open=float(row[1]), high=float(row[2]), low=float(row[3]), close=float(row[4]), volume=float(row[5])) for row in rows]
         return HistoricalMarketDataResult(
             symbol=request.symbol,
             timeframe=request.timeframe,
