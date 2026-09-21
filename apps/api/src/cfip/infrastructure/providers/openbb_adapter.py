@@ -19,6 +19,10 @@ class OpenBBMarketDataAdapter:
         return True
 
     def fetch_historical(self, request: HistoricalMarketDataRequest) -> HistoricalMarketDataResult:
+        interval_map = {"1m": "1m", "2m": "2m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d", "1w": "1wk", "1mo": "1mo"}
+        interval = interval_map.get(request.timeframe.lower())
+        if interval is None:
+            raise ValueError("unsupported_openbb_timeframe")
         try:
             from openbb import obb
         except ImportError as exc:
