@@ -14,19 +14,19 @@ Progress is capability maturity, not a claim of production readiness.
 | Training/data lineage | 68% | Temporal split and immutable dataset controls |
 | Model registry/lifecycle | 48% | MLflow adapter implemented; runtime gate pending |
 | Retrieval/research memory | 50% | Qdrant + OpenBB adapters implemented; benchmarks pending |
-| Agent orchestration | 45% | PydanticAI integrated; orchestration adapters benchmarked next |
+| Agent orchestration | 58% | CFIP-owned agent/tool/model/memory/research contracts + PydanticAI adapter; LangGraph/Haystack benchmark next |
 | Self-healing | 80% | Runtime health evaluation + protected invariant API + gated execution boundary |
 | Self-development | 68% | Governed proposal/validation/promotion path |
 | Observability | 61% | OpenTelemetry adapter implemented; propagation/export pending |
 | Backtest/replay | 55% | NautilusTrader adapter implemented; deterministic runtime benchmark pending |
 | Journal/outcome feedback | 55% | Outcome contracts active |
-| Security/governance | 76% | Evidence, security headers, artifact integrity and approval gates active |
-| OSS integration fabric | 74% | Nine major optional adapters implemented; runtime gates active |
+| Security/governance | 82% | Trusted hosts, CORS wildcard rejection, request correlation, HSTS production boundary and approval gates active |
+| OSS integration fabric | 78% | CFIP-owned capability contracts expanded across intelligence/runtime/security; optional OSS adapters remain isolated |
 | Documentation/provenance | 80% | Canonical progress and OSS ledgers maintained |
 
 ## Overall capability maturity
 
-**Approximately 72%**
+**Approximately 74%**
 
 The remaining work is weighted toward runtime integration, empirical verification, data/research
 depth, execution/backtesting, learning loops, observability propagation and terminal-to-engine
@@ -44,6 +44,8 @@ integration rather than superficial feature additions.
 8. Runtime health/invariant collection and self-healing gates.
 9. Self-development verification and controlled promotion.
 10. Terminal → analysis → risk → replay → outcome → learning integration.
+11. Vendor-neutral MIOS Agent/Tool/Model/Memory/Research runtime contracts and PydanticAI adapter.
+12. Request-boundary security hardening and trusted-host/CORS controls.
 
 Progress percentages are engineering estimates for roadmap tracking; they are not benchmark
 scores or production-readiness claims.
