@@ -39,7 +39,7 @@ PLATFORM_CAPABILITIES: tuple[PlatformCapability, ...] = (
     PlatformCapability(id="trading.outcomes", kind="trading", maturity="integrated", contract="signal.outcome.v1", evidence_required=True),
     PlatformCapability(id="trading.journal", kind="trading", maturity="contract", contract="trading.journal.v1"),
     PlatformCapability(id="intelligence.core", kind="intelligence", maturity="contract", contract="intelligence.core.v1", evidence_required=True),
-    PlatformCapability(id="intelligence.agent-runtime", kind="intelligence", maturity="integrated", contract="intelligence.agent.v1", dependencies=("pydantic-ai",), evidence_required=True),
+    PlatformCapability(id="intelligence.agent-runtime", kind="intelligence", maturity="adapter", contract="intelligence.agent.v1", dependencies=("pydantic-ai",), evidence_required=True),
     PlatformCapability(id="intelligence.tools", kind="intelligence", maturity="contract", contract="intelligence.tool.v1", evidence_required=True),
     PlatformCapability(id="intelligence.models", kind="intelligence", maturity="contract", contract="intelligence.model.v1", evidence_required=True),
     PlatformCapability(id="intelligence.memory", kind="intelligence", maturity="contract", contract="intelligence.memory.v1", evidence_required=True),
@@ -50,6 +50,7 @@ PLATFORM_CAPABILITIES: tuple[PlatformCapability, ...] = (
     PlatformCapability(id="research.fabric", kind="research", maturity="contract", contract="research.evidence.v1", evidence_required=True),
     PlatformCapability(id="research.oss-adapters", kind="research", maturity="contract", contract="oss.adapter.v1"),
     PlatformCapability(id="platform.git-governance", kind="platform", maturity="integrated", contract="git.governance.v1", evidence_required=True),
+    PlatformCapability(id="platform.security-boundary", kind="platform", maturity="integrated", contract="security.http-boundary.v1", evidence_required=True),
     PlatformCapability(id="platform.i18n", kind="platform", maturity="native", contract="experience.locale.v1"),
     PlatformCapability(id="admin.control-plane", kind="admin", maturity="integrated", contract="control-plane.v1"),
 )
