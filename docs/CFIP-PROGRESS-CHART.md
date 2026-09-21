@@ -1,43 +1,40 @@
 # MIOS Progress Chart
 
-Updated: 2026-09-21
+Updated: 2026-09-22
 
-This chart is an engineering-status estimate, not a production-readiness certification. A percentage reflects the amount of the planned capability surface that is represented by working contracts/implementations in the active feature branch; it does not mean that percentage of the product has been validated in production.
+This is an engineering coverage estimate, not a production-readiness certification.
 
 | Area | Estimate | Current state |
 |---|---:|---|
-| Platform/backend foundation | 75% | Typed domain/application/infrastructure boundaries, FastAPI lifecycle and configuration are present. |
-| Professional terminal/chart | 68% | Lightweight Charts terminal, drawings, replay, sessions, indicators and overlays are present; deeper UX and runtime validation remain. |
-| Market data/providers | 55% | Provider-neutral contracts/catalog and data-quality boundary exist; live adapters/connectivity are not yet complete. |
-| Unified analysis | 60% | Canonical analysis contracts, confluence gates and terminal/backend handoff exist; broader multi-source/MTF evidence integration remains. |
-| OSS analytics integration | 35% | Adapter boundary exists, but mature OSS engines are not yet broadly wired into the active branch; native chart math still exists. |
-| MIOS intelligence | 55% | Governed intelligence runtime, evidence contracts and improvement lifecycle exist; durable execution/training/promotion loops remain. |
-| Self-learning / outcomes | 45% | Outcome/learning contracts and persistence migrations exist; end-to-end calibration and model promotion need completion and verification. |
-| Self-healing / self-development | 50% | Governed state transitions and fail-closed boundaries exist; sandboxed remediation and evidence-driven autonomous cycles remain. |
-| Security/governance | 65% | Secret references, governed Git boundaries, approval requirements and fail-closed authorization are present; full runtime/security validation remains. |
-| Verification / release readiness | 30% | Unit coverage is substantial, but the active branch still has no reported GitHub Actions run after the latest changes. |
+| Platform/backend foundation | 82% | Typed domain/application/infrastructure boundaries, FastAPI lifecycle and native launcher are established. |
+| Professional terminal/chart | 72% | Terminal/chart foundation exists; runtime datafeed, replay depth and UX hardening remain. |
+| Market data/providers | 68% | Vendor-neutral contracts, CCXT boundary and OpenBB/Nautilus boundaries exist; live connectivity still requires configured adapters. |
+| Indicators/market structure | 78% | TA-Lib boundary plus MIOS-specific structure contracts exist; parity and broader OSS migration remain. |
+| Unified analysis/MTF | 68% | Canonical analysis/confluence boundaries exist; broader multi-source evidence and deterministic integration tests remain. |
+| OSS integration fabric | 62% | OSS dependencies are isolated behind contracts; optional research, ML, observability and retrieval profile is now defined. |
+| MIOS intelligence | 63% | Evidence and governed intelligence runtime exist; durable agent/model/training execution remains. |
+| Self-learning/outcomes | 52% | Outcome/learning foundations exist; calibration, registry promotion and feedback automation remain. |
+| Self-healing/self-development | 64% | Risk-gated autonomous execution is established; sandbox/canary/evidence loops need end-to-end integration. |
+| Git/GitHub control plane | 55% | Local governed Git plus remote Git contracts exist; PR/review/check/rollback adapter and provenance remain. |
+| Security/health | 76% | Trusted hosts, security headers, request correlation and SSRF policy boundary exist; authenticated control-plane mutation and runtime security scanning remain. |
+| Verification/release | 34% | Unit coverage is growing; branch-wide CI and frontend/backend integration verification are still required. |
 
-## Immediate engineering sequence
+## MIOS target architecture
 
-1. Verify the active branch with backend unit/import checks and frontend lint/typecheck/build.
-2. Reconcile PR #4's missing vertical capabilities with PR #5 without duplicating contracts or implementations.
-3. Replace remaining native indicator calculations with OSS-backed adapters where semantic equivalence and compatibility gates pass.
-4. Complete the terminal's production-grade indicator pane/layout behavior, datafeed adapters and real-time stream boundary.
-5. Connect MIOS evidence → proposal → sandbox validation → human approval → governed promotion → outcome → learning → rollback as one durable lifecycle.
-6. Add deterministic integration tests for readiness, analysis gates, provider health, replay, risk sizing, outcomes and governed self-development.
+evidence -> research -> data quality -> indicators/structure -> MTF/confluence -> unified analysis -> risk -> signal/outcome -> learning
 
-## Branch state
+Parallel governance loop:
 
-Active development branch: `feat/platform-runtime-orchestration-2026-09-20`
+observe -> diagnose -> propose -> risk gate -> sandbox/canary -> test/security evidence -> autonomous low/medium apply OR human approval for high/critical -> audit -> outcome -> learn -> rollback/revise
 
-Latest branch commit at chart creation: `5d5382c72fbb5891029969a6bd73edd1b1364e70`
+## OSS policy
 
-The branch is a draft PR against `main`. No CI-green claim is made until GitHub Actions produces a result.
+Prefer mature OSS implementations wherever they improve correctness or coverage. Keep MIOS-owned contracts, provenance, governance and product UX. Do not add overlapping engines merely for breadth; benchmark first.
 
-## 2026-09-21 autonomy/security pass
+Current integration surfaces include TA-Lib, CCXT, OpenBB, NautilusTrader, PydanticAI and optional adapters for trafilatura, MLflow, Evidently, OpenTelemetry, Qdrant, OpenSearch and Feast.
 
-- MIOS autonomy policy: low/medium risk may self-apply; high/critical requires human approval.
-- Protected Git surfaces automatically escalate to high risk.
-- Direct main commits remain forbidden.
-- Local Git adapter now uses argv-only subprocess execution, path traversal checks and bounded timeouts.
-- API adds trusted-host enforcement, request correlation and baseline security headers.
+## Current branch
+
+feat/mios-platform-unification-2026-09-22
+
+No CI-green claim is made until GitHub Actions reports a successful run for the current head.
