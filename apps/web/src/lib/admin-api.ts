@@ -25,7 +25,11 @@ const AdminRuntimeSchema = z.object({
     degraded_count: z.number(),
     components: z.array(ComponentSchema),
   }),
-  security: z.object({ secrets_exposed: z.boolean(), mutation_enabled: z.boolean(), note: z.string() }),
+  security: z.object({
+    secrets_exposed: z.boolean(),
+    mutation_enabled: z.boolean(),
+    authentication: z.string(),
+  }),
 });
 export type AdminRuntime = z.infer<typeof AdminRuntimeSchema>;
 
