@@ -9,7 +9,7 @@ from hashlib import sha256
 from json import dumps
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ProposalKind = Literal["bug-fix", "performance", "security", "data-quality", "model", "ux", "dependency"]
 ProposalRisk = Literal["low", "medium", "high", "critical"]
@@ -62,3 +62,11 @@ class PromotionDecision(BaseModel):
     actor: str = Field(min_length=1, max_length=128)
     reason: str = Field(default="", max_length=2000)
     validation_run_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def enforce_validation_before_promotion(self) -> "PromotionDecision":
+        if self.approved and not self.validation_run_id:
+            raise ValueError("approval_requires_validation_run")
+        if not self.approved and not self.reason.strip():
+            raise ValueError("rejection_requires_reason")
+        return self
