@@ -15,18 +15,18 @@ Progress is capability maturity, not a claim of production readiness.
 | Model registry/lifecycle | 48% | MLflow adapter implemented; runtime gate pending |
 | Retrieval/research memory | 50% | Qdrant + OpenBB adapters implemented; benchmarks pending |
 | Agent orchestration | 45% | PydanticAI integrated; orchestration adapters benchmarked next |
-| Self-healing | 77% | Health observation + gated execution boundary |
+| Self-healing | 80% | Runtime health evaluation + protected invariant API + gated execution boundary |
 | Self-development | 68% | Governed proposal/validation/promotion path |
 | Observability | 61% | OpenTelemetry adapter implemented; propagation/export pending |
 | Backtest/replay | 55% | NautilusTrader adapter implemented; deterministic runtime benchmark pending |
 | Journal/outcome feedback | 55% | Outcome contracts active |
-| Security/governance | 74% | Evidence, headers, artifact integrity and approval gates active |
+| Security/governance | 76% | Evidence, security headers, artifact integrity and approval gates active |
 | OSS integration fabric | 74% | Nine major optional adapters implemented; runtime gates active |
 | Documentation/provenance | 80% | Canonical progress and OSS ledgers maintained |
 
 ## Overall capability maturity
 
-**Approximately 71%**
+**Approximately 72%**
 
 The remaining work is weighted toward runtime integration, empirical verification, data/research
 depth, execution/backtesting, learning loops, observability propagation and terminal-to-engine
@@ -41,8 +41,9 @@ integration rather than superficial feature additions.
 5. OpenTelemetry trace/metric instrumentation.
 6. OpenBB research/news retrieval.
 7. Outcome-driven training, calibration and drift feedback.
-8. Self-development verification and controlled promotion.
-9. Terminal → analysis → risk → replay → outcome → learning integration.
+8. Runtime health/invariant collection and self-healing gates.
+9. Self-development verification and controlled promotion.
+10. Terminal → analysis → risk → replay → outcome → learning integration.
 
 Progress percentages are engineering estimates for roadmap tracking; they are not benchmark
 scores or production-readiness claims.
