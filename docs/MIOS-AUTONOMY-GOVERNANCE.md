@@ -1,6 +1,6 @@
-# MIOS autonomy governance
+# MIOSAI autonomy governance
 
-MIOS is designed to operate autonomously inside explicit safety boundaries.
+MIOSAI is designed to operate autonomously inside explicit safety boundaries.
 
 ## Default rule
 
@@ -11,7 +11,7 @@ MIOS is designed to operate autonomously inside explicit safety boundaries.
 
 Protected surfaces include CI/workflows, environment/secrets, production infrastructure and core runtime configuration. A change touching those surfaces is escalated regardless of the proposal's original risk label.
 
-The policy is deliberately separate from the executor. MIOS may propose and evaluate a mutation, but the executor must still enforce artifact integrity, tests, rollback and audit evidence.
+The policy is deliberately separate from the executor. MIOSAI may propose and evaluate a mutation, but the executor must still enforce artifact integrity, tests, rollback and audit evidence.
 
 ## Autonomous Git workflow
 
@@ -19,7 +19,7 @@ observe -> diagnose -> propose -> risk-evaluate -> branch -> change -> test -> c
 
 Direct commits to main remain forbidden. Low/medium changes can be prepared and committed on isolated branches without waiting for a human. High/critical changes stop at the approval boundary.
 
-This gives MIOS broad operational autonomy without allowing it to silently bypass safety controls.
+This gives MIOSAI broad operational autonomy without allowing it to silently bypass safety controls.
 
 
 ## Verification note
