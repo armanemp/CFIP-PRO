@@ -12,7 +12,7 @@ class RuntimeDecision:
 
 
 class IntelligenceRuntimeService:
-    """Keep provider execution behind evidence and approval boundaries."""
+    """Keep provider execution behind evidence, scope and approval boundaries."""
 
     def __init__(self, agent: AgentRuntime) -> None:
         self.agent = agent
@@ -24,6 +24,8 @@ class IntelligenceRuntimeService:
             return RuntimeDecision(False, "evidence_required")
         if context.approval_required and not context.dry_run:
             return RuntimeDecision(False, "approval_required_for_live_execution")
+        if not request.spec.model_id.strip():
+            return RuntimeDecision(False, "model_identity_required")
         return RuntimeDecision(True, "allowed")
 
     async def run(self, request: AgentRequest) -> AgentResponse:
