@@ -11,7 +11,7 @@ from cfip.domain.intelligence_identity import DEFAULT_INTELLIGENCE_NAME
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = Field(default="CFIP-PRO", alias="APP_NAME")
+    app_name: str = Field(default="MIOS", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
     api_host: str = Field(default="127.0.0.1", alias="API_HOST")
