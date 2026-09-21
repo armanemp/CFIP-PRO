@@ -1,12 +1,9 @@
 """Optional TA-Lib indicator adapter.
 
-TA-Lib is deliberately imported lazily: CFIP core must remain bootable when the
-optional native extension is unavailable. The adapter implements the provider-
-neutral indicator contract and preserves provenance in result metadata.
+TA-Lib is imported lazily so CFIP core remains bootable without the optional
+native extension. Market timestamps always come from the caller.
 """
 from __future__ import annotations
-
-from collections.abc import Sequence
 
 from cfip.domain.indicator_contracts import IndicatorPoint, IndicatorRequest, IndicatorResult
 
@@ -20,17 +17,10 @@ def _talib_function(indicator_id: str):
         import talib
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise TALibUnavailable("TA-Lib is not installed") from exc
-
     try:
         return getattr(talib, indicator_id.upper()), talib.__version__
     except AttributeError as exc:
         raise ValueError(f"TA-Lib does not expose indicator {indicator_id!r}") from exc
-
-
-def _float_parameter(value: object, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{name} must be numeric")
-    return float(value)
 
 
 def _int_parameter(value: object, name: str, default: int) -> int:
@@ -52,11 +42,12 @@ class TALibIndicatorAdapter:
 
     def calculate(self, request: IndicatorRequest) -> IndicatorResult:
         function, library_version = _talib_function(request.indicator_id)
+        timestamps = request.aligned_timestamps()
         values = [float(value) for value in request.values]
         kwargs = dict(request.parameters)
 
         period = _int_parameter(kwargs.pop("timeperiod", kwargs.pop("period", None)), "period", 14)
-        supported = {"timeperiod": period}
+        supported: dict[str, int] = {"timeperiod": period}
         for name in ("fastperiod", "slowperiod", "signalperiod"):
             if name in kwargs:
                 supported[name] = _int_parameter(kwargs.pop(name), name, period)
@@ -70,14 +61,11 @@ class TALibIndicatorAdapter:
                 "use a dedicated multi-output adapter"
             )
 
-        points: list[IndicatorPoint] = []
-        # IndicatorRequest currently carries values only, so timestamps cannot be
-        # fabricated. Callers requiring persisted timestamps must extend the
-        # request contract before using this adapter for storage.
-        for index, value in enumerate(output):
-            if value == value:  # NaN check without importing numpy.
-                points.append(IndicatorPoint(timestamp=index + 1, value=float(value)))
-
+        points = [
+            IndicatorPoint(timestamp=timestamps[index], value=float(value))
+            for index, value in enumerate(output)
+            if value == value
+        ]
         return IndicatorResult(
             indicator_id=request.indicator_id,
             version=f"talib-{library_version}",
