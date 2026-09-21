@@ -34,8 +34,8 @@ export function terminalChartOptions(prefs: ChartPreferences) {
     },
     crosshair: {
       mode: CrosshairMode.Normal,
-      vertLine: { color: TERMINAL_THEME.crosshair, width: 1, style: 3, labelBackgroundColor: TERMINAL_THEME.crosshairLabel },
-      horzLine: { color: TERMINAL_THEME.crosshair, width: 1, style: 3, labelBackgroundColor: TERMINAL_THEME.crosshairLabel },
+      vertLine: { color: TERMINAL_THEME.crosshair, width: 1 as const, style: 3 as const, labelBackgroundColor: TERMINAL_THEME.crosshairLabel },
+      horzLine: { color: TERMINAL_THEME.crosshair, width: 1 as const, style: 3 as const, labelBackgroundColor: TERMINAL_THEME.crosshairLabel },
     },
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
     handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
