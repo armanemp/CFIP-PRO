@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +44,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_host_list)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
