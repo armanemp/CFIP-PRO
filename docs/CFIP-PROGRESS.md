@@ -156,14 +156,14 @@
 - Implementation commits: `30ce82a707589d9bd8e86c14b282e2e209e7ba8e`, `7c05376192f6ca803a421f3c589d9041d04e5733`, `7533a6a28202e1c3b7cbfc3bf1f5686ddb806586`.
 - CI verification is pending GitHub Actions execution for the latest commit; no local build result is claimed here.
 
-# CFIP-PRO Canonical Progress Record
+# MIOS Canonical Progress Record
 
 **Canonical rule:** this file is the single project progress/change ledger. Every meaningful implementation, dependency decision, verification result, blocker and next step is appended here. Do not create competing progress ledgers.
 
 ## 2026-09-18 — Lightweight Charts attribution compliance + stale native frontend correction
 
 - Verified against the current official Lightweight Charts documentation and repository that the library requires specifying TradingView as the product creator, preserving the attribution notice from the upstream `NOTICE` file, and providing a link to `https://www.tradingview.com/` on the public website/application. The built-in `layout.attributionLogo` is an accepted way to satisfy the link requirement.
-- The CFIP-PRO chart configuration had explicitly set `attributionLogo: false`; this was identified as incorrect for the intended public deployment. The terminal shell now exposes a persistent user-visible `TradingView Lightweight Charts™ · https://www.tradingview.com/` attribution link, and the exact upstream `NOTICE` text is preserved at the repository root in `NOTICE`.
+- The MIOS chart configuration had explicitly set `attributionLogo: false`; this was identified as incorrect for the intended public deployment. The terminal shell now exposes a persistent user-visible `TradingView Lightweight Charts™ · https://www.tradingview.com/` attribution link, and the exact upstream `NOTICE` text is preserved at the repository root in `NOTICE`.
 - The project continues to use `lightweight-charts` `5.2.1`; no dependency churn is required.
 - User runtime showed `GET /sw.js 404 Not Found` even though `apps/web/public/sw.js` exists in source. Root cause is stale `apps/web/out` generated output: the native launcher only rebuilt when `index.html` was absent, so source changes could be served through an old export.
 - Corrected `scripts/run_cfip.py` so the single native Windows entrypoint rebuilds the web export only when it is missing or older than a tracked frontend source file. It deliberately excludes `out` and `node_modules`, avoiding unconditional builds while guaranteeing pulled frontend/PWA changes reach the served export.
@@ -176,7 +176,7 @@
 ## 2026-09-18 — Chart terminal completion track opened
 
 - The chart remains the main implementation focus. The repository already pins `lightweight-charts` `5.2.1`, which is the current stable release verified against the official Lightweight Charts project; no downgrade or unnecessary dependency replacement is justified.
-- The visual gap versus the original TradingView terminal is architectural: Lightweight Charts supplies the rendering engine, while CFIP-PRO must own the professional terminal shell, tool state, drawing system, indicator orchestration, market-structure/intelligence overlays, risk tools, multi-pane behavior, persistence and data lifecycle.
+- The visual gap versus the original TradingView terminal is architectural: Lightweight Charts supplies the rendering engine, while MIOS must own the professional terminal shell, tool state, drawing system, indicator orchestration, market-structure/intelligence overlays, risk tools, multi-pane behavior, persistence and data lifecycle.
 - Final target includes professional symbol/timeframe/header controls, chart types, scale controls, indicators, volume, oscillators, FVG/OB/market-structure intelligence, drawings, measurement/risk overlays, navigation/history/realtime boundaries, and a maintainable chart-state/rendering architecture.
 - Temporary `react-hooks/refs` lint containment remains a known architectural debt until the chart series/overlay bridge is state-driven.
 
@@ -213,7 +213,7 @@
 - This matches the native launcher output check, which already expects `apps/web/out/index.html`.
 - No dependency was added, no cache was disabled, no build was triggered by this correction, and no database/runtime reset was performed.
 - Correction committed on `main` as `a8ef451a21910babe27fc22b6fbc0091d17a04d3`.
-- Native verification after pulling this commit is required. The expected result is the actual CFIP-PRO web application at `http://127.0.0.1:8000`, rather than the JSON fallback.
+- Native verification after pulling this commit is required. The expected result is the actual MIOS web application at `http://127.0.0.1:8000`, rather than the JSON fallback.
 - `/sw.js` remains a separate non-blocking PWA gap and is not being masked with a placeholder.
 
 ## 2026-09-18 — Chart ref lint gate correction
@@ -274,6 +274,11 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+## 2026-09-21 — MIOS canonical platform identity and OSS adapter boundary
+
+- MIOS is now the canonical human-facing name for the entire platform, not merely the intelligence subsystem. The historical GitHub repository slug remains `armanemp/CFIP-PRO` so existing links and clone paths remain stable.
+- `APP_NAME` defaults to `MIOS`, `INTELLIGENCE_NAME` remains `MIOS`, and the README/progress terminology is aligned to the new project identity.
 
 ## 2026-09-21 — OSS adapter boundary and runtime capability discovery
 
