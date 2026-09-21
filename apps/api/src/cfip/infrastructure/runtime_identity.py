@@ -1,11 +1,13 @@
 """Persistent, runtime-editable platform identity registry."""
 
+from time import time_ns
 from threading import RLock
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cfip.domain.intelligence_identity import DEFAULT_INTELLIGENCE_IDENTITY, IntelligenceIdentity
 from cfip.infrastructure.db.models import PlatformSettingModel
+from cfip.infrastructure.db.repositories.intelligence import IntelligenceRepository
 from cfip.infrastructure.db.session import session_factory
 
 IDENTITY_NAME_KEY = "platform.identity.name"
@@ -35,15 +37,15 @@ class RuntimeIdentityRegistry:
     ) -> IntelligenceIdentity:
         normalized = IntelligenceIdentity(name=name).name
         current = self.get()
-        identity = current.model_copy(update={"name": normalized, "short_name": normalized[:12]})
-        # Revalidate the complete aggregate after deriving its short name.
-        identity = IntelligenceIdentity.model_validate(identity.model_dump())
+        identity = IntelligenceIdentity.model_validate(
+            {**current.model_dump(), "name": normalized, "short_name": normalized[:12]}
+        )
 
         if session is None:
             async with session_factory() as owned:
-                await self._write(owned, identity)
+                await self._write(owned, identity, previous_name=current.name)
         else:
-            await self._write(session, identity)
+            await self._write(session, identity, previous_name=current.name)
 
         with self._lock:
             self._identity = identity
@@ -60,12 +62,24 @@ class RuntimeIdentityRegistry:
             self._identity = identity
         return identity.model_copy(deep=True)
 
-    async def _write(self, session: AsyncSession, identity: IntelligenceIdentity) -> None:
+    async def _write(
+        self, session: AsyncSession, identity: IntelligenceIdentity, *, previous_name: str
+    ) -> None:
         row = await session.get(PlatformSettingModel, IDENTITY_NAME_KEY)
         if row is None:
             session.add(PlatformSettingModel(key=IDENTITY_NAME_KEY, value=identity.name))
         else:
             row.value = identity.name
+
+        occurred_at = time_ns()
+        await IntelligenceRepository(session).append_audit(
+            event_key=f"platform.identity.rename:{occurred_at}",
+            event_type="platform.identity.renamed",
+            aggregate_type="platform_identity",
+            aggregate_id=IDENTITY_NAME_KEY,
+            payload={"previous_name": previous_name, "new_name": identity.name},
+            occurred_at=occurred_at,
+        )
         await session.commit()
 
     def set_name(self, name: str) -> IntelligenceIdentity:
