@@ -35,7 +35,7 @@ class GitChangeProposal(BaseModel):
     validation_plan: tuple[str, ...] = ()
     rollback_plan: tuple[str, ...] = ()
     risk: GitRisk = "medium"
-    requires_approval: bool = True
+    requires_approval: bool = False
 
 class GitAuthorization(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -45,10 +45,20 @@ class GitAuthorization(BaseModel):
     approval_reason: str = Field(default="", max_length=2000)
     expires_at: int | None = Field(default=None, gt=0)
 
-def path_allowed(path: str, scope: GitScope) -> bool:
+def normalized_git_path(path: str) -> str:
     normalized = path.replace("\\", "/").lstrip("/")
-    if any(normalized.startswith(prefix) for prefix in scope.protected_paths):
-        return False
+    if not normalized or normalized == "." or normalized.startswith("../") or "/../" in normalized:
+        raise ValueError("invalid_git_path")
+    return normalized
+
+
+def is_protected_path(path: str, scope: GitScope) -> bool:
+    normalized = normalized_git_path(path)
+    return any(normalized.startswith(prefix) for prefix in scope.protected_paths)
+
+
+def path_allowed(path: str, scope: GitScope) -> bool:
+    normalized = normalized_git_path(path)
     return not scope.allowed_paths or any(
         normalized == allowed or normalized.startswith(allowed.rstrip("/") + "/")
         for allowed in scope.allowed_paths
