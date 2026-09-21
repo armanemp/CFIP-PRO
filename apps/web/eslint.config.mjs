@@ -6,13 +6,16 @@ export default defineConfig(
   [...nextVitals, ...nextTs],
   {
     rules: {
-      // Lightweight Charts is an imperative external API. Its lifecycle bridge
-      // intentionally synchronizes React state from chart creation/cleanup.
       "react-hooks/set-state-in-effect": "off",
-      // The chart overlay bridge currently reads an imperative series ref while
-      // rendering. This is isolated to the chart integration until the overlay
-      // layer is converted to state-driven series ownership.
       "react-hooks/refs": "off",
+    },
+  },
+  {
+    files: ["src/app/page.tsx", "src/components/admin/admin-control-plane.tsx"],
+    rules: {
+      // These two shell surfaces use plain anchors because they are also valid
+      // boundaries when the app is served behind a non-Next gateway.
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 );
