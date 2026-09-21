@@ -1,6 +1,6 @@
 # MIOSAIAI Progress Chart
 
-Updated: 2026-09-22
+Updated: 2026-09-22 (identity/security persistence pass)
 
 This is an engineering coverage estimate, not a production-readiness certification.
 
