@@ -1,8 +1,8 @@
-> MIOS is the canonical name of the entire platform. The historical GitHub slug armanemp/CFIP-PRO remains until the repository rename is applied.
+> MIOSAI is the canonical name of the entire platform. The historical GitHub slug armanemp/CFIP-PRO remains until the repository rename is applied.
 
-# MIOS
+# MIOSAI
 
-MIOS is a Python-first financial market intelligence platform designed to evolve into a complete evidence-grounded market analyst with governed learning, self-healing and self-development. MIOS owns contracts, safety policy and UX; mature OSS engines provide implementation behind adapters.
+MIOSAI is a Python-first financial market intelligence platform designed to evolve into a complete evidence-grounded market analyst with governed learning, self-healing and self-development. MIOSAI owns contracts, safety policy and UX; mature OSS engines provide implementation behind adapters.
 
 ## Foundation
 
@@ -16,7 +16,7 @@ MIOS is a Python-first financial market intelligence platform designed to evolve
 
 From the repository root:
 
-    .\.venv\Scripts\python.exe scripts\run_mios.py
+    .\.venv\Scripts\python.exe scripts\run_miosai.py
 
 Open http://127.0.0.1:8000. The launcher builds the web export only when stale and never resets the database or unconditionally rebuilds dependencies.
 
@@ -34,7 +34,7 @@ scripts/run_cfip.py remains as a compatibility wrapper during the naming migrati
 
 ## Architecture rule
 
-OSS engine -> MIOS adapter -> MIOS domain contract -> application orchestration -> API/UI
+OSS engine -> MIOSAI adapter -> MIOSAI domain contract -> application orchestration -> API/UI
 
 OSS libraries are optional where practical, lazy-loaded, license-reviewed, resource-bounded and observable. The domain never imports vendor APIs directly.
 
@@ -46,4 +46,4 @@ Low/medium-risk changes may be autonomously prepared and committed on isolated b
 
 ## Git control plane
 
-MIOS is building a governed Git control plane covering local state, branches, commits, pull requests, reviews, checks, merge gates, rollback and provenance. Direct commits to main remain forbidden.
+MIOSAI is building a governed Git control plane covering local state, branches, commits, pull requests, reviews, checks, merge gates, rollback and provenance. Direct commits to main remain forbidden.
