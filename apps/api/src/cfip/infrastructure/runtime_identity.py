@@ -1,6 +1,5 @@
 """Persistent, runtime-editable platform identity registry."""
 from threading import RLock
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cfip.domain.intelligence_identity import DEFAULT_INTELLIGENCE_IDENTITY, IntelligenceIdentity
