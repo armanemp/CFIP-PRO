@@ -20,6 +20,12 @@ class ProviderDescriptor(BaseModel):
     notes: str = ""
 
 PROVIDER_CATALOG: tuple[ProviderDescriptor, ...] = (
+    ProviderDescriptor(id="openbb",name="OpenBB",kind="market-data",status="adapter",capabilities=("historical","provider-routing","research"),credential_required=False),
+    ProviderDescriptor(id="nautilus-trader",name="NautilusTrader",kind="execution",status="adapter",capabilities=("backtest","deterministic-simulation","execution-adapter"),credential_required=False),
+    ProviderDescriptor(id="qlib",name="Qlib",kind="research",capabilities=("quant-research","features","models"),credential_required=False),
+    ProviderDescriptor(id="ta-lib",name="TA-Lib",kind="market-data",status="adapter",capabilities=("technical-analysis","pattern-recognition"),credential_required=False),
+    ProviderDescriptor(id="evidently",name="Evidently",kind="observability",status="adapter",capabilities=("data-drift","prediction-drift","evaluation"),credential_required=False),
+    ProviderDescriptor(id="opentelemetry-sdk",name="OpenTelemetry SDK",kind="observability",status="adapter",capabilities=("traces","metrics","logs"),credential_required=False),
     ProviderDescriptor(id="eodhd",name="EODHD",kind="market-data",capabilities=("forex","historical","fundamentals")),
     ProviderDescriptor(id="twelve-data",name="Twelve Data",kind="market-data",capabilities=("forex","historical","realtime")),
     ProviderDescriptor(id="finnhub",name="Finnhub",kind="market-data",capabilities=("forex","historical","realtime","news")),
