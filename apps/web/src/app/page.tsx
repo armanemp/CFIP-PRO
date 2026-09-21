@@ -23,10 +23,10 @@ export default function Home() {
     getConfigDefaults().then(setConfig).catch(()=>setConfig(null));
   },[]);
   const price = market?.last ?? market?.bid ?? market?.ask;
-  const intelligenceName = config?.intelligence_identity.name ?? "Finance Intelligence";
+  const intelligenceName = config?.intelligence_identity.name ?? "Market Intelligence";
   return <main className="min-h-dvh overflow-hidden bg-[var(--cfip-terminal-bg)] text-[var(--cfip-terminal-text)]">
     <header className="flex h-12 items-center border-b border-[var(--cfip-terminal-border)] bg-[var(--cfip-terminal-surface)]/90 px-5 backdrop-blur">
-      <a href="/" className="font-semibold tracking-[0.16em] text-white">CFIP-PRO</a>
+      <a href="/" className="font-semibold tracking-[0.16em] text-white">{intelligenceName}</a>
       <span className="mx-3 text-[var(--cfip-terminal-border-strong)]">/</span><span className="text-[10px] uppercase tracking-[0.18em] text-[var(--cfip-terminal-text-muted)]">Financial Intelligence Platform</span>
       <nav className="ml-auto flex items-center gap-4 text-xs text-[var(--cfip-terminal-text-muted)]"><a href="/terminal" className="hover:text-white">Terminal</a><a href="/admin" className="hover:text-white">Control Plane</a></nav>
     </header>
@@ -35,7 +35,7 @@ export default function Home() {
       <div className="max-w-4xl">
         <div className="mb-5 inline-flex rounded-full border border-[var(--cfip-terminal-border-strong)] bg-[var(--cfip-terminal-surface)] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--cfip-terminal-text-muted)]">AI-native • modular • governed</div>
         <h1 className="text-5xl font-semibold tracking-[-0.04em] text-white md:text-7xl">Market intelligence,<br/><span className="text-[var(--cfip-terminal-accent)]">built as a workstation.</span></h1>
-        <p className="mt-6 max-w-2xl text-base leading-7 text-[var(--cfip-terminal-text-muted)] md:text-lg">CFIP-PRO combines professional charting, deterministic market analysis, broker-aware risk, realtime data and {intelligenceName} intelligence in a modular platform designed for evidence, reproducibility and control.</p>
+        <p className="mt-6 max-w-2xl text-base leading-7 text-[var(--cfip-terminal-text-muted)] md:text-lg">{intelligenceName} combines professional charting, deterministic market analysis, broker-aware risk, realtime data and {intelligenceName} intelligence in a modular platform designed for evidence, reproducibility and control.</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="/terminal" className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-[#071018] transition hover:bg-[var(--cfip-terminal-text-muted)]">Open terminal</a>
           <a href="/admin" className="rounded-lg border border-[var(--cfip-terminal-border-strong)] bg-[var(--cfip-terminal-surface)] px-5 py-3 text-sm font-medium text-white hover:bg-[var(--cfip-terminal-surface-active)]">Control plane</a>
@@ -50,7 +50,7 @@ export default function Home() {
         {capabilities.map(([title,description])=><article key={title} className="rounded-xl border border-[var(--cfip-terminal-border)] bg-[var(--cfip-terminal-surface)]/80 p-5 hover:border-[var(--cfip-terminal-border-strong)]"><h2 className="text-sm font-semibold text-white">{title === "Intelligence" ? `${intelligenceName} Intelligence` : title}</h2><p className="mt-2 text-xs leading-5 text-[var(--cfip-terminal-text-muted)]">{description}</p></article>)}
       </div>
     </section>
-    <footer className="border-t border-[var(--cfip-terminal-border)] px-5 py-5 text-center text-[10px] uppercase tracking-[0.15em] text-[var(--cfip-terminal-text-faint)]">CFIP-PRO • chart-first • evidence-first • governed</footer>
+    <footer className="border-t border-[var(--cfip-terminal-border)] px-5 py-5 text-center text-[10px] uppercase tracking-[0.15em] text-[var(--cfip-terminal-text-faint)]">{intelligenceName} • chart-first • evidence-first • governed</footer>
   </main>;
 }
 
