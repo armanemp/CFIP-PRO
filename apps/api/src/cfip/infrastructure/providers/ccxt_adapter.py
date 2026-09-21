@@ -1,16 +1,24 @@
 """Optional CCXT market-data adapter for exchange/crypto connectivity."""
 from __future__ import annotations
-from datetime import datetime, timezone
+
+import asyncio
+from contextlib import suppress
+from datetime import UTC, datetime
+
 from cfip.domain.analysis import CandleInput
 from cfip.domain.market_data_contracts import HistoricalMarketDataRequest, HistoricalMarketDataResult
+
 
 class CCXTUnavailable(RuntimeError):
     pass
 
+
 class CCXTMarketDataAdapter:
     id = "ccxt"
+
     def __init__(self, exchange_id: str = "binance") -> None:
         self.exchange_id = exchange_id
+
     @property
     def version(self) -> str:
         try:
@@ -18,12 +26,14 @@ class CCXTMarketDataAdapter:
             return str(ccxt.__version__)
         except ImportError:
             return "unavailable"
+
     def available(self) -> bool:
         try:
             import ccxt  # type: ignore
             return hasattr(ccxt, self.exchange_id)
         except ImportError:
             return False
+
     def fetch_historical(self, request: HistoricalMarketDataRequest) -> HistoricalMarketDataResult:
         try:
             import ccxt  # type: ignore
@@ -40,14 +50,21 @@ class CCXTMarketDataAdapter:
         finally:
             close = getattr(exchange, "close", None)
             if close is not None:
-                import asyncio
                 result = close()
                 if hasattr(result, "__await__"):
-                    try:
+                    with suppress(RuntimeError):
                         asyncio.run(result)
-                    except RuntimeError:
-                        pass
-        candles = [CandleInput(time=int(row[0] // 1000), open=float(row[1]), high=float(row[2]), low=float(row[3]), close=float(row[4]), volume=float(row[5])) for row in rows]
+        candles = [
+            CandleInput(
+                time=int(row[0] // 1000),
+                open=float(row[1]),
+                high=float(row[2]),
+                low=float(row[3]),
+                close=float(row[4]),
+                volume=float(row[5]),
+            )
+            for row in rows
+        ]
         return HistoricalMarketDataResult(
             symbol=request.symbol,
             timeframe=request.timeframe,
@@ -55,5 +72,5 @@ class CCXTMarketDataAdapter:
             provider=f"ccxt:{self.exchange_id}",
             provider_version=self.version,
             provenance=f"ccxt/{self.exchange_id}/fetch_ohlcv",
-            fetched_at_epoch=int(datetime.now(timezone.utc).timestamp()),
+            fetched_at_epoch=int(datetime.now(UTC).timestamp()),
         )
