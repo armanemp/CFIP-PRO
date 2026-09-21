@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { UTCTimestamp } from "lightweight-charts";
 import { canEditDrawing, createDrawing, deleteDrawing, moveDrawing, selectDrawingAt, updateDrawing } from "./drawing-controller";
 
-const point = (time: 100, price: 1.1) => ({ time: time as never, price });
+const point = (time: number, price: number) => ({ time: time as UTCTimestamp, price });
 
 const drawing = createDrawing({ tool: "trendline", a: point(100, 1.1), b: point(200, 1.2) }, "d1");
 
