@@ -1,4 +1,4 @@
-"""Governed self-development contracts for Elyrava.
+"""Governed self-development contracts for MIOS.
 
 This boundary makes platform self-improvement auditable and reversible. It does
 not grant shell, production, or Git permissions by itself; adapters must enforce
