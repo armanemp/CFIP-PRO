@@ -1,7 +1,7 @@
 [project]
-name = "mios"
+name = "miosai"
 version = "0.1.0"
-description = "MIOS: modular Python-first financial market intelligence platform"
+description = "MIOSAI: modular Python-first financial market intelligence platform"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
