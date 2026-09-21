@@ -1,84 +1,49 @@
-> **MIOS is the canonical name of the entire platform. The historical repository slug remains `armanemp/CFIP-PRO` for continuity.**
+> MIOS is the canonical name of the entire platform. The historical GitHub slug armanemp/CFIP-PRO remains until the repository rename is applied.
 
 # MIOS
 
-MIOS is a clean greenfield, Python-first financial market intelligence platform. **CForex is the sole external capability reference.** MIOS does not inherit CForex implementation structure or technical debt.
+MIOS is a Python-first financial market intelligence platform designed to evolve into a complete evidence-grounded market analyst with governed learning, self-healing and self-development. MIOS owns contracts, safety policy and UX; mature OSS engines provide implementation behind adapters.
 
 ## Foundation
 
-- Python 3.14 + FastAPI + Pydantic 2 + SQLAlchemy 2 + Alembic
-- PostgreSQL as transactional system of record
-- NATS JetStream for durable event workflows
-- Redis for cache/ephemeral coordination
-- Next.js 16 + React 19.3 + TypeScript 6.0.3 + Tailwind CSS 4.3
-- TradingView Lightweight Charts 5.2.1
-- `uv` for Python dependency/environment management
-- npm for the frontend foundation
+- Python 3.14, FastAPI, Pydantic 2, SQLAlchemy 2, Alembic
+- PostgreSQL, NATS JetStream and Redis
+- Next.js, React, TypeScript, Tailwind and TradingView Lightweight Charts
+- OSS-first adapters for TA-Lib, CCXT, OpenBB, NautilusTrader and the wider research/ML/observability fabric
+- Native Windows development; Docker/WSL are not required for development
 
-The repository is a modular monolith with explicit boundaries. Domain code does not depend on transport, persistence, or infrastructure clients.
+## Native entrypoint
 
-## Native development
+From the repository root:
 
-Normal development is native Windows and does not require Docker. **Port 8000 is the single MIOS application entrypoint.** The native launcher builds the static Next.js application when needed and serves the web terminal and FastAPI API from the same origin.
+    .\.venv\Scripts\python.exe scripts\run_mios.py
 
-### Start the complete application
+Open http://127.0.0.1:8000. The launcher builds the web export only when stale and never resets the database or unconditionally rebuilds dependencies.
 
-From the repository root, with the project `.venv` available:
+scripts/run_cfip.py remains as a compatibility wrapper during the naming migration.
 
-```powershell
-.\.venv\Scripts\python.exe scripts\run_cfip.py
-```
+## Verification
 
-Then open `http://127.0.0.1:8000`. No second frontend terminal is required.
+    .\.venv\Scripts\python.exe -m pytest
+    .\.venv\Scripts\python.exe -m ruff check .
+    .\.venv\Scripts\python.exe -m mypy apps/api/src
+    cd apps/web
+    npm run lint
+    npm run typecheck
+    npm run build
 
-The launcher rebuilds the frontend export only when it is missing or older than tracked frontend source/config files. It does not rebuild unconditionally, reinstall dependencies, reset PostgreSQL, or require Docker/WSL.
+## Architecture rule
 
-### Backend verification
+OSS engine -> MIOS adapter -> MIOS domain contract -> application orchestration -> API/UI
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m mypy apps/api/src
-```
+OSS libraries are optional where practical, lazy-loaded, license-reviewed, resource-bounded and observable. The domain never imports vendor APIs directly.
 
-### Frontend development/build
+## Intelligence lifecycle
 
-```powershell
-cd apps/web
-npm run build
-npm run lint
-npm run typecheck
-```
+evidence -> research -> analysis -> proposal -> risk gate -> validate -> apply -> observe outcome -> learn -> rollback/revise
 
-The API defaults to `http://127.0.0.1:8000/api`; the production-style native entrypoint serves both API and web UI on port `8000`.
+Low/medium-risk changes may be autonomously prepared and committed on isolated branches when tests, rollback evidence and safety invariants pass. High/critical changes, merge and deployment remain approval-gated.
 
-## Architecture
+## Git control plane
 
-```text
-apps/
-├── api/
-│   ├── src/cfip/
-│   │   ├── api/            # HTTP transport and routers
-│   │   ├── application/    # use cases and orchestration
-│   │   ├── domain/         # framework-independent business contracts
-│   │   ├── infrastructure/ # DB, messaging, cache, providers
-│   │   └── worker/         # asynchronous process entry points
-│   └── tests/               # API-local tests when needed
-└── web/
-    └── src/
-        ├── app/            # Next.js App Router
-        ├── components/     # reusable terminal UI
-        ├── features/       # capability-owned UI modules
-        └── lib/            # API/config/client utilities
-
-scripts/
-└── run_cfip.py              # single native application launcher
-```
-
-## Project state
-
-The canonical implementation and progress record is `docs/MIOSGRESS.md`. Every structural change, dependency decision, verification result, blocker, and next step must be recorded there.
-
-## Scope
-
-The foundation intentionally does not pretend that market intelligence, trading, payment, OAuth, or autonomous intelligence are already implemented. Those capabilities are introduced as vertical slices after their contracts, OSS evaluations, tests, and operational boundaries are established.
+MIOS is building a governed Git control plane covering local state, branches, commits, pull requests, reviews, checks, merge gates, rollback and provenance. Direct commits to main remain forbidden.
