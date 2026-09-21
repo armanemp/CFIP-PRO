@@ -1,6 +1,6 @@
 import type { Candle } from "./types";
 import type { LinePoint } from "./chart-series";
-import { atr, ema, bollinger, sma, wma, vwap, obv, rsi, macd, dmi, stochastic, donchian, keltner, ichimoku } from "./chart-math";
+import { atr, bollinger, dmi, donchian, ema, ichimoku, keltner, macd, obv, rsi, sma, stochastic, vwap, wma } from "./chart-math";
 import { getIndicatorDefinition, defaultIndicatorParameters, type IndicatorId } from "./indicator-registry";
 import { TERMINAL_THEME } from "./terminal-theme";
 
@@ -79,17 +79,11 @@ const RUNTIME: Partial<Record<IndicatorId, Runtime>> = {
   },
 };
 
-export function renderIndicatorRuntime(
-  id: string,
-  context: IndicatorRenderContext,
-  parameters?: Record<string, number>,
-): boolean {
+export function renderIndicatorRuntime(id: string, context: IndicatorRenderContext, parameters?: Record<string, number>): boolean {
   if (!getIndicatorDefinition(id)) return false;
   const runtime = RUNTIME[id as IndicatorId];
   if (!runtime) return false;
   const normalized = parameters ?? defaultIndicatorParameters(id as IndicatorId);
-  for (const spec of runtime(context, normalized)) {
-    context.add(spec.data, spec.color, spec.title, spec.pane);
-  }
+  for (const spec of runtime(context, normalized)) context.add(spec.data, spec.color, spec.title, spec.pane);
   return true;
 }
