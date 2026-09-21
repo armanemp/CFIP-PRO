@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from cfip.application.intelligence_governance import authorize_agent
 from cfip.domain.intelligence_contracts import AgentRequest, AgentResponse, AgentRuntime
 
 
@@ -19,14 +20,8 @@ class IntelligenceRuntimeService:
 
     @staticmethod
     def authorize(request: AgentRequest) -> RuntimeDecision:
-        context = request.context
-        if not context.evidence:
-            return RuntimeDecision(False, "evidence_required")
-        if context.approval_required and not context.dry_run:
-            return RuntimeDecision(False, "approval_required_for_live_execution")
-        if not request.spec.model_id.strip():
-            return RuntimeDecision(False, "model_identity_required")
-        return RuntimeDecision(True, "allowed")
+        decision = authorize_agent(request)
+        return RuntimeDecision(decision.allowed, decision.reason)
 
     async def run(self, request: AgentRequest) -> AgentResponse:
         decision = self.authorize(request)
