@@ -29,8 +29,8 @@ class SelfHealingExecutionService:
             "index",
         }
         if (
-            request.artifact_kind == "code"
-            and policy.require_approval_for_code
+            (request.risk in {"high", "critical"} or (request.artifact_kind == "code" and policy.require_approval_for_code)
+             or (request.artifact_kind == "dependency" and policy.require_approval_for_dependency))
             and not approval_present
         ):
             reasons.append("approval_required")
@@ -70,10 +70,8 @@ class SelfHealingExecutionService:
         signed_artifact: bool,
     ) -> ExecutionGateResult:
         reasons: list[str] = []
-        if change.review_required and not approval_present:
-            reasons.append("review_required")
-        if not approval_present:
-            reasons.append("production_approval_required")
+        if (change.review_required or change.risk in {"high", "critical"}) and not approval_present:
+            reasons.append("human_approval_required")
         if not signed_artifact:
             reasons.append("signed_artifact_required")
         if not change.test_evidence_ids:
