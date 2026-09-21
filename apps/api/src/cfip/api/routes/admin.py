@@ -19,7 +19,7 @@ def _require_admin_token(token: str | None) -> None:
 @router.get("/runtime")
 async def runtime() -> dict[str, object]:
     settings = get_settings()
-    identity = platform_identity.get()
+    identity = await platform_identity.get_async()
     return {
         "app": {
             "name": identity.name,
@@ -42,9 +42,9 @@ async def runtime() -> dict[str, object]:
 
 @router.get("/identity")
 async def identity() -> dict[str, object]:
-    return platform_identity.get().model_dump()
+    return (await platform_identity.get_async()).model_dump()
 
 @router.put("/identity")
 async def update_identity(payload: IdentityUpdate, x_admin_control_token: str | None = Header(default=None)) -> dict[str, object]:
     _require_admin_token(x_admin_control_token)
-    return platform_identity.set_name(payload.name).model_dump()
+    return (await platform_identity.set_name_async(payload.name)).model_dump()
