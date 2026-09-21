@@ -1,6 +1,8 @@
 """FastAPI application entry point and same-origin web serving boundary."""
 
 from pathlib import Path
+from uuid import uuid4
+
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,17 @@ from cfip.core.config import get_settings
 
 settings = get_settings()
 
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Bound and propagate a correlation ID without trusting arbitrary input."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        incoming = request.headers.get("X-Request-ID", "").strip()
+        request_id = incoming if 1 <= len(incoming) <= 128 and incoming.isprintable() else str(uuid4())
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Apply conservative browser security headers at the API/web boundary."""
 
@@ -25,9 +38,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+        if settings.app_env.lower() in {"production", "prod"}:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
