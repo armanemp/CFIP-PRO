@@ -38,43 +38,43 @@ const RUNTIME: Partial<Record<IndicatorId, Runtime>> = {
   DMI14: ({ candles, paneIndex }) => {
     const value = dmi(candles, 14);
     return [
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.plus })), color: TERMINAL_THEME.bullish, title: "DMI +DI", pane: paneIndex },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.minus })), color: TERMINAL_THEME.bearish, title: "DMI -DI", pane: paneIndex },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.adx })), color: TERMINAL_THEME.highlight, title: "ADX", pane: paneIndex },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.plus }))), color: TERMINAL_THEME.bullish, title: "DMI +DI", pane: paneIndex },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.minus }))), color: TERMINAL_THEME.bearish, title: "DMI -DI", pane: paneIndex },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.adx }))), color: TERMINAL_THEME.highlight, title: "ADX", pane: paneIndex },
     ];
   },
   STOCH14: ({ candles, paneIndex }, p) => [{ data: stochastic(candles, p.period ?? 14, p.smooth ?? 3), color: TERMINAL_THEME.highlight, title: `Stochastic ${p.period ?? 14}`, pane: paneIndex }],
   DONCHIAN20: ({ candles }) => {
     const value = donchian(candles, 20);
     return [
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper })), color: TERMINAL_THEME.textFaint, title: "Donchian upper" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.middle })), color: TERMINAL_THEME.chartText, title: "Donchian mid" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower })), color: TERMINAL_THEME.textFaint, title: "Donchian lower" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper }))), color: TERMINAL_THEME.textFaint, title: "Donchian upper" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.middle }))), color: TERMINAL_THEME.chartText, title: "Donchian mid" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower }))), color: TERMINAL_THEME.textFaint, title: "Donchian lower" },
     ];
   },
   KELTNER20: ({ candles }) => {
     const value = keltner(candles, 20, 14, 1.5);
     return [
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper })), color: TERMINAL_THEME.info, title: "Keltner upper" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.middle })), color: TERMINAL_THEME.info, title: "Keltner mid" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower })), color: TERMINAL_THEME.info, title: "Keltner lower" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper }))), color: TERMINAL_THEME.info, title: "Keltner upper" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.middle }))), color: TERMINAL_THEME.info, title: "Keltner mid" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower }))), color: TERMINAL_THEME.info, title: "Keltner lower" },
     ];
   },
   ICHIMOKU: ({ candles }) => {
     const value = ichimoku(candles);
     return [
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.tenkan })), color: TERMINAL_THEME.bearish, title: "Ichimoku Tenkan" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.kijun })), color: TERMINAL_THEME.warning, title: "Ichimoku Kijun" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.senkouA })), color: TERMINAL_THEME.bullish, title: "Ichimoku Span A" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.senkouB })), color: TERMINAL_THEME.highlight, title: "Ichimoku Span B" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.tenkan }))), color: TERMINAL_THEME.bearish, title: "Ichimoku Tenkan" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.kijun }))), color: TERMINAL_THEME.warning, title: "Ichimoku Kijun" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.senkouA }))), color: TERMINAL_THEME.bullish, title: "Ichimoku Span A" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.senkouB }))), color: TERMINAL_THEME.highlight, title: "Ichimoku Span B" },
     ];
   },
   BB20: ({ candles }) => {
     const value = bollinger(candles);
     return [
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper })), color: TERMINAL_THEME.textFaint, title: "BB upper" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.mid })), color: TERMINAL_THEME.chartText, title: "BB mid" },
-      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower })), color: TERMINAL_THEME.textFaint, title: "BB lower" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.upper }))), color: TERMINAL_THEME.textFaint, title: "BB upper" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.mid }))), color: TERMINAL_THEME.chartText, title: "BB mid" },
+      { data: valueSeries(value.map(x => ({ time: x.time, value: x.lower }))), color: TERMINAL_THEME.textFaint, title: "BB lower" },
     ];
   },
 };
