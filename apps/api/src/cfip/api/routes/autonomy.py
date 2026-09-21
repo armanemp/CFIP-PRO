@@ -2,12 +2,13 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from cfip.application.autonomy import AutonomyService
+from cfip.domain.autonomy_policy import Action, Risk
 
 router = APIRouter(prefix="/autonomy", tags=["intelligence"])
 
 class AutonomyRequest(BaseModel):
-    action: str
-    risk: str = "low"
+    action: Action
+    risk: Risk = "low"
     paths: tuple[str, ...] = ()
     changed_files: int = Field(default=1, ge=1, le=1000)
 
