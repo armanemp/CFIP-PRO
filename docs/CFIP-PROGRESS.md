@@ -1,3 +1,10 @@
+## 2026-09-21 — governed health evaluation and invariant API
+
+- Added API-level component health evaluation backed by the existing deterministic circuit-breaker policy.
+- Added protected health-invariant evaluation as an explicit API boundary; missing safety evidence remains blocking rather than inferred healthy.
+- Added regression coverage for repeated component failure, fail-closed invariant evaluation, and the existing browser security headers.
+- This creates the runtime-facing health input required by the self-healing execution gate without granting the health endpoint mutation authority.
+
 ## 2026-09-21 — broker-aware risk planning API vertical slice
 
 - Exposed the existing deterministic RiskService through POST /api/risk/plan, with explicit account context, instrument/broker constraints and quote-to-account conversion.
