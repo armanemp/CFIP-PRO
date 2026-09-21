@@ -1,5 +1,8 @@
+import pytest
+from pydantic import ValidationError
+
 from cfip.application.self_improvement import evaluate_promotion_gate
-from cfip.domain.self_improvement import ImprovementProposal
+from cfip.domain.self_improvement import ImprovementProposal, PromotionDecision
 
 
 def proposal(**overrides: object) -> ImprovementProposal:
@@ -33,6 +36,7 @@ def test_gate_rejects_missing_governance_evidence() -> None:
         "missing_rollback_plan",
     }
 
+
 def test_high_risk_requires_human_approval() -> None:
     result = evaluate_promotion_gate(proposal(risk="high", requires_approval=False))
     assert not result.accepted
@@ -52,3 +56,23 @@ def test_fingerprint_is_deterministic() -> None:
     second = proposal()
     assert first.fingerprint() == second.fingerprint()
     assert len(first.fingerprint()) == 64
+
+
+def test_approved_decision_requires_validation_run() -> None:
+    with pytest.raises(ValidationError, match="approval_requires_validation_run"):
+        PromotionDecision(proposal_id="p1", approved=True, actor="admin")
+
+
+def test_rejection_requires_reason() -> None:
+    with pytest.raises(ValidationError, match="rejection_requires_reason"):
+        PromotionDecision(proposal_id="p1", approved=False, actor="admin")
+
+
+def test_approved_decision_is_bound_to_validation_run() -> None:
+    decision = PromotionDecision(
+        proposal_id="p1",
+        approved=True,
+        actor="admin",
+        validation_run_id="run-1",
+    )
+    assert decision.validation_run_id == "run-1"
