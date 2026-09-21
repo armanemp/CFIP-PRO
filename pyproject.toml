@@ -1,7 +1,7 @@
 [project]
-name = "cfip-pro"
+name = "mios"
 version = "0.1.0"
-description = "CFIP-PRO: modular Python-first financial market intelligence platform"
+description = "MIOS: modular Python-first financial market intelligence platform"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
@@ -19,6 +19,19 @@ dependencies = [
   "pyvsmc==0.3.7",
   "pydantic-ai==2.44.0",
   "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+oss = [
+  "openbb",
+  "trafilatura",
+  "mlflow",
+  "evidently",
+  "opentelemetry-api",
+  "opentelemetry-sdk",
+  "qdrant-client",
+  "opensearch-py",
+  "feast",
 ]
 
 [dependency-groups]
