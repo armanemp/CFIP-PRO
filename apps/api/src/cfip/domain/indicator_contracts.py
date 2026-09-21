@@ -12,6 +12,15 @@ class IndicatorRequest(BaseModel):
     timeframe: str = Field(min_length=1, max_length=16)
     parameters: Mapping[str, float | int | str | bool] = Field(default_factory=dict)
     values: Sequence[float] = Field(min_length=1, max_length=100_000)
+    timestamps: Sequence[int] | None = Field(default=None, min_length=1, max_length=100_000)
+
+    def aligned_timestamps(self) -> list[int]:
+        """Return caller-supplied timestamps; never synthesize market time."""
+        if self.timestamps is None:
+            raise ValueError("timestamps are required for persisted indicator results")
+        if len(self.timestamps) != len(self.values):
+            raise ValueError("timestamps and values must have identical lengths")
+        return [int(timestamp) for timestamp in self.timestamps]
 
 
 class IndicatorPoint(BaseModel):
