@@ -73,4 +73,4 @@ async def test_default_runtime_initializes_all_platform_components() -> None:
 
     assert snapshot["status"] == "ready"
     assert snapshot["ready_count"] == len(DEFAULT_COMPONENTS)
-    assert set(snapshot["local_bootstrap"]) == {item.name for item in DEFAULT_COMPONENTS}
+    states = {item["name"]: item["state"] for item in snapshot["components"]}\n    assert states == {item.name: ComponentState.READY.value for item in DEFAULT_COMPONENTS}
