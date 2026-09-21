@@ -28,7 +28,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
             response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-            response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+            response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; form-action 'self'; upgrade-insecure-requests"
+            response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+            if request.url.path.startswith("/api/admin") or request.url.path.startswith("/api/config"):
+                response.headers["Cache-Control"] = "no-store"
             if settings.hsts_enabled:
                 response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
@@ -52,8 +57,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "Authorization", "X-Admin-Control-Token", "X-Request-ID"],
 )
 app.include_router(api_router, prefix="/api")
 
