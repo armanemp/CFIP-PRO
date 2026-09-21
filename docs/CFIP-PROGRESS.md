@@ -274,3 +274,13 @@
 - No dependency was added, no database was reset, and no cache was disabled.
 - Implementation commits: `1eecbc8c9a2ef50bdf6e3bb543dbc0c3ac1541a8` plus the native shutdown correction immediately following it.
 - Local frontend verification is intentionally not claimed yet; the user should pull this batch and run the existing lint/typecheck/build gates before the next feature batch.
+
+## 2026-09-21 — OSS adapter boundary and runtime capability discovery
+
+- Added a canonical `HistoricalMarketDataRequest/Result` contract so external market-data libraries can be replaced without leaking vendor models into the domain.
+- Added an optional OpenBB adapter with explicit timeframe mapping, provider provenance and lazy import. It refuses unsupported timeframes rather than silently returning a different bar interval.
+- Added a NautilusTrader backtest boundary. It deliberately refuses to claim a completed backtest until a typed CFIP strategy/event binding exists; installed is not treated as operational.
+- Added runtime OSS capability discovery for OpenBB, TA-Lib, CCXT, NautilusTrader, Polars, PydanticAI, MLflow, Evidently, OpenTelemetry, trafilatura, Qdrant and OpenSearch. The API now exposes installed/configuration/connection/operational states separately.
+- Extended the provider catalog with OpenBB, NautilusTrader, Qlib, TA-Lib, Evidently and OpenTelemetry SDK as adapter targets.
+- Added unit coverage for request validation, unsupported OpenBB timeframes, Nautilus safety behavior and the installed-vs-operational distinction.
+- No heavyweight OSS dependency was made mandatory. This keeps the native Windows/8GB development environment viable while creating explicit integration seams for production adapters.
