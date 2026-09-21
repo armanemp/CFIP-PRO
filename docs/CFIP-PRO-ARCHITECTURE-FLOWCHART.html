@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CFIP-PRO — نقشه معماری و فلوچارت کامل پلتفرم</title>
+<style>
+:root{--bg:#071018;--panel:#0d1822;--panel2:#111f2c;--line:#284354;--text:#e9f1f7;--muted:#9fb2c0;--accent:#56c7ff;--good:#4ade80;--warn:#fbbf24;--danger:#fb7185;--purple:#b69cff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 20% 0,#102638 0,#071018 38%,#050b10 100%);color:var(--text);font-family:Tahoma,"Segoe UI",Arial,sans-serif;line-height:1.8}
+header{padding:42px 5vw 28px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#0c1b28,#071018)}
+h1{font-size:clamp(28px,4vw,48px);margin:0 0 8px}h2{margin-top:0;color:#fff}h3{color:var(--accent)}
+.sub{color:var(--muted);max-width:1100px}.wrap{width:min(1500px,94vw);margin:auto}
+nav{position:sticky;top:0;z-index:5;background:#071018ee;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:10px;display:flex;gap:8px;overflow:auto}
+nav a{color:var(--text);text-decoration:none;padding:7px 12px;border:1px solid var(--line);border-radius:9px;white-space:nowrap;font-size:13px}
+section{margin:28px 0}.card{background:linear-gradient(145deg,#0d1924,#0a141d);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 10px 35px #0004}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:12px;margin:2px}.good{color:var(--good);border-color:#256b45}.warn{color:var(--warn);border-color:#765b1a}.danger{color:var(--danger);border-color:#713040}.oss{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}th{color:var(--accent);background:#0b1721}
+.flow{overflow:auto;background:#061018;border:1px solid var(--line);border-radius:16px;padding:12px}.flow svg{min-width:1100px;width:100%;height:auto}
+svg text{font-family:Tahoma,"Segoe UI",Arial,sans-serif;fill:#edf5fa}svg .title{font-size:19px;font-weight:700}svg .small{font-size:13px;fill:#b9cad5}svg .box{fill:#0d1b26;stroke:#345467;stroke-width:1.5}svg .core{fill:#12263a;stroke:#56c7ff;stroke-width:2}svg .mios{fill:#211d3a;stroke:#b69cff;stroke-width:2}svg .sec{fill:#2b1820;stroke:#fb7185;stroke-width:1.5}svg .ossbox{fill:#102b25;stroke:#4ade80;stroke-width:1.5}svg .arrow{stroke:#6e8999;stroke-width:2;fill:none;marker-end:url(#a)}
+.kpi{font-size:27px;font-weight:700}.meter{height:9px;background:#152531;border-radius:99px;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,#4ade80,#56c7ff);width:var(--p)}
+footer{padding:35px 0 70px;color:var(--muted)}
+code{color:#bde9ff;background:#09141d;padding:2px 5px;border-radius:5px}
+@media(max-width:700px){.card{padding:16px}table{font-size:12px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>CFIP-PRO — نقشه معماری، جریان داده و فلوچارت کامل</h1>
+<p class="sub">نقشه مرجع یک پلتفرم هوش بازار مالی Python-first با هسته MIOS؛ شامل ترمینال حرفه‌ای، داده، تحلیل چندلایه، مدیریت ریسک، بک‌تست/Replay، یادگیری، خودترمیم، خودتوسعه کنترل‌شده، OSS adapters، امنیت، مشاهده‌پذیری و governance.</p>
+<span class="badge oss">OSS-first</span><span class="badge">Python 3.14</span><span class="badge">FastAPI</span><span class="badge">Next.js / React</span><span class="badge">MIOS</span><span class="badge danger">بدون تغییر خودکار و بدون تأیید انسانی در production</span>
+</div></header>
+<nav><div class="wrap" style="display:flex;gap:8px"><a href="#master">فلوچارت اصلی</a><a href="#layers">لایه‌ها</a><a href="#oss">OSS</a><a href="#analysis">تحلیل</a><a href="#mios">MIOS</a><a href="#security">امنیت</a><a href="#terminal">ترمینال</a><a href="#health">سلامت</a><a href="#roadmap">نقشه اجرا</a></div></nav>
+
+<main class="wrap">
+<section id="master"><div class="card"><h2>۱) فلوچارت اصلی کل پلتفرم</h2>
+<div class="flow">
+<svg viewBox="0 0 1500 2050" role="img" aria-label="فلوچارت کامل CFIP-PRO">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6e8999"/></marker></defs>
+<rect x="520" y="25" width="460" height="85" rx="16" class="mios"/><text x="750" y="60" text-anchor="middle" class="title">MIOS — هسته هوش بازار</text><text x="750" y="87" text-anchor="middle" class="small">ادراک • استدلال • حافظه • پژوهش • یادگیری • حاکمیت</text>
+
+<rect x="70" y="160" width="270" height="105" rx="14" class="box"/><text x="205" y="195" text-anchor="middle" class="title">کاربر / API / UI</text><text x="205" y="222" text-anchor="middle" class="small">ترمینال، درخواست تحلیل، معامله، پژوهش</text><text x="205" y="244" text-anchor="middle" class="small">هشدار و Journal</text>
+<rect x="390" y="160" width="270" height="105" rx="14" class="box"/><text x="525" y="195" text-anchor="middle" class="title">Market Data Gateway</text><text x="525" y="222" text-anchor="middle" class="small">REST / WebSocket / historical</text><text x="525" y="244" text-anchor="middle" class="small">normalization + timestamps</text>
+<rect x="710" y="160" width="270" height="105" rx="14" class="box"/><text x="845" y="195" text-anchor="middle" class="title">Research Gateway</text><text x="845" y="222" text-anchor="middle" class="small">اخبار، macro، اسناد، وب</text><text x="845" y="244" text-anchor="middle" class="small">evidence + provenance</text>
+<rect x="1030" y="160" width="400" height="105" rx="14" class="sec"/><text x="1230" y="195" text-anchor="middle" class="title">Security / Policy Gateway</text><text x="1230" y="222" text-anchor="middle" class="small">AuthN/AuthZ • rate limit • SSRF policy</text><text x="1230" y="244" text-anchor="middle" class="small">audit • secrets • request limits</text>
+
+<path d="M750 110 V145" class="arrow"/><path d="M340 212 H390" class="arrow"/><path d="M660 212 H710" class="arrow"/><path d="M980 212 H1030" class="arrow"/>
+
+<rect x="100" y="335" width="300" height="120" rx="14" class="ossbox"/><text x="250" y="370" text-anchor="middle" class="title">OSS Data Adapters</text><text x="250" y="397" text-anchor="middle" class="small">OpenBB • CCXT • yfinance</text><text x="250" y="421" text-anchor="middle" class="small">provider-specific connectors</text><text x="250" y="442" text-anchor="middle" class="small">configured / reachable / operational</text>
+<rect x="450" y="335" width="300" height="120" rx="14" class="core"/><text x="600" y="370" text-anchor="middle" class="title">Data Quality & Canonical Model</text><text x="600" y="397" text-anchor="middle" class="small">schema • timezone • gaps • duplicates</text><text x="600" y="421" text-anchor="middle" class="small">freshness • lineage • confidence</text><text x="600" y="442" text-anchor="middle" class="small">Arrow / Parquet / DuckDB</text>
+<rect x="800" y="335" width="300" height="120" rx="14" class="ossbox"/><text x="950" y="370" text-anchor="middle" class="title">OSS Research / Retrieval</text><text x="950" y="397" text-anchor="middle" class="small">trafilatura • Scrapy • Playwright</text><text x="950" y="421" text-anchor="middle" class="small">OpenSearch / pgvector / Qdrant</text><text x="950" y="442" text-anchor="middle" class="small">document provenance</text>
+<rect x="1150" y="335" width="280" height="120" rx="14" class="box"/><text x="1290" y="370" text-anchor="middle" class="title">Event / Runtime Plane</text><text x="1290" y="397" text-anchor="middle" class="small">FastAPI lifespan • NATS JetStream</text><text x="1290" y="421" text-anchor="middle" class="small">Redis • PostgreSQL</text><text x="1290" y="442" text-anchor="middle" class="small">typed lifecycle + readiness</text>
+<path d="M250 265 V335" class="arrow"/><path d="M600 265 V335" class="arrow"/><path d="M950 265 V335" class="arrow"/><path d="M1230 265 V335" class="arrow"/>
+
+<rect x="100" y="530" width="300" height="135" rx="14" class="core"/><text x="250" y="568" text-anchor="middle" class="title">Indicator Engine</text><text x="250" y="595" text-anchor="middle" class="small">TA-Lib adapter + native fallback</text><text x="250" y="619" text-anchor="middle" class="small">SMA / EMA / RSI / MACD / ATR …</text><text x="250" y="643" text-anchor="middle" class="small">timestamp-safe + versioned</text>
+<rect x="450" y="530" width="300" height="135" rx="14" class="core"/><text x="600" y="568" text-anchor="middle" class="title">Market Structure</text><text x="600" y="595" text-anchor="middle" class="small">HH/HL/LH/LL • BOS • CHoCH</text><text x="600" y="619" text-anchor="middle" class="small">FVG • Order Blocks • liquidity</text><text x="600" y="643" text-anchor="middle" class="small">sessions • volatility • regime</text>
+<rect x="800" y="530" width="300" height="135" rx="14" class="core"/><text x="950" y="568" text-anchor="middle" class="title">MTF Analysis</text><text x="950" y="595" text-anchor="middle" class="small">1m / 5m / 15m / 1h / 4h / D</text><text x="950" y="619" text-anchor="middle" class="small">alignment + conflict detection</text><text x="950" y="643" text-anchor="middle" class="small">regime-aware weighting</text>
+<rect x="1150" y="530" width="280" height="135" rx="14" class="ossbox"/><text x="1290" y="568" text-anchor="middle" class="title">Quant / ML Adapters</text><text x="1290" y="595" text-anchor="middle" class="small">Qlib • Polars • Arrow</text><text x="1290" y="619" text-anchor="middle" class="small">MLflow • Feast • Evidently</text><text x="1290" y="643" text-anchor="middle" class="small">benchmark before promotion</text>
+<path d="M250 455 V530" class="arrow"/><path d="M600 455 V530" class="arrow"/><path d="M950 455 V530" class="arrow"/><path d="M1290 455 V530" class="arrow"/>
+
+<rect x="240" y="740" width="1020" height="145" rx="18" class="mios"/><text x="750" y="780" text-anchor="middle" class="title">Unified Analysis Orchestrator — یک نتیجه واحد</text><text x="750" y="810" text-anchor="middle" class="small">داده + کیفیت + ساختار + اندیکاتورها + MTF + پژوهش + regime + sentiment/evidence</text><text x="750" y="838" text-anchor="middle" class="small">confidence • contradictions • provenance • reasons • invalidation conditions</text><text x="750" y="866" text-anchor="middle" class="small">خروجی: Market State + Scenarios + Signal Candidate + Risk Context</text>
+<path d="M250 665 V710 H430 V740" class="arrow"/><path d="M600 665 V740" class="arrow"/><path d="M950 665 V740" class="arrow"/><path d="M1290 665 V710 H1070 V740" class="arrow"/>
+
+<rect x="100" y="960" width="300" height="125" rx="14" class="box"/><text x="250" y="997" text-anchor="middle" class="title">Risk Engine</text><text x="250" y="1024" text-anchor="middle" class="small">equity • leverage • SL/TP</text><text x="250" y="1048" text-anchor="middle" class="small">position sizing • exposure</text><text x="250" y="1070" text-anchor="middle" class="small">risk limits / kill switch</text>
+<rect x="450" y="960" width="300" height="125" rx="14" class="ossbox"/><text x="600" y="997" text-anchor="middle" class="title">Backtest / Replay</text><text x="600" y="1024" text-anchor="middle" class="small">NautilusTrader adapter</text><text x="600" y="1048" text-anchor="middle" class="small">deterministic simulation</text><text x="600" y="1070" text-anchor="middle" class="small">cost / slippage / latency</text>
+<rect x="800" y="960" width="300" height="125" rx="14" class="box"/><text x="950" y="997" text-anchor="middle" class="title">Decision & Trade Plan</text><text x="950" y="1024" text-anchor="middle" class="small">entry zones • invalidation</text><text x="950" y="1048" text-anchor="middle" class="small">targets • scenario branches</text><text x="950" y="1070" text-anchor="middle" class="small">explanation + evidence</text>
+<rect x="1150" y="960" width="280" height="125" rx="14" class="box"/><text x="1290" y="997" text-anchor="middle" class="title">Journal / Outcome</text><text x="1290" y="1024" text-anchor="middle" class="small">planned vs actual</text><text x="1290" y="1048" text-anchor="middle" class="small">P&amp;L • MAE/MFE • attribution</text><text x="1290" y="1070" text-anchor="middle" class="small">calibration dataset</text>
+<path d="M750 885 V925 H250 V960" class="arrow"/><path d="M750 885 V960" class="arrow"/><path d="M750 885 V925 H950 V960" class="arrow"/><path d="M750 885 V925 H1290 V960" class="arrow"/>
+
+<rect x="120" y="1160" width="300" height="125" rx="14" class="ossbox"/><text x="270" y="1197" text-anchor="middle" class="title">Observability</text><text x="270" y="1224" text-anchor="middle" class="small">OpenTelemetry</text><text x="270" y="1248" text-anchor="middle" class="small">metrics • traces • logs</text><text x="270" y="1270" text-anchor="middle" class="small">Langfuse / Phoenix برای AI</text>
+<rect x="470" y="1160" width="300" height="125" rx="14" class="ossbox"/><text x="620" y="1197" text-anchor="middle" class="title">Drift / Quality</text><text x="620" y="1224" text-anchor="middle" class="small">Evidently</text><text x="620" y="1248" text-anchor="middle" class="small">data drift • prediction drift</text><text x="620" y="1270" text-anchor="middle" class="small">quality thresholds</text>
+<rect x="820" y="1160" width="300" height="125" rx="14" class="mios"/><text x="970" y="1197" text-anchor="middle" class="title">MIOS Learning Fabric</text><text x="970" y="1224" text-anchor="middle" class="small">evidence → hypothesis → proposal</text><text x="970" y="1248" text-anchor="middle" class="small">validation → approval → promotion</text><text x="970" y="1270" text-anchor="middle" class="small">outcome → learning → rollback</text>
+<rect x="1170" y="1160" width="260" height="125" rx="14" class="sec"/><text x="1300" y="1197" text-anchor="middle" class="title">Governance</text><text x="1300" y="1224" text-anchor="middle" class="small">human approval queue</text><text x="1300" y="1248" text-anchor="middle" class="small">immutable evidence</text><text x="1300" y="1270" text-anchor="middle" class="small">RBAC / policy / audit</text>
+<path d="M250 1085 V1160" class="arrow"/><path d="M600 1085 V1160" class="arrow"/><path d="M950 1085 V1160" class="arrow"/><path d="M1290 1085 V1160" class="arrow"/>
+
+<rect x="230" y="1370" width="1040" height="145" rx="18" class="mios"/><text x="750" y="1410" text-anchor="middle" class="title">چرخه خودیادگیری و خودتوسعه کنترل‌شده</text><text x="750" y="1440" text-anchor="middle" class="small">Observe → Diagnose → Research → Propose → Validate → Approve → Promote</text><text x="750" y="1468" text-anchor="middle" class="small">→ Observe Outcome → Calibrate → Learn → Detect Regression → Rollback در صورت نیاز</text><text x="750" y="1496" text-anchor="middle" class="small">هیچ پیشنهاد پرریسکی مستقیماً وارد production نمی‌شود.</text>
+<path d="M970 1285 V1370" class="arrow"/><path d="M1300 1285 V1340 H1270 V1370" class="arrow"/>
+
+<rect x="120" y="1600" width="330" height="125" rx="14" class="box"/><text x="285" y="1637" text-anchor="middle" class="title">Self-Healing</text><text x="285" y="1664" text-anchor="middle" class="small">health anomaly → diagnosis</text><text x="285" y="1688" text-anchor="middle" class="small">restart/recover/fallback</text><text x="285" y="1710" text-anchor="middle" class="small">escalation + audit</text>
+<rect x="585" y="1600" width="330" height="125" rx="14" class="box"/><text x="750" y="1637" text-anchor="middle" class="title">Sandbox / Canary</text><text x="750" y="1664" text-anchor="middle" class="small">isolated candidate</text><text x="750" y="1688" text-anchor="middle" class="small">deterministic tests + benchmark</text><text x="750" y="1710" text-anchor="middle" class="small">shadow/canary evaluation</text>
+<rect x="1050" y="1600" width="330" height="125" rx="14" class="sec"/><text x="1215" y="1637" text-anchor="middle" class="title">Production Guardrail</text><text x="1215" y="1664" text-anchor="middle" class="small">policy gates • kill switch</text><text x="1215" y="1688" text-anchor="middle" class="small">rollback • audit • alert</text><text x="1215" y="1710" text-anchor="middle" class="small">no autonomous unsafe promotion</text>
+<path d="M420 1515 V1600" class="arrow"/><path d="M750 1515 V1600" class="arrow"/><path d="M1080 1515 V1600" class="arrow"/>
+
+<rect x="220" y="1810" width="1060" height="105" rx="16" class="core"/><text x="750" y="1848" text-anchor="middle" class="title">بازگشت به داده و بازار</text><text x="750" y="1876" text-anchor="middle" class="small">هر outcome و هر تغییر سلامت، داده و evidence جدید تولید می‌کند؛ این داده وارد چرخه تحلیل، کالیبراسیون و یادگیری بعدی می‌شود.</text><text x="750" y="1898" text-anchor="middle" class="small">چرخه بسته است، اما مرزهای امنیتی و governance آن را کنترل می‌کنند.</text>
+<path d="M285 1725 V1770 H750 V1810" class="arrow"/><path d="M750 1725 V1810" class="arrow"/><path d="M1215 1725 V1770 H750 V1810" class="arrow"/>
+</svg>
+</div></div></section>
+
+<section id="layers"><h2>۲) لایه‌های معماری</h2><div class="grid">
+<div class="card"><h3>Presentation</h3><p>Next.js + React + TypeScript + Tailwind + Lightweight Charts. ترمینال یک محیط کاری است، نه داشبورد اسکرولی.</p></div>
+<div class="card"><h3>API / Application</h3><p>FastAPI، use-case orchestration، lifecycle، policy enforcement، request validation و APIهای typed.</p></div>
+<div class="card"><h3>Domain</h3><p>قراردادهای مستقل از vendor: MarketData، Indicator، Analysis، Risk، Evidence، Intelligence، Governance و Outcome.</p></div>
+<div class="card"><h3>Infrastructure</h3><p>PostgreSQL، NATS JetStream، Redis، Arrow/Parquet/DuckDB و adapterهای OSS/provider.</p></div>
+<div class="card"><h3>Workers</h3><p>کارهای asynchronous برای data ingestion، research، replay، evaluation، learning و health recovery.</p></div>
+<div class="card"><h3>Governance</h3><p>approval queue، provenance، audit، policy، rollback، secret boundaries و قابلیت توقف اضطراری.</p></div>
+</div></section>
+
+<section id="oss"><div class="card"><h2>۳) نقشه OSS و مرز هر پروژه</h2>
+<table><thead><tr><th>حوزه</th><th>OSS هدف</th><th>نقش در CFIP-PRO</th><th>مرز معماری</th></tr></thead><tbody>
+<tr><td>Data / Research</td><td>OpenBB</td><td>provider و data-model integration</td><td>فقط adapter؛ domain به OpenBB وابسته نیست</td></tr>
+<tr><td>Exchange / Market</td><td>CCXT</td><td>اتصال بازارهای پشتیبانی‌شده</td><td>normalized market-data/execution ports</td></tr>
+<tr><td>Indicators</td><td>TA-Lib</td><td>indicator backend</td><td>IndicatorPlugin + provenance + timestamps</td></tr>
+<tr><td>Trading / Backtest</td><td>NautilusTrader</td><td>simulation/execution adapter</td><td>Backtest/Execution contract</td></tr>
+<tr><td>Quant / ML</td><td>Qlib</td><td>research/feature/model experiments</td><td>experiment adapter</td></tr>
+<tr><td>DataFrame</td><td>Polars / Arrow</td><td>محاسبات ستونی و interchange</td><td>data processing boundary</td></tr>
+<tr><td>Experiment</td><td>MLflow</td><td>run/model/metric lifecycle</td><td>experiment registry adapter</td></tr>
+<tr><td>Drift</td><td>Evidently</td><td>data/prediction drift</td><td>quality monitor adapter</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry</td><td>traces/metrics/log correlation</td><td>telemetry boundary</td></tr>
+<tr><td>AI Observability</td><td>Langfuse / Phoenix</td><td>LLM/agent traces and evaluation</td><td>optional adapter</td></tr>
+<tr><td>Agent Orchestration</td><td>PydanticAI / LangGraph / Haystack</td><td>قابل انتخاب بر اساس benchmark</td><td>MIOS Agent/Tool contracts</td></tr>
+<tr><td>Search / Retrieval</td><td>OpenSearch / pgvector / Qdrant</td><td>semantic + lexical retrieval</td><td>Retrieval contract</td></tr>
+<tr><td>Web Acquisition</td><td>trafilatura / Scrapy / Playwright / Firecrawl</td><td>research acquisition</td><td>safe fetch + provenance + SSRF policy</td></tr>
+<tr><td>Graph</td><td>AGE / Kuzu / Neo4j</td><td>relation/evidence graph در صورت benchmark</td><td>Graph contract</td></tr>
+<tr><td>Authorization</td><td>OpenFGA / OPA / Keycloak</td><td>identity/policy/RBAC</td><td>Security boundary</td></tr>
+</tbody></table>
+<p class="sub">اصل ثابت: «OSS implementation → CFIP adapter → CFIP contract → application orchestration → API/UI». هیچ UI نباید مستقیماً OSS را صدا بزند.</p></div></section>
+
+<section id="analysis"><div class="card"><h2>۴) موتور تحلیل واحد</h2>
+<div class="grid">
+<div><h3>ورودی</h3><p>OHLCV، tick/order-book در صورت دسترسی، timeframeهای متعدد، داده macro/news، وضعیت بازار و context حساب.</p></div>
+<div><h3>ساختار</h3><p>BOS/CHoCH، swingها، liquidity، FVG، Order Block، session، volatility و regime.</p></div>
+<div><h3>Indicator</h3><p>TA-Lib/OSS adapters و native fallback با version، timestamp و provenance.</p></div>
+<div><h3>Research</h3><p>evidence، source، زمان مشاهده، confidence، freshness و contradiction.</p></div>
+<div><h3>Aggregation</h3><p>ترکیب همه evidenceها در یک نتیجه typed؛ بدون چند منطق متناقض در UI.</p></div>
+<div><h3>خروجی</h3><p>سناریوها، شرایط ورود/ابطال، risk context، confidence و توضیح قابل ردیابی.</p></div>
+</div></div></section>
+
+<section id="mios"><div class="card"><h2>۵) چرخه کامل MIOS</h2>
+<div class="flow"><svg viewBox="0 0 1400 430"><defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6e8999"/></marker></defs>
+<g class="small">
+<rect x="40" y="80" width="150" height="70" rx="12" class="box"/><text x="115" y="110" text-anchor="middle">مشاهده</text><text x="115" y="133" text-anchor="middle">Observe</text>
+<rect x="230" y="80" width="150" height="70" rx="12" class="box"/><text x="305" y="110" text-anchor="middle">تشخیص</text><text x="305" y="133" text-anchor="middle">Diagnose</text>
+<rect x="420" y="80" width="150" height="70" rx="12" class="box"/><text x="495" y="110" text-anchor="middle">پژوهش</text><text x="495" y="133" text-anchor="middle">Research</text>
+<rect x="610" y="80" width="150" height="70" rx="12" class="mios"/><text x="685" y="110" text-anchor="middle">پیشنهاد</text><text x="685" y="133" text-anchor="middle">Propose</text>
+<rect x="800" y="80" width="150" height="70" rx="12" class="box"/><text x="875" y="110" text-anchor="middle">اعتبارسنجی</text><text x="875" y="133" text-anchor="middle">Validate</text>
+<rect x="990" y="80" width="150" height="70" rx="12" class="sec"/><text x="1065" y="110" text-anchor="middle">تأیید انسانی</text><text x="1065" y="133" text-anchor="middle">Approve</text>
+<rect x="1180" y="80" width="170" height="70" rx="12" class="box"/><text x="1265" y="110" text-anchor="middle">Promotion</text><text x="1265" y="133" text-anchor="middle">ارتقای کنترل‌شده</text>
+<path d="M190 115H230 M380 115H420 M570 115H610 M760 115H800 M950 115H990 M1140 115H1180" class="arrow"/>
+<rect x="300" y="250" width="190" height="75" rx="12" class="box"/><text x="395" y="282" text-anchor="middle">Outcome</text><text x="395" y="307" text-anchor="middle">نتیجه واقعی</text>
+<rect x="605" y="250" width="190" height="75" rx="12" class="mios"/><text x="700" y="282" text-anchor="middle">Calibration / Learn</text><text x="700" y="307" text-anchor="middle">کالیبراسیون و یادگیری</text>
+<rect x="910" y="250" width="190" height="75" rx="12" class="sec"/><text x="1005" y="282" text-anchor="middle">Rollback</text><text x="1005" y="307" text-anchor="middle">اگر regression رخ دهد</text>
+<path d="M1265 150V210H395V250" class="arrow"/><path d="M490 287H605 M795 287H910" class="arrow"/><path d="M1005 325V370H115V150" class="arrow"/>
+</g></svg></div>
+<p>MIOS باید از outcome واقعی یاد بگیرد، نه از صرفاً متن تولیدشده توسط مدل. هر تغییر باید evidence، validation، owner/approval، نسخه، benchmark و rollback path داشته باشد.</p></div></section>
+
+<section id="security"><div class="card"><h2>۶) سلامت و امنیت</h2><div class="grid">
+<div><h3>ورودی</h3><p>schema validation، payload limits، rate limits، CORS، authentication و authorization.</p></div>
+<div><h3>Research</h3><p>SSRF protection، allow/deny policy، redirect controls، content-size/time limits و provenance.</p></div>
+<div><h3>Secrets</h3><p>عدم قرار دادن secret در source/log/evidence؛ secret reference به جای secret value.</p></div>
+<div><h3>Supply Chain</h3><p>version pinning، advisory scan، license review، optional dependencies و compatibility gate.</p></div>
+<div><h3>Runtime</h3><p>liveness/readiness، dependency health، timeout، circuit breaker، fallback و graceful degradation.</p></div>
+<div><h3>Governance</h3><p>audit، immutable evidence، approval، canary، rollback و kill switch.</p></div>
+</div></div></section>
+
+<section id="terminal"><div class="card"><h2>۷) ترمینال حرفه‌ای</h2>
+<div class="grid">
+<div><h3>مرکز</h3><p>نمودار تمام‌صفحه با candles، volume، overlays، crosshair و drawing state.</p></div>
+<div><h3>Rail</h3><p>symbol، timeframe، indicators، drawings، alerts و market tools.</p></div>
+<div><h3>Analysis Drawer</h3><p>Market State، MTF، FVG/OB، evidence، scenarios و invalidation.</p></div>
+<div><h3>Risk Drawer</h3><p>equity، leverage، SL/TP، sizing، R:R و exposure.</p></div>
+<div><h3>Bottom Bar</h3><p>watchlist، positions، orders، journal، replay و system health.</p></div>
+<div><h3>زبان</h3><p>تغییر زبان فقط متن/ترمینولوژی chart و terminal را تغییر می‌دهد؛ layout ثابت می‌ماند.</p></div>
+</div></div></section>
+
+<section id="health"><div class="card"><h2>۸) مدل سلامت سیستم</h2>
+<table><thead><tr><th>وضعیت</th><th>معنی</th><th>رفتار</th></tr></thead><tbody>
+<tr><td><span class="badge good">Operational</span></td><td>provider/config/runtime سالم و قابل استفاده</td><td>قابل استفاده در production path</td></tr>
+<tr><td><span class="badge">Reachable</span></td><td>اتصال برقرار است ولی همه capabilityها اثبات نشده‌اند</td><td>استفاده محدود بر اساس capability</td></tr>
+<tr><td><span class="badge warn">Configured</span></td><td>تنظیمات موجود است ولی اتصال/سلامت تأیید نشده</td><td>عدم ادعای live capability</td></tr>
+<tr><td><span class="badge">Installed</span></td><td>کتابخانه نصب شده</td><td>به معنی provider سالم نیست</td></tr>
+<tr><td><span class="badge danger">Degraded</span></td><td>بخشی از مسیر خراب یا stale است</td><td>fallback + warning + telemetry</td></tr>
+<tr><td><span class="badge danger">Failed</span></td><td>مسیر غیرقابل استفاده</td><td>fail-safe، isolation و escalation</td></tr>
+</tbody></table></div></section>
+
+<section id="roadmap"><div class="card"><h2>۹) نقشه تکمیل مهندسی</h2>
+<div class="grid">
+<div><div class="kpi">75%</div><p>Backend / Platform</p><div class="meter"><i style="--p:75%"></i></div></div>
+<div><div class="kpi">68%</div><p>Terminal / Chart</p><div class="meter"><i style="--p:68%"></i></div></div>
+<div><div class="kpi">55%</div><p>Market Data</p><div class="meter"><i style="--p:55%"></i></div></div>
+<div><div class="kpi">60%</div><p>Unified Analysis</p><div class="meter"><i style="--p:60%"></i></div></div>
+<div><div class="kpi">45%</div><p>OSS Integration</p><div class="meter"><i style="--p:45%"></i></div></div>
+<div><div class="kpi">55%</div><p>MIOS Intelligence</p><div class="meter"><i style="--p:55%"></i></div></div>
+<div><div class="kpi">45%</div><p>Self-Learning</p><div class="meter"><i style="--p:45%"></i></div></div>
+<div><div class="kpi">50%</div><p>Self-Healing</p><div class="meter"><i style="--p:50%"></i></div></div>
+<div><div class="kpi">65%</div><p>Security / Health</p><div class="meter"><i style="--p:65%"></i></div></div>
+<div><div class="kpi">30%</div><p>Verification / Release</p><div class="meter"><i style="--p:30%"></i></div></div>
+</div>
+<p class="sub">این درصدها شاخص مهندسی تقریبی برای هدایت کار هستند، نه گواهی آمادگی production. هر capability باید با تست، health signal، provenance و acceptance gate اثبات شود.</p>
+</div></section>
+
+<section><div class="card"><h2>۱۰) قواعد غیرقابل مذاکره معماری</h2>
+<ol>
+<li><b>Contract-first:</b> domain هرگز به vendor API وابسته نمی‌شود.</li>
+<li><b>OSS-first:</b> قبل از نوشتن implementation جدید، OSS بالغ بررسی و benchmark می‌شود.</li>
+<li><b>No fake data:</b> timestamp، price، provider health و evidence هرگز جعل نمی‌شوند.</li>
+<li><b>One analysis result:</b> همه UIها از Unified Analysis استفاده می‌کنند.</li>
+<li><b>Human governance:</b> self-development پرریسک بدون approval وارد production نمی‌شود.</li>
+<li><b>Deterministic evaluation:</b> تغییرات تحلیلی قبل از promotion با replay/backtest/benchmark بررسی می‌شوند.</li>
+<li><b>Observable by default:</b> هر مسیر مهم باید health، metric، trace و audit داشته باشد.</li>
+<li><b>Graceful degradation:</b> نبود یک provider نباید کل سیستم را از کار بیندازد.</li>
+<li><b>Rollback first:</b> هر promotion بدون مسیر برگشت ناقص محسوب می‌شود.</li>
+<li><b>Minimal coupling:</b> هیچ موتور OSS صرفاً برای «داشتن نام آن» اضافه نمی‌شود.</li>
+</ol></div></section>
+</main>
+<footer><div class="wrap">CFIP-PRO Architecture Reference • MIOS • نسخه مرجع معماری • این فایل مستقل از backend/frontend است و برای مرور کل سیستم طراحی شده است.</div></footer>
+</body>
+</html>
