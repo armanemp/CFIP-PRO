@@ -1,7 +1,7 @@
 import pytest
 
 from cfip.domain.market_data_contracts import HistoricalMarketDataRequest
-from cfip.infrastructure.providers.nautilus_adapter import NautilusBacktestAdapter, NautilusUnavailable
+from cfip.infrastructure.providers.nautilus_adapter import BacktestRequest, NautilusBacktestAdapter, NautilusUnavailable
 from cfip.infrastructure.providers.openbb_adapter import OpenBBMarketDataAdapter
 from cfip.infrastructure.providers.oss_registry import capability_snapshot
 
@@ -17,9 +17,13 @@ def test_openbb_rejects_unknown_timeframe_before_external_call() -> None:
 
 def test_nautilus_adapter_is_safe_when_package_is_absent_or_explicitly_unbound() -> None:
     adapter = NautilusBacktestAdapter()
+    request = BacktestRequest(strategy_name="test", data=[{"time": 1}])
     if not adapter.available():
         with pytest.raises(NautilusUnavailable):
-            adapter.run(type("Request", (), {"strategy_name": "test"})())
+            adapter.run(request)
+    else:
+        with pytest.raises(NotImplementedError, match="nautilus_strategy_binding_required"):
+            adapter.run(request)
 
 def test_oss_registry_distinguishes_installed_from_operational() -> None:
     snapshot = capability_snapshot()
