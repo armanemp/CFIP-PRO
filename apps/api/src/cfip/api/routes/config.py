@@ -8,7 +8,7 @@ router = APIRouter(prefix="/config", tags=["config"])
 
 @router.get("/defaults")
 async def defaults() -> dict[str, object]:
-    identity = platform_identity.get()
+    identity = await platform_identity.get_async()
     intelligence = IntelligenceConfig(identity=identity)
     return {
         "risk": RiskConfig().model_dump(),
