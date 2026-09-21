@@ -71,4 +71,4 @@ def test_high_risk_self_development_requires_human_approval() -> None:
         signed_artifact=True,
     )
     assert not result.allowed
-    assert "production_apply_not_granted" in result.reasons
+    assert "human_approval_required" in result.reasons
