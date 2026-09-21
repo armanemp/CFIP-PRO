@@ -1,6 +1,8 @@
-# CFIP-PRO
+> **MIOS is the canonical name of the entire platform. The historical repository slug remains `armanemp/CFIP-PRO` for continuity.**
 
-CFIP-PRO is a clean greenfield, Python-first financial market intelligence platform. **CForex is the sole external capability reference.** CFIP-PRO does not inherit CForex implementation structure or technical debt.
+# MIOS
+
+MIOS is a clean greenfield, Python-first financial market intelligence platform. **CForex is the sole external capability reference.** MIOS does not inherit CForex implementation structure or technical debt.
 
 ## Foundation
 
@@ -17,7 +19,7 @@ The repository is a modular monolith with explicit boundaries. Domain code does 
 
 ## Native development
 
-Normal development is native Windows and does not require Docker. **Port 8000 is the single CFIP-PRO application entrypoint.** The native launcher builds the static Next.js application when needed and serves the web terminal and FastAPI API from the same origin.
+Normal development is native Windows and does not require Docker. **Port 8000 is the single MIOS application entrypoint.** The native launcher builds the static Next.js application when needed and serves the web terminal and FastAPI API from the same origin.
 
 ### Start the complete application
 
@@ -75,7 +77,7 @@ scripts/
 
 ## Project state
 
-The canonical implementation and progress record is `docs/CFIP-PROGRESS.md`. Every structural change, dependency decision, verification result, blocker, and next step must be recorded there.
+The canonical implementation and progress record is `docs/MIOSGRESS.md`. Every structural change, dependency decision, verification result, blocker, and next step must be recorded there.
 
 ## Scope
 
