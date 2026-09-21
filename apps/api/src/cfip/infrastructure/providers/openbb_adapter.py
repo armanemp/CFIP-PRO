@@ -24,7 +24,15 @@ class OpenBBMarketDataAdapter:
         except ImportError as exc:
             raise OpenBBUnavailable("OpenBB is not installed") from exc
 
-        kwargs: dict[str, object] = {"symbol": request.symbol, "provider": "yfinance"}
+        interval_map = {"1m": "1m", "2m": "2m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d", "1w": "1wk", "1mo": "1mo"}
+        interval = interval_map.get(request.timeframe.lower())
+        if interval is None:
+            raise ValueError("unsupported_openbb_timeframe")
+        kwargs: dict[str, object] = {
+            "symbol": request.symbol,
+            "provider": "yfinance",
+            "interval": interval,
+        }
         if request.start_epoch is not None:
             kwargs["start_date"] = datetime.fromtimestamp(request.start_epoch, tz=UTC).date().isoformat()
         if request.end_epoch is not None:
