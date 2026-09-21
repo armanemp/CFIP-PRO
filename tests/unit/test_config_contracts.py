@@ -21,7 +21,7 @@ def test_provider_secrets_are_references() -> None:
 
 def test_intelligence_identity_has_finance_default_and_is_overridable() -> None:
     config = IntelligenceConfig(identity=IntelligenceIdentity(name="NorthstarFX", short_name="NSF"))
-    assert DEFAULT_INTELLIGENCE_NAME == "Aurevex"
+    assert DEFAULT_INTELLIGENCE_NAME == "MIOSAI"
     assert config.identity.name == "NorthstarFX"
     assert config.identity.short_name == "NSF"
-    assert config.identity.domain == "finance.forex"
+    assert config.identity.domain == "finance.market-intelligence"
