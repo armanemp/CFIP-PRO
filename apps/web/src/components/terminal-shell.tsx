@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { ProfessionalChartTerminalV3 } from "@/components/professional-chart-terminal-v3";
 import { getMarketObservations, type MarketObservation } from "@/lib/api";
 import { TERMINAL_DATA_DEFAULTS } from "@/components/terminal/terminal-config";
-import { useEffect } from "react";
-
 export function TerminalShell() {
   const [observations, setObservations] = useState<MarketObservation[]>([]);
   const [error, setError] = useState<string | null>(null);
