@@ -6257,6 +6257,43 @@ namespace cAlgo
                 ? _signalEntry - price
                 : price - _signalEntry;
 
+            int liveM5Bar = Math.Max(1, _m5 != null ? _m5.Count - 1 : _signalCreatedM5Bar);
+            int barsSinceEntry = _signalCreatedM5Bar >= 0
+                ? Math.Max(0, liveM5Bar - _signalCreatedM5Bar)
+                : 0;
+
+            double initialRisk = Math.Max(Symbol.PipSize, _signalInitialRisk);
+            double favorableR = Math.Max(0, favorableMove) / initialRisk;
+            double adverseR = Math.Max(0, adverseMove) / initialRisk;
+            if (favorableR > _signalMfeR) { _signalMfeR = favorableR; _signalMfeBars = barsSinceEntry; }
+            if (adverseR > _signalMaeR) { _signalMaeR = adverseR; _signalMaeBars = barsSinceEntry; }
+            _signalMfe = Math.Max(_signalMfe, Math.Max(0, favorableMove));
+            _signalMae = Math.Max(_signalMae, Math.Max(0, adverseMove));
+
+            int closedIndex = GetLastClosedIndexBefore(_m5, _m5.OpenTimes[Math.Max(1, _m5.Count - 1)]);
+            double monitorAtr = closedIndex >= 30 ? GetAtr(_m5, closedIndex, AtrPeriod) : 0;
+
+            if (_signalActive && OutcomeMaximumBars > 0 && barsSinceEntry >= OutcomeMaximumBars)
+            {
+                _signalActive = false;
+                _signalOutcome = "TIMEOUT";
+                _lastExitM5Bar = liveM5Bar;
+                RecordSignalOutcome(false);
+                QueueExitDecisionAlert((_signalDirection == 1 ? "BUY" : "SELL") + " SETUP EXPIRED | " + SymbolName + " | BARS " + barsSinceEntry, 0, liveM5Bar);
+                DrawOutcomeMarker("TIMEOUT", price, false);
+            }
+
+            if (_signalActive && EnableSetupInvalidation && monitorAtr > 0 &&
+                EvaluateActiveSignalInvalidation(closedIndex, price, monitorAtr))
+            {
+                _signalActive = false;
+                _signalOutcome = "STRUCTURE INVALIDATED";
+                _lastExitM5Bar = liveM5Bar;
+                RecordSignalOutcome(false);
+                QueueExitDecisionAlert((_signalDirection == 1 ? "BUY" : "SELL") + " SETUP INVALIDATED | " + SymbolName + " | SCORE " + _smartInvalidationScore, 0, liveM5Bar);
+                DrawOutcomeMarker("INVALIDATED", price, false);
+            }
+
             double initialRisk = Math.Max(Symbol.PipSize, _signalInitialRisk);
             double favorableR = Math.Max(0, favorableMove) / initialRisk;
             double adverseR = Math.Max(0, adverseMove) / initialRisk;
@@ -12350,41 +12387,6 @@ for (int j = impulse + 1; j <= index; j++)
             _lastContextAlertDirection = direction;
             _lastContextAlertDirectionBar = m5BarIndex;
             _contextStatusText = "CONTEXT  " + label;
-            if (_signalActive &&
-                OutcomeMaximumBars > 0 &&
-                barsSinceEntry >= OutcomeMaximumBars)
-            {
-                _signalActive = false;
-                _signalOutcome = "TIMEOUT";
-                _lastExitM5Bar = liveM5Bar;
-                RecordSignalOutcome(false);
-                QueueExitDecisionAlert(
-                    (_signalDirection == 1 ? "BUY" : "SELL") +
-                    " SETUP EXPIRED | " + SymbolName +
-                    " | BARS " + barsSinceEntry,
-                    0,
-                    liveM5Bar);
-                DrawOutcomeMarker("TIMEOUT", market, false);
-            }
-
-            if (_signalActive &&
-                EnableSetupInvalidation &&
-                monitorAtr > 0 &&
-                EvaluateActiveSignalInvalidation(closedIndex, market, monitorAtr))
-            {
-                _signalActive = false;
-                _signalOutcome = "STRUCTURE INVALIDATED";
-                _lastExitM5Bar = liveM5Bar;
-                RecordSignalOutcome(false);
-                QueueExitDecisionAlert(
-                    (_signalDirection == 1 ? "BUY" : "SELL") +
-                    " SETUP INVALIDATED | " + SymbolName +
-                    " | SCORE " + _smartInvalidationScore,
-                    0,
-                    liveM5Bar);
-                DrawOutcomeMarker("INVALIDATED", market, false);
-            }
-
             if (!_suppressIntermediatePanelRender)
                 DrawUnifiedPanel();
         }
