@@ -484,6 +484,15 @@ namespace cAlgo
         [Parameter("Maximum Open Positions", Group = "13 · Auto Trading", DefaultValue = 1, MinValue = 1, MaxValue = 20)]
         public int MaximumOpenPositions { get; set; }
 
+        [Parameter("Use Market Hours Guard", Group = "13 · Auto Trading", DefaultValue = true)]
+        public bool UseMarketHoursGuard { get; set; }
+
+        [Parameter("Use Auto Margin Guard", Group = "13 · Auto Trading", DefaultValue = true)]
+        public bool UseAutoMarginGuard { get; set; }
+
+        [Parameter("Max Auto Margin Usage %", Group = "13 · Auto Trading", DefaultValue = 80, MinValue = 10, MaxValue = 100)]
+        public double MaxAutoMarginUsagePercent { get; set; }
+
         [Parameter("Auto Trade Label", Group = "13 · Auto Trading", DefaultValue = "CFIP-SMART-CLEAN30")]
         public string AutoTradeLabel { get; set; }
 
@@ -9204,6 +9213,58 @@ if (UseM1Trigger &&
         // AUTO TRADING
         // ============================================================
 
+        private bool PassesAutoTradeSafetyGuards(
+            TradeType tradeType,
+            double volume)
+        {
+            if (!IsFinitePositive(volume))
+                return false;
+
+            if (UseMarketHoursGuard)
+            {
+                if (!Symbol.IsTradingEnabled)
+                    return false;
+
+                if (Symbol.MarketHours == null ||
+                    !Symbol.MarketHours.IsOpened())
+                    return false;
+            }
+
+            if (UseAutoMarginGuard)
+            {
+                double freeMargin =
+                    Account.FreeMargin;
+
+                if (!IsFinitePositive(
+                        freeMargin))
+                    return false;
+
+                double estimatedMargin =
+                    Symbol.GetEstimatedMargin(
+                        tradeType,
+                        volume);
+
+                if (!IsFinitePositive(
+                        estimatedMargin))
+                    return false;
+
+                double maximumUsage =
+                    Math.Max(
+                        10,
+                        Math.Min(
+                            100,
+                            MaxAutoMarginUsagePercent));
+
+                if (estimatedMargin >
+                    freeMargin *
+                    maximumUsage /
+                    100.0)
+                    return false;
+            }
+
+            return true;
+        }
+
         private void TryAutoTrade(
             int closedM5)
         {
@@ -9303,6 +9364,11 @@ if (UseM1Trigger &&
                     _plan.Direction == 1
                         ? TradeType.Buy
                         : TradeType.Sell;
+
+                if (!PassesAutoTradeSafetyGuards(
+                        type,
+                        volume))
+                    return;
 
                 TradeResult result =
                     ExecuteMarketOrder(
@@ -10698,6 +10764,11 @@ if (UseM1Trigger &&
                     _reaction.Direction == 1
                         ? TradeType.Buy
                         : TradeType.Sell;
+
+                if (!PassesAutoTradeSafetyGuards(
+                        type,
+                        volume))
+                    return;
 
                 TradeResult result =
                     ExecuteMarketOrder(
