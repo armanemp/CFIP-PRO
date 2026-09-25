@@ -5049,42 +5049,64 @@ namespace cAlgo
 
         private void FlushCoordinatedDecisionAlerts()
         {
+            // Exactly one queued alert is emitted per Calculate() pass, with
+            // priority: exit -> restriction -> confirmed entry -> reaction ->
+            // smart -> early -> context. The queue is always cleared, including
+            // after an early return, so stale alerts cannot replay.
             if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage))
             {
                 SendGenericAlert(_pendingExitAlertMessage, _pendingExitAlertDirection);
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage))
             {
                 SendRestrictionAlert(_pendingRestrictionAlertMessage);
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage))
             {
                 if (_pendingHighConfidenceSignalAlert)
                     SendHighConfidenceAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
                 else
                     SendGenericAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
+
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage))
             {
                 SendGenericAlert(_pendingReactionAlertMessage, _pendingReactionAlertDirection);
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage))
             {
                 SendGenericAlert(_pendingSmartAlertMessage, _pendingSmartAlertDirection);
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage))
             {
                 SendGenericAlert(_pendingEarlyAlertMessage, _pendingEarlyAlertDirection);
+                ClearPendingDecisionAlerts();
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
                 SendGenericAlert(_pendingContextAlertMessage, _pendingContextAlertDirection);
 
+            ClearPendingDecisionAlerts();
+        }
+
+        private void ClearPendingDecisionAlerts()
+        {
             _pendingExitAlertMessage = "";
             _pendingRestrictionAlertMessage = "";
             _pendingSignalAlertMessage = "";
@@ -5094,6 +5116,7 @@ namespace cAlgo
             _pendingContextAlertMessage = "";
             _pendingHighConfidenceSignalAlert = false;
         }
+
 
         private void RenderSynchronizedPresentation(int chartIndex)
         {
