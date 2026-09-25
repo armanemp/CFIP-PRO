@@ -941,6 +941,15 @@ namespace cAlgo
         [Parameter("Auto Trade Risk % Equity", Group = "15 Auto Trading", DefaultValue = 0.50, MinValue = 0.05, MaxValue = 5.00, Step = 0.05)]
         public double AutoTradeRiskPercentEquity { get; set; }
 
+        [Parameter("Auto Trade Minimum Confidence", Group = "15 Auto Trading", DefaultValue = 78, MinValue = 50, MaxValue = 99)]
+        public int AutoTradeMinimumConfidence { get; set; }
+
+        [Parameter("Auto Trade Minimum Smart Quality", Group = "15 Auto Trading", DefaultValue = 70, MinValue = 50, MaxValue = 95)]
+        public int AutoTradeMinimumSmartQuality { get; set; }
+
+        [Parameter("Require Structural SL/TP", Group = "15 Auto Trading", DefaultValue = true)]
+        public bool AutoTradeRequireStructuralPlan { get; set; }
+
         [Parameter("Auto Trade Fixed Lots", Group = "15 Auto Trading", DefaultValue = 0.01, MinValue = 0.001, MaxValue = 100.0, Step = 0.001)]
         public double AutoTradeFixedLots { get; set; }
 
@@ -5266,6 +5275,36 @@ namespace cAlgo
                     _signalTp3,
                     _signalTp4,
                     _signalEntry);
+
+            if (_signalConfidence <
+                Math.Max(50, AutoTradeMinimumConfidence))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | CONFIDENCE " +
+                    _signalConfidence;
+                return;
+            }
+
+            if (_smartQuality <
+                Math.Max(50, AutoTradeMinimumSmartQuality))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | SMART QUALITY " +
+                    _smartQuality;
+                return;
+            }
+
+            if (AutoTradeRequireStructuralPlan &&
+                (!IsFinitePositive(_signalSl) ||
+                 !IsFinitePositive(target) ||
+                 string.IsNullOrWhiteSpace(_signalSlSource) ||
+                 _signalSlSource == "FALLBACK" ||
+                 _signalSlSource == "SYNTHETIC"))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | NON-STRUCTURAL PLAN";
+                return;
+            }
 
             if (!IsAutoTradePlanValid(
                     _signalDirection,
