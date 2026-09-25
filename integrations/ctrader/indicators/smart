@@ -3688,32 +3688,44 @@ namespace cAlgo
 
             if (ShowPredictionTargets && ShowLevelLines)
             {
-                if (ShowEntry) DrawEarlyLevelByIndex(EarlyPrefix + "ENTRY", startIndex, endIndex, p.Entry, EntryColor);
-                else Chart.RemoveObject(EarlyPrefix + "ENTRY");
+                if (ShowEntry)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "ENTRY", startIndex, endIndex, p.Entry, EntryColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "ENTRY");
 
-                if (ShowSL) DrawEarlyLevelByIndex(EarlyPrefix + "SL", startIndex, endIndex, p.StopLoss, SlColor);
-                else Chart.RemoveObject(EarlyPrefix + "SL");
+                if (ShowSL)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "SL", startIndex, endIndex, p.StopLoss, SlColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "SL");
 
-                if (ShowTP1) DrawEarlyLevelByIndex(EarlyPrefix + "TP1", startIndex, endIndex, p.Target1, TpColor);
-                else Chart.RemoveObject(EarlyPrefix + "TP1");
+                if (ShowTP1)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "TP1", startIndex, endIndex, p.Target1, TpColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "TP1");
 
-                if (ShowTP2) DrawEarlyLevelByIndex(EarlyPrefix + "TP2", startIndex, endIndex, p.Target2, TpColor);
-                else Chart.RemoveObject(EarlyPrefix + "TP2");
+                if (ShowTP2)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "TP2", startIndex, endIndex, p.Target2, TpColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "TP2");
 
-                if (ShowTP3 && p.Target3 > 0) DrawEarlyLevelByIndex(EarlyPrefix + "TP3", startIndex, endIndex, p.Target3, TpColor);
-                else Chart.RemoveObject(EarlyPrefix + "TP3");
+                if (ShowTP3 && p.Target3 > 0)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "TP3", startIndex, endIndex, p.Target3, TpColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "TP3");
 
-                if (ShowTP4 && p.Target4 > 0) DrawEarlyLevelByIndex(EarlyPrefix + "TP4", startIndex, endIndex, p.Target4, TpColor);
-                else Chart.RemoveObject(EarlyPrefix + "TP4");
+                if (ShowTP4 && p.Target4 > 0)
+                    DrawEarlyLevelByIndex(EarlyPrefix + "TP4", startIndex, endIndex, p.Target4, TpColor);
+                else
+                    RemoveLevelDrawing(EarlyPrefix + "TP4");
             }
             else
             {
-                Chart.RemoveObject(EarlyPrefix + "ENTRY");
-                Chart.RemoveObject(EarlyPrefix + "SL");
-                Chart.RemoveObject(EarlyPrefix + "TP1");
-                Chart.RemoveObject(EarlyPrefix + "TP2");
-                Chart.RemoveObject(EarlyPrefix + "TP3");
-                Chart.RemoveObject(EarlyPrefix + "TP4");
+                RemoveLevelDrawing(EarlyPrefix + "ENTRY");
+                RemoveLevelDrawing(EarlyPrefix + "SL");
+                RemoveLevelDrawing(EarlyPrefix + "TP1");
+                RemoveLevelDrawing(EarlyPrefix + "TP2");
+                RemoveLevelDrawing(EarlyPrefix + "TP3");
+                RemoveLevelDrawing(EarlyPrefix + "TP4");
             }
 
             // Visible rendering is owned by RenderSynchronizedPresentation().
@@ -14646,23 +14658,13 @@ for (int j = impulse + 1; j <= index; j++)
             Chart.RemoveObject(
                 Prefix + "ARROW");
 
-            Chart.RemoveObject(
-                Prefix + "ENTRY");
-
-            Chart.RemoveObject(
-                Prefix + "SL");
-
-            Chart.RemoveObject(
-                Prefix + "TP1");
-
-            Chart.RemoveObject(
-                Prefix + "TP2");
-
-            Chart.RemoveObject(
-                Prefix + "TP3");
-
-            Chart.RemoveObject(
-                Prefix + "TP4");
+            // Level drawings own both the primary and fallback chart objects.
+            RemoveLevelDrawing(Prefix + "ENTRY");
+            RemoveLevelDrawing(Prefix + "SL");
+            RemoveLevelDrawing(Prefix + "TP1");
+            RemoveLevelDrawing(Prefix + "TP2");
+            RemoveLevelDrawing(Prefix + "TP3");
+            RemoveLevelDrawing(Prefix + "TP4");
 
             Chart.RemoveObject(
                 Prefix + "SIGNAL");
@@ -14692,38 +14694,19 @@ for (int j = impulse + 1; j <= index; j++)
             Chart.RemoveObject(
                 EarlyPrefix + "TEXT");
 
-            Chart.RemoveObject(
-                EarlyPrefix + "ZONE_TOP");
-
-            Chart.RemoveObject(
-                EarlyPrefix + "ZONE_BOTTOM");
-
-            Chart.RemoveObject(
-                EarlyPrefix + "TRIGGER");
+            RemoveLevelDrawing(EarlyPrefix + "ZONE_TOP");
+            RemoveLevelDrawing(EarlyPrefix + "ZONE_BOTTOM");
+            RemoveLevelDrawing(EarlyPrefix + "TRIGGER");
             Chart.RemoveObject(
                 EarlyPrefix + "ALERT_MARKER");
-            Chart.RemoveObject(
-                EarlyPrefix + "ENTRY");
-            Chart.RemoveObject(
-                EarlyPrefix + "SL");
-
-            Chart.RemoveObject(
-                EarlyPrefix + "TARGET1");
-
-            Chart.RemoveObject(
-                EarlyPrefix + "TARGET2");
-
-
-            Chart.RemoveObject(
-                EarlyPrefix + "TP1");
-
-
-            Chart.RemoveObject(
-                EarlyPrefix + "TP2");
-            Chart.RemoveObject(
-                EarlyPrefix + "TP3");
-            Chart.RemoveObject(
-                EarlyPrefix + "TP4");
+            RemoveLevelDrawing(EarlyPrefix + "ENTRY");
+            RemoveLevelDrawing(EarlyPrefix + "SL");
+            RemoveLevelDrawing(EarlyPrefix + "TARGET1");
+            RemoveLevelDrawing(EarlyPrefix + "TARGET2");
+            RemoveLevelDrawing(EarlyPrefix + "TP1");
+            RemoveLevelDrawing(EarlyPrefix + "TP2");
+            RemoveLevelDrawing(EarlyPrefix + "TP3");
+            RemoveLevelDrawing(EarlyPrefix + "TP4");
 
             // Reaction objects are owned by ClearLiveReactionObjects().
             // Do not clear them here: EvaluateEngine may refresh early prediction
