@@ -937,13 +937,16 @@ namespace cAlgo
         [Parameter("Require Smart Consensus", Group = "Smart Intelligence", DefaultValue = true)]
         public bool RequireSmartConsensus { get; set; }
 
-        [Parameter("Smart Consensus Threshold", Group = "Smart Intelligence", DefaultValue = 62, MinValue = 50, MaxValue = 95)]
+        [Parameter("Smart Consensus Threshold", Group = "Smart Intelligence", DefaultValue = 72, MinValue = 50, MaxValue = 95)]
         public int SmartConsensusThreshold { get; set; }
 
-        [Parameter("Smart Minimum Independent Evidence", Group = "Smart Intelligence", DefaultValue = 3, MinValue = 2, MaxValue = 6)]
+        [Parameter("Smart Minimum Independent Evidence", Group = "Smart Intelligence", DefaultValue = 4, MinValue = 2, MaxValue = 6)]
         public int SmartMinimumIndependentEvidence { get; set; }
 
-        [Parameter("Smart Regime Quality Floor", Group = "Smart Intelligence", DefaultValue = 48, MinValue = 30, MaxValue = 80)]
+        [Parameter("Smart Minimum Timeframe Agreement", Group = "Smart Intelligence", DefaultValue = 65, MinValue = 50, MaxValue = 95)]
+        public int SmartMinimumTimeframeAgreement { get; set; }
+
+        [Parameter("Smart Regime Quality Floor", Group = "Smart Intelligence", DefaultValue = 55, MinValue = 30, MaxValue = 80)]
         public int SmartRegimeQualityFloor { get; set; }
 
         [Parameter("Smart Stop Zone Bonus", Group = "Smart Intelligence", DefaultValue = 10, MinValue = 0, MaxValue = 25)]
@@ -1142,6 +1145,7 @@ namespace cAlgo
         private int _smartRegimeQuality;
         private int _smartConsensusQuality;
         private int _smartIndependentEvidence;
+        private int _smartTimeframeAgreement;
         private int _smartLastStableDirection;
         private int _smartOppositeBars;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
@@ -6865,6 +6869,50 @@ private void UpdateBrokerPositionProtection()
             return (int)Math.Round(Clamp(q, 0, 100));
         }
 
+        private int CalculateSmartTimeframeAgreement(
+            int direction,
+            Analysis a5,
+            Analysis a15,
+            Analysis a30,
+            Analysis h1,
+            Analysis h4,
+            Analysis w1)
+        {
+            if (direction == 0)
+                return 0;
+
+            Analysis[] frames = { a5, a15, a30, h1, h4, w1 };
+            double[] weights =
+            {
+                Math.Max(0.0, M5Weight),
+                Math.Max(0.0, M15Weight),
+                Math.Max(0.0, M30Weight),
+                Math.Max(0.0, H1Weight),
+                Math.Max(0.0, H4Weight),
+                SmartWeeklyContext
+                    ? Math.Max(0.5, Math.Min(3.0, Math.Max(0.5, H4Weight * 0.75)))
+                    : 0.0
+            };
+
+            double total = 0.0;
+            double aligned = 0.0;
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null || weights[i] <= 0)
+                    continue;
+
+                total += weights[i];
+
+                if (frames[i].Direction == direction)
+                    aligned += weights[i];
+            }
+
+            return total > 0
+                ? (int)Math.Round(Clamp(aligned / total * 100.0, 0.0, 100.0))
+                : 0;
+        }
+
         private int CalculateSmartConsensusQuality(
             int direction,
             Analysis a5,
@@ -6935,11 +6983,9 @@ private void UpdateBrokerPositionProtection()
                 direction == 1
                     ? (core.MssBull ||
                        core.ChochBull ||
-                       core.DisplacementBull ||
                        core.StructureBull)
                     : (core.MssBear ||
                        core.ChochBear ||
-                       core.DisplacementBear ||
                        core.StructureBear);
 
             bool liquidity =
@@ -6969,20 +7015,25 @@ private void UpdateBrokerPositionProtection()
                        core.MacdBear ||
                        core.VwapBear);
 
+            // Trigger evidence must be independently earned. The previous
+            // implementation compared the live score against LiveTriggerScore
+            // itself, which made any positive configured threshold self-satisfy.
             bool trigger =
                 liveTriggerScore >=
                 Math.Max(
                     1,
                     Math.Min(
                         6,
-                        LiveTriggerScore));
+                        PrecisionTriggerScore));
 
             bool entry =
-                entryQuality >= 60.0;
+                entryQuality >= 65.0;
 
-            if (tfAgreement >= 60.0) independentEvidence++;
+            if (tfAgreement >= Math.Max(50, SmartMinimumTimeframeAgreement))
+                independentEvidence++;
             if (structure) independentEvidence++;
-            if (liquidity || zone) independentEvidence++;
+            if (liquidity) independentEvidence++;
+            if (zone) independentEvidence++;
             if (momentum) independentEvidence++;
             if (trigger) independentEvidence++;
             if (entry) independentEvidence++;
@@ -6992,7 +7043,7 @@ private void UpdateBrokerPositionProtection()
                 liquidity && zone
                     ? 100.0
                     : liquidity || zone
-                        ? 65.0
+                        ? 58.0
                         : 0.0;
             double momentumScore = momentum ? 100.0 : 0.0;
             double triggerScore =
@@ -7003,9 +7054,9 @@ private void UpdateBrokerPositionProtection()
             double entryScore = Clamp(entryQuality, 0.0, 100.0);
 
             double consensus =
-                tfAgreement * 0.40 +
+                tfAgreement * 0.42 +
                 structureScore * 0.18 +
-                liquidityZoneScore * 0.14 +
+                liquidityZoneScore * 0.12 +
                 momentumScore * 0.10 +
                 triggerScore * 0.10 +
                 entryScore * 0.08;
@@ -7407,6 +7458,14 @@ private void UpdateBrokerPositionProtection()
 
             _smartConsensusQuality = consensusQuality;
             _smartIndependentEvidence = independentEvidence;
+            _smartTimeframeAgreement = CalculateSmartTimeframeAgreement(
+                provisionalDirection,
+                a5,
+                a15,
+                a30,
+                ah1,
+                ah4,
+                aw1);
 
             // Feed independent consensus back into quality. This keeps the
             // displayed quality aligned with the actual gate instead of allowing
@@ -7432,7 +7491,9 @@ private void UpdateBrokerPositionProtection()
                         consensusQuality <
                         Math.Max(50, SmartConsensusThreshold) ||
                         independentEvidence <
-                        Math.Max(2, SmartMinimumIndependentEvidence)
+                        Math.Max(2, SmartMinimumIndependentEvidence) ||
+                        _smartTimeframeAgreement <
+                        Math.Max(50, SmartMinimumTimeframeAgreement)
                     );
 
                 if (weakRegime || weakConsensus)
