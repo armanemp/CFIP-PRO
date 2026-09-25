@@ -1256,7 +1256,6 @@ namespace cAlgo
         private int _lastContextM5 = -1;
         private int _lastBrokerModifyM5 = -1;
         private int _lastInvalidationAlertM5 = -1;
-        private int _lastHighConfidenceM5 = -1;
         private bool _panelHidden;
         private Button _panelToggleButton;
         private Button _popupCloseButton;
@@ -1271,7 +1270,6 @@ namespace cAlgo
         private int _lastEventGuardM5 = -1;
         private int _lastRestrictionM5 = -1;
         private int _lastSmartDecisionAlertM5 = -1;
-        private int _lastHighConfidenceM5 = -1;
         private int _lastHistoricalHostBar = -1;
 
         // ============================================================
@@ -4439,7 +4437,13 @@ namespace cAlgo
                             continue;
                     }
 
+                    bool requireObstacleFree =
+                        stage == 0
+                            ? RequireObstacleFreeTp1
+                            : true;
+
                     if (RejectTargetObstacle &&
+                        requireObstacleFree &&
                         HasTargetObstacle(
                             _m5Bars,
                             _m5Bars.Count - 2,
@@ -4449,7 +4453,7 @@ namespace cAlgo
                             atr))
                         continue;
 
-                    double distance =
+                    double targetDistance =
                         Math.Abs(
                             candidate.Price -
                             entry);
@@ -4459,7 +4463,7 @@ namespace cAlgo
                         (1.0 +
                          SmartTargetNearestBias /
                          (1.0 +
-                          distance /
+                          targetDistance /
                           Math.Max(
                               Symbol.PipSize,
                               atr)));
