@@ -1343,7 +1343,6 @@ namespace cAlgo
             RemoveAllChartObjects();
             RemovePanel();
             RemovePopup();
-            RemovePredictionObjects();
             base.OnDestroy();
         }
 
@@ -8178,6 +8177,34 @@ if (UseM1Trigger &&
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
 
+                _panelToggleButton.FontSize =
+                    Math.Max(
+                        8,
+                        PanelFontSize - 1);
+
+                _panelToggleButton.FontWeight =
+                    PanelBold
+                        ? FontWeight.Bold
+                        : FontWeight.Normal;
+
+                _panelToggleButton.BackgroundColor =
+                    Color.FromArgb(
+                        225,
+                        PanelBackground);
+
+                _panelToggleButton.BorderColor =
+                    PanelBorder;
+
+                _panelToggleButton.BorderThickness =
+                    Math.Max(
+                        0,
+                        PanelBorderThickness);
+
+                _panelToggleButton.CornerRadius =
+                    Math.Max(
+                        0,
+                        PanelCornerRadius);
+
                 _panelToggleButton.Click +=
                     args => TogglePanel();
 
@@ -8384,10 +8411,66 @@ if (UseM1Trigger &&
                 "CANCEL ALL ORDERS";
 
             _closeButton.ForegroundColor =
-                Color.White;
+                PanelTextColor;
 
             _cancelButton.ForegroundColor =
-                Color.White;
+                PanelTextColor;
+
+            _closeButton.FontSize =
+                Math.Max(
+                    8,
+                    PanelFontSize - 1);
+
+            _cancelButton.FontSize =
+                Math.Max(
+                    8,
+                    PanelFontSize - 1);
+
+            _closeButton.FontWeight =
+                PanelBold
+                    ? FontWeight.Bold
+                    : FontWeight.Normal;
+
+            _cancelButton.FontWeight =
+                PanelBold
+                    ? FontWeight.Bold
+                    : FontWeight.Normal;
+
+            _closeButton.BackgroundColor =
+                Color.FromArgb(
+                    225,
+                    PanelBackground);
+
+            _cancelButton.BackgroundColor =
+                Color.FromArgb(
+                    225,
+                    PanelBackground);
+
+            _closeButton.BorderColor =
+                PanelBorder;
+
+            _cancelButton.BorderColor =
+                PanelBorder;
+
+            _closeButton.BorderThickness =
+                Math.Max(
+                    0,
+                    PanelBorderThickness);
+
+            _cancelButton.BorderThickness =
+                Math.Max(
+                    0,
+                    PanelBorderThickness);
+
+            _closeButton.CornerRadius =
+                Math.Max(
+                    0,
+                    PanelCornerRadius);
+
+            _cancelButton.CornerRadius =
+                Math.Max(
+                    0,
+                    PanelCornerRadius);
         }
 
         private string BuildPanelText()
@@ -8596,6 +8679,17 @@ if (UseM1Trigger &&
             lines.Add("");
             lines.Add("MTF");
 
+            if (UseVolumeExpansion ||
+                UseMacdBias ||
+                UseVwapBias ||
+                UseHealthyVolatility)
+            {
+                lines.Add(
+                    "CONFL  " +
+                    ConfluenceText(
+                        _m5Frame));
+            }
+
             lines.Add(
                 "M5  " +
                 FrameText(_m5Frame));
@@ -8642,6 +8736,55 @@ if (UseM1Trigger &&
             return string.Join(
                 Environment.NewLine,
                 lines.ToArray());
+        }
+
+
+        private string ConfluenceText(
+            Frame frame)
+        {
+            if (frame == null)
+                return "WAIT";
+
+            List<string> parts =
+                new List<string>();
+
+            if (UseVolumeExpansion)
+                parts.Add(
+                    frame.VolumeBull
+                        ? "VOL+"
+                        : frame.VolumeBear
+                            ? "VOL-"
+                            : "VOL0");
+
+            if (UseMacdBias)
+                parts.Add(
+                    frame.MacdBull
+                        ? "MACD+"
+                        : frame.MacdBear
+                            ? "MACD-"
+                            : "MACD0");
+
+            if (UseVwapBias)
+                parts.Add(
+                    frame.VwapBull
+                        ? "VWAP+"
+                        : frame.VwapBear
+                            ? "VWAP-"
+                            : "VWAP0");
+
+            if (UseHealthyVolatility)
+                parts.Add(
+                    frame.HealthyBull
+                        ? "ATR+"
+                        : frame.HealthyBear
+                            ? "ATR-"
+                            : "ATR0");
+
+            return parts.Count == 0
+                ? "OFF"
+                : string.Join(
+                    " | ",
+                    parts.ToArray());
         }
 
         private string FrameText(
@@ -10946,4 +11089,5 @@ if (UseM1Trigger &&
             RemovePlanObjects();
         }
     }
+}
 }
