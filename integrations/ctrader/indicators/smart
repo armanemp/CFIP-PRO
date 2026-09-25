@@ -1414,7 +1414,7 @@ namespace cAlgo
 
         // Rendering invariants: one owner per visible level, fixed panel rows,
         // and in-place icon updates so repeated Calculate() calls do not flicker.
-        private const int TradePlanPanelFixedRows = 36;
+        private const int TradePlanPanelFixedRows = 52;
         private const int TradePlanPanelActionRow = TradePlanPanelFixedRows;
         private const int TradePlanPanelTotalRows = TradePlanPanelFixedRows + 1;
 
@@ -5045,60 +5045,47 @@ namespace cAlgo
             LineStyle lineStyle,
             bool extendToInfinity)
         {
-            if (Bars == null || Bars.Count < 2)
+            if (Bars == null ||
+                Bars.Count < 2 ||
+                !IsFinitePositive(price))
                 return false;
 
             int safeStart =
-                Math.Max(
-                    0,
-                    Math.Min(
-                        startIndex,
-                        Bars.Count - 2));
-
+                Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
             int safeEnd =
-                Math.Max(
-                    safeStart + 1,
-                    Math.Min(
-                        endIndex,
-                        Bars.Count - 1));
+                Math.Max(safeStart + 1, Math.Min(endIndex, Bars.Count - 1));
 
             try
             {
-                ChartTrendLine fallback =
+                ChartTrendLine line =
                     Chart.FindObject(fallbackName) as ChartTrendLine;
 
-                if (fallback == null)
+                if (line == null)
                 {
                     Chart.RemoveObject(fallbackName);
-
-                    fallback =
-                        Chart.DrawTrendLine(
-                            fallbackName,
-                            Bars.OpenTimes[safeStart],
-                            price,
-                            Bars.OpenTimes[safeEnd],
-                            price,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            lineStyle);
+                    line = Chart.DrawTrendLine(
+                        fallbackName,
+                        safeStart,
+                        price,
+                        safeEnd,
+                        price,
+                        color,
+                        Math.Max(1, LevelLineThickness),
+                        lineStyle);
                 }
 
-                if (fallback == null)
+                if (line == null)
                     return false;
 
-                fallback.Time1 =
-                    Bars.OpenTimes[safeStart];
-                fallback.Y1 = price;
-                fallback.Time2 =
-                    Bars.OpenTimes[safeEnd];
-                fallback.Y2 = price;
-                fallback.Color = color;
-                fallback.Thickness =
-                    Math.Max(1, LevelLineThickness);
-                fallback.LineStyle = lineStyle;
-                fallback.ExtendToInfinity =
-                    extendToInfinity;
-                fallback.IsInteractive = false;
+                line.Time1 = Bars.OpenTimes[safeStart];
+                line.Y1 = price;
+                line.Time2 = Bars.OpenTimes[safeEnd];
+                line.Y2 = price;
+                line.Color = color;
+                line.Thickness = Math.Max(1, LevelLineThickness);
+                line.LineStyle = lineStyle;
+                line.ExtendToInfinity = extendToInfinity;
+                line.IsInteractive = false;
                 return true;
             }
             catch
@@ -5127,14 +5114,17 @@ namespace cAlgo
             if (!visible ||
                 !IsFinitePositive(price) ||
                 Bars == null ||
-                Bars.Count < 1)
+                Bars.Count < 2)
             {
                 RemoveLevelDrawing(name);
                 return;
             }
 
-            double normalizedPrice =
-                NormalizePrice(price);
+            int safeStart =
+                Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
+            int safeEnd =
+                Math.Max(safeStart + 1, Math.Min(endIndex, Bars.Count - 1));
+            double normalizedPrice = NormalizePrice(price);
 
             if (!IsFinitePositive(normalizedPrice))
             {
@@ -5142,144 +5132,63 @@ namespace cAlgo
                 return;
             }
 
-            LineStyle lineStyle =
-                styleOverride ?? PlanLineStyle;
-
-            bool fullWidth =
-                fullWidthOverride ?? FullWidthLevelLines;
+            LineStyle lineStyle = styleOverride ?? PlanLineStyle;
+            bool fullWidth = fullWidthOverride ?? FullWidthLevelLines;
 
             try
             {
-                if (fullWidth)
-                {
-                    ChartHorizontalLine line =
-                        Chart.FindObject(name) as ChartHorizontalLine;
-
-                    if (line == null)
-                    {
-                        Chart.RemoveObject(name);
-
-                        line =
-                            Chart.DrawHorizontalLine(
-                                name,
-                                normalizedPrice,
-                                color,
-                                Math.Max(1, LevelLineThickness),
-                                lineStyle);
-                    }
-
-                    if (line != null)
-                    {
-                        line.Y =
-                            normalizedPrice;
-                        line.Color = color;
-                        line.Thickness =
-                            Math.Max(1, LevelLineThickness);
-                        line.LineStyle = lineStyle;
-                        line.IsInteractive = false;
-
-                        Chart.RemoveObject(
-                            name + "_FALLBACK");
-                        Chart.RemoveObject(
-                            name + "_SEG");
-                        return;
-                    }
-
-                    if (TryDrawLevelFallback(
-                            name + "_FALLBACK",
-                            startIndex,
-                            endIndex,
-                            normalizedPrice,
-                            color,
-                            lineStyle,
-                            true))
-                        return;
-
-                    Print(
-                        "CFIP level render failed [{0}]: horizontal line unavailable",
-                        name);
-                    return;
-                }
-
-                int safeStart =
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            startIndex,
-                            Bars.Count - 2));
-
-                int safeEnd =
-                    Math.Max(
-                        safeStart + 1,
-                        Math.Min(
-                            endIndex,
-                            Bars.Count - 1));
-
-                ChartTrendLine trend =
+                ChartTrendLine line =
                     Chart.FindObject(name) as ChartTrendLine;
 
-                if (trend == null)
+                if (line == null)
                 {
                     Chart.RemoveObject(name);
-
-                    trend =
-                        Chart.DrawTrendLine(
-                            name,
-                            Bars.OpenTimes[safeStart],
-                            normalizedPrice,
-                            Bars.OpenTimes[safeEnd],
-                            normalizedPrice,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            lineStyle);
+                    line = Chart.DrawTrendLine(
+                        name,
+                        safeStart,
+                        normalizedPrice,
+                        safeEnd,
+                        normalizedPrice,
+                        color,
+                        Math.Max(1, LevelLineThickness),
+                        lineStyle);
                 }
 
-                if (trend != null)
+                if (line != null)
                 {
-                    trend.Time1 =
-                        Bars.OpenTimes[safeStart];
-                    trend.Y1 =
-                        normalizedPrice;
-                    trend.Time2 =
-                        Bars.OpenTimes[safeEnd];
-                    trend.Y2 =
-                        normalizedPrice;
-                    trend.Color = color;
-                    trend.Thickness =
-                        Math.Max(1, LevelLineThickness);
-                    trend.LineStyle = lineStyle;
-                    trend.ExtendToInfinity = false;
-                    trend.IsInteractive = false;
-
-                    Chart.RemoveObject(
-                        name + "_FALLBACK");
-                    Chart.RemoveObject(
-                        name + "_SEG");
+                    line.Time1 = Bars.OpenTimes[safeStart];
+                    line.Y1 = normalizedPrice;
+                    line.Time2 = Bars.OpenTimes[safeEnd];
+                    line.Y2 = normalizedPrice;
+                    line.Color = color;
+                    line.Thickness = Math.Max(1, LevelLineThickness);
+                    line.LineStyle = lineStyle;
+                    line.ExtendToInfinity = fullWidth;
+                    line.IsInteractive = false;
+                    Chart.RemoveObject(name + "_SEG");
+                    Chart.RemoveObject(name + "_FALLBACK");
                     return;
                 }
 
-                if (TryDrawLevelFallback(
+                if (!TryDrawLevelFallback(
                         name + "_FALLBACK",
                         safeStart,
                         safeEnd,
                         normalizedPrice,
                         color,
                         lineStyle,
-                        false))
-                    return;
-
-                Print(
-                    "CFIP level render failed [{0}]: trend line unavailable",
-                    name);
+                        fullWidth))
+                {
+                    Print("CFIP level render failed [{0}]", name);
+                }
             }
             catch (Exception ex)
             {
                 Chart.RemoveObject(name);
-
                 if (!TryDrawLevelFallback(
                         name + "_FALLBACK",
-                        startIndex,
-                        endIndex,
+                        safeStart,
+                        safeEnd,
                         normalizedPrice,
                         color,
                         lineStyle,
@@ -5292,7 +5201,6 @@ namespace cAlgo
                 }
             }
         }
-
 
         private void DrawSignal(
             int index,
@@ -6183,7 +6091,7 @@ namespace cAlgo
                     {
                         ShowGridLines = false,
                         HorizontalAlignment = HorizontalAlignment.Left,
-                        VerticalAlignment = VerticalAlignment.Top
+                        VerticalAlignment = VerticalAlignment.Bottom
                     };
 
                 _tradePlanPanelRows =
@@ -6276,30 +6184,58 @@ namespace cAlgo
                     lines.Count,
                     TradePlanPanelFixedRows);
 
+            int firstVisibleRow =
+                TradePlanPanelFixedRows -
+                visibleRows;
+
+            int lineStart =
+                Math.Max(
+                    0,
+                    lines.Count -
+                    TradePlanPanelFixedRows);
+
             for (int i = 0;
                  i < TradePlanPanelFixedRows;
                  i++)
             {
-                bool visible = i < visibleRows;
-                TextBlock row = _tradePlanPanelRows[i];
+                bool visible =
+                    i >= firstVisibleRow;
+
+                int lineIndex =
+                    lineStart +
+                    (i - firstVisibleRow);
+
+                if (lineIndex < 0 ||
+                    lineIndex >= lines.Count)
+                    visible = false;
+
+                TextBlock row =
+                    _tradePlanPanelRows[i];
 
                 _tradePlanPanelGrid.Rows[i]
                     .SetHeightInPixels(
-                        visible ? rowHeight : 0);
+                        visible
+                            ? rowHeight
+                            : 0);
 
                 row.Text =
                     visible
-                        ? lines[i]
+                        ? lines[lineIndex]
                         : "";
 
-                row.IsVisible = visible;
-                row.ForegroundColor = panelColor;
+                row.IsVisible =
+                    visible;
+
+                row.ForegroundColor =
+                    panelColor;
+
                 row.FontSize =
                     showPlan
                         ? Math.Max(8, TradePlanFontSize)
                         : Math.Max(8, TextFontSize);
 
                 row.FontWeight =
+                    IsPanelSectionHeader(row.Text) ||
                     TradePlanBold
                         ? FontWeight.Bold
                         : FontWeight.Normal;
@@ -6310,36 +6246,46 @@ namespace cAlgo
                         ? "Arial"
                         : TradePlanFontFamily;
 
-                row.LineHeight = rowHeight;
-                row.TextWrapping = TextWrapping.NoWrap;
-                row.TextTrimming = TextTrimming.CharacterEllipsis;
+                row.LineHeight =
+                    rowHeight;
+
+                row.TextWrapping =
+                    TextWrapping.NoWrap;
+
+                row.TextTrimming =
+                    TextTrimming.CharacterEllipsis;
             }
 
             if (lines.Count > TradePlanPanelFixedRows)
             {
                 TextBlock overflowRow =
                     _tradePlanPanelRows[
-                        TradePlanPanelFixedRows - 1];
+                        firstVisibleRow];
 
                 overflowRow.Text =
                     "… " +
                     (lines.Count -
-                     TradePlanPanelFixedRows +
-                     1) +
-                    " additional lines";
+                     TradePlanPanelFixedRows) +
+                    " earlier lines hidden";
 
-                overflowRow.IsVisible = true;
+                overflowRow.IsVisible =
+                    true;
             }
 
             _tradePlanPanelGrid.Width =
                 Math.Max(180, TradePlanWidth);
 
-            int panelHeight =
+            int contentHeight =
                 visibleRows * rowHeight +
                 actionRowHeight;
 
+            int panelHeight =
+                contentHeight +
+                Math.Max(0, TradePlanPadding) * 2 +
+                Math.Max(0, TradePlanBorderThickness) * 2;
+
             _tradePlanPanelGrid.Height =
-                panelHeight;
+                contentHeight;
 
             _tradePlanPanelBorder.HorizontalAlignment =
                 horizontal;
@@ -6470,6 +6416,27 @@ namespace cAlgo
 
             _closeAllPositionsButton.BorderThickness = 1;
             _cancelAllOrdersButton.BorderThickness = 1;
+        }
+
+
+        private bool IsPanelSectionHeader(
+            string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+
+            string value =
+                text.Trim();
+
+            return value.Equals("STATUS", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("TRADE PLAN", StringComparison.OrdinalIgnoreCase) ||
+                   value.StartsWith("SMART DECISION", StringComparison.OrdinalIgnoreCase) ||
+                   value.StartsWith("SMART CONTEXT", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("LIVE REACTION", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("WATCH SETUP", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("CONTEXT", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("AUTO TRADING", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("ACTIONS", StringComparison.OrdinalIgnoreCase);
         }
 
 
