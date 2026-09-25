@@ -8,7 +8,7 @@ using cAlgo.API.Internals;
 
 namespace cAlgo
 {
-    public enum CFIPClean31PanelCorner
+    public enum CFIPClean32PanelCorner
     {
         TopLeft,
         TopRight,
@@ -16,13 +16,13 @@ namespace cAlgo
         BottomRight
     }
 
-    public enum CFIPClean31SizingMode
+    public enum CFIPClean32SizingMode
     {
         RiskPercentEquity = 0,
         FixedLots = 1
     }
 
-    public enum CFIPClean31TargetStage
+    public enum CFIPClean32TargetStage
     {
         TP1 = 0,
         TP2 = 1,
@@ -481,8 +481,8 @@ namespace cAlgo
         [Parameter("Confirmed Signals Only", Group = "13 · Auto Trading", DefaultValue = true)]
         public bool ConfirmedSignalsOnly { get; set; }
 
-        [Parameter("Sizing Mode", Group = "13 · Auto Trading", DefaultValue = CFIPClean31SizingMode.RiskPercentEquity)]
-        public CFIPClean31SizingMode SizingMode { get; set; }
+        [Parameter("Sizing Mode", Group = "13 · Auto Trading", DefaultValue = CFIPClean32SizingMode.RiskPercentEquity)]
+        public CFIPClean32SizingMode SizingMode { get; set; }
 
         [Parameter("Risk % Equity", Group = "13 · Auto Trading", DefaultValue = 0.50, MinValue = 0.05, MaxValue = 5)]
         public double RiskPercentEquity { get; set; }
@@ -499,8 +499,8 @@ namespace cAlgo
         [Parameter("Minimum Auto Level Quality", Group = "13 · Auto Trading", DefaultValue = 72, MinValue = 40, MaxValue = 100)]
         public int MinimumAutoLevelQuality { get; set; }
 
-        [Parameter("Auto TP Stage", Group = "13 · Auto Trading", DefaultValue = CFIPClean31TargetStage.TP2)]
-        public CFIPClean31TargetStage AutoTpStage { get; set; }
+        [Parameter("Auto TP Stage", Group = "13 · Auto Trading", DefaultValue = CFIPClean32TargetStage.TP2)]
+        public CFIPClean32TargetStage AutoTpStage { get; set; }
 
         [Parameter("Maximum Open Positions", Group = "13 · Auto Trading", DefaultValue = 1, MinValue = 1, MaxValue = 20)]
         public int MaximumOpenPositions { get; set; }
@@ -575,8 +575,8 @@ namespace cAlgo
         [Parameter("Show Panel Background", Group = "14 · Display", DefaultValue = true)]
         public bool ShowPanelBackground { get; set; }
 
-        [Parameter("Panel Position", Group = "14 · Display", DefaultValue = CFIPClean31PanelCorner.BottomLeft)]
-        public CFIPClean31PanelCorner PanelPosition { get; set; }
+        [Parameter("Panel Position", Group = "14 · Display", DefaultValue = CFIPClean32PanelCorner.BottomLeft)]
+        public CFIPClean32PanelCorner PanelPosition { get; set; }
 
         [Parameter("Panel Width", Group = "14 · Display", DefaultValue = 430, MinValue = 220, MaxValue = 700)]
         public int PanelWidth { get; set; }
@@ -1341,8 +1341,8 @@ namespace cAlgo
         [Parameter("Sound File Path", Group = "18 · Alerts", DefaultValue = "")]
         public string SoundFilePath { get; set; }
 
-        [Parameter("Popup Position", Group = "18 · Alerts", DefaultValue = CFIPClean31PanelCorner.TopRight)]
-        public CFIPClean31PanelCorner PopupPosition { get; set; }
+        [Parameter("Popup Position", Group = "18 · Alerts", DefaultValue = CFIPClean32PanelCorner.TopRight)]
+        public CFIPClean32PanelCorner PopupPosition { get; set; }
 
         [Parameter("Popup Width", Group = "18 · Alerts", DefaultValue = 430, MinValue = 220, MaxValue = 700)]
         public int PopupWidth { get; set; }
@@ -1446,8 +1446,8 @@ namespace cAlgo
         [Parameter("Aggressive Risk % Equity", Group = "21 · Auto Intelligence", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 5)]
         public double AggressiveRiskPercentEquity { get; set; }
 
-        [Parameter("Aggressive TP Stage", Group = "21 · Auto Intelligence", DefaultValue = CFIPClean31TargetStage.TP1)]
-        public CFIPClean31TargetStage AggressiveTpStage { get; set; }
+        [Parameter("Aggressive TP Stage", Group = "21 · Auto Intelligence", DefaultValue = CFIPClean32TargetStage.TP1)]
+        public CFIPClean32TargetStage AggressiveTpStage { get; set; }
 
         [Parameter("Aggressive Require Smart Agreement", Group = "21 · Auto Intelligence", DefaultValue = true)]
         public bool AggressiveRequireSmartAgreement { get; set; }
@@ -1606,8 +1606,8 @@ namespace cAlgo
         private TextBlock _popupText;
         private DateTime _popupUntilUtc = DateTime.MinValue;
 
-        private const string P = "CFIP_CLEAN31_";
-        private const string H = "CFIP_CLEAN31_H_";
+        private const string P = "CFIP_CLEAN32_";
+        private const string H = "CFIP_CLEAN32_H_";
 
         private int _lastContextM5 = -1;
         private int _lastBrokerModifyM5 = -1;
@@ -11506,21 +11506,21 @@ namespace cAlgo
 
             switch (PopupPosition)
             {
-                case CFIPClean31PanelCorner.TopLeft:
+                case CFIPClean32PanelCorner.TopLeft:
                     _popup.VerticalAlignment =
                         VerticalAlignment.Top;
                     _popup.HorizontalAlignment =
                         HorizontalAlignment.Left;
                     break;
 
-                case CFIPClean31PanelCorner.BottomLeft:
+                case CFIPClean32PanelCorner.BottomLeft:
                     _popup.VerticalAlignment =
                         VerticalAlignment.Bottom;
                     _popup.HorizontalAlignment =
                         HorizontalAlignment.Left;
                     break;
 
-                case CFIPClean31PanelCorner.BottomRight:
+                case CFIPClean32PanelCorner.BottomRight:
                     _popup.VerticalAlignment =
                         VerticalAlignment.Bottom;
                     _popup.HorizontalAlignment =
@@ -11986,7 +11986,7 @@ namespace cAlgo
                 double volume;
 
                 if (SizingMode ==
-                    CFIPClean31SizingMode.FixedLots)
+                    CFIPClean32SizingMode.FixedLots)
                 {
                     volume =
                         Symbol.QuantityToVolumeInUnits(
@@ -12092,20 +12092,20 @@ namespace cAlgo
 
         private double AutoTarget(
             Plan plan,
-            CFIPClean31TargetStage stage)
+            CFIPClean32TargetStage stage)
         {
             if (stage ==
-                    CFIPClean31TargetStage.TP4 &&
+                    CFIPClean32TargetStage.TP4 &&
                 plan.Tp4 > 0)
                 return plan.Tp4;
 
             if (stage ==
-                    CFIPClean31TargetStage.TP3 &&
+                    CFIPClean32TargetStage.TP3 &&
                 plan.Tp3 > 0)
                 return plan.Tp3;
 
             if (stage ==
-                    CFIPClean31TargetStage.TP2 &&
+                    CFIPClean32TargetStage.TP2 &&
                 plan.Tp2 > 0)
                 return plan.Tp2;
 
@@ -13238,17 +13238,17 @@ namespace cAlgo
         {
             switch (AggressiveTpStage)
             {
-                case CFIPClean31TargetStage.TP4:
+                case CFIPClean32TargetStage.TP4:
                     return Math.Max(
                         3.0,
                         Tp4MinimumRR);
 
-                case CFIPClean31TargetStage.TP3:
+                case CFIPClean32TargetStage.TP3:
                     return Math.Max(
                         2.5,
                         Tp3MinimumRR);
 
-                case CFIPClean31TargetStage.TP2:
+                case CFIPClean32TargetStage.TP2:
                     return Math.Max(
                         2.0,
                         Tp2MinimumRR);
