@@ -1,0 +1,16 @@
+name: cTrader v30 compile check
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "integrations/ctrader/indicators/CFIP_MTF_LiveEntryEngine_Clean_v30.cs"
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+      - run: dotnet restore ci/ctrader-v30-compile/cfip-v30.csproj
+      - run: dotnet build ci/ctrader-v30-compile/cfip-v30.csproj -c Release --no-restore
