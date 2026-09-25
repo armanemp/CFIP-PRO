@@ -92,7 +92,7 @@ namespace cAlgo
         [Parameter("Enable Sound Alerts", Group = "03 Alerts & Notifications", DefaultValue = true)]
         public bool EnableSoundAlerts { get; set; }
 
-        [Parameter("Show Popup Alert", Group = "03 Alerts & Notifications", DefaultValue = true)]
+        [Parameter("Show Popup Alert", Group = "03 Alerts & Notifications", DefaultValue = false)]
         public bool ShowPopupAlert { get; set; }
 
         [Parameter("Popup Only Critical Alerts", Group = "03 Alerts & Notifications", DefaultValue = true)]
@@ -658,7 +658,10 @@ namespace cAlgo
         [Parameter("Trade Plan Text Color", Group = "17 Display & Panel", DefaultValue = "Lime")]
         public Color TradePlanTextColor { get; set; }
 
-        [Parameter("Unified Panel Text Color", Group = "17 Display & Panel", DefaultValue = "Lime")]
+        [Parameter("Use Unified Panel Text Color", Group = "17 Display & Panel", DefaultValue = true)]
+        public bool UseUnifiedPanelTextColor { get; set; }
+
+        [Parameter("Unified Panel Text Color", Group = "17 Display & Panel", DefaultValue = "White")]
         public Color UnifiedPanelTextColor { get; set; }
 
         [Parameter("Trade Plan Font Family", Group = "17 Display & Panel", DefaultValue = "Arial")]
@@ -1506,7 +1509,8 @@ namespace cAlgo
         // Rendering invariants: one owner per visible level, fixed panel rows,
         // and in-place icon updates so repeated Calculate() calls do not flicker.
         // Content rows stay above the action row; the whole panel is bottom-anchored.
-        // New content is inserted from the bottom upward so existing lower rows do not move.\n        private const int TradePlanPanelFixedRows = 26;
+        // New content is inserted from the bottom upward so existing lower rows do not move.
+        private const int TradePlanPanelFixedRows = 26;
         private const int TradePlanPanelSpacerRow = 0;
         private const int TradePlanPanelFirstContentRow = 1;
         private const int TradePlanPanelLastContentRow =
@@ -5862,9 +5866,33 @@ namespace cAlgo
             if (string.IsNullOrWhiteSpace(name))
                 return;
 
-            Chart.RemoveObject(name);
-            Chart.RemoveObject(name + "_SEG");
-            Chart.RemoveObject(name + "_FALLBACK");
+            // One removal path owns every generation of this level object.
+            // This is critical when switching between native horizontal lines,
+            // finite trend-lines, and older legacy suffixes.
+            string[] suffixes =
+            {
+                "",
+                "_SEG",
+                "_FALLBACK",
+                "_H",
+                "_TEXT",
+                "_LABEL"
+            };
+
+            for (int i = 0; i < suffixes.Length; i++)
+                Chart.RemoveObject(name + suffixes[i]);
+
+            if (name.StartsWith(Prefix, StringComparison.Ordinal))
+            {
+                string token = name.Substring(Prefix.Length);
+                Chart.RemoveObject(Prefix + "LBL_" + token);
+            }
+
+            if (name.StartsWith(EarlyPrefix, StringComparison.Ordinal))
+            {
+                string token = name.Substring(EarlyPrefix.Length);
+                Chart.RemoveObject(EarlyPrefix + "LBL_" + token);
+            }
         }
 
         private bool TryDrawLevelFallback(
@@ -6004,18 +6032,24 @@ namespace cAlgo
                 if (fullWidth)
                 {
                     // Native horizontal lines are the authoritative full-width
-                    // representation. This avoids timeframe/bar-index conversion
-                    // entirely and uses cTrader's dedicated Y-axis drawing API.
-                    // Always recreate the authoritative native horizontal line.
-                    // cTrader replaces an existing drawing with the same name, which
-                    // avoids stale/wrong-type objects left by older indicator versions.
+                    // representation. Update the existing object in-place whenever
+                    // possible so every tick does not recreate/re-stack the level.
                     ChartHorizontalLine horizontal =
-                        Chart.DrawHorizontalLine(
-                            name,
-                            normalizedPrice,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            style);
+                        Chart.FindObject(name) as ChartHorizontalLine;
+
+                    if (horizontal == null)
+                    {
+                        if (Chart.FindObject(name) != null)
+                            Chart.RemoveObject(name);
+
+                        horizontal =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                style);
+                    }
 
                     if (horizontal == null)
                         throw new InvalidOperationException(
@@ -6036,7 +6070,9 @@ namespace cAlgo
 
                 if (line == null)
                 {
-                    Chart.RemoveObject(name);
+                    if (Chart.FindObject(name) != null)
+                        Chart.RemoveObject(name);
+
                     line =
                         Chart.DrawTrendLine(
                             name,
@@ -6336,34 +6372,32 @@ namespace cAlgo
 
         private void FlushCoordinatedDecisionAlerts()
         {
-            // At most two distinct events may be emitted from one Calculate()
-            // pass. Semantic dedupe prevents repeated copies of the same event
-            // even when its diagnostic message changes intrabar.
-            int emitted = 0;
-            const int maxPerPass = 2;
+            // Exit/restriction events are operational. A confirmed signal is the
+            // primary directional event for the pass; lower-priority watch/reaction/
+            // smart/context notifications are suppressed when that primary exists.
+            bool operationalEmitted = false;
+            bool primaryDirectionalEmitted = false;
 
-            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage) &&
-                emitted < maxPerPass)
+            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage))
             {
                 SendGenericAlert(
                     _pendingExitAlertMessage,
                     _pendingExitAlertDirection,
                     _pendingExitAlertBar,
                     "EXIT");
-                emitted++;
+                operationalEmitted = true;
             }
 
             if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage) &&
-                emitted < maxPerPass)
+                !operationalEmitted)
             {
                 SendRestrictionAlert(
                     _pendingRestrictionAlertMessage,
                     _pendingRestrictionAlertBar);
-                emitted++;
+                operationalEmitted = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage) &&
-                emitted < maxPerPass)
+            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage))
             {
                 if (_pendingHighConfidenceSignalAlert)
                 {
@@ -6381,51 +6415,50 @@ namespace cAlgo
                         "SIGNAL");
                 }
 
-                emitted++;
+                primaryDirectionalEmitted = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage) &&
-                emitted < maxPerPass)
+            if (!primaryDirectionalEmitted &&
+                !string.IsNullOrWhiteSpace(_pendingReactionAlertMessage))
             {
                 SendGenericAlert(
                     _pendingReactionAlertMessage,
                     _pendingReactionAlertDirection,
                     _pendingReactionAlertBar,
                     "REACTION");
-                emitted++;
+                primaryDirectionalEmitted = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage) &&
-                emitted < maxPerPass)
+            if (!primaryDirectionalEmitted &&
+                !string.IsNullOrWhiteSpace(_pendingSmartAlertMessage))
             {
                 SendGenericAlert(
                     _pendingSmartAlertMessage,
                     _pendingSmartAlertDirection,
                     _pendingSmartAlertBar,
                     "SMART");
-                emitted++;
+                primaryDirectionalEmitted = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage) &&
-                emitted < maxPerPass)
+            if (!primaryDirectionalEmitted &&
+                !string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage))
             {
                 SendGenericAlert(
                     _pendingEarlyAlertMessage,
                     _pendingEarlyAlertDirection,
                     _pendingEarlyAlertBar,
                     "EARLY");
-                emitted++;
+                primaryDirectionalEmitted = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage) &&
-                emitted < maxPerPass)
+            if (!primaryDirectionalEmitted &&
+                !string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
             {
                 SendGenericAlert(
                     _pendingContextAlertMessage,
                     _pendingContextAlertDirection,
                     _pendingContextAlertBar,
                     "CONTEXT");
-                emitted++;
             }
 
             ClearPendingDecisionAlerts();
@@ -7135,12 +7168,13 @@ namespace cAlgo
                 return;
             }
 
-            // One stable color policy: plan/watch/reaction content uses the
-            // Trade Plan color; status-only content uses Status Color. Defaults
-            // are fluorescent green, so state changes never recolor the box.
-            Color panelColor = (showPlan || showReaction || showEarly)
-                ? TradePlanTextColor
-                : (showStatus ? StatusColor : UnifiedPanelTextColor);
+            // One master color policy by default. Legacy section-specific
+            // colors remain available when the master switch is disabled.
+            Color panelColor = UseUnifiedPanelTextColor
+                ? UnifiedPanelTextColor
+                : ((showPlan || showReaction || showEarly)
+                    ? TradePlanTextColor
+                    : (showStatus ? StatusColor : UnifiedPanelTextColor));
 
             // The border/grid has fixed physical rows. Only the text in each
             // row changes. This prevents bottom-left panels from jumping vertically
@@ -9075,13 +9109,13 @@ namespace cAlgo
                 _signalDirection == 0)
                 return false;
 
-            int liveBar = _m5 != null ? Math.Max(1, _m5.Count - 1) : closedIndex;
-            double refreshDistance = Math.Max(Symbol.PipSize * 4.0, atr * Math.Max(0.05, TargetUpdateStepAtr));
-            if (_lastSmartTargetCalcM5Bar == liveBar &&
-                Math.Abs(market - _lastSmartTargetCalcPrice) < refreshDistance)
+            // Target discovery is based on closed structure, not every live tick.
+            // This prevents TP lines from sliding around during a forming M5 candle.
+            int closedM5Bar = Math.Max(1, closedIndex);
+            if (_lastSmartTargetCalcM5Bar == closedM5Bar)
                 return false;
 
-            _lastSmartTargetCalcM5Bar = liveBar;
+            _lastSmartTargetCalcM5Bar = closedM5Bar;
             _lastSmartTargetCalcPrice = market;
 
             double old1 = _signalTp1;
@@ -12859,16 +12893,17 @@ private void UpdateBrokerPositionProtection()
                 _signalDirection == 0)
                 return 0;
 
-            int liveBar = _m5 != null ? Math.Max(1, _m5.Count - 1) : index;
-            double recalcDistance = Math.Max(Symbol.PipSize * 4.0, atr * 0.12);
+            // Structural stops are snapshots of CLOSED M5 structure.
+            // Do not let intrabar price movement continuously relocate the stop.
+            int closedM5Bar = Math.Max(1, index);
 
-            if (_lastSmartStructuralStopCalcM5Bar == liveBar &&
-                Math.Abs(market - _lastSmartStructuralStopCalcPrice) < recalcDistance &&
-                _cachedSmartStructuralStop > 0)
+            if (_lastSmartStructuralStopCalcM5Bar == closedM5Bar)
             {
                 if ((_signalDirection == 1 && _cachedSmartStructuralStop > _signalSl) ||
                     (_signalDirection == -1 && _cachedSmartStructuralStop < _signalSl))
                     return _cachedSmartStructuralStop;
+
+                return 0;
             }
 
             DateTime reference = GetClosedBarReferenceTime(bars, index);
@@ -12966,7 +13001,7 @@ private void UpdateBrokerPositionProtection()
 
             if (best == null)
             {
-                _lastSmartStructuralStopCalcM5Bar = liveBar;
+                _lastSmartStructuralStopCalcM5Bar = closedM5Bar;
                 _lastSmartStructuralStopCalcPrice = market;
                 _cachedSmartStructuralStop = 0;
                 return 0;
@@ -12996,7 +13031,7 @@ private void UpdateBrokerPositionProtection()
                 ? stop > _signalSl && stop < market
                 : stop < _signalSl && stop > market;
 
-            _lastSmartStructuralStopCalcM5Bar = liveBar;
+            _lastSmartStructuralStopCalcM5Bar = closedM5Bar;
             _lastSmartStructuralStopCalcPrice = market;
 
             if (!valid)
@@ -15752,7 +15787,11 @@ for (int j = impulse + 1; j <= index; j++)
             };
 
             foreach (string suffix in suffixes)
+            {
                 Chart.RemoveObject(Prefix + suffix);
+                Chart.RemoveObject(EarlyPrefix + suffix);
+                Chart.RemoveObject(ReactionPrefix + suffix);
+            }
         }
 
         private void ClearLiveSignalObjects()
