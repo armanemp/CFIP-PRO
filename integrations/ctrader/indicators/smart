@@ -623,6 +623,9 @@ namespace cAlgo
         [Parameter("Trade Plan Width", Group = "17 Display & Panel", DefaultValue = 420, MinValue = 180, MaxValue = 600)]
         public int TradePlanWidth { get; set; }
 
+        [Parameter("Trade Plan Minimum Height", Group = "17 Display & Panel", DefaultValue = 300, MinValue = 120, MaxValue = 700)]
+        public int TradePlanMinimumHeight { get; set; }
+
         [Parameter("Panel State Hold Seconds", Group = "17 Display & Panel", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
         public int PanelStateHoldSeconds { get; set; }
 
@@ -963,6 +966,9 @@ namespace cAlgo
         [Parameter("Aggressive Smart Minimum Quality", Group = "15 Auto Trading", DefaultValue = 65, MinValue = 50, MaxValue = 95)]
         public int AggressiveSmartMinimumQuality { get; set; }
 
+        [Parameter("Auto Trade Retry Cooldown Seconds", Group = "15 Auto Trading", DefaultValue = 3, MinValue = 1, MaxValue = 30)]
+        public int AutoTradeRetryCooldownSeconds { get; set; }
+
         [Parameter("Auto Protect Broker Positions", Group = "16 Broker Protection", DefaultValue = false)]
         public bool AutoProtectBrokerPositions { get; set; }
 
@@ -1226,6 +1232,13 @@ namespace cAlgo
         private bool _slAlerted;
 
         private bool _signalActive;
+        private string _signalOrigin = "NONE";
+        private int _lastAutoTradeConfirmedM5Bar = -1;
+        private int _lastAggressiveAutoTradeM5Bar = -1;
+        private int _autoTradeLastPositionId = -1;
+        private string _autoTradeStatusText = "AUTO OFF";
+        private DateTime _lastAggressiveAutoTradeAttemptUtc = DateTime.MinValue;
+
         private int _lastSignalDecisionM5Bar = -1;
         private int _lastPredictionAlertBar = -1;
         private int _lastContextAlertBar = -1;
@@ -1470,8 +1483,15 @@ namespace cAlgo
         // Rendering invariants: one owner per visible level, fixed panel rows,
         // and in-place icon updates so repeated Calculate() calls do not flicker.
         private const int TradePlanPanelFixedRows = 36;
-        private const int TradePlanPanelActionRow = TradePlanPanelFixedRows;
-        private const int TradePlanPanelTotalRows = TradePlanPanelFixedRows + 1;
+        private const int TradePlanPanelSpacerRow = 0;
+        private const int TradePlanPanelFirstContentRow = 1;
+        private const int TradePlanPanelLastContentRow =
+            TradePlanPanelFirstContentRow +
+            TradePlanPanelFixedRows - 1;
+        private const int TradePlanPanelActionRow =
+            TradePlanPanelLastContentRow + 1;
+        private const int TradePlanPanelTotalRows =
+            TradePlanPanelActionRow + 1;
 
         // ============================================================
         // INITIALIZE
@@ -1494,6 +1514,16 @@ namespace cAlgo
             _signalDirection = 0;
             _predictionDirection = 0;
             _signalActive = false;
+            _signalOrigin = "NONE";
+            _lastAutoTradeConfirmedM5Bar = -1;
+            _lastAggressiveAutoTradeM5Bar = -1;
+            _autoTradeLastPositionId = -1;
+            _autoTradeStatusText =
+                EnableAutoTrading
+                    ? "ARMED | CONFIRMED"
+                    : "AUTO OFF";
+            _lastAggressiveAutoTradeAttemptUtc =
+                DateTime.MinValue;
             _lastSignalDecisionM5Bar = -1;
             _lastPredictionAlertBar = -1;
             _lastContextAlertBar = -1;
@@ -1659,8 +1689,13 @@ namespace cAlgo
             if (_signalActive && EnableLiveExitManagement)
                 UpdateLiveExitPlan();
 
-            if (_signalActive && AutoProtectBrokerPositions)
+            if (_signalActive &&
+                (AutoProtectBrokerPositions ||
+                 (EnableAutoTrading &&
+                  AutoTradeBrokerProtection)))
+            {
                 UpdateBrokerPositionProtection();
+            }
 
             _suppressIntermediatePanelRender = false;
 
@@ -4700,6 +4735,7 @@ namespace cAlgo
             // Anchor the visible signal to the actual closed M5 decision bar.
             _signalBar = MapM5BarToChartIndex(m5ClosedIndex, chartIndex);
             _signalDirection = direction;
+            _signalOrigin = "CONFIRMED";
             _signalEntry = entry;
             _signalSl = NormalizePrice(sl);
             _signalTp1 = NormalizePrice(tp1);
@@ -4895,9 +4931,7 @@ namespace cAlgo
 
             double stopLossPips =
                 Math.Abs(entry - stopLoss) /
-                Math.Max(
-                    Symbol.PipSize,
-                    Symbol.TickSize);
+                Symbol.PipSize;
 
             if (stopLossPips <= 0)
                 return 0;
@@ -5038,15 +5072,11 @@ namespace cAlgo
 
             double stopLossPips =
                 Math.Abs(entry - stopLoss) /
-                Math.Max(
-                    Symbol.PipSize,
-                    Symbol.TickSize);
+                Symbol.PipSize;
 
             double takeProfitPips =
                 Math.Abs(takeProfit - entry) /
-                Math.Max(
-                    Symbol.PipSize,
-                    Symbol.TickSize);
+                Symbol.PipSize;
 
             if (stopLossPips <= 0 ||
                 takeProfitPips <= 0)
@@ -5142,9 +5172,15 @@ namespace cAlgo
                 }
 
                 if (aggressive)
+                {
                     _lastAggressiveAutoTradeM5Bar = m5Bar;
+                    _lastAggressiveAutoTradeAttemptUtc =
+                        DateTime.UtcNow;
+                }
                 else
+                {
                     _lastAutoTradeConfirmedM5Bar = m5Bar;
+                }
 
                 _autoTradeLastPositionId =
                     position.Id;
@@ -5257,6 +5293,16 @@ namespace cAlgo
             if (_lastAggressiveAutoTradeM5Bar ==
                 m5Bar)
                 return;
+
+            if ((DateTime.UtcNow -
+                 _lastAggressiveAutoTradeAttemptUtc).TotalSeconds <
+                Math.Max(
+                    1,
+                    AutoTradeRetryCooldownSeconds))
+                return;
+
+            _lastAggressiveAutoTradeAttemptUtc =
+                DateTime.UtcNow;
 
             if (_liveReactionConfidence <
                 Math.Max(
@@ -5795,8 +5841,8 @@ namespace cAlgo
 
             try
             {
-                // Direct draw calls are the only authoritative rendering path.
-                // cTrader replaces an existing object with the same name.
+                // This is the only authoritative line path.
+                // cTrader replaces an existing object when its name is reused.
                 if (fullWidth)
                 {
                     ChartHorizontalLine line =
@@ -5813,19 +5859,21 @@ namespace cAlgo
                         throw new InvalidOperationException(
                             "Chart.DrawHorizontalLine returned null.");
 
-                    line.Y =
-                        normalizedPrice;
-                    line.Color =
-                        color;
+                    line.Y = normalizedPrice;
+                    line.Color = color;
                     line.Thickness =
                         Math.Max(
                             1,
                             LevelLineThickness);
-                    line.LineStyle =
-                        style;
+                    line.LineStyle = style;
                     line.IsInteractive = false;
                     line.IsLocked = true;
                     line.IsHidden = false;
+                    line.ZIndex = 1000000;
+
+                    Chart.RemoveObject(
+                        name + "_FALLBACK");
+
                     return;
                 }
 
@@ -5868,22 +5916,70 @@ namespace cAlgo
                     Bars.OpenTimes[safeEnd];
                 trend.Y2 =
                     normalizedPrice;
-                trend.Color =
-                    color;
+                trend.Color = color;
                 trend.Thickness =
                     Math.Max(
                         1,
                         LevelLineThickness);
-                trend.LineStyle =
-                    style;
+                trend.LineStyle = style;
                 trend.ExtendToInfinity = false;
                 trend.IsInteractive = false;
                 trend.IsLocked = true;
                 trend.IsHidden = false;
+                trend.ZIndex = 1000000;
+
+                Chart.RemoveObject(
+                    name + "_FALLBACK");
             }
             catch (Exception ex)
             {
-                RemoveLevelDrawing(name);
+                Chart.RemoveObject(name);
+                Chart.RemoveObject(name + "_SEG");
+
+                try
+                {
+                    // Emergency fallback uses a different object name and is
+                    // always a real horizontal line at the same price.
+                    ChartHorizontalLine fallback =
+                        Chart.DrawHorizontalLine(
+                            name + "_FALLBACK",
+                            normalizedPrice,
+                            color,
+                            Math.Max(
+                                1,
+                                LevelLineThickness),
+                            style);
+
+                    if (fallback != null)
+                    {
+                        fallback.Y =
+                            normalizedPrice;
+                        fallback.Color =
+                            color;
+                        fallback.Thickness =
+                            Math.Max(
+                                1,
+                                LevelLineThickness);
+                        fallback.LineStyle =
+                            style;
+                        fallback.IsInteractive =
+                            false;
+                        fallback.IsLocked =
+                            true;
+                        fallback.IsHidden =
+                            false;
+                        fallback.ZIndex =
+                            999999;
+                        return;
+                    }
+                }
+                catch
+                {
+                    // Preserve the original renderer exception below.
+                }
+
+                Chart.RemoveObject(
+                    name + "_FALLBACK");
 
                 Print(
                     "CFIP level draw failed [{0}] {1}",
@@ -6947,11 +7043,20 @@ namespace cAlgo
                 _tradePlanPanelRows =
                     new TextBlock[TradePlanPanelFixedRows];
 
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelSpacerRow]
+                    .SetHeightInPixels(0);
+
                 for (int i = 0;
                      i < TradePlanPanelFixedRows;
                      i++)
                 {
-                    _tradePlanPanelGrid.Rows[i]
+                    int gridRow =
+                        TradePlanPanelFirstContentRow +
+                        i;
+
+                    _tradePlanPanelGrid.Rows[
+                            gridRow]
                         .SetHeightInPixels(0);
 
                     _tradePlanPanelRows[i] =
@@ -6969,7 +7074,7 @@ namespace cAlgo
 
                     _tradePlanPanelGrid.AddChild(
                         _tradePlanPanelRows[i],
-                        i,
+                        gridRow,
                         0);
                 }
 
@@ -7016,12 +7121,17 @@ namespace cAlgo
             }
             else
             {
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelSpacerRow]
+                    .SetHeightInPixels(0);
+
                 for (int i = 0;
                      i < TradePlanPanelFixedRows;
                      i++)
                 {
-                    _tradePlanPanelGrid.Rows[i]
-                        .SetHeightInPixels(rowHeight);
+                    _tradePlanPanelGrid.Rows[
+                            TradePlanPanelFirstContentRow + i]
+                        .SetHeightInPixels(0);
                 }
 
                 _tradePlanPanelGrid.Rows[
@@ -7037,9 +7147,6 @@ namespace cAlgo
                     bottomUpLines.Count,
                     TradePlanPanelFixedRows);
 
-            // Bottom row is directly above the action buttons. New information
-            // is placed into progressively higher rows, so the panel grows only
-            // upward and its bottom edge never moves.
             for (int i = 0;
                  i < TradePlanPanelFixedRows;
                  i++)
@@ -7075,7 +7182,8 @@ namespace cAlgo
                 row.TextTrimming =
                     TextTrimming.CharacterEllipsis;
 
-                _tradePlanPanelGrid.Rows[i]
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelFirstContentRow + i]
                     .SetHeightInPixels(0);
             }
 
@@ -7084,17 +7192,19 @@ namespace cAlgo
                  i++)
             {
                 int rowIndex =
-                    TradePlanPanelFixedRows -
-                    1 -
+                    TradePlanPanelLastContentRow -
                     i;
 
-                _tradePlanPanelRows[rowIndex].Text =
-                    bottomUpLines[i];
+                TextBlock row =
+                    _tradePlanPanelRows[i];
 
-                _tradePlanPanelRows[rowIndex].IsVisible =
+                row.Text =
+                    bottomUpLines[i];
+                row.IsVisible =
                     true;
 
-                _tradePlanPanelGrid.Rows[rowIndex]
+                _tradePlanPanelGrid.Rows[
+                        rowIndex]
                     .SetHeightInPixels(
                         rowHeight);
             }
@@ -7102,17 +7212,22 @@ namespace cAlgo
             if (bottomUpLines.Count >
                 TradePlanPanelFixedRows)
             {
-                _tradePlanPanelRows[0].Text =
+                TextBlock overflow =
+                    _tradePlanPanelRows[
+                        TradePlanPanelFixedRows - 1];
+
+                overflow.Text =
                     "… " +
                     (bottomUpLines.Count -
                      TradePlanPanelFixedRows +
                      1) +
                     " additional lines";
 
-                _tradePlanPanelRows[0].IsVisible =
+                overflow.IsVisible =
                     true;
 
-                _tradePlanPanelGrid.Rows[0]
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelFirstContentRow]
                     .SetHeightInPixels(
                         rowHeight);
             }
@@ -7125,16 +7240,43 @@ namespace cAlgo
                     0,
                     TradePlanPadding);
 
-            int innerPanelHeight =
+            int requestedInnerHeight =
                 visibleRows * rowHeight +
                 actionRowHeight;
 
-            int outerPanelHeight =
-                innerPanelHeight +
-                padding * 2;
+            int minimumOuterHeight =
+                Math.Max(
+                    120,
+                    TradePlanMinimumHeight);
+
+            int minimumInnerHeight =
+                Math.Max(
+                    0,
+                    minimumOuterHeight -
+                    padding * 2);
+
+            int finalInnerHeight =
+                Math.Max(
+                    requestedInnerHeight,
+                    minimumInnerHeight);
+
+            int topSpacerHeight =
+                Math.Max(
+                    0,
+                    finalInnerHeight -
+                    requestedInnerHeight);
+
+            _tradePlanPanelGrid.Rows[
+                    TradePlanPanelSpacerRow]
+                .SetHeightInPixels(
+                    topSpacerHeight);
 
             _tradePlanPanelGrid.Height =
-                innerPanelHeight;
+                finalInnerHeight;
+
+            int outerPanelHeight =
+                finalInnerHeight +
+                padding * 2;
 
             _tradePlanPanelBorder.HorizontalAlignment =
                 horizontal;
