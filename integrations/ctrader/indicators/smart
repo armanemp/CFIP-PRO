@@ -6176,12 +6176,9 @@ namespace cAlgo
                     directionColor);
             }
 
-            DrawExactLevelLineByIndex(Prefix + "ENTRY", startIndex, endIndex, _signalEntry, EntryColor, ShowLevelLines && ShowEntry);
-            DrawExactLevelLineByIndex(Prefix + "SL", startIndex, endIndex, _signalSl, SlColor, ShowLevelLines && ShowSL);
-            DrawExactLevelLineByIndex(Prefix + "TP1", startIndex, endIndex, _signalTp1, TpColor, ShowLevelLines && ShowTP1);
-            DrawExactLevelLineByIndex(Prefix + "TP2", startIndex, endIndex, _signalTp2, TpColor, ShowLevelLines && ShowTP2);
-            DrawExactLevelLineByIndex(Prefix + "TP3", startIndex, endIndex, _signalTp3, TpColor, ShowLevelLines && ShowTP3 && _signalTp3 > 0);
-            DrawExactLevelLineByIndex(Prefix + "TP4", startIndex, endIndex, _signalTp4, TpColor, ShowLevelLines && ShowTP4 && _signalTp4 > 0);
+            // Level lines are rendered once by EnsureConfirmedPlanLines(), which is
+            // the single authoritative owner for the active confirmed plan.
+            // Keeping them out of DrawSignal avoids duplicate object updates on every tick.
 
             // All default text lives in the single unified static panel.
             // No level text is drawn on top of candles.
