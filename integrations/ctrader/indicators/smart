@@ -936,6 +936,52 @@ namespace cAlgo
         public int ActionButtonMargin { get; set; }
 
         // ============================================================
+        // AUTOMATED TRADING
+        // ============================================================
+
+        [Parameter("Auto Trade Confirmed Signals", Group = "Auto Trading", DefaultValue = false)]
+        public bool AutoTradeConfirmedSignals { get; set; }
+
+        [Parameter("Auto Trade Aggressive Entry", Group = "Auto Trading", DefaultValue = false)]
+        public bool AutoTradeAggressiveEntry { get; set; }
+
+        [Parameter("Auto Trade Use Risk Sizing", Group = "Auto Trading", DefaultValue = true)]
+        public bool AutoTradeUseRiskSizing { get; set; }
+
+        [Parameter("Auto Trade Risk % Equity", Group = "Auto Trading", DefaultValue = 0.50, MinValue = 0.05, MaxValue = 5.00, Step = 0.05)]
+        public double AutoTradeRiskPercent { get; set; }
+
+        [Parameter("Auto Trade Fixed Volume Lots", Group = "Auto Trading", DefaultValue = 0.01, MinValue = 0.01, MaxValue = 100.0, Step = 0.01)]
+        public double AutoTradeFixedVolumeLots { get; set; }
+
+        [Parameter("Auto Trade Max Volume Lots (0=Off)", Group = "Auto Trading", DefaultValue = 0.0, MinValue = 0.0, MaxValue = 100.0, Step = 0.01)]
+        public double AutoTradeMaxVolumeLots { get; set; }
+
+        [Parameter("Auto Trade Max Open Positions", Group = "Auto Trading", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+        public int AutoTradeMaxOpenPositions { get; set; }
+
+        [Parameter("Auto Trade One Per M5 Bar", Group = "Auto Trading", DefaultValue = true)]
+        public bool AutoTradeOnePerM5Bar { get; set; }
+
+        [Parameter("Auto Trade Cooldown Seconds", Group = "Auto Trading", DefaultValue = 20, MinValue = 0, MaxValue = 300)]
+        public int AutoTradeCooldownSeconds { get; set; }
+
+        [Parameter("Auto Trade Confirmed Min Confidence", Group = "Auto Trading", DefaultValue = 75, MinValue = 50, MaxValue = 99)]
+        public int AutoTradeConfirmedMinConfidence { get; set; }
+
+        [Parameter("Auto Trade Aggressive Min Confidence", Group = "Auto Trading", DefaultValue = 82, MinValue = 50, MaxValue = 99)]
+        public int AutoTradeAggressiveMinConfidence { get; set; }
+
+        [Parameter("Auto Trade Aggressive Min Evidence", Group = "Auto Trading", DefaultValue = 3, MinValue = 1, MaxValue = 6)]
+        public int AutoTradeAggressiveMinEvidence { get; set; }
+
+        [Parameter("Auto Trade Require Smart Direction", Group = "Auto Trading", DefaultValue = true)]
+        public bool AutoTradeRequireSmartDirection { get; set; }
+
+        [Parameter("Auto Trade Label", Group = "Auto Trading", DefaultValue = "CFIP-SMART")]
+        public string AutoTradeLabel { get; set; }
+
+        // ============================================================
         // SMART INTELLIGENCE
         // ============================================================
 
@@ -1357,6 +1403,10 @@ namespace cAlgo
         private int _lastSmartDecisionAlertDirection;
         private string _lastSmartDecisionAlertAction = "";
         private int _lastEventShockBar = -1;
+
+        private int _lastAutoTradeM5Bar = -1;
+        private DateTime _lastAutoTradeAttemptUtc = DateTime.MinValue;
+        private string _autoTradeStatusText = "";
         private int _lastRestrictionAlertBar = -1;
         private string _lastRestrictionSignature = "";
         private int _lastRestrictionAlertM5Bar = -1;
@@ -1510,6 +1560,9 @@ namespace cAlgo
             _alertPopupExpiresUtc = DateTime.MinValue;
             _smartDecisionM5Bar = -1;
             _cachedRetestM5Index = -1;
+            _lastAutoTradeM5Bar = -1;
+            _lastAutoTradeAttemptUtc = DateTime.MinValue;
+            _autoTradeStatusText = "";
             _cachedBullRetestQuality = 0;
             _cachedBearRetestQuality = 0;
             _liveReversalDirection = 0;
@@ -2959,6 +3012,20 @@ namespace cAlgo
                                (direction == 1 ? "BUY" : "SELL") +
                                " | Q " + confidence + " | EVIDENCE " + evidence +
                                " | " + (confidence >= LiveReactionStrongThreshold ? "STRONG" : actionable ? "TRIGGERING" : "FORMING");
+
+            if (!_signalActive &&
+                actionableReaction &&
+                AutoTradeAggressiveEntry)
+            {
+                TryExecuteAutoMarketOrder(
+                    direction,
+                    confidence,
+                    _reactionSl,
+                    _reactionTp1,
+                    "AGGRESSIVE",
+                    liveIndex,
+                    false);
+            }
 
             // The header must never say WAITING while a live reaction is visible.
             // Confirmed ACTIVE always has priority over the informational reaction.
@@ -4719,6 +4786,18 @@ namespace cAlgo
                 signalAlert,
                 direction,
                 m5LiveIndex);
+
+            if (AutoTradeConfirmedSignals)
+            {
+                TryExecuteAutoMarketOrder(
+                    direction,
+                    _signalConfidence,
+                    _signalSl,
+                    _signalTp1,
+                    "CONFIRMED",
+                    m5LiveIndex,
+                    true);
+            }
         }
 
         private double FindNearestSwingAbove(Bars bars, int index, double price)
@@ -6046,6 +6125,43 @@ namespace cAlgo
                 lines.Add("");
                 lines.Add("CONTEXT");
                 lines.Add(_contextStatusText);
+            }
+
+            if (AutoTradeConfirmedSignals ||
+                AutoTradeAggressiveEntry ||
+                !string.IsNullOrWhiteSpace(
+                    _autoTradeStatusText))
+            {
+                lines.Add("");
+                lines.Add("AUTO TRADING");
+
+                lines.Add(
+                    "CONFIRMED " +
+                    (AutoTradeConfirmedSignals
+                        ? "ON"
+                        : "OFF") +
+                    " | AGGRESSIVE " +
+                    (AutoTradeAggressiveEntry
+                        ? "ON"
+                        : "OFF"));
+
+                lines.Add(
+                    "RISK " +
+                    (AutoTradeUseRiskSizing
+                        ? AutoTradeRiskPercent.ToString("F2") +
+                          "% EQUITY"
+                        : "FIXED " +
+                          AutoTradeFixedVolumeLots.ToString("F2") +
+                          " LOT") +
+                    " | MAX POS " +
+                    Math.Max(
+                        1,
+                        AutoTradeMaxOpenPositions));
+
+                if (!string.IsNullOrWhiteSpace(
+                        _autoTradeStatusText))
+                    lines.Add(
+                        _autoTradeStatusText);
             }
 
             if (!string.IsNullOrWhiteSpace(_tradeActionStatusText))
@@ -8205,6 +8321,428 @@ private void UpdateBrokerPositionProtection()
             if (any)
                 _lastBrokerModifyUtc = DateTime.UtcNow;
         }
+
+        private string GetAutoTradeBaseLabel()
+        {
+            string label =
+                string.IsNullOrWhiteSpace(
+                    AutoTradeLabel)
+                    ? "CFIP-SMART"
+                    : AutoTradeLabel.Trim();
+
+            if (label.Length > 64)
+                label =
+                    label.Substring(
+                        0,
+                        64);
+
+            return label;
+        }
+
+        private int CountManagedAutoPositions()
+        {
+            string baseLabel =
+                GetAutoTradeBaseLabel();
+
+            int count = 0;
+
+            foreach (Position position in Positions)
+            {
+                if (position == null ||
+                    position.SymbolName != SymbolName)
+                    continue;
+
+                if (string.Equals(
+                        position.Label,
+                        baseLabel + "-CONFIRMED",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        position.Label,
+                        baseLabel + "-AGGRESSIVE",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool IsAutoTradeCooldownReady(
+            int m5LiveBar)
+        {
+            DateTime now =
+                Server.Time;
+
+            if (AutoTradeOnePerM5Bar &&
+                _lastAutoTradeM5Bar ==
+                m5LiveBar)
+                return false;
+
+            if (AutoTradeCooldownSeconds > 0 &&
+                _lastAutoTradeAttemptUtc !=
+                DateTime.MinValue &&
+                (now -
+                 _lastAutoTradeAttemptUtc).TotalSeconds <
+                AutoTradeCooldownSeconds)
+                return false;
+
+            return true;
+        }
+
+        private double GetMinimumDistanceInPips(
+            double distance,
+            double referencePrice)
+        {
+            if (distance <= 0 ||
+                Symbol.PipSize <= 0)
+                return 0;
+
+            if (Symbol.MinDistanceType ==
+                SymbolMinDistanceType.Pips)
+                return distance;
+
+            if (referencePrice <= 0)
+                return 0;
+
+            return
+                referencePrice *
+                distance /
+                100.0 /
+                Symbol.PipSize;
+        }
+
+        private double CalculateAutoTradeVolume(
+            double stopLossPips)
+        {
+            if (stopLossPips <= 0)
+                return 0;
+
+            double volume;
+
+            if (AutoTradeUseRiskSizing)
+            {
+                volume =
+                    Symbol.VolumeForProportionalRisk(
+                        ProportionalAmountType.Equity,
+                        Math.Max(
+                            0.01,
+                            AutoTradeRiskPercent),
+                        stopLossPips,
+                        RoundingMode.Down);
+            }
+            else
+            {
+                volume =
+                    Symbol.QuantityToVolumeInUnits(
+                        Math.Max(
+                            0.01,
+                            AutoTradeFixedVolumeLots));
+
+                volume =
+                    Symbol.NormalizeVolumeInUnits(
+                        volume,
+                        RoundingMode.Down);
+            }
+
+            if (AutoTradeMaxVolumeLots > 0)
+            {
+                double maxVolume =
+                    Symbol.QuantityToVolumeInUnits(
+                        AutoTradeMaxVolumeLots);
+
+                volume =
+                    Math.Min(
+                        volume,
+                        maxVolume);
+            }
+
+            volume =
+                Symbol.NormalizeVolumeInUnits(
+                    volume,
+                    RoundingMode.Down);
+
+            if (volume <
+                Symbol.VolumeInUnitsMin)
+                return 0;
+
+            if (volume >
+                Symbol.VolumeInUnitsMax)
+            {
+                volume =
+                    Symbol.NormalizeVolumeInUnits(
+                        Symbol.VolumeInUnitsMax,
+                        RoundingMode.Down);
+            }
+
+            return volume;
+        }
+
+        private bool TryExecuteAutoMarketOrder(
+            int direction,
+            int quality,
+            double plannedSl,
+            double plannedTp1,
+            string mode,
+            int m5LiveBar,
+            bool confirmed)
+        {
+            if (direction == 0 ||
+                !Symbol.IsTradingEnabled)
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | SYMBOL TRADING DISABLED";
+                return false;
+            }
+
+            if (confirmed)
+            {
+                if (!AutoTradeConfirmedSignals ||
+                    quality < AutoTradeConfirmedMinConfidence)
+                    return false;
+            }
+            else
+            {
+                if (!AutoTradeAggressiveEntry ||
+                    quality < AutoTradeAggressiveMinConfidence ||
+                    _liveReactionEvidence <
+                    Math.Max(
+                        1,
+                        AutoTradeAggressiveMinEvidence))
+                    return false;
+            }
+
+            if (AutoTradeRequireSmartDirection &&
+                EnableSmartDecisionEngine &&
+                _smartDirection != direction)
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | SMART DIRECTION CONFLICT";
+                return false;
+            }
+
+            if (!IsAutoTradeCooldownReady(
+                    m5LiveBar))
+                return false;
+
+            if (CountManagedAutoPositions() >=
+                Math.Max(
+                    1,
+                    AutoTradeMaxOpenPositions))
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | MAX MANAGED POSITIONS";
+                return false;
+            }
+
+            DateTime now =
+                Server.Time;
+
+            if (!IsSessionAllowed(now) ||
+                !IsFridayAllowed(now))
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | SESSION / DAY FILTER";
+                return false;
+            }
+
+            if (_m5 == null ||
+                _m5.Count < 2)
+                return false;
+
+            int liveBar =
+                Math.Max(
+                    1,
+                    Math.Min(
+                        m5LiveBar,
+                        _m5.Count - 1));
+
+            int closedIndex =
+                GetLastClosedIndexBefore(
+                    _m5,
+                    _m5.OpenTimes[liveBar]);
+
+            if (closedIndex < 20 ||
+                !IsSpreadAllowed(
+                    _m5,
+                    closedIndex))
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | MARKET FILTER";
+                return false;
+            }
+
+            double market =
+                NormalizePrice(
+                    direction == 1
+                        ? Symbol.Ask
+                        : Symbol.Bid);
+
+            double sl =
+                NormalizePrice(plannedSl);
+
+            double tp1 =
+                plannedTp1 > 0
+                    ? NormalizePrice(plannedTp1)
+                    : 0;
+
+            if (!IsFinitePositive(market) ||
+                !IsFinitePositive(sl))
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | INVALID MARKET / SL";
+                return false;
+            }
+
+            if (direction == 1
+                ? sl >= market
+                : sl <= market)
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | SL ON WRONG SIDE";
+                return false;
+            }
+
+            double stopLossPips =
+                Math.Abs(
+                    market - sl) /
+                Symbol.PipSize;
+
+            if (stopLossPips <= 0)
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | ZERO SL";
+                return false;
+            }
+
+            double minStopPips =
+                GetMinimumDistanceInPips(
+                    Symbol.MinStopLossDistance,
+                    market);
+
+            if (minStopPips > 0 &&
+                stopLossPips < minStopPips)
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | SL BELOW BROKER MIN";
+                return false;
+            }
+
+            double? takeProfitPips =
+                null;
+
+            if (IsFinitePositive(tp1))
+            {
+                if (direction == 1
+                    ? tp1 <= market
+                    : tp1 >= market)
+                {
+                    _autoTradeStatusText =
+                        "AUTO BLOCK | TP1 ON WRONG SIDE";
+                    return false;
+                }
+
+                double tpDistancePips =
+                    Math.Abs(
+                        tp1 - market) /
+                    Symbol.PipSize;
+
+                double minTpPips =
+                    GetMinimumDistanceInPips(
+                        Symbol.MinTakeProfitDistance,
+                        market);
+
+                if (tpDistancePips <= 0 ||
+                    (minTpPips > 0 &&
+                     tpDistancePips < minTpPips))
+                {
+                    _autoTradeStatusText =
+                        "AUTO BLOCK | TP1 BELOW BROKER MIN";
+                    return false;
+                }
+
+                takeProfitPips =
+                    tpDistancePips;
+            }
+
+            double volume =
+                CalculateAutoTradeVolume(
+                    stopLossPips);
+
+            if (!IsFinitePositive(volume))
+            {
+                _autoTradeStatusText =
+                    "AUTO BLOCK | INVALID VOLUME";
+                return false;
+            }
+
+            string label =
+                GetAutoTradeBaseLabel() +
+                "-" +
+                (confirmed
+                    ? "CONFIRMED"
+                    : "AGGRESSIVE");
+
+            _lastAutoTradeAttemptUtc =
+                now;
+
+            try
+            {
+                TradeResult result =
+                    ExecuteMarketOrder(
+                        direction == 1
+                            ? TradeType.Buy
+                            : TradeType.Sell,
+                        SymbolName,
+                        volume,
+                        label,
+                        stopLossPips,
+                        takeProfitPips);
+
+                if (result == null ||
+                    !result.IsSuccessful ||
+                    result.Position == null)
+                {
+                    _autoTradeStatusText =
+                        "AUTO FAILED | " +
+                        (result == null
+                            ? "NO RESULT"
+                            : result.Error.ToString());
+                    return false;
+                }
+
+                _lastAutoTradeM5Bar =
+                    m5LiveBar;
+
+                _autoTradeStatusText =
+                    "AUTO " +
+                    mode +
+                    " EXECUTED | " +
+                    (direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " | VOL " +
+                    Symbol.VolumeInUnitsToQuantity(
+                        result.Position.VolumeInUnits)
+                        .ToString("F2") +
+                    " | SL " +
+                    FormatPrice(sl) +
+                    " | TP1 " +
+                    (tp1 > 0
+                        ? FormatPrice(tp1)
+                        : "NONE");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _autoTradeStatusText =
+                    "AUTO FAILED | " +
+                    ex.Message;
+                return false;
+            }
+        }
+
 
         private void CloseAllPositionsAggressive()
         {
