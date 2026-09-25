@@ -771,16 +771,16 @@ namespace cAlgo
         [Parameter("Alert On SL", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnSl { get; set; }
 
-        [Parameter("Alert On Early Setup", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Early Setup", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnEarlySetup { get; set; }
 
-        [Parameter("Alert On BOS", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On BOS", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnBos { get; set; }
 
-        [Parameter("Alert On MSS / CHOCH", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On MSS / CHOCH", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnMssChoch { get; set; }
 
-        [Parameter("Alert On Liquidity Sweep", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Liquidity Sweep", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnLiquiditySweep { get; set; }
 
         [Parameter("Enable Email Alerts", Group = "Alerts", DefaultValue = false)]
@@ -852,7 +852,7 @@ namespace cAlgo
         [Parameter("Show Popup Close Button", Group = "Alerts", DefaultValue = true)]
         public bool ShowPopupCloseButton { get; set; }
 
-        [Parameter("Alert On Exit Plan Update", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Exit Plan Update", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnExitPlanUpdate { get; set; }
 
         [Parameter("Enable Live Exit Management", Group = "Live Exit", DefaultValue = true)]
