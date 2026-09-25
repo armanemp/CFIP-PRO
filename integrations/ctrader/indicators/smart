@@ -8829,8 +8829,10 @@ namespace cAlgo
                 _signalSl = candidateSl;
                 _lastLiveExitSl = candidateSl;
 
-                _lastSmartStructuralStopCalcM5Bar = -1;
-                _cachedSmartStructuralStop = 0;
+                // Keep the structural-stop snapshot for the current closed M5 bar.
+                // The next recalculation is allowed only when a new closed bar exists.
+                _cachedSmartStructuralStop = candidateSl;
+                _lastSmartStructuralStopCalcM5Bar = closedIndex;
 
                 RefreshSignalLevelMetadata(
                     _m5,
