@@ -294,8 +294,8 @@ namespace cAlgo
         [Parameter("Maximum SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.80, MinValue = 0.5, MaxValue = 10)]
         public double MaximumSlAtr { get; set; }
 
-        [Parameter("Fallback SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.00, MinValue = 0.1, MaxValue = 5)]
-        public double FallbackSlAtr { get; set; }
+        [Parameter("alternate SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.00, MinValue = 0.1, MaxValue = 5)]
+        public double alternateSlAtr { get; set; }
 
         [Parameter("TP1 Minimum RR", Group = "09 · Risk & Targets", DefaultValue = 2.00, MinValue = 0.5, MaxValue = 10)]
         public double Tp1MinimumRR { get; set; }
@@ -725,6 +725,7 @@ namespace cAlgo
         private Bars _d1Bars;
         private Bars _w1Bars;
 
+        private Frame _m1Frame;
         private Frame _m5Frame;
         private Frame _m15Frame;
         private Frame _m30Frame;
@@ -743,6 +744,7 @@ namespace cAlgo
         private int _lastEvaluatedM5 = -1;
         private int _lastSignalM5 = -1;
         private int _lastAutoM5 = -1;
+        private int _lastEarlyAlertM5 = -1;
         private int _tp1Hit;
         private int _tp2Hit;
         private int _tp3Hit;
@@ -835,6 +837,13 @@ namespace cAlgo
                 RenderPanel();
                 return;
             }
+
+            int m1Index = ClosedIndex(_m1Bars, reference);
+
+            _m1Frame =
+                m1Index >= 30
+                    ? AnalyzeFrame(_m1Bars, m1Index)
+                    : null;
 
             _m5Frame = AnalyzeFrame(_m5Bars, closedM5);
             _m15Frame = AnalyzeFrame(_m15Bars, m15Index);
@@ -1107,12 +1116,14 @@ namespace cAlgo
             f.EmaSlow = Ema(bars, index, false);
 
             f.StructureBull =
+                UseInternalStructure &&
                 BullStructure(
                     bars,
                     index,
                     f.Atr);
 
             f.StructureBear =
+                UseInternalStructure &&
                 BearStructure(
                     bars,
                     index,
@@ -1416,6 +1427,26 @@ namespace cAlgo
                 sell += LiveBias(chartIndex, -1);
             }
 
+            if (UsePremiumDiscount)
+            {
+                int pd = PremiumDiscountBias(
+                    _m5Bars,
+                    closedM5);
+
+                if (pd == 1)
+                    buy += 6;
+                else if (pd == -1)
+                    sell += 6;
+            }
+
+            if (UseM1Trigger && _m1Frame != null)
+            {
+                if (_m1Frame.Direction == 1)
+                    buy += 3;
+                else if (_m1Frame.Direction == -1)
+                    sell += 3;
+            }
+
             double total =
                 Math.Max(
                     1,
@@ -1695,6 +1726,23 @@ namespace cAlgo
                     return false;
                 }
             }
+            
+            if (UseM5Confirmation &&
+                ((d.Direction == 1 && _m5Frame.Direction != 1) ||
+                 (d.Direction == -1 && _m5Frame.Direction != -1)))
+            {
+                reason = "M5 CONFIRMATION";
+                return false;
+            }
+
+            if (UseM1Trigger &&
+                _m1Frame != null &&
+                _m1Frame.Direction != 0 &&
+                _m1Frame.Direction != d.Direction)
+            {
+                reason = "M1 TRIGGER MISALIGNED";
+                return false;
+            }
 
             if (RequireStableM5Direction &&
                 !StableDirection(
@@ -1817,6 +1865,50 @@ namespace cAlgo
                     ? ""
                     : " | BLOCK " +
                       d.BlockReason);
+        }
+
+        private int PremiumDiscountBias(
+            Bars bars,
+            int index)
+        {
+            if (!UsePremiumDiscount ||
+                bars == null ||
+                index < 10)
+                return 0;
+
+            double high =
+                Highest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index -
+                        StructureLookback),
+                    index);
+
+            double low =
+                Lowest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index -
+                        StructureLookback),
+                    index);
+
+            if (high <= low)
+                return 0;
+
+            double midpoint =
+                (high + low) * 0.5;
+
+            if (bars.ClosePrices[index] <
+                midpoint)
+                return 1;
+
+            if (bars.ClosePrices[index] >
+                midpoint)
+                return -1;
+
+            return 0;
         }
 
         private double LiveBias(
@@ -2132,6 +2224,12 @@ namespace cAlgo
                     ? Symbol.Ask
                     : Symbol.Bid;
 
+            double triggerBuffer =
+                atr *
+                Math.Max(
+                    0.0,
+                    EntryBufferAtr);
+
             bool extensionOk =
                 Math.Abs(
                     market -
@@ -2139,14 +2237,25 @@ namespace cAlgo
                 atr *
                 MaximumEntryExtensionAtr;
 
+            bool bufferPassed =
+                direction == 1
+                    ? market >=
+                      bars.ClosePrices[index] +
+                      triggerBuffer
+                    : market <=
+                      bars.ClosePrices[index] -
+                      triggerBuffer;
+
             if (trigger >= 5 &&
-                breakReady)
+                breakReady &&
+                bufferPassed)
                 return true;
 
             return
                 trigger >= 4 &&
                 breakReady &&
-                extensionOk;
+                extensionOk &&
+                bufferPassed;
         }
 
         private int BullTriggerScore(
@@ -2293,10 +2402,10 @@ namespace cAlgo
                     direction == 1
                         ? entry -
                           atr *
-                          FallbackSlAtr
+                          alternateSlAtr
                         : entry +
                           atr *
-                          FallbackSlAtr;
+                          alternateSlAtr;
 
                 stopSource = "ATR";
                 stopQuality = 50;
@@ -2739,9 +2848,174 @@ namespace cAlgo
                 atr,
                 _m5Bars.OpenTimes[closedM5]);
 
+            AddSupplyDemandAndLiquidityLevels(
+                levels,
+                closedM5,
+                direction,
+                entry,
+                atr);
+
             return MergeLevels(
                 levels,
                 atr);
+        }
+
+        private void AddSupplyDemandAndLiquidityLevels(
+            List<Level> levels,
+            int closedM5,
+            int direction,
+            double entry,
+            double atr)
+        {
+            double swing =
+                direction == 1
+                    ? FindSwingHighAbove(
+                        _m5Bars,
+                        closedM5,
+                        entry)
+                    : FindSwingLowBelow(
+                        _m5Bars,
+                        closedM5,
+                        entry);
+
+            AddLevel(
+                levels,
+                swing,
+                direction == 1
+                    ? "SUPPLY_ZONE"
+                    : "DEMAND_ZONE",
+                "M5",
+                0,
+                SupplyDemandWeight);
+
+            double liquidity =
+                direction == 1
+                    ? FindEqualHigh(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr)
+                    : FindEqualLow(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr);
+
+            AddLevel(
+                levels,
+                liquidity,
+                "LIQUIDITY_POOL",
+                "M5",
+                0,
+                LiquidityPoolWeight);
+
+            int d1 =
+                ClosedIndex(
+                    _d1Bars,
+                    _m5Bars.OpenTimes[closedM5]);
+
+            if (d1 > 0)
+            {
+                AddLevel(
+                    levels,
+                    direction == 1
+                        ? _d1Bars.HighPrices[d1 - 1]
+                        : _d1Bars.LowPrices[d1 - 1],
+                    "LIQUIDITY_POOL",
+                    "D1",
+                    1,
+                    LiquidityPoolWeight);
+            }
+
+            double sessionHigh;
+            double sessionLow;
+
+            GetSessionRange(
+                _m5Bars,
+                closedM5,
+                SessionStartUtc,
+                SessionEndUtc,
+                out sessionHigh,
+                out sessionLow);
+
+            AddLevel(
+                levels,
+                direction == 1
+                    ? sessionHigh
+                    : sessionLow,
+                "SESSION",
+                "M5",
+                0,
+                SessionWeight);
+        }
+
+        private void GetSessionRange(
+            Bars bars,
+            int index,
+            int startHour,
+            int endHour,
+            out double high,
+            out double low)
+        {
+            high = 0;
+            low = 0;
+
+            if (bars == null || index < 5)
+                return;
+
+            DateTime anchor = bars.OpenTimes[index];
+
+            DateTime dayStart =
+                new DateTime(
+                    anchor.Year,
+                    anchor.Month,
+                    anchor.Day,
+                    0,
+                    0,
+                    0);
+
+            DateTime from =
+                dayStart.AddHours(startHour);
+
+            DateTime to =
+                startHour < endHour
+                    ? dayStart.AddHours(endHour)
+                    : dayStart.AddDays(1).AddHours(endHour);
+
+            int first = -1;
+            int last = -1;
+
+            for (int i = index;
+                 i >= Math.Max(0, index - 400);
+                 i--)
+            {
+                DateTime t = bars.OpenTimes[i];
+
+                if (t < from)
+                    break;
+
+                if (t <= to)
+                {
+                    first = i;
+                    if (last < 0)
+                        last = i;
+                }
+            }
+
+            if (first < 0 || last < first)
+                return;
+
+            high =
+                Highest(
+                    bars,
+                    first,
+                    last);
+
+            low =
+                Lowest(
+                    bars,
+                    first,
+                    last);
         }
 
         private void AddHtfTargets(
@@ -3023,10 +3297,20 @@ namespace cAlgo
                              0.50))
                         continue;
 
-                    double rr =
+                    double distance =
                         Math.Abs(
                             candidate.Price -
-                            entry) /
+                            entry);
+
+                    if (distance >
+                        atr *
+                        Math.Max(
+                            1.0,
+                            MaximumTargetExtensionAtr))
+                        continue;
+
+                    double rr =
+                        distance /
                         Math.Max(
                             Symbol.PipSize,
                             risk);
@@ -3081,7 +3365,7 @@ namespace cAlgo
             double entry,
             double risk,
             int direction,
-            double fallbackRR)
+            double alternateRR)
         {
             if (selected != null &&
                 position < selected.Count)
@@ -3089,8 +3373,8 @@ namespace cAlgo
 
             return NormalizePrice(
                 direction == 1
-                    ? entry + risk * fallbackRR
-                    : entry - risk * fallbackRR);
+                    ? entry + risk * alternateRR
+                    : entry - risk * alternateRR);
         }
 
         private void ApplyTargetMeta(
@@ -5266,12 +5550,87 @@ namespace cAlgo
                 return;
             }
 
+            double normalized =
+                NormalizePrice(price);
+
+            if (!IsFinitePositive(normalized))
+            {
+                RemovePlanLine(name);
+                return;
+            }
+
             try
             {
-                ChartHorizontalLine line =
-                    Chart.FindObject(name) as ChartHorizontalLine;
+                if (FullWidthLevelLines)
+                {
+                    ChartHorizontalLine line =
+                        Chart.FindObject(name)
+                        as ChartHorizontalLine;
 
-                if (line == null)
+                    if (line == null)
+                    {
+                        ChartObject existing =
+                            Chart.FindObject(name);
+
+                        if (existing != null)
+                            Chart.RemoveObject(name);
+
+                        line =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalized,
+                                color,
+                                Math.Max(
+                                    1,
+                                    LevelLineThickness),
+                                PlanLineStyle);
+                    }
+
+                    if (line == null)
+                        return;
+
+                    line.Y =
+                        normalized;
+
+                    line.Color =
+                        color;
+
+                    line.Thickness =
+                        Math.Max(
+                            1,
+                            LevelLineThickness);
+
+                    line.LineStyle =
+                        PlanLineStyle;
+
+                    return;
+                }
+
+                int anchor =
+                    _plan != null
+                        ? MapM5ToChart(
+                            _plan.CreatedM5,
+                            Bars.Count - 1)
+                        : Bars.Count - 1;
+
+                int left =
+                    Math.Max(
+                        0,
+                        anchor - 14);
+
+                int right =
+                    Math.Min(
+                        Bars.Count - 1,
+                        anchor + 10);
+
+                if (right <= left)
+                    return;
+
+                ChartTrendLine trend =
+                    Chart.FindObject(name)
+                    as ChartTrendLine;
+
+                if (trend == null)
                 {
                     ChartObject existing =
                         Chart.FindObject(name);
@@ -5279,10 +5638,13 @@ namespace cAlgo
                     if (existing != null)
                         Chart.RemoveObject(name);
 
-                    line =
-                        Chart.DrawHorizontalLine(
+                    trend =
+                        Chart.DrawTrendLine(
                             name,
-                            NormalizePrice(price),
+                            left,
+                            normalized,
+                            right,
+                            normalized,
                             color,
                             Math.Max(
                                 1,
@@ -5290,22 +5652,37 @@ namespace cAlgo
                             PlanLineStyle);
                 }
 
-                if (line == null)
+                if (trend == null)
                     return;
 
-                line.Y =
-                    NormalizePrice(price);
+                trend.Time1 =
+                    Bars.OpenTimes[left];
 
-                line.Color =
+                trend.Y1 =
+                    normalized;
+
+                trend.Time2 =
+                    Bars.OpenTimes[right];
+
+                trend.Y2 =
+                    normalized;
+
+                trend.Color =
                     color;
 
-                line.Thickness =
+                trend.Thickness =
                     Math.Max(
                         1,
                         LevelLineThickness);
 
-                line.LineStyle =
+                trend.LineStyle =
                     PlanLineStyle;
+
+                trend.ExtendToInfinity =
+                    false;
+
+                trend.IsInteractive =
+                    false;
             }
             catch (Exception ex)
             {
@@ -5326,6 +5703,38 @@ namespace cAlgo
                 _decision == null ||
                 _decision.Direction == 0)
                 return;
+
+            if (AlertOnEarlyWatch &&
+                _decision.Confidence >=
+                Math.Max(
+                    60,
+                    MinimumConfidence - 8) &&
+                _decision.Confidence <
+                MinimumConfidence &&
+                _lastEarlyAlertM5 !=
+                closedM5)
+            {
+                SendUnifiedAlert(
+                    "WATCH|" +
+                    closedM5 +
+                    "|" +
+                    _decision.Direction,
+                    "CFIP CLEAN30 " +
+                    (_decision.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " WATCH | CONF " +
+                    _decision.Confidence +
+                    " | SMART " +
+                    _decision.SmartQuality +
+                    " | " +
+                    _decision.Reason,
+                    _decision.Direction,
+                    false);
+
+                _lastEarlyAlertM5 =
+                    closedM5;
+            }
 
             int hostBar =
                 MapM5ToChart(
@@ -5450,7 +5859,7 @@ namespace cAlgo
 
         private int MapM5ToChart(
             int m5Index,
-            int fallback)
+            int alternate)
         {
             if (_m5Bars == null ||
                 Bars == null ||
@@ -5459,7 +5868,7 @@ namespace cAlgo
                 return Math.Max(
                     0,
                     Math.Min(
-                        fallback,
+                        alternate,
                         Bars.Count - 1));
 
             int mapped =
@@ -5473,7 +5882,7 @@ namespace cAlgo
                     : Math.Max(
                         0,
                         Math.Min(
-                            fallback,
+                            alternate,
                             Bars.Count - 1));
         }
 
