@@ -2142,7 +2142,8 @@ namespace cAlgo
                 sell += LiveBias(chartIndex, -1);
             }
 
-            if (EnableSmartDecisionEngine)
+            if (EnableSmartDecisionEngine &&
+                UsePremiumDiscount)
             {
                 int pd =
                     PremiumDiscountBias(
@@ -2153,37 +2154,16 @@ namespace cAlgo
                     buy += 6;
                 else if (pd == -1)
                     sell += 6;
-
-                if (_m1Frame != null)
-                {
-                    if (_m1Frame.Direction == 1)
-                        buy += 3;
-
-                    if (_m1Frame.Direction == -1)
-                        sell += 3;
-                }
             }
 
-            if (EnableSmartDecisionEngine)
+            if (EnableSmartDecisionEngine &&
+                UseM1Trigger &&
+                _m1Frame != null)
             {
-                int pd =
-                    PremiumDiscountBias(
-                        _m5Bars,
-                        closedM5);
-
-                if (pd == 1)
-                    buy += 6;
-                else if (pd == -1)
-                    sell += 6;
-
-                if (UseM1Trigger &&
-                    _m1Frame != null)
-                {
-                    if (_m1Frame.Direction == 1)
-                        buy += 3;
-                    else if (_m1Frame.Direction == -1)
-                        sell += 3;
-                }
+                if (_m1Frame.Direction == 1)
+                    buy += 3;
+                else if (_m1Frame.Direction == -1)
+                    sell += 3;
             }
 
             if (UsePremiumDiscount)
@@ -4790,9 +4770,13 @@ if (UseM1Trigger &&
                 !_slHit)
             {
                 _slHit = true;
+                RegisterOutcome(
+                    _plan.Direction,
+                    false);
                 _losses++;
 
-                if (EnableLevelHitAlerts &&
+                if (AlertOnLevelHit &&
+                    EnableLevelHitAlerts &&
                     AlertOnSl)
                 {
                     SendUnifiedAlert(
@@ -4814,7 +4798,8 @@ if (UseM1Trigger &&
             {
                 _tp1Hit = 1;
 
-                if (EnableLevelHitAlerts &&
+                if (AlertOnLevelHit &&
+                    EnableLevelHitAlerts &&
                     AlertOnTp1)
                 {
                     SendUnifiedAlert(
@@ -4832,7 +4817,8 @@ if (UseM1Trigger &&
             {
                 _tp2Hit = 1;
 
-                if (EnableLevelHitAlerts &&
+                if (AlertOnLevelHit &&
+                    EnableLevelHitAlerts &&
                     AlertOnTp2)
                 {
                     SendUnifiedAlert(
@@ -4850,7 +4836,8 @@ if (UseM1Trigger &&
             {
                 _tp3Hit = 1;
 
-                if (EnableLevelHitAlerts &&
+                if (AlertOnLevelHit &&
+                    EnableLevelHitAlerts &&
                     AlertOnTp3)
                 {
                     SendUnifiedAlert(
@@ -4867,9 +4854,13 @@ if (UseM1Trigger &&
                 _tp4Hit == 0)
             {
                 _tp4Hit = 1;
+                RegisterOutcome(
+                    _plan.Direction,
+                    true);
                 _wins++;
 
-                if (EnableLevelHitAlerts &&
+                if (AlertOnLevelHit &&
+                    EnableLevelHitAlerts &&
                     AlertOnTp4)
                 {
                     SendUnifiedAlert(
@@ -6987,7 +6978,6 @@ if (UseM1Trigger &&
             Chart.RemoveObject(
                 P + "TP4_LABEL");
         }
-
         private void DrawPlanLine(
             string name,
             double price,
@@ -6995,7 +6985,9 @@ if (UseM1Trigger &&
             bool visible)
         {
             if (!visible ||
-                !IsFinitePositive(price))
+                !IsFinitePositive(price) ||
+                Bars == null ||
+                Bars.Count < 2)
             {
                 RemovePlanLine(name);
                 return;
@@ -7012,51 +7004,6 @@ if (UseM1Trigger &&
 
             try
             {
-                if (FullWidthLevelLines)
-                {
-                    ChartHorizontalLine line =
-                        Chart.FindObject(name)
-                        as ChartHorizontalLine;
-
-                    if (line == null)
-                    {
-                        ChartObject existing =
-                            Chart.FindObject(name);
-
-                        if (existing != null)
-                            Chart.RemoveObject(name);
-
-                        line =
-                            Chart.DrawHorizontalLine(
-                                name,
-                                normalized,
-                                color,
-                                Math.Max(
-                                    1,
-                                    LevelLineThickness),
-                                PlanLineStyle);
-                    }
-
-                    if (line == null)
-                        return;
-
-                    line.Y =
-                        normalized;
-
-                    line.Color =
-                        color;
-
-                    line.Thickness =
-                        Math.Max(
-                            1,
-                            LevelLineThickness);
-
-                    line.LineStyle =
-                        PlanLineStyle;
-
-                    return;
-                }
-
                 int anchor =
                     _plan != null
                         ? MapM5ToChart(
@@ -7064,24 +7011,68 @@ if (UseM1Trigger &&
                             Bars.Count - 1)
                         : Bars.Count - 1;
 
-                int left =
+                anchor =
                     Math.Max(
                         0,
-                        anchor - 14);
+                        Math.Min(
+                            Bars.Count - 1,
+                            anchor));
 
-                int right =
-                    Math.Min(
-                        Bars.Count - 1,
-                        anchor + 10);
+                int left;
+                int right;
+
+                if (FullWidthLevelLines)
+                {
+                    left =
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                Bars.Count - 1,
+                                Chart.FirstVisibleBarIndex));
+
+                    right =
+                        Math.Max(
+                            left,
+                            Math.Min(
+                                Bars.Count - 1,
+                                Chart.LastVisibleBarIndex));
+
+                    if (right <= left)
+                    {
+                        left = 0;
+                        right = Bars.Count - 1;
+                    }
+                }
+                else
+                {
+                    left =
+                        Math.Max(
+                            0,
+                            anchor -
+                            Math.Max(
+                                1,
+                                LineLengthBars));
+
+                    right =
+                        Math.Min(
+                            Bars.Count - 1,
+                            anchor +
+                            Math.Max(
+                                1,
+                                LineForwardBars));
+                }
 
                 if (right <= left)
+                {
+                    RemovePlanLine(name);
                     return;
+                }
 
-                ChartTrendLine trend =
+                ChartTrendLine line =
                     Chart.FindObject(name)
                     as ChartTrendLine;
 
-                if (trend == null)
+                if (line == null)
                 {
                     ChartObject existing =
                         Chart.FindObject(name);
@@ -7089,7 +7080,7 @@ if (UseM1Trigger &&
                     if (existing != null)
                         Chart.RemoveObject(name);
 
-                    trend =
+                    line =
                         Chart.DrawTrendLine(
                             name,
                             left,
@@ -7103,36 +7094,28 @@ if (UseM1Trigger &&
                             PlanLineStyle);
                 }
 
-                if (trend == null)
+                if (line == null)
                     return;
 
-                trend.Time1 =
+                line.Time1 =
                     Bars.OpenTimes[left];
-
-                trend.Y1 =
+                line.Y1 =
                     normalized;
-
-                trend.Time2 =
+                line.Time2 =
                     Bars.OpenTimes[right];
-
-                trend.Y2 =
+                line.Y2 =
                     normalized;
-
-                trend.Color =
+                line.Color =
                     color;
-
-                trend.Thickness =
+                line.Thickness =
                     Math.Max(
                         1,
                         LevelLineThickness);
-
-                trend.LineStyle =
+                line.LineStyle =
                     PlanLineStyle;
-
-                trend.ExtendToInfinity =
+                line.ExtendToInfinity =
                     false;
-
-                trend.IsInteractive =
+                line.IsInteractive =
                     false;
             }
             catch (Exception ex)
@@ -7968,28 +7951,6 @@ if (UseM1Trigger &&
                 "H4  " +
                 FrameText(_h4Frame));
 
-            if (ShowOutcomeDiagnostics)
-            {
-                lines.Add(
-                    "OUTCOME  W" +
-                    _wins +
-                    " | L" +
-                    _losses +
-                    " | CAL " +
-                    CalibrationText());
-            }
-
-            if (ShowOutcomeDiagnostics)
-            {
-                lines.Add(
-                    "OUTCOME  W" +
-                    _wins +
-                    " | L" +
-                    _losses +
-                    " | CAL " +
-                    CalibrationText());
-            }
-
             lines.Add(
                 "AUTO  " +
                 (EnableAutoTrading
@@ -8074,6 +8035,20 @@ if (UseM1Trigger &&
                 }
             }
 
+            if (_panelToggleButton != null)
+            {
+                try
+                {
+                    Chart.RemoveControl(
+                        _panelToggleButton);
+                }
+                catch
+                {
+                }
+            }
+
+            _panelToggleButton = null;
+            _panelHidden = false;
             _panel = null;
             _panelStack = null;
             _panelText = null;
@@ -9248,16 +9223,72 @@ if (UseM1Trigger &&
                     ? SellArrowColor
                     : BuyArrowColor;
         }
-
         private void DrawPredictionLine(
             string name,
             double price)
         {
+            if (!IsFinitePositive(price) ||
+                Bars == null ||
+                Bars.Count < 2)
+            {
+                Chart.RemoveObject(name);
+                return;
+            }
+
             try
             {
-                ChartHorizontalLine line =
+                int anchor =
+                    MapM5ToChart(
+                        _m5Bars == null
+                            ? Bars.Count - 1
+                            : Math.Max(
+                                1,
+                                _m5Bars.Count - 1),
+                        Bars.Count - 1);
+
+                anchor =
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            Bars.Count - 1,
+                            anchor));
+
+                int left =
+                    Math.Max(
+                        0,
+                        anchor -
+                        Math.Max(
+                            1,
+                            LineLengthBars));
+
+                int right =
+                    Math.Min(
+                        Bars.Count - 1,
+                        anchor +
+                        Math.Max(
+                            1,
+                            Math.Max(
+                                LineForwardBars,
+                                PredictionLookaheadBars)));
+
+                if (right <= left)
+                {
+                    Chart.RemoveObject(name);
+                    return;
+                }
+
+                double normalized =
+                    NormalizePrice(price);
+
+                if (!IsFinitePositive(normalized))
+                {
+                    Chart.RemoveObject(name);
+                    return;
+                }
+
+                ChartTrendLine line =
                     Chart.FindObject(name)
-                    as ChartHorizontalLine;
+                    as ChartTrendLine;
 
                 if (line == null)
                 {
@@ -9268,9 +9299,12 @@ if (UseM1Trigger &&
                         Chart.RemoveObject(name);
 
                     line =
-                        Chart.DrawHorizontalLine(
+                        Chart.DrawTrendLine(
                             name,
-                            NormalizePrice(price),
+                            left,
+                            normalized,
+                            right,
+                            normalized,
                             predictionColor(),
                             Math.Max(
                                 1,
@@ -9281,19 +9315,26 @@ if (UseM1Trigger &&
                 if (line == null)
                     return;
 
-                line.Y =
-                    NormalizePrice(price);
-
+                line.Time1 =
+                    Bars.OpenTimes[left];
+                line.Y1 =
+                    normalized;
+                line.Time2 =
+                    Bars.OpenTimes[right];
+                line.Y2 =
+                    normalized;
                 line.Color =
                     predictionColor();
-
                 line.Thickness =
                     Math.Max(
                         1,
                         LevelLineThickness);
-
                 line.LineStyle =
                     LineStyle.Dots;
+                line.ExtendToInfinity =
+                    false;
+                line.IsInteractive =
+                    false;
             }
             catch (Exception ex)
             {
