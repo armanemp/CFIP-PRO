@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="cTrader.Automate" Version="1.0.21" />
+    <Compile Include="../../integrations/ctrader/indicators/CFIP_MTF_LiveEntryEngine_Clean_v30.cs" Link="CFIP_MTF_LiveEntryEngine_Clean_v30.cs" />
+  </ItemGroup>
+</Project>
