@@ -750,6 +750,51 @@ namespace cAlgo
         [Parameter("Sound File Path", Group = "Alerts", DefaultValue = "")]
         public string SoundFilePath { get; set; }
 
+        [Parameter("Alert Cooldown Seconds", Group = "Alerts", DefaultValue = 3, MinValue = 0, MaxValue = 60)]
+        public int AlertCooldownSeconds { get; set; }
+
+        [Parameter("Suppress Duplicate Alerts", Group = "Alerts", DefaultValue = true)]
+        public bool SuppressDuplicateAlerts { get; set; }
+
+        [Parameter("Custom Popup Position", Group = "Alerts", DefaultValue = CFIPPanelCorner.BottomRight)]
+        public CFIPPanelCorner CustomPopupPosition { get; set; }
+
+        [Parameter("Popup Width", Group = "Alerts", DefaultValue = 320, MinValue = 220, MaxValue = 600)]
+        public int PopupWidth { get; set; }
+
+        [Parameter("Popup Font Size", Group = "Alerts", DefaultValue = 11, MinValue = 8, MaxValue = 22)]
+        public int PopupFontSize { get; set; }
+
+        [Parameter("Popup Duration Seconds", Group = "Alerts", DefaultValue = 6, MinValue = 1, MaxValue = 60)]
+        public int PopupDurationSeconds { get; set; }
+
+        [Parameter("Popup Margin", Group = "Alerts", DefaultValue = 10, MinValue = 0, MaxValue = 50)]
+        public int PopupMargin { get; set; }
+
+        [Parameter("Popup Background", Group = "Alerts", DefaultValue = "#18212B")]
+        public Color PopupBackgroundColor { get; set; }
+
+        [Parameter("Popup Background Alpha", Group = "Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        public int PopupBackgroundAlpha { get; set; }
+
+        [Parameter("Popup Border", Group = "Alerts", DefaultValue = "#3A4656")]
+        public Color PopupBorderColor { get; set; }
+
+        [Parameter("Popup Border Alpha", Group = "Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        public int PopupBorderAlpha { get; set; }
+
+        [Parameter("Popup Border Thickness", Group = "Alerts", DefaultValue = 1, MinValue = 0, MaxValue = 4)]
+        public int PopupBorderThickness { get; set; }
+
+        [Parameter("Popup Corner Radius", Group = "Alerts", DefaultValue = 5, MinValue = 0, MaxValue = 20)]
+        public int PopupCornerRadius { get; set; }
+
+        [Parameter("Popup Padding", Group = "Alerts", DefaultValue = 9, MinValue = 0, MaxValue = 30)]
+        public int PopupPadding { get; set; }
+
+        [Parameter("Popup Text Color", Group = "Alerts", DefaultValue = "White")]
+        public Color PopupTextColor { get; set; }
+
         [Parameter("Alert On Exit Plan Update", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnExitPlanUpdate { get; set; }
 
@@ -970,6 +1015,12 @@ namespace cAlgo
         private Button _closeAllPositionsButton;
         private Button _cancelAllOrdersButton;
 
+        private Border _alertPopupBorder;
+        private TextBlock _alertPopupText;
+        private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
+        private string _lastAlertSignature = "";
+        private DateTime _lastAlertUtc = DateTime.MinValue;
+
         // Live exit state
         private double _signalInitialRisk;
         private double _maxFavorablePrice;
@@ -1162,6 +1213,9 @@ namespace cAlgo
             _lastExitM5Bar = -1;
             _lastSmartExitAlertMode = "";
             _lastSmartExitAlertUtc = DateTime.MinValue;
+            _lastAlertSignature = "";
+            _lastAlertUtc = DateTime.MinValue;
+            _alertPopupExpiresUtc = DateTime.MinValue;
             _lastSmartTargetCalcM5Bar = -1;
             _lastSmartTargetCalcPrice = 0;
             _lastSmartStructuralStopCalcM5Bar = -1;
@@ -1193,6 +1247,7 @@ namespace cAlgo
             ClearLiveObjects();
             ClearHistoricalObjects();
             RemoveTradePlanPanel();
+            RemoveAlertPopup();
             base.OnDestroy();
         }
 
@@ -1207,6 +1262,8 @@ namespace cAlgo
 
             if (!IsSupportedTimeFrame())
                 return;
+
+            UpdateAlertPopupLifetime();
 
             if (_m5 == null || _m15 == null)
             {
@@ -1997,8 +2054,7 @@ namespace cAlgo
                     ValidateTradeRiskReward(
                         _m5,
                         m5Index,                        -1,
-                        Symbol.Bid,
-                        out double bearSl,
+                        Symbol.Bid,                        out double bearSl,
                         out double bearTp1,
                         out double bearTp2,
                         out double bearTp3,
@@ -3892,22 +3948,14 @@ namespace cAlgo
             if (tp3 > 0) tp3 = NormalizePrice(tp3);
             if (tp4 > 0) tp4 = NormalizePrice(tp4);
 
-            if (direction == 1)
-            {
-                if (!(sl < entry && entry < tp1 && tp1 < tp2))
-                    return false;
-                if (tp3 > 0 && tp3 <= tp2) tp3 = 0;
-                if (tp4 > 0 && (tp3 <= 0 || tp4 <= tp3)) tp4 = 0;
-            }
-            else
-            {
-                if (!(sl > entry && entry > tp1 && tp1 > tp2))
-                    return false;
-                if (tp3 > 0 && tp3 >= tp2) tp3 = 0;
-                if (tp4 > 0 && (tp3 <= 0 || tp4 >= tp3)) tp4 = 0;
-            }
-
-            return true;
+            return NormalizeAndValidatePlanLevels(
+                direction,
+                ref entry,
+                ref sl,
+                ref tp1,
+                ref tp2,
+                ref tp3,
+                ref tp4);
         }
 
         private double FindHtfProtectiveLow(
@@ -3997,7 +4045,6 @@ namespace cAlgo
                 }
                 if (!swing)
                     continue;
-
                 bool broken = false;
                 for (int j = i + 1; j <= index; j++)
                 {
@@ -4123,9 +4170,14 @@ namespace cAlgo
                 return;
             }
 
-            if (direction == 1 && !(sl < entry && entry < tp1 && tp1 < tp2))
-                return;
-            if (direction == -1 && !(sl > entry && entry > tp1 && tp1 > tp2))
+            if (!NormalizeAndValidatePlanLevels(
+                    direction,
+                    ref entry,
+                    ref sl,
+                    ref tp1,
+                    ref tp2,
+                    ref tp3,
+                    ref tp4))
                 return;
 
             _signalBar = Math.Max(0, Math.Min(chartIndex, Bars.Count - 1));
@@ -4336,18 +4388,10 @@ namespace cAlgo
             Color color,
             bool visible)
         {
-            // cTrader can silently fail to render a finite TrendLine on some
-            // host/timeframe combinations.  The trade-plan level itself is a
-            // horizontal price invariant, so the authoritative visual object is
-            // a native HorizontalLine.  A finite segment is also attempted for
-            // the preferred terminal presentation; the horizontal object is
-            // deliberately kept as the guaranteed visible representation.
-            string segmentName = name + "_SEG";
-
             if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 2)
             {
                 Chart.RemoveObject(name);
-                Chart.RemoveObject(segmentName);
+                Chart.RemoveObject(name + "_SEG");
                 return;
             }
 
@@ -4355,40 +4399,25 @@ namespace cAlgo
             if (!IsFinitePositive(normalizedPrice))
             {
                 Chart.RemoveObject(name);
-                Chart.RemoveObject(segmentName);
+                Chart.RemoveObject(name + "_SEG");
+                return;
+            }
+
+            startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
+            endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
+            if (endIndex <= startIndex)
+            {
+                Chart.RemoveObject(name);
+                Chart.RemoveObject(name + "_SEG");
                 return;
             }
 
             try
             {
-                ChartHorizontalLine horizontal = Chart.DrawHorizontalLine(
-                    name,
-                    normalizedPrice,
-                    color,
-                    Math.Max(1, LevelLineThickness),
-                    PlanLineStyle);
-
-                if (horizontal == null)
-                    throw new InvalidOperationException("Chart.DrawHorizontalLine returned null");
-
-                horizontal.IsInteractive = false;
-            }
-            catch (Exception ex)
-            {
-                Chart.RemoveObject(name);
-                Print("CFIP horizontal level draw failed [{0}]: {1}", name, ex.Message);
-            }
-
-            // Keep the finite segment as a secondary presentation object.  If
-            // the segment API is unavailable/fails, the horizontal line above
-            // remains visible and is the source of truth.
-            try
-            {
-                startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
-                endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
-
+                // Finite chart-local segments only. Native horizontal lines span the
+                // entire chart and are intentionally not used for SL/TP/Entry plans.
                 ChartTrendLine segment = Chart.DrawTrendLine(
-                    segmentName,
+                    name,
                     startIndex,
                     normalizedPrice,
                     endIndex,
@@ -4405,8 +4434,9 @@ namespace cAlgo
             }
             catch (Exception ex)
             {
-                Chart.RemoveObject(segmentName);
-                Print("CFIP finite level segment failed [{0}]: {1}", name, ex.Message);
+                Chart.RemoveObject(name);
+                Chart.RemoveObject(name + "_SEG");
+                Print("CFIP finite authoritative level failed [{0}]: {1}", name, ex.Message);
             }
         }
 
@@ -5313,9 +5343,91 @@ namespace cAlgo
         // ALERT
         // ============================================================
 
-        private void SendRestrictionAlert(string message)
+        private bool TryAcceptAlert(string subject, string message, int direction)
         {
             if (string.IsNullOrWhiteSpace(message))
+                return false;
+            if (!SuppressDuplicateAlerts || AlertCooldownSeconds <= 0)
+                return true;
+            string signature = (subject ?? "") + "|" + direction + "|" + message.Trim();
+            DateTime now = DateTime.UtcNow;
+            if (signature == _lastAlertSignature && (now - _lastAlertUtc).TotalSeconds < AlertCooldownSeconds)
+                return false;
+            _lastAlertSignature = signature;
+            _lastAlertUtc = now;
+            return true;
+        }
+
+        private void ShowInternalAlertPopup(string title, string message, PopupNotificationState state)
+        {
+            if (!ShowPopupAlert || string.IsNullOrWhiteSpace(message))
+                return;
+            try
+            {
+                if (_alertPopupBorder == null)
+                {
+                    _alertPopupText = new TextBlock { IsHitTestVisible = false, TextWrapping = TextWrapping.Wrap };
+                    _alertPopupBorder = new Border { Child = _alertPopupText, IsHitTestVisible = false };
+                    Chart.AddControl(_alertPopupBorder);
+                }
+
+                VerticalAlignment vertical = VerticalAlignment.Bottom;
+                HorizontalAlignment horizontal = HorizontalAlignment.Right;
+                switch (CustomPopupPosition)
+                {
+                    case CFIPPanelCorner.TopLeft:
+                        vertical = VerticalAlignment.Top; horizontal = HorizontalAlignment.Left; break;
+                    case CFIPPanelCorner.TopRight:
+                        vertical = VerticalAlignment.Top; horizontal = HorizontalAlignment.Right; break;
+                    case CFIPPanelCorner.BottomLeft:
+                        vertical = VerticalAlignment.Bottom; horizontal = HorizontalAlignment.Left; break;
+                }
+
+                _alertPopupBorder.HorizontalAlignment = horizontal;
+                _alertPopupBorder.VerticalAlignment = vertical;
+                _alertPopupBorder.Margin = Math.Max(0, PopupMargin);
+                _alertPopupBorder.Width = Math.Max(220, PopupWidth);
+                _alertPopupBorder.Padding = Math.Max(0, PopupPadding);
+                _alertPopupBorder.BorderThickness = Math.Max(0, PopupBorderThickness);
+                _alertPopupBorder.CornerRadius = Math.Max(0, PopupCornerRadius);
+                _alertPopupBorder.BorderColor = Color.FromArgb(Math.Max(0, Math.Min(255, PopupBorderAlpha)), PopupBorderColor);
+                _alertPopupBorder.BackgroundColor = Color.FromArgb(Math.Max(0, Math.Min(255, PopupBackgroundAlpha)), PopupBackgroundColor);
+                _alertPopupText.Text = string.IsNullOrWhiteSpace(title) ? message : title + "\n" + message;
+                _alertPopupText.ForegroundColor = PopupTextColor;
+                _alertPopupText.FontSize = Math.Max(8, PopupFontSize);
+                _alertPopupText.FontWeight = TradePlanBold ? FontWeight.ExtraBold : FontWeight.Normal;
+                _alertPopupText.TextAlignment = TextAlignment.Left;
+                _alertPopupText.HorizontalAlignment = HorizontalAlignment.Left;
+                _alertPopupBorder.IsVisible = true;
+                _alertPopupExpiresUtc = DateTime.UtcNow.AddSeconds(Math.Max(1, PopupDurationSeconds));
+            }
+            catch (Exception ex)
+            {
+                Print("CFIP internal popup failed: {0}", ex.Message);
+            }
+        }
+
+        private void UpdateAlertPopupLifetime()
+        {
+            if (_alertPopupBorder != null && _alertPopupExpiresUtc != DateTime.MinValue && DateTime.UtcNow >= _alertPopupExpiresUtc)
+                RemoveAlertPopup();
+        }
+
+        private void RemoveAlertPopup()
+        {
+            if (_alertPopupBorder != null)
+            {
+                try { Chart.RemoveControl(_alertPopupBorder); }
+                catch (Exception ex) { Print("CFIP popup removal failed: {0}", ex.Message); }
+            }
+            _alertPopupBorder = null;
+            _alertPopupText = null;
+            _alertPopupExpiresUtc = DateTime.MinValue;
+        }
+
+        private void SendRestrictionAlert(string message)
+        {
+            if (!TryAcceptAlert("RESTRICTION", message, 0))
                 return;
 
             if (EnableSoundAlerts)
@@ -5337,7 +5449,7 @@ namespace cAlgo
             {
                 try
                 {
-                    Notifications.ShowPopup(
+                    ShowInternalAlertPopup(
                         "CFIP MTF ENTRY BLOCKED",
                         message,
                         PopupNotificationState.Information);
@@ -5363,7 +5475,7 @@ namespace cAlgo
 
         private void SendHighConfidenceAlert(string message, int direction)
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (!TryAcceptAlert("HIGH_CONFIDENCE", message, direction))
                 return;
 
             if (EnableSoundAlerts)
@@ -5385,7 +5497,7 @@ namespace cAlgo
             {
                 try
                 {
-                    Notifications.ShowPopup(
+                    ShowInternalAlertPopup(
                         "CFIP MTF HIGH-CONFIDENCE ENTRY",
                         message,
                         PopupNotificationState.Success);
@@ -5416,7 +5528,7 @@ namespace cAlgo
 
         private void SendNotificationBundle(string message, int direction, string subject)
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (!TryAcceptAlert(subject, message, direction))
                 return;
 
             if (EnableSoundAlerts)
@@ -5438,7 +5550,7 @@ namespace cAlgo
             {
                 try
                 {
-                    Notifications.ShowPopup(
+                    ShowInternalAlertPopup(
                         "CFIP MTF Intelligence",
                         message,
                         direction < 0 ? PopupNotificationState.Error : PopupNotificationState.Success);
@@ -5997,8 +6109,7 @@ namespace cAlgo
             ref string source,
             ref int quality,
             double atr)
-        {
-            SmartLevel level =
+        {            SmartLevel level =
                 FindClosestSmartLevel(
                     candidates,
                     target,
@@ -6141,6 +6252,36 @@ namespace cAlgo
                     _signalTp4 = NormalizePrice(selected[3]);
             }
 
+            double liveEntry = _signalEntry;
+            double liveSl = _signalSl;
+            double liveTp1 = _signalTp1;
+            double liveTp2 = _signalTp2;
+            double liveTp3 = _signalTp3;
+            double liveTp4 = _signalTp4;
+
+            if (!NormalizeAndValidatePlanLevels(
+                    _signalDirection,
+                    ref liveEntry,
+                    ref liveSl,
+                    ref liveTp1,
+                    ref liveTp2,
+                    ref liveTp3,
+                    ref liveTp4))
+            {
+                _signalTp1 = old1;
+                _signalTp2 = old2;
+                _signalTp3 = old3;
+                _signalTp4 = old4;
+                return false;
+            }
+
+            _signalEntry = liveEntry;
+            _signalSl = liveSl;
+            _signalTp1 = liveTp1;
+            _signalTp2 = liveTp2;
+            _signalTp3 = liveTp3;
+            _signalTp4 = liveTp4;
+
             bool changed =
                 Math.Abs(_signalTp1 - old1) > Symbol.PipSize * 0.5 ||
                 Math.Abs(_signalTp2 - old2) > Symbol.PipSize * 0.5 ||
@@ -6195,6 +6336,49 @@ namespace cAlgo
                 if (swing && l > best) best = l;
             }
             return best == double.MinValue ? 0 : NormalizePrice(best);
+        }
+
+        private bool NormalizeAndValidatePlanLevels(
+            int direction,
+            ref double entry,
+            ref double sl,
+            ref double tp1,
+            ref double tp2,
+            ref double tp3,
+            ref double tp4)
+        {
+            if (direction != 1 && direction != -1)
+                return false;
+
+            entry = NormalizePrice(entry);
+            sl = NormalizePrice(sl);
+            tp1 = NormalizePrice(tp1);
+            tp2 = NormalizePrice(tp2);
+            tp3 = tp3 > 0 ? NormalizePrice(tp3) : 0;
+            tp4 = tp4 > 0 ? NormalizePrice(tp4) : 0;
+
+            if (!IsFinitePositive(entry) || !IsFinitePositive(sl) ||
+                !IsFinitePositive(tp1) || !IsFinitePositive(tp2))
+                return false;
+
+            double minStep = Math.Max(Symbol.TickSize, Symbol.PipSize * 0.10);
+
+            if (direction == 1)
+            {
+                if (!(sl < entry && entry < tp1 && tp1 < tp2))
+                    return false;
+                if (tp3 > 0 && tp3 <= tp2 + minStep) tp3 = 0;
+                if (tp4 > 0 && (tp3 <= 0 || tp4 <= tp3 + minStep)) tp4 = 0;
+            }
+            else
+            {
+                if (!(sl > entry && entry > tp1 && tp1 > tp2))
+                    return false;
+                if (tp3 > 0 && tp3 >= tp2 - minStep) tp3 = 0;
+                if (tp4 > 0 && (tp3 <= 0 || tp4 >= tp3 - minStep)) tp4 = 0;
+            }
+
+            return true;
         }
 
         private bool IsFinitePositive(double value)
@@ -7997,8 +8181,7 @@ private void UpdateBrokerPositionProtection()
             }
         }
 
-        private List<SmartLevel> ConsolidateSmartLevels(
-            List<SmartLevel> levels,
+        private List<SmartLevel> ConsolidateSmartLevels(            List<SmartLevel> levels,
             double atr)
         {
             List<SmartLevel> result = new List<SmartLevel>();
@@ -9998,7 +10181,6 @@ private void UpdateBrokerPositionProtection()
                    bars.ClosePrices[index] <
                        high;
         }
-
         // ============================================================
         // FVG
         // ============================================================
@@ -11997,7 +12179,6 @@ for (int j = impulse + 1; j <= index; j++)
             public string SourceTimeframe { get; set; }
             public string Kind { get; set; }
         }
-
         private class Analysis
         {
             public int Direction { get; set; }
