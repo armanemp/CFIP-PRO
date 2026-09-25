@@ -517,6 +517,9 @@ namespace cAlgo
         // DISPLAY
         // ============================================================
 
+        [Parameter("Show Level Lines", Group = "Display", DefaultValue = true)]
+        public bool ShowLevelLines { get; set; }
+
         [Parameter("Line Length Bars", Group = "Display", DefaultValue = 14, MinValue = 2, MaxValue = 30)]
         public int LineLengthBars { get; set; }
 
@@ -4802,10 +4805,13 @@ namespace cAlgo
             Color color,
             bool visible)
         {
+            string fallbackName = name + "_FALLBACK";
+
             if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 2)
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
+                Chart.RemoveObject(fallbackName);
                 return;
             }
 
@@ -4814,22 +4820,16 @@ namespace cAlgo
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
+                Chart.RemoveObject(fallbackName);
                 return;
             }
 
             startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
             endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
-            if (endIndex <= startIndex)
-            {
-                Chart.RemoveObject(name);
-                Chart.RemoveObject(name + "_SEG");
-                return;
-            }
 
             try
             {
-                // Finite chart-local segments only. Native horizontal lines span the
-                // entire chart and are intentionally not used for SL/TP/Entry plans.
+                // Draw a finite, thin, horizontal segment as the primary object.
                 ChartTrendLine segment = Chart.DrawTrendLine(
                     name,
                     startIndex,
@@ -4844,13 +4844,40 @@ namespace cAlgo
                 {
                     segment.ExtendToInfinity = false;
                     segment.IsInteractive = false;
+                    Chart.RemoveObject(fallbackName);
+                    return;
                 }
+
+                // Native horizontal fallback guarantees visibility on cTrader
+                // builds where an index-based TrendLine fails to paint.
+                ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
+                    fallbackName,
+                    normalizedPrice,
+                    color,
+                    Math.Max(1, LevelLineThickness),
+                    PlanLineStyle);
+
+                if (fallback != null)
+                    fallback.IsInteractive = false;
             }
             catch (Exception ex)
             {
-                Chart.RemoveObject(name);
-                Chart.RemoveObject(name + "_SEG");
-                Print("CFIP finite authoritative level failed [{0}]: {1}", name, ex.Message);
+                try
+                {
+                    ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
+                        fallbackName,
+                        normalizedPrice,
+                        color,
+                        Math.Max(1, LevelLineThickness),
+                        PlanLineStyle);
+
+                    if (fallback != null)
+                        fallback.IsInteractive = false;
+                }
+                catch (Exception fallbackEx)
+                {
+                    Print("CFIP level render failed [{0}]: {1} / fallback: {2}", name, ex.Message, fallbackEx.Message);
+                }
             }
         }
 
