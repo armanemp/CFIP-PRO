@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using cAlgo.API;
 using cAlgo.API.Internals;
+using cAlgo.API.Indicators;
 
 namespace cAlgo
 {
@@ -619,7 +620,7 @@ namespace cAlgo
         [Parameter("Trade Plan Padding", Group = "Display", DefaultValue = 9, MinValue = 0, MaxValue = 30)]
         public int TradePlanPadding { get; set; }
 
-        [Parameter("Trade Plan Width", Group = "Display", DefaultValue = 315, MinValue = 180, MaxValue = 600)]
+        [Parameter("Trade Plan Width", Group = "Display", DefaultValue = 420, MinValue = 180, MaxValue = 600)]
         public int TradePlanWidth { get; set; }
 
         [Parameter("Panel State Hold Seconds", Group = "Display", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
@@ -1134,6 +1135,21 @@ namespace cAlgo
         private Bars _d1;
         private Bars _w1;
 
+        // Native cTrader indicator instances are initialized once and read by
+        // index, avoiding repeated manual window calculations on every tick.
+        private sealed class NativeIndicatorSet
+        {
+            public Bars Bars { get; set; }
+            public Dictionary<int, ExponentialMovingAverage> Emas { get; } =
+                new Dictionary<int, ExponentialMovingAverage>();
+            public AverageTrueRange Atr { get; set; }
+            public RelativeStrengthIndex Rsi { get; set; }
+            public DirectionalMovementSystem Dms { get; set; }
+        }
+
+        private readonly List<NativeIndicatorSet> _nativeIndicators =
+            new List<NativeIndicatorSet>();
+
         // ============================================================
         // LIVE STATE
         // ============================================================
@@ -1416,6 +1432,7 @@ namespace cAlgo
             _h4 = MarketData.GetBars(TimeFrame.Hour4);
             _d1 = MarketData.GetBars(TimeFrame.Daily);
             _w1 = MarketData.GetBars(TimeFrame.Weekly);
+            InitializeNativeIndicators();
 
             _signalBar = -1;
             _predictionBar = -1;
@@ -4841,61 +4858,248 @@ namespace cAlgo
             return GetSignalArrowColor(direction, confidence);
         }
 
+        private bool IsValidDirectionalStop(
+            int direction,
+            double entry,
+            double stop)
+        {
+            if (!IsFinitePositive(entry) ||
+                !IsFinitePositive(stop))
+                return false;
+
+            return direction == 1
+                ? stop < entry
+                : direction == -1 && stop > entry;
+        }
+
+        private bool IsValidDirectionalTarget(
+            int direction,
+            double entry,
+            double target)
+        {
+            if (!IsFinitePositive(entry) ||
+                !IsFinitePositive(target))
+                return false;
+
+            return direction == 1
+                ? target > entry
+                : direction == -1 && target < entry;
+        }
+
         private void EnsureConfirmedPlanLines(int chartIndex)
         {
             if (Bars == null || Bars.Count < 2)
                 return;
 
-            if (!_signalActive || _signalDirection == 0 || !ShowLevelLines)
+            if (!_signalActive ||
+                _signalDirection == 0 ||
+                !ShowLevelLines)
             {
-                Chart.RemoveObject(Prefix + "ENTRY");
-                Chart.RemoveObject(Prefix + "SL");
-                Chart.RemoveObject(Prefix + "TP1");
-                Chart.RemoveObject(Prefix + "TP2");
-                Chart.RemoveObject(Prefix + "TP3");
-                Chart.RemoveObject(Prefix + "TP4");
+                RemoveLevelDrawing(Prefix + "ENTRY");
+                RemoveLevelDrawing(Prefix + "SL");
+                RemoveLevelDrawing(Prefix + "TP1");
+                RemoveLevelDrawing(Prefix + "TP2");
+                RemoveLevelDrawing(Prefix + "TP3");
+                RemoveLevelDrawing(Prefix + "TP4");
                 return;
             }
 
             int anchor = _signalBar >= 0
-                ? Math.Max(0, Math.Min(_signalBar, Bars.Count - 1))
-                : Math.Max(0, Math.Min(chartIndex, Bars.Count - 1));
+                ? Math.Max(
+                    0,
+                    Math.Min(
+                        _signalBar,
+                        Bars.Count - 1))
+                : Math.Max(
+                    0,
+                    Math.Min(
+                        chartIndex,
+                        Bars.Count - 1));
 
-            GetFinitePlanRange(anchor, out int startIndex, out int endIndex);
+            GetFinitePlanRange(
+                anchor,
+                out int startIndex,
+                out int endIndex);
 
-            double validationEntry = _signalEntry;
-            double validationSl = _signalSl;
-            double validationTp1 = _signalTp1;
-            double validationTp2 = _signalTp2;
-            double validationTp3 = _signalTp3;
-            double validationTp4 = _signalTp4;
+            double entry = NormalizePrice(_signalEntry);
+            double sl = NormalizePrice(_signalSl);
+            double tp1 = _signalTp1 > 0
+                ? NormalizePrice(_signalTp1)
+                : 0;
+            double tp2 = _signalTp2 > 0
+                ? NormalizePrice(_signalTp2)
+                : 0;
+            double tp3 = _signalTp3 > 0
+                ? NormalizePrice(_signalTp3)
+                : 0;
+            double tp4 = _signalTp4 > 0
+                ? NormalizePrice(_signalTp4)
+                : 0;
 
-            // Rendering is the final safety boundary: a corrupted/stale state must
-            // never put a SELL TP above entry or a BUY SL above entry on the chart.
-            if (!NormalizeAndValidatePlanLevels(
+            bool entryOk =
+                IsFinitePositive(entry);
+
+            bool slOk =
+                entryOk &&
+                IsValidDirectionalStop(
                     _signalDirection,
-                    ref validationEntry,
-                    ref validationSl,
-                    ref validationTp1,
-                    ref validationTp2,
-                    ref validationTp3,
-                    ref validationTp4))
-            {
-                Chart.RemoveObject(Prefix + "ENTRY");
-                Chart.RemoveObject(Prefix + "SL");
-                Chart.RemoveObject(Prefix + "TP1");
-                Chart.RemoveObject(Prefix + "TP2");
-                Chart.RemoveObject(Prefix + "TP3");
-                Chart.RemoveObject(Prefix + "TP4");
-                return;
-            }
+                    entry,
+                    sl);
 
-            DrawAuthoritativeLevelLine(Prefix + "ENTRY", startIndex, endIndex, validationEntry, EntryColor, ShowEntry);
-            DrawAuthoritativeLevelLine(Prefix + "SL", startIndex, endIndex, validationSl, SlColor, ShowSL);
-            DrawAuthoritativeLevelLine(Prefix + "TP1", startIndex, endIndex, validationTp1, TpColor, ShowTP1);
-            DrawAuthoritativeLevelLine(Prefix + "TP2", startIndex, endIndex, validationTp2, TpColor, ShowTP2);
-            DrawAuthoritativeLevelLine(Prefix + "TP3", startIndex, endIndex, validationTp3, TpColor, ShowTP3 && validationTp3 > 0);
-            DrawAuthoritativeLevelLine(Prefix + "TP4", startIndex, endIndex, validationTp4, TpColor, ShowTP4 && validationTp4 > 0);
+            bool tp1Ok =
+                entryOk &&
+                IsValidDirectionalTarget(
+                    _signalDirection,
+                    entry,
+                    tp1);
+
+            bool tp2Ok =
+                entryOk &&
+                IsValidDirectionalTarget(
+                    _signalDirection,
+                    entry,
+                    tp2);
+
+            bool tp3Ok =
+                entryOk &&
+                IsValidDirectionalTarget(
+                    _signalDirection,
+                    entry,
+                    tp3);
+
+            bool tp4Ok =
+                entryOk &&
+                IsValidDirectionalTarget(
+                    _signalDirection,
+                    entry,
+                    tp4);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "ENTRY",
+                startIndex,
+                endIndex,
+                entry,
+                EntryColor,
+                ShowEntry && entryOk);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "SL",
+                startIndex,
+                endIndex,
+                sl,
+                SlColor,
+                ShowSL && slOk);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "TP1",
+                startIndex,
+                endIndex,
+                tp1,
+                TpColor,
+                ShowTP1 && tp1Ok);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "TP2",
+                startIndex,
+                endIndex,
+                tp2,
+                TpColor,
+                ShowTP2 && tp2Ok);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "TP3",
+                startIndex,
+                endIndex,
+                tp3,
+                TpColor,
+                ShowTP3 && tp3Ok);
+
+            DrawAuthoritativeLevelLine(
+                Prefix + "TP4",
+                startIndex,
+                endIndex,
+                tp4,
+                TpColor,
+                ShowTP4 && tp4Ok);
+        }
+
+
+        private bool TryDrawLevelFallback(
+            string fallbackName,
+            int startIndex,
+            int endIndex,
+            double price,
+            Color color,
+            LineStyle lineStyle,
+            bool extendToInfinity)
+        {
+            if (Bars == null || Bars.Count < 2)
+                return false;
+
+            int safeStart =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        startIndex,
+                        Bars.Count - 2));
+
+            int safeEnd =
+                Math.Max(
+                    safeStart + 1,
+                    Math.Min(
+                        endIndex,
+                        Bars.Count - 1));
+
+            try
+            {
+                ChartTrendLine fallback =
+                    Chart.FindObject(fallbackName) as ChartTrendLine;
+
+                if (fallback == null)
+                {
+                    Chart.RemoveObject(fallbackName);
+
+                    fallback =
+                        Chart.DrawTrendLine(
+                            fallbackName,
+                            Bars.OpenTimes[safeStart],
+                            price,
+                            Bars.OpenTimes[safeEnd],
+                            price,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            lineStyle);
+                }
+
+                if (fallback == null)
+                    return false;
+
+                fallback.Time1 =
+                    Bars.OpenTimes[safeStart];
+                fallback.Y1 = price;
+                fallback.Time2 =
+                    Bars.OpenTimes[safeEnd];
+                fallback.Y2 = price;
+                fallback.Color = color;
+                fallback.Thickness =
+                    Math.Max(1, LevelLineThickness);
+                fallback.LineStyle = lineStyle;
+                fallback.ExtendToInfinity =
+                    extendToInfinity;
+                fallback.IsInteractive = false;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void RemoveLevelDrawing(string name)
+        {
+            Chart.RemoveObject(name);
+            Chart.RemoveObject(name + "_SEG");
+            Chart.RemoveObject(name + "_FALLBACK");
         }
 
         private void DrawAuthoritativeLevelLine(
@@ -4913,18 +5117,16 @@ namespace cAlgo
                 Bars == null ||
                 Bars.Count < 1)
             {
-                Chart.RemoveObject(name);
-                Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(name + "_FALLBACK");
+                RemoveLevelDrawing(name);
                 return;
             }
 
-            double normalizedPrice = NormalizePrice(price);
+            double normalizedPrice =
+                NormalizePrice(price);
+
             if (!IsFinitePositive(normalizedPrice))
             {
-                Chart.RemoveObject(name);
-                Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(name + "_FALLBACK");
+                RemoveLevelDrawing(name);
                 return;
             }
 
@@ -4944,48 +5146,72 @@ namespace cAlgo
                     if (line == null)
                     {
                         Chart.RemoveObject(name);
-                        line = Chart.DrawHorizontalLine(
-                            name,
-                            normalizedPrice,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            lineStyle);
+
+                        line =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                lineStyle);
                     }
 
                     if (line != null)
                     {
-                        line.Y = normalizedPrice;
+                        line.Y =
+                            normalizedPrice;
                         line.Color = color;
                         line.Thickness =
                             Math.Max(1, LevelLineThickness);
                         line.LineStyle = lineStyle;
                         line.IsInteractive = false;
+
+                        Chart.RemoveObject(
+                            name + "_FALLBACK");
+                        Chart.RemoveObject(
+                            name + "_SEG");
+                        return;
                     }
+
+                    if (TryDrawLevelFallback(
+                            name + "_FALLBACK",
+                            startIndex,
+                            endIndex,
+                            normalizedPrice,
+                            color,
+                            lineStyle,
+                            true))
+                        return;
+
+                    Print(
+                        "CFIP level render failed [{0}]: horizontal line unavailable",
+                        name);
+                    return;
                 }
-                else
+
+                int safeStart =
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            startIndex,
+                            Bars.Count - 2));
+
+                int safeEnd =
+                    Math.Max(
+                        safeStart + 1,
+                        Math.Min(
+                            endIndex,
+                            Bars.Count - 1));
+
+                ChartTrendLine trend =
+                    Chart.FindObject(name) as ChartTrendLine;
+
+                if (trend == null)
                 {
-                    int safeStart =
-                        Math.Max(
-                            0,
-                            Math.Min(
-                                startIndex,
-                                Bars.Count - 2));
+                    Chart.RemoveObject(name);
 
-                    int safeEnd =
-                        Math.Max(
-                            safeStart + 1,
-                            Math.Min(
-                                endIndex,
-                                Bars.Count - 1));
-
-                    ChartTrendLine line =
-                        Chart.FindObject(name) as ChartTrendLine;
-
-                    if (line == null)
-                    {
-                        Chart.RemoveObject(name);
-
-                        line = Chart.DrawTrendLine(
+                    trend =
+                        Chart.DrawTrendLine(
                             name,
                             Bars.OpenTimes[safeStart],
                             normalizedPrice,
@@ -4994,89 +5220,63 @@ namespace cAlgo
                             color,
                             Math.Max(1, LevelLineThickness),
                             lineStyle);
-                    }
-
-                    if (line != null)
-                    {
-                        line.Time1 = Bars.OpenTimes[safeStart];
-                        line.Y1 = normalizedPrice;
-                        line.Time2 = Bars.OpenTimes[safeEnd];
-                        line.Y2 = normalizedPrice;
-                        line.Color = color;
-                        line.Thickness =
-                            Math.Max(1, LevelLineThickness);
-                        line.LineStyle = lineStyle;
-                        line.ExtendToInfinity = false;
-                        line.IsInteractive = false;
-                    }
                 }
 
-                Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(name + "_FALLBACK");
+                if (trend != null)
+                {
+                    trend.Time1 =
+                        Bars.OpenTimes[safeStart];
+                    trend.Y1 =
+                        normalizedPrice;
+                    trend.Time2 =
+                        Bars.OpenTimes[safeEnd];
+                    trend.Y2 =
+                        normalizedPrice;
+                    trend.Color = color;
+                    trend.Thickness =
+                        Math.Max(1, LevelLineThickness);
+                    trend.LineStyle = lineStyle;
+                    trend.ExtendToInfinity = false;
+                    trend.IsInteractive = false;
+
+                    Chart.RemoveObject(
+                        name + "_FALLBACK");
+                    Chart.RemoveObject(
+                        name + "_SEG");
+                    return;
+                }
+
+                if (TryDrawLevelFallback(
+                        name + "_FALLBACK",
+                        safeStart,
+                        safeEnd,
+                        normalizedPrice,
+                        color,
+                        lineStyle,
+                        false))
+                    return;
+
+                Print(
+                    "CFIP level render failed [{0}]: trend line unavailable",
+                    name);
             }
             catch (Exception ex)
             {
-                try
-                {
-                    Chart.RemoveObject(name);
+                Chart.RemoveObject(name);
 
-                    if (fullWidth)
-                    {
-                        ChartHorizontalLine retry =
-                            Chart.DrawHorizontalLine(
-                                name,
-                                normalizedPrice,
-                                color,
-                                Math.Max(1, LevelLineThickness),
-                                lineStyle);
-
-                        if (retry != null)
-                            retry.IsInteractive = false;
-                    }
-                    else
-                    {
-                        int safeStart =
-                            Math.Max(
-                                0,
-                                Math.Min(
-                                    startIndex,
-                                    Bars.Count - 2));
-
-                        int safeEnd =
-                            Math.Max(
-                                safeStart + 1,
-                                Math.Min(
-                                    endIndex,
-                                    Bars.Count - 1));
-
-                        ChartTrendLine retry =
-                            Chart.DrawTrendLine(
-                                name,
-                                Bars.OpenTimes[safeStart],
-                                normalizedPrice,
-                                Bars.OpenTimes[safeEnd],
-                                normalizedPrice,
-                                color,
-                                Math.Max(1, LevelLineThickness),
-                                lineStyle);
-
-                        if (retry != null)
-                        {
-                            retry.ExtendToInfinity = false;
-                            retry.IsInteractive = false;
-                        }
-                    }
-
-                    Chart.RemoveObject(name + "_SEG");
-                    Chart.RemoveObject(name + "_FALLBACK");
-                }
-                catch (Exception retryEx)
+                if (!TryDrawLevelFallback(
+                        name + "_FALLBACK",
+                        startIndex,
+                        endIndex,
+                        normalizedPrice,
+                        color,
+                        lineStyle,
+                        fullWidth))
                 {
                     Print(
-                        "CFIP level render failed [{0}]: {1} / retry: {2}",
+                        "CFIP level render failed [{0}]: {1}",
                         name,
-                        ex.Message,
-                        retryEx.Message);
+                        ex.Message);
                 }
             }
         }
@@ -5657,6 +5857,33 @@ namespace cAlgo
             {
                 lines.Add("STATUS");
                 lines.Add(stableHeader);
+
+                string statusText = _engineStatusText ?? "";
+                string[] statusParts =
+                    statusText.Split(
+                        new[] { '\r', '\n' },
+                        StringSplitOptions.RemoveEmptyEntries);
+
+                for (int i = 0; i < statusParts.Length; i++)
+                {
+                    string detail = statusParts[i].Trim();
+
+                    if (string.IsNullOrWhiteSpace(detail))
+                        continue;
+
+                    if (detail.StartsWith(
+                            "CFIP MTF INTELLIGENCE",
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.Equals(
+                            detail,
+                            stableHeader,
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    lines.Add(detail);
+                }
             }
 
             if (showPlan)
@@ -5769,34 +5996,41 @@ namespace cAlgo
             if (EnableSmartDecisionEngine && _smartDecision != null)
                 lines.Add("");
 
-            // One compact SMART row: percentages are explicitly labelled
-            // EVIDENCE SHARE, not probability, because softmax share is not            // statistical calibration.
+            // SMART is displayed as evidence/quality, not probability.
             if (EnableSmartDecisionEngine &&
                 _smartDecision != null)
             {
                 lines.Add(
-                    "SMART  " + _smartAction +
-                    " | REGIME " + _smartRegime +
-                    " | Q " + _smartQuality +
-                    " | EVIDENCE B" +
-                    _smartBuyShare + "/S" + _smartSellShare +
-                    " | COVERAGE " +
-                    Math.Round(_smartDecision.EvidenceCoverage) + "%" +
+                    "SMART DECISION  " +
+                    (_smartDirection == 1 ? "BUY" :
+                     _smartDirection == -1 ? "SELL" : "NEUTRAL") +
+                    " | ACTION " + _smartAction +
+                    " | QUALITY " + _smartQuality + "/100");
+
+                lines.Add(
+                    "EVIDENCE SHARE  BUY " + _smartBuyShare + "%" +
+                    " | SELL " + _smartSellShare + "%" +
                     " | EDGE " +
                     Math.Abs(_smartBuyShare - _smartSellShare) +
-                    "pp" +
-                    " | CONS " + _smartConsensusQuality +
-                    " | EVID " + _smartIndependentEvidence);
+                    "pp | COVERAGE " +
+                    Math.Round(_smartDecision.EvidenceCoverage) + "%");
+
+                lines.Add(
+                    "SMART CONTEXT  REGIME " + _smartRegime +
+                    " | REGIME Q " + _smartRegimeQuality +
+                    " | CONSENSUS " + _smartConsensusQuality +
+                    " | TF AGREEMENT " + _smartTimeframeAgreement +
+                    " | INDEPENDENT EVIDENCE " +
+                    _smartIndependentEvidence);
 
                 if (_fastReversalDirection != 0 &&
                     _fastReversalQuality > 0)
                 {
                     lines.Add(
-                        "REVERSAL " +
+                        "FAST REVERSAL  " +
                         (_fastReversalDirection == 1 ? "BUY" : "SELL") +
-                        " | Q" + _fastReversalQuality +
-                        " | E" + _fastReversalEvidence +
-                        " | M5 FAST");
+                        " | QUALITY " + _fastReversalQuality +
+                        " | EVIDENCE " + _fastReversalEvidence);
                 }
 
                 if (!string.IsNullOrWhiteSpace(_smartReason))
@@ -5920,7 +6154,11 @@ namespace cAlgo
             int rowHeight =
                 Math.Max(13, TradePlanFontSize + 1);
             int actionRowHeight =
-                Math.Max(28, ActionButtonHeight + ActionButtonMargin * 2 + 4);
+                showButtons
+                    ? Math.Max(
+                        28,
+                        ActionButtonHeight + ActionButtonMargin * 2 + 4)
+                    : 0;
 
             if (_tradePlanPanelBorder == null ||
                 _tradePlanPanelGrid == null ||
@@ -5944,7 +6182,7 @@ namespace cAlgo
                      i++)
                 {
                     _tradePlanPanelGrid.Rows[i]
-                        .SetHeightInPixels(rowHeight);
+                        .SetHeightInPixels(0);
 
                     _tradePlanPanelRows[i] =
                         new TextBlock
@@ -6033,6 +6271,10 @@ namespace cAlgo
                 bool visible = i < visibleRows;
                 TextBlock row = _tradePlanPanelRows[i];
 
+                _tradePlanPanelGrid.Rows[i]
+                    .SetHeightInPixels(
+                        visible ? rowHeight : 0);
+
                 row.Text =
                     visible
                         ? lines[i]
@@ -6068,11 +6310,11 @@ namespace cAlgo
                         TradePlanPanelFixedRows - 1];
 
                 overflowRow.Text =
-                    "… +" +
+                    "… " +
                     (lines.Count -
                      TradePlanPanelFixedRows +
                      1) +
-                    " more";
+                    " additional lines";
 
                 overflowRow.IsVisible = true;
             }
@@ -6080,10 +6322,12 @@ namespace cAlgo
             _tradePlanPanelGrid.Width =
                 Math.Max(180, TradePlanWidth);
 
-            _tradePlanPanelGrid.Height =
-                TradePlanPanelFixedRows *
-                rowHeight +
+            int panelHeight =
+                visibleRows * rowHeight +
                 actionRowHeight;
+
+            _tradePlanPanelGrid.Height =
+                panelHeight;
 
             _tradePlanPanelBorder.HorizontalAlignment =
                 horizontal;
@@ -6094,6 +6338,9 @@ namespace cAlgo
             _tradePlanPanelBorder.Margin = 10;
             _tradePlanPanelBorder.Width =
                 Math.Max(180, TradePlanWidth);
+
+            _tradePlanPanelBorder.Height =
+                panelHeight;
             _tradePlanPanelBorder.Padding =
                 Math.Max(0, TradePlanPadding);
 
@@ -13646,8 +13893,131 @@ for (int j = impulse + 1; j <= index; j++)
         }
 
         // ============================================================
-        // EMA
+        // NATIVE INDICATORS / PERFORMANCE
         // ============================================================
+
+        private void InitializeNativeIndicators()
+        {
+            _nativeIndicators.Clear();
+
+            RegisterNativeIndicators(_m1);
+            RegisterNativeIndicators(_m5);
+            RegisterNativeIndicators(_m15);
+            RegisterNativeIndicators(_m30);
+            RegisterNativeIndicators(_h1);
+            RegisterNativeIndicators(_h4);
+            RegisterNativeIndicators(_d1);
+            RegisterNativeIndicators(_w1);
+
+            if (Bars != null && FindNativeIndicatorSet(Bars) == null)
+                RegisterNativeIndicators(Bars);
+        }
+
+        private NativeIndicatorSet FindNativeIndicatorSet(Bars bars)
+        {
+            if (bars == null)
+                return null;
+
+            for (int i = 0; i < _nativeIndicators.Count; i++)
+            {
+                NativeIndicatorSet set = _nativeIndicators[i];
+
+                if (set != null &&
+                    object.ReferenceEquals(set.Bars, bars))
+                    return set;
+            }
+
+            return null;
+        }
+
+        private NativeIndicatorSet RegisterNativeIndicators(Bars bars)
+        {
+            if (bars == null)
+                return null;
+
+            NativeIndicatorSet existing =
+                FindNativeIndicatorSet(bars);
+
+            if (existing != null)
+                return existing;
+
+            try
+            {
+                NativeIndicatorSet set =
+                    new NativeIndicatorSet
+                    {
+                        Bars = bars
+                    };
+
+                int[] emaPeriods =
+                {
+                    FastEma,
+                    SlowEma,
+                    12,
+                    26
+                };
+
+                for (int i = 0; i < emaPeriods.Length; i++)
+                {
+                    int period = emaPeriods[i];
+
+                    if (period > 1 &&
+                        !set.Emas.ContainsKey(period))
+                    {
+                        set.Emas[period] =
+                            Indicators.ExponentialMovingAverage(
+                                bars.ClosePrices,
+                                period);
+                    }
+                }
+
+                if (AtrPeriod >= 2)
+                {
+                    set.Atr =
+                        Indicators.AverageTrueRange(
+                            bars,
+                            AtrPeriod,
+                            MovingAverageType.WilderSmoothing);
+                }
+
+                if (RsiPeriod >= 2)
+                {
+                    set.Rsi =
+                        Indicators.RelativeStrengthIndex(
+                            bars.ClosePrices,
+                            RsiPeriod);
+                }
+
+                if (AdxPeriod >= 2)
+                {
+                    set.Dms =
+                        Indicators.DirectionalMovementSystem(
+                            bars,
+                            AdxPeriod,
+                            MovingAverageType.WilderSmoothing);
+                }
+
+                _nativeIndicators.Add(set);
+                return set;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP native indicator initialization failed for {0}: {1}",
+                    bars.TimeFrame,
+                    ex.Message);
+                return null;
+            }
+        }
+
+        private NativeIndicatorSet GetNativeIndicatorSet(Bars bars)
+        {
+            NativeIndicatorSet set =
+                FindNativeIndicatorSet(bars);
+
+            return set ??
+                   RegisterNativeIndicators(bars);
+        }
 
         private double GetEma(
             Bars bars,
@@ -13657,282 +14027,188 @@ for (int j = impulse + 1; j <= index; j++)
             if (bars == null ||
                 index < 0 ||
                 index >= bars.Count)
-                return 0;
+                return 0.0;
 
             if (period <= 1)
                 return bars.ClosePrices[index];
 
-            int start =
-                Math.Max(
-                    0,
-                    index -
-                    period * 5);
+            NativeIndicatorSet set =
+                GetNativeIndicatorSet(bars);
 
-            double ema =
-                bars.ClosePrices[start];
+            if (set == null)
+                return 0.0;
 
-            double multiplier =
-                2.0 /
-                (period + 1.0);
-
-            for (int i = start + 1;
-                 i <= index;
-                 i++)
+            if (!set.Emas.TryGetValue(
+                    period,
+                    out ExponentialMovingAverage ema))
             {
-                ema =
-                    ((bars.ClosePrices[i] -
-                      ema) *
-                     multiplier) +
-                    ema;
+                try
+                {
+                    ema =
+                        Indicators.ExponentialMovingAverage(
+                            bars.ClosePrices,
+                            period);
+
+                    set.Emas[period] = ema;
+                }
+                catch (Exception ex)
+                {
+                    Print(
+                        "CFIP EMA initialization failed [{0}/{1}]: {2}",
+                        bars.TimeFrame,
+                        period,
+                        ex.Message);
+                    return 0.0;
+                }
             }
 
-            return ema;
+            if (ema == null ||
+                index >= ema.Result.Count)
+                return 0.0;
+
+            double value =
+                ema.Result[index];
+
+            return IsFinitePositive(value)
+                ? value
+                : 0.0;
         }
 
-        // ============================================================
-        // RSI
-        // ============================================================
-
-        private double GetRsi(Bars bars, int index, int period)
+        private double GetRsi(
+            Bars bars,
+            int index,
+            int period)
         {
-            if (bars == null || period < 2 || index < period || index >= bars.Count)
+            if (bars == null ||
+                period < 2 ||
+                index < 0 ||
+                index >= bars.Count)
                 return 50.0;
 
-            int start = Math.Max(1, index - period * 8);
-            if (index - start < period)
-                start = Math.Max(1, index - period);
+            NativeIndicatorSet set =
+                GetNativeIndicatorSet(bars);
 
-            double avgGain = 0.0;
-            double avgLoss = 0.0;
-            int seedStart = Math.Max(1, start);
-            int seedEnd = Math.Min(index, seedStart + period - 1);
-
-            for (int i = seedStart; i <= seedEnd; i++)
-            {
-                double change = bars.ClosePrices[i] - bars.ClosePrices[i - 1];
-                if (change > 0) avgGain += change;
-                else avgLoss -= change;
-            }
-
-            int seedCount = seedEnd - seedStart + 1;
-            if (seedCount <= 0)
+            if (set == null ||
+                set.Rsi == null ||
+                index >= set.Rsi.Result.Count)
                 return 50.0;
 
-            avgGain /= seedCount;
-            avgLoss /= seedCount;
+            double value =
+                set.Rsi.Result[index];
 
-            for (int i = seedEnd + 1; i <= index; i++)
-            {
-                double change = bars.ClosePrices[i] - bars.ClosePrices[i - 1];
-                double gain = change > 0 ? change : 0.0;
-                double loss = change < 0 ? -change : 0.0;
-                avgGain = ((avgGain * (period - 1)) + gain) / period;
-                avgLoss = ((avgLoss * (period - 1)) + loss) / period;
-            }
+            if (double.IsNaN(value) ||
+                double.IsInfinity(value))
+                return 50.0;
 
-            if (avgLoss <= 1e-12)
-                return avgGain > 1e-12 ? 100.0 : 50.0;
-
-            double rs = avgGain / avgLoss;
-            return Clamp(100.0 - 100.0 / (1.0 + rs), 0.0, 100.0);
+            return Clamp(
+                value,
+                0.0,
+                100.0);
         }
 
-
-
-        // ============================================================
-        // ATR
-        // ============================================================
-
-        private double GetAtr(Bars bars, int index, int period)
+        private double GetAtr(
+            Bars bars,
+            int index,
+            int period)
         {
-            if (bars == null || period < 2 || index < period || index >= bars.Count)
+            if (bars == null ||
+                period < 2 ||
+                index < 0 ||
+                index >= bars.Count)
                 return 0.0;
 
-            int start = Math.Max(1, index - period * 8);
-            if (index - start < period)
-                start = Math.Max(1, index - period);
+            NativeIndicatorSet set =
+                GetNativeIndicatorSet(bars);
 
-            int seedEnd = Math.Min(index, start + period - 1);
-            double atr = 0.0;
-            int seedCount = 0;
-
-            for (int i = start; i <= seedEnd; i++)
-            {
-                double prevClose = bars.ClosePrices[i - 1];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - prevClose),
-                        Math.Abs(bars.LowPrices[i] - prevClose)));
-                atr += tr;
-                seedCount++;
-            }
-
-            if (seedCount <= 0)
+            if (set == null ||
+                set.Atr == null ||
+                index >= set.Atr.Result.Count)
                 return 0.0;
 
-            atr /= seedCount;
+            double value =
+                set.Atr.Result[index];
 
-            for (int i = seedEnd + 1; i <= index; i++)
-            {
-                double prevClose = bars.ClosePrices[i - 1];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - prevClose),
-                        Math.Abs(bars.LowPrices[i] - prevClose)));
-                atr = ((atr * (period - 1)) + tr) / period;
-            }
-
-            return atr;
+            return IsFinitePositive(value)
+                ? value
+                : 0.0;
         }
 
-
-
-        // ============================================================
-        // DMI / ADX
-        // ============================================================
-
-        private double GetDmiBias(Bars bars, int index, int period)
+        private double GetDmiBias(
+            Bars bars,
+            int index,
+            int period)
         {
-            if (bars == null || period < 2 || index < period + 1 || index >= bars.Count)
+            if (bars == null ||
+                period < 2 ||
+                index < 0 ||
+                index >= bars.Count)
                 return 0.0;
 
-            int start = Math.Max(1, index - period * 8);
-            int seedEnd = Math.Min(index, start + period - 1);
+            NativeIndicatorSet set =
+                GetNativeIndicatorSet(bars);
 
-            double trSum = 0.0;
-            double plusSum = 0.0;
-            double minusSum = 0.0;
-            int seedCount = 0;
-
-            for (int i = start; i <= seedEnd; i++)
-            {
-                double up = bars.HighPrices[i] - bars.HighPrices[i - 1];
-                double down = bars.LowPrices[i - 1] - bars.LowPrices[i];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - bars.ClosePrices[i - 1]),
-                        Math.Abs(bars.LowPrices[i] - bars.ClosePrices[i - 1])));
-
-                trSum += tr;
-                plusSum += (up > down && up > 0) ? up : 0.0;
-                minusSum += (down > up && down > 0) ? down : 0.0;
-                seedCount++;
-            }
-
-            if (seedCount <= 0)
+            if (set == null ||
+                set.Dms == null ||
+                index >= set.Dms.DIPlus.Count ||
+                index >= set.Dms.DIMinus.Count)
                 return 0.0;
 
-            double smoothTr = trSum;
-            double smoothPlus = plusSum;
-            double smoothMinus = minusSum;
+            double plus = set.Dms.DIPlus[index];
+            double minus = set.Dms.DIMinus[index];
 
-            for (int i = seedEnd + 1; i <= index; i++)
-            {
-                double up = bars.HighPrices[i] - bars.HighPrices[i - 1];
-                double down = bars.LowPrices[i - 1] - bars.LowPrices[i];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - bars.ClosePrices[i - 1]),
-                        Math.Abs(bars.LowPrices[i] - bars.ClosePrices[i - 1])));
-                double plus = (up > down && up > 0) ? up : 0.0;
-                double minus = (down > up && down > 0) ? down : 0.0;
-                smoothTr = smoothTr - smoothTr / period + tr;
-                smoothPlus = smoothPlus - smoothPlus / period + plus;
-                smoothMinus = smoothMinus - smoothMinus / period + minus;
-            }
-
-            if (smoothTr <= 1e-12)
+            if (double.IsNaN(plus) ||
+                double.IsInfinity(plus) ||
+                double.IsNaN(minus) ||
+                double.IsInfinity(minus))
                 return 0.0;
 
-            double plusDi = 100.0 * smoothPlus / smoothTr;
-            double minusDi = 100.0 * smoothMinus / smoothTr;
-            double total = plusDi + minusDi;
+            double total = plus + minus;
+
             if (total <= 1e-12)
                 return 0.0;
 
-            return Clamp((plusDi - minusDi) / total, -1.0, 1.0);
+            return Clamp(
+                (plus - minus) / total,
+                -1.0,
+                1.0);
         }
 
-
-
-        private double GetAdx(Bars bars, int index, int period)
+        private double GetAdx(
+            Bars bars,
+            int index,
+            int period)
         {
-            if (bars == null || period < 2 || index < period * 2 || index >= bars.Count)
+            if (bars == null ||
+                period < 2 ||
+                index < 0 ||
+                index >= bars.Count)
                 return 0.0;
 
-            int start = Math.Max(1, index - period * 10);
-            int seedEnd = Math.Min(index, start + period - 1);
+            NativeIndicatorSet set =
+                GetNativeIndicatorSet(bars);
 
-            double smoothTr = 0.0;
-            double smoothPlus = 0.0;
-            double smoothMinus = 0.0;
-
-            for (int i = start; i <= seedEnd; i++)
-            {
-                double up = bars.HighPrices[i] - bars.HighPrices[i - 1];
-                double down = bars.LowPrices[i - 1] - bars.LowPrices[i];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - bars.ClosePrices[i - 1]),
-                        Math.Abs(bars.LowPrices[i] - bars.ClosePrices[i - 1])));
-                smoothTr += tr;
-                smoothPlus += (up > down && up > 0) ? up : 0.0;
-                smoothMinus += (down > up && down > 0) ? down : 0.0;
-            }
-
-            double adxSeed = 0.0;
-            int dxCount = 0;
-            for (int i = seedEnd + 1; i <= index; i++)
-            {
-                double up = bars.HighPrices[i] - bars.HighPrices[i - 1];
-                double down = bars.LowPrices[i - 1] - bars.LowPrices[i];
-                double tr = Math.Max(
-                    bars.HighPrices[i] - bars.LowPrices[i],
-                    Math.Max(
-                        Math.Abs(bars.HighPrices[i] - bars.ClosePrices[i - 1]),
-                        Math.Abs(bars.LowPrices[i] - bars.ClosePrices[i - 1])));
-                double plus = (up > down && up > 0) ? up : 0.0;
-                double minus = (down > up && down > 0) ? down : 0.0;
-                smoothTr = smoothTr - smoothTr / period + tr;
-                smoothPlus = smoothPlus - smoothPlus / period + plus;
-                smoothMinus = smoothMinus - smoothMinus / period + minus;
-
-                if (smoothTr <= 1e-12)
-                    continue;
-
-                double plusDi = 100.0 * smoothPlus / smoothTr;
-                double minusDi = 100.0 * smoothMinus / smoothTr;
-                double denom = plusDi + minusDi;
-                if (denom <= 1e-12)
-                    continue;
-
-                double dx = 100.0 * Math.Abs(plusDi - minusDi) / denom;
-                if (dxCount < period)
-                {
-                    adxSeed += dx;
-                    dxCount++;
-                }
-                else
-                {
-                    adxSeed = ((adxSeed * (period - 1)) + dx) / period;
-                }
-            }
-
-            if (dxCount == 0)
+            if (set == null ||
+                set.Dms == null ||
+                index >= set.Dms.ADX.Count)
                 return 0.0;
 
-            if (dxCount < period)
-                adxSeed /= dxCount;
+            double value =
+                set.Dms.ADX[index];
 
-            return Clamp(adxSeed, 0.0, 100.0);
+            if (double.IsNaN(value) ||
+                double.IsInfinity(value))
+                return 0.0;
+
+            return Clamp(
+                value,
+                0.0,
+                100.0);
         }
 
 
+        // ============================================================
+        // HISTORICAL
+        // ============================================================
 
         // ============================================================
         // HISTORICAL
@@ -14025,125 +14301,15 @@ for (int j = impulse + 1; j <= index; j++)
         private int HistoricalBullTriggerScore(
             int index)
         {
-            if (index < 10)
-                return 0;
-
-            double atr =
-                GetAtr(
-                    Bars,
-                    index,
-                    AtrPeriod);
-
-            if (atr <= 0)
-                return 0;
-
-            int score = 0;
-
-            double ema =
-                GetEma(
-                    Bars,
-                    index,
-                    FastEma);
-
-            if (Bars.ClosePrices[index] >
-                ema)
-                score++;
-
-            if (Bars.ClosePrices[index] >
-                HighestHigh(
-                    Bars,
-                    Math.Max(
-                        0,
-                        index - 6),
-                    index - 1))
-                score++;
-
-            if (Bars.ClosePrices[index] >
-                Bars.ClosePrices[index - 1])
-                score++;
-
-            if (Bars.ClosePrices[index] -
-                Bars.OpenPrices[index] >=
-                atr * Math.Max(0.02, MinimumTriggerBodyAtr * 0.40))
-                score++;
-
-            double body =
-                Math.Abs(
-                    Bars.ClosePrices[index] -
-                    Bars.OpenPrices[index]);
-
-            if (Bars.ClosePrices[index] >
-                Bars.OpenPrices[index] &&
-                body >= atr * Math.Max(0.02, MinimumTriggerBodyAtr))
-                score++;
-
-            if (Bars.ClosePrices[index] >
-                Bars.HighPrices[index - 1])
-                score++;
-
-            return score;
+            // Historical bars are closed. Reuse the exact live trigger scorer.
+            return LiveBullTriggerScore(Bars, index);
         }
 
         private int HistoricalBearTriggerScore(
             int index)
         {
-            if (index < 10)
-                return 0;
-
-            double atr =
-                GetAtr(
-                    Bars,
-                    index,
-                    AtrPeriod);
-
-            if (atr <= 0)
-                return 0;
-
-            int score = 0;
-
-            double ema =
-                GetEma(
-                    Bars,
-                    index,
-                    FastEma);
-
-            if (Bars.ClosePrices[index] <
-                ema)
-                score++;
-
-            if (Bars.ClosePrices[index] <
-                LowestLow(
-                    Bars,
-                    Math.Max(
-                        0,
-                        index - 6),
-                    index - 1))
-                score++;
-
-            if (Bars.ClosePrices[index] <
-                Bars.ClosePrices[index - 1])
-                score++;
-
-            if (Bars.OpenPrices[index] -
-                Bars.ClosePrices[index] >=
-                atr * Math.Max(0.02, MinimumTriggerBodyAtr * 0.40))
-                score++;
-
-            double body =
-                Math.Abs(
-                    Bars.ClosePrices[index] -
-                    Bars.OpenPrices[index]);
-
-            if (Bars.ClosePrices[index] <
-                Bars.OpenPrices[index] &&
-                body >= atr * Math.Max(0.02, MinimumTriggerBodyAtr))
-                score++;
-
-            if (Bars.ClosePrices[index] <
-                Bars.LowPrices[index - 1])
-                score++;
-
-            return score;
+            // Historical bars are closed. Reuse the exact live trigger scorer.
+            return LiveBearTriggerScore(Bars, index);
         }
 
         private void DrawHistoricalSignal(
