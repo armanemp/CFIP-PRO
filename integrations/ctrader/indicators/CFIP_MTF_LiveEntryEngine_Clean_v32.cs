@@ -9968,28 +9968,28 @@ namespace cAlgo
             {
                 case CFIPClean32PanelCorner.TopLeft:
                     _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Top;
+                        VerticalAlignment.Bottom;
                     _panelToggleButton.HorizontalAlignment =
                         HorizontalAlignment.Right;
                     break;
 
                 case CFIPClean32PanelCorner.TopRight:
                     _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Top;
+                        VerticalAlignment.Bottom;
                     _panelToggleButton.HorizontalAlignment =
                         HorizontalAlignment.Left;
                     break;
 
                 case CFIPClean32PanelCorner.BottomRight:
                     _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Bottom;
+                        VerticalAlignment.Top;
                     _panelToggleButton.HorizontalAlignment =
                         HorizontalAlignment.Left;
                     break;
 
                 default:
                     _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Bottom;
+                        VerticalAlignment.Top;
                     _panelToggleButton.HorizontalAlignment =
                         HorizontalAlignment.Right;
                     break;
@@ -10072,14 +10072,43 @@ namespace cAlgo
                       8
                     : 0;
 
-            int maxHeight =
+            int configuredMaxHeight =
                 Math.Max(
                     260,
                     PanelMaxHeight);
 
+            int availableChartHeight =
+                0;
+
+            try
+            {
+                availableChartHeight =
+                    (int)Math.Round(
+                        Math.Max(
+                            0,
+                            Chart.Height -
+                            Math.Max(
+                                0,
+                                PanelMargin) * 2 -
+                            8));
+            }
+            catch
+            {
+                availableChartHeight = 0;
+            }
+
+            int maxHeight =
+                availableChartHeight > 0
+                    ? Math.Max(
+                        220,
+                        Math.Min(
+                            configuredMaxHeight,
+                            availableChartHeight))
+                    : configuredMaxHeight;
+
             int scrollHeight =
                 Math.Max(
-                    180,
+                    100,
                     maxHeight -
                     buttonAreaHeight -
                     padding * 2 -
