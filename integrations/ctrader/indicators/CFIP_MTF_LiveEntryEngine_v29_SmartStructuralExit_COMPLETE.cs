@@ -579,8 +579,14 @@ namespace cAlgo
         [Parameter("TP Color", Group = "Display", DefaultValue = "Lime")]
         public Color TpColor { get; set; }
 
-        [Parameter("Status Color", Group = "Display", DefaultValue = "White")]
+        [Parameter("Status Color", Group = "Display", DefaultValue = "Lime")]
         public Color StatusColor { get; set; }
+
+        [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "Lime")]
+        public Color TradePlanTextColor { get; set; }
+
+        [Parameter("Trade Plan Font Family", Group = "Display", DefaultValue = "Arial")]
+        public string TradePlanFontFamily { get; set; }
 
         [Parameter("Prediction Color", Group = "Display", DefaultValue = "Cyan")]
         public Color PredictionColor { get; set; }
@@ -792,8 +798,14 @@ namespace cAlgo
         [Parameter("Popup Padding", Group = "Alerts", DefaultValue = 9, MinValue = 0, MaxValue = 30)]
         public int PopupPadding { get; set; }
 
-        [Parameter("Popup Text Color", Group = "Alerts", DefaultValue = "White")]
+        [Parameter("Popup Text Color", Group = "Alerts", DefaultValue = "Lime")]
         public Color PopupTextColor { get; set; }
+
+        [Parameter("Popup Bold", Group = "Alerts", DefaultValue = false)]
+        public bool PopupBold { get; set; }
+
+        [Parameter("Popup Font Family", Group = "Alerts", DefaultValue = "Arial")]
+        public string PopupFontFamily { get; set; }
 
         [Parameter("Alert On Exit Plan Update", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnExitPlanUpdate { get; set; }
@@ -927,6 +939,24 @@ namespace cAlgo
 
         [Parameter("Block Same-Bar Reentry After Exit", Group = "Smart Intelligence", DefaultValue = true)]
         public bool BlockSameBarReentryAfterExit { get; set; }
+
+        [Parameter("Adaptive Smart Thresholds", Group = "Smart Intelligence", DefaultValue = true)]
+        public bool AdaptiveSmartThresholds { get; set; }
+
+        [Parameter("Smart Regime Buffer", Group = "Smart Intelligence", DefaultValue = 6, MinValue = 0, MaxValue = 15)]
+        public int SmartRegimeBuffer { get; set; }
+
+        [Parameter("Smart Strong Setup Quality", Group = "Smart Intelligence", DefaultValue = 82, MinValue = 65, MaxValue = 98)]
+        public int SmartStrongSetupQuality { get; set; }
+
+        [Parameter("Smart Strong Setup Edge", Group = "Smart Intelligence", DefaultValue = 10, MinValue = 4, MaxValue = 30)]
+        public int SmartStrongSetupEdge { get; set; }
+
+        [Parameter("Smart Flip Confirmation Bars", Group = "Smart Intelligence", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
+        public int SmartFlipConfirmationBars { get; set; }
+
+        [Parameter("Allow Smart Soft Gate", Group = "Smart Intelligence", DefaultValue = true)]
+        public bool AllowSmartSoftGate { get; set; }
 
         // ============================================================
         // DATA
@@ -1089,6 +1119,9 @@ namespace cAlgo
         private string _smartRegime = "UNKNOWN";
         private string _smartAction = "WAIT";
         private string _smartReason = "";
+        private int _smartRegimeQuality;
+        private int _smartLastStableDirection;
+        private int _smartOppositeBars;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
         private int _lastSmartDecisionAlertDirection;
         private string _lastSmartDecisionAlertAction = "";
@@ -1168,6 +1201,9 @@ namespace cAlgo
             _bullStabilityCount = 0;
             _bearStabilityCount = 0;
             _directionalBiasBootstrapped = false;
+            _smartRegimeQuality = 0;
+            _smartLastStableDirection = 0;
+            _smartOppositeBars = 0;
             _lastEarlyBias = 0;
             _lastEarlyBiasM5Bar = -1;
             _signalOutcome = "ACTIVE";
@@ -1386,6 +1422,13 @@ namespace cAlgo
         // ============================================================
         // MAIN ENGINE
         // ============================================================
+
+        private int GetSmartEdge()
+        {
+            return _smartDecision == null
+                ? 0
+                : Math.Abs(_smartDecision.BuyShare - _smartDecision.SellShare);
+        }
 
         private void EvaluateEngine(int chartIndex)
         {
@@ -1947,10 +1990,12 @@ namespace cAlgo
                 bearConfidenceOk = bearConfidenceOk ||
                                    (_smartDirection == -1 && _smartQuality >= Math.Min(95, MinimumSmartQuality + 8) && _smartSellShare >= MinimumSmartDirectionShare + 3);
             }
-            bool bullEdgeOk = edge >= MinimumEdge ||
-                              (bullStrongOverride && edge >= Math.Max(5, MinimumEdge - 5));
-            bool bearEdgeOk = edge >= MinimumEdge ||
-                              (bearStrongOverride && edge >= Math.Max(5, MinimumEdge - 5));
+            bool bullEdgeOk = edge >= engineSmartEdge ||
+                              (bullStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
+                              bullSmartStrong;
+            bool bearEdgeOk = edge >= engineSmartEdge ||
+                              (bearStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
+                              bearSmartStrong;
             bool bullBiasReady = IsDirectionalBiasReady(1, m5, m15) ||
                                  (bullStrongOverride &&
                                   (m5.MssBull || m5.ChochBull || m5.DisplacementBull || m5.LiquidityBull));
@@ -1958,19 +2003,43 @@ namespace cAlgo
                                  (bearStrongOverride &&
                                   (m5.MssBear || m5.ChochBear || m5.DisplacementBear || m5.LiquidityBear));
 
+            GetAdaptiveSmartThresholds(
+                _smartRegime,
+                out int engineSmartQuality,
+                out int engineSmartShare,
+                out int engineSmartEdge);
+
+            bool bullSmartStrong =
+                AllowSmartSoftGate &&
+                _smartDecision != null &&
+                _smartDirection == 1 &&
+                _smartQuality >= Math.Max(SmartStrongSetupQuality, engineSmartQuality + 8) &&
+                _smartBuyShare >= engineSmartShare &&
+                GetSmartEdge() >= Math.Max(SmartStrongSetupEdge, engineSmartEdge);
+
+            bool bearSmartStrong =
+                AllowSmartSoftGate &&
+                _smartDecision != null &&
+                _smartDirection == -1 &&
+                _smartQuality >= Math.Max(SmartStrongSetupQuality, engineSmartQuality + 8) &&
+                _smartSellShare >= engineSmartShare &&
+                GetSmartEdge() >= Math.Max(SmartStrongSetupEdge, engineSmartEdge);
+
             bool smartBullGate = !EnableSmartDecisionEngine ||
                 (_smartDecision != null &&
-                 _smartBuyShare >= MinimumSmartDirectionShare &&
-                 _smartQuality >= MinimumSmartQuality &&
+                 _smartBuyShare >= engineSmartShare &&
+                 _smartQuality >= engineSmartQuality &&
                  _smartDirection == 1) ||
-                bullStrongOverride;
+                bullStrongOverride ||
+                bullSmartStrong;
 
             bool smartBearGate = !EnableSmartDecisionEngine ||
                 (_smartDecision != null &&
-                 _smartSellShare >= MinimumSmartDirectionShare &&
-                 _smartQuality >= MinimumSmartQuality &&
+                 _smartSellShare >= engineSmartShare &&
+                 _smartQuality >= engineSmartQuality &&
                  _smartDirection == -1) ||
-                bearStrongOverride;
+                bearStrongOverride ||
+                bearSmartStrong;
 
             bool bullCandidate =
                 triggerFrameOk &&
@@ -5151,6 +5220,20 @@ namespace cAlgo
             if (showContext)
                 lines.Add(_contextStatusText);
 
+            if (EnableSmartDecisionEngine)
+            {
+                lines.Add(
+                    "SMART " + (_smartAction ?? "WAIT") +
+                    " | Q " + _smartQuality +
+                    " | B" + _smartBuyShare +
+                    "/S" + _smartSellShare +
+                    " | EDGE " + GetSmartEdge() +
+                    " | " + (_smartRegime ?? "UNKNOWN"));
+
+                lines.Add(
+                    "REGIME-Q " + _smartRegimeQuality);
+            }
+
             if (!string.IsNullOrWhiteSpace(_tradeActionStatusText))
                 lines.Add(_tradeActionStatusText);
 
@@ -5160,12 +5243,7 @@ namespace cAlgo
                 return;
             }
 
-            Color panelColor =
-                _signalDirection != 0 && _signalActive
-                    ? (_signalDirection == 1 ? Color.Lime : Color.Red)
-                    : (showReaction || showEarly
-                        ? PredictionColor
-                        : StatusColor);
+            Color panelColor = TradePlanTextColor;
 
             if (_tradePlanPanelBorder == null)
             {
@@ -5259,8 +5337,13 @@ namespace cAlgo
 
             _tradePlanPanelText.FontWeight =
                 TradePlanBold
-                    ? FontWeight.ExtraBold
+                    ? FontWeight.Bold
                     : FontWeight.Normal;
+
+            _tradePlanPanelText.FontFamily =
+                string.IsNullOrWhiteSpace(TradePlanFontFamily)
+                    ? "Arial"
+                    : TradePlanFontFamily;
 
             _tradePlanPanelText.TextAlignment =
                 TextAlignment.Left;
@@ -5420,7 +5503,11 @@ namespace cAlgo
                 _alertPopupText.Text = string.IsNullOrWhiteSpace(title) ? message : title + "\n" + message;
                 _alertPopupText.ForegroundColor = PopupTextColor;
                 _alertPopupText.FontSize = Math.Max(8, PopupFontSize);
-                _alertPopupText.FontWeight = TradePlanBold ? FontWeight.ExtraBold : FontWeight.Normal;
+                _alertPopupText.FontWeight = PopupBold ? FontWeight.Bold : FontWeight.Normal;
+                _alertPopupText.FontFamily =
+                    string.IsNullOrWhiteSpace(PopupFontFamily)
+                        ? "Arial"
+                        : PopupFontFamily;
                 _alertPopupText.TextAlignment = TextAlignment.Left;
                 _alertPopupText.HorizontalAlignment = HorizontalAlignment.Left;
                 _alertPopupBorder.IsVisible = true;
@@ -6546,6 +6633,95 @@ private void UpdateBrokerPositionProtection()
         // SMART DECISION ENGINE
         // ============================================================
 
+        private void GetAdaptiveSmartThresholds(
+            string regime,
+            out int qualityThreshold,
+            out int shareThreshold,
+            out int edgeThreshold)
+        {
+            qualityThreshold = Math.Max(40, Math.Min(95, MinimumSmartQuality));
+            shareThreshold = Math.Max(50, Math.Min(90, MinimumSmartDirectionShare));
+            edgeThreshold = Math.Max(4, Math.Min(30, MinimumEdge));
+
+            if (!AdaptiveSmartThresholds)
+                return;
+
+            int b = Math.Max(0, SmartRegimeBuffer);
+            switch (regime ?? "UNKNOWN")
+            {
+                case "TREND":
+                case "EXPANSION":
+                    qualityThreshold -= b;
+                    shareThreshold -= Math.Max(1, b / 3);
+                    edgeThreshold -= Math.Max(1, b / 3);
+                    break;
+
+                case "REVERSAL":
+                    qualityThreshold -= Math.Max(1, b / 2);
+                    break;
+
+                case "RANGE":
+                    qualityThreshold += Math.Max(1, b / 2);
+                    shareThreshold += Math.Max(1, b / 3);
+                    edgeThreshold += Math.Max(1, b / 3);
+                    break;
+
+                case "COMPRESSION":
+                    qualityThreshold += b;
+                    shareThreshold += Math.Max(1, b / 2);
+                    edgeThreshold += Math.Max(1, b / 2);
+                    break;
+            }
+
+            qualityThreshold = Math.Max(40, Math.Min(95, qualityThreshold));
+            shareThreshold = Math.Max(50, Math.Min(90, shareThreshold));
+            edgeThreshold = Math.Max(4, Math.Min(30, edgeThreshold));
+        }
+
+        private int CalculateSmartRegimeQuality(Bars bars, int index, string regime)
+        {
+            if (bars == null || index < 35)
+                return 0;
+
+            double atr = GetAtr(bars, index, AtrPeriod);
+            double oldAtr = GetAtr(bars, Math.Max(20, index - 12), AtrPeriod);
+            double adx = GetAdx(bars, index, AdxPeriod);
+            if (atr <= 0 || oldAtr <= 0)
+                return 0;
+
+            double fast = GetEma(bars, index, FastEma);
+            double slow = GetEma(bars, index, SlowEma);
+            double slope = Math.Abs(fast - GetEma(bars, Math.Max(10, index - 4), FastEma)) / atr;
+            double spread = Math.Abs(fast - slow) / atr;
+            double expansion = atr / oldAtr;
+            double adxQuality = Clamp(adx / Math.Max(1.0, AdxMinimum * 2.0), 0.0, 1.0);
+
+            double q;
+            switch (regime ?? "UNKNOWN")
+            {
+                case "TREND":
+                    q = 55 + Clamp(spread, 0, 2) * 18 + Clamp(slope, 0, 1) * 12 + adxQuality * 15;
+                    break;
+                case "EXPANSION":
+                    q = 50 + Clamp((expansion - 1.0) * 45, 0, 25) + adxQuality * 25;
+                    break;
+                case "REVERSAL":
+                    q = 48 + adxQuality * 20 + Clamp((expansion - 0.9) * 35, 0, 25);
+                    break;
+                case "RANGE":
+                    q = 45 + (1 - adxQuality) * 25 + Clamp(1 - spread, 0, 1) * 20;
+                    break;
+                case "COMPRESSION":
+                    q = 35 + (1 - adxQuality) * 20;
+                    break;
+                default:
+                    q = 42;
+                    break;
+            }
+
+            return (int)Math.Round(Clamp(q, 0, 100));
+        }
+
         private void EvaluateSmartDecision(int chartIndex)
         {
             _smartDecision = null;
@@ -6673,6 +6849,18 @@ private void UpdateBrokerPositionProtection()
                 DetectSmartRegime(
                     _m5,
                     m5Index);
+
+            _smartRegimeQuality =
+                CalculateSmartRegimeQuality(
+                    _m5,
+                    m5Index,
+                    regime);
+
+            GetAdaptiveSmartThresholds(
+                regime,
+                out int adaptiveQualityThreshold,
+                out int adaptiveShareThreshold,
+                out int adaptiveEdgeThreshold);
 
             double bull = 0.0;
             double bear = 0.0;
@@ -6839,15 +7027,8 @@ private void UpdateBrokerPositionProtection()
 
             int direction = 0;
 
-            int requiredShare =
-                Math.Max(
-                    50,
-                    MinimumSmartDirectionShare);
-
-            int requiredEdge =
-                Math.Max(
-                    4,
-                    MinimumEdge);
+            int requiredShare = adaptiveShareThreshold;
+            int requiredEdge = adaptiveEdgeThreshold;
 
             if (buyShare >= requiredShare &&
                 buyShare >= sellShare + requiredEdge)
@@ -6895,10 +7076,11 @@ private void UpdateBrokerPositionProtection()
             int quality =
                 (int)Math.Round(
                     Clamp(
-                        strongestShare * 0.52 +
-                        evidenceCoverage * 0.28 +
-                        edge * 0.30 -
-                        conflict * 0.55,
+                        strongestShare * 0.44 +
+                        evidenceCoverage * 0.22 +
+                        edge * 0.28 +
+                        _smartRegimeQuality * 0.12 -
+                        conflict * 0.60,
                         0,
                         100));
 
@@ -6907,6 +7089,26 @@ private void UpdateBrokerPositionProtection()
                     Math.Max(
                         0,
                         quality - 10);
+
+            // Do not allow one weak bar to flip an established decision.
+            // A genuine MSS/CHOCH/displacement can still break the hysteresis.
+            if (direction != 0 &&
+                _smartLastStableDirection != 0 &&
+                direction != _smartLastStableDirection)
+            {
+                bool genuineFlip =
+                    direction == 1
+                        ? (a5.MssBull || a5.ChochBull || a5.DisplacementBull)
+                        : (a5.MssBear || a5.ChochBear || a5.DisplacementBear);
+
+                if (!genuineFlip &&
+                    quality < adaptiveQualityThreshold + 6)
+                    direction = 0;
+            }
+
+            if (direction != 0 &&
+                quality < adaptiveQualityThreshold)
+                direction = 0;
 
             _smartDecision =
                 new SmartDecision
@@ -6922,6 +7124,7 @@ private void UpdateBrokerPositionProtection()
                     SellEvidence = bearEvidence,
                     EvidenceCoverage = evidenceCoverage,
                     Regime = regime,
+                    RegimeQuality = _smartRegimeQuality,
                     LiveBuy = liveBull,
                     LiveSell = liveBear
                 };
@@ -6931,6 +7134,18 @@ private void UpdateBrokerPositionProtection()
             _smartSellShare = sellShare;
             _smartQuality = quality;
             _smartRegime = regime;
+
+            if (direction != 0)
+            {
+                _smartLastStableDirection = direction;
+                _smartOppositeBars = 0;
+            }
+            else if (_smartLastStableDirection != 0)
+            {
+                _smartOppositeBars++;
+                if (_smartOppositeBars >= Math.Max(1, SmartFlipConfirmationBars))
+                    _smartLastStableDirection = 0;
+            }
 
             if (direction != 0)
             {
@@ -12186,6 +12401,7 @@ for (int j = impulse + 1; j <= index; j++)
             public double BuyEvidence { get; set; }
             public double SellEvidence { get; set; }
             public double EvidenceCoverage { get; set; }
+            public int RegimeQuality { get; set; }
             public string Regime { get; set; }
             public int LiveBuy { get; set; }
             public int LiveSell { get; set; }
