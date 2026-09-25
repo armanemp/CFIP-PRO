@@ -5154,32 +5154,7 @@ namespace cAlgo
             Chart.RemoveObject(Prefix + "TP2");
             Chart.RemoveObject(Prefix + "TP3");
             Chart.RemoveObject(Prefix + "TP4");
-            Chart.RemoveObject(Prefix + "ENTRY_SEG");
-            Chart.RemoveObject(Prefix + "SL_SEG");
-            Chart.RemoveObject(Prefix + "TP1_SEG");
-            Chart.RemoveObject(Prefix + "TP2_SEG");
-            Chart.RemoveObject(Prefix + "TP3_SEG");
-            Chart.RemoveObject(Prefix + "TP4_SEG");
-            Chart.RemoveObject(Prefix + "ENTRY_H");
-            Chart.RemoveObject(Prefix + "SL_H");
-            Chart.RemoveObject(Prefix + "TP1_H");
-            Chart.RemoveObject(Prefix + "TP2_H");
-            Chart.RemoveObject(Prefix + "TP3_H");
-            Chart.RemoveObject(Prefix + "TP4_H");
-            Chart.RemoveObject(Prefix + "ENTRY_SEG");
-            Chart.RemoveObject(Prefix + "SL_SEG");
-            Chart.RemoveObject(Prefix + "TP1_SEG");
-            Chart.RemoveObject(Prefix + "TP2_SEG");
-            Chart.RemoveObject(Prefix + "TP3_SEG");
-            Chart.RemoveObject(Prefix + "TP4_SEG");
-            Chart.RemoveObject(Prefix + "ENTRY_TEXT");
-            Chart.RemoveObject(Prefix + "SL_TEXT");
-            Chart.RemoveObject(Prefix + "TP1_TEXT");
-            Chart.RemoveObject(Prefix + "TP2_TEXT");
-            Chart.RemoveObject(Prefix + "TP3_TEXT");
-            Chart.RemoveObject(Prefix + "TP4_TEXT");
         }
-
 
 
         private string GetSmartExitMode()
