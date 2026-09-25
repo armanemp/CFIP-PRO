@@ -823,6 +823,163 @@ namespace cAlgo
         public double HealthyAtrMaximumRatio { get; set; }
 
         // ============================================================
+        // 22 · COMPLETE INTELLIGENCE
+        // ============================================================
+
+        [Parameter("Early Setup Confidence", Group = "22 · Complete Intelligence", DefaultValue = 52, MinValue = 40, MaxValue = 95)]
+        public int EarlySetupConfidence { get; set; }
+
+        [Parameter("Enable Live Reaction", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool EnableLiveReaction { get; set; }
+
+        [Parameter("Live Reaction Watch Threshold", Group = "22 · Complete Intelligence", DefaultValue = 56, MinValue = 40, MaxValue = 95)]
+        public int LiveReactionWatchThreshold { get; set; }
+
+        [Parameter("Live Reaction Threshold", Group = "22 · Complete Intelligence", DefaultValue = 68, MinValue = 40, MaxValue = 95)]
+        public int LiveReactionThreshold { get; set; }
+
+        [Parameter("Live Reaction Strong Threshold", Group = "22 · Complete Intelligence", DefaultValue = 82, MinValue = 50, MaxValue = 99)]
+        public int LiveReactionStrongThreshold { get; set; }
+
+        [Parameter("Minimum Live Reaction Evidence", Group = "22 · Complete Intelligence", DefaultValue = 3, MinValue = 1, MaxValue = 8)]
+        public int MinimumLiveReactionEvidence { get; set; }
+
+        [Parameter("Use Volume Expansion Evidence", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseVolumeExpansionEvidence { get; set; }
+
+        [Parameter("Use MACD Evidence", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseMacdEvidence { get; set; }
+
+        [Parameter("Use VWAP Evidence", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseVwapEvidence { get; set; }
+
+        [Parameter("Use Healthy Volatility Evidence", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseHealthyVolatilityEvidence { get; set; }
+
+        [Parameter("Minimum Smart Direction Share", Group = "22 · Complete Intelligence", DefaultValue = 57, MinValue = 50, MaxValue = 95)]
+        public int MinimumSmartDirectionShare { get; set; }
+
+        [Parameter("Smart Score Temperature", Group = "22 · Complete Intelligence", DefaultValue = 12.0, MinValue = 1.0, MaxValue = 50.0, Step = 0.5)]
+        public double SmartScoreTemperature { get; set; }
+
+        [Parameter("Smart Consensus Threshold", Group = "22 · Complete Intelligence", DefaultValue = 57, MinValue = 50, MaxValue = 95)]
+        public int SmartConsensusThreshold { get; set; }
+
+        [Parameter("Adaptive Regime Weighting", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool AdaptiveRegimeWeighting { get; set; }
+
+        [Parameter("Use Multi TF Level Map", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseMultiTfLevelMap { get; set; }
+
+        [Parameter("Smart Level Cluster ATR", Group = "22 · Complete Intelligence", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 1.0, Step = 0.01)]
+        public double SmartLevelClusterAtr { get; set; }
+
+        [Parameter("Smart Target Quality", Group = "22 · Complete Intelligence", DefaultValue = 58, MinValue = 40, MaxValue = 100)]
+        public int SmartTargetQuality { get; set; }
+
+        [Parameter("Smart Stop Quality", Group = "22 · Complete Intelligence", DefaultValue = 55, MinValue = 40, MaxValue = 100)]
+        public int SmartStopQuality { get; set; }
+
+        [Parameter("Smart Exit Pressure Threshold", Group = "22 · Complete Intelligence", DefaultValue = 65, MinValue = 40, MaxValue = 95)]
+        public int SmartExitPressureThreshold { get; set; }
+
+        [Parameter("Smart Alert Cooldown Seconds", Group = "22 · Complete Intelligence", DefaultValue = 8, MinValue = 1, MaxValue = 60)]
+        public int SmartAlertCooldownSeconds { get; set; }
+
+        [Parameter("Smart Weekly Context", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool SmartWeeklyContext { get; set; }
+
+        [Parameter("Block Same-Bar Reentry After Exit", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool BlockSameBarReentryAfterExit { get; set; }
+
+        [Parameter("Allow Execution Frame Stop Fallback", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool AllowExecutionFrameStopFallback { get; set; }
+
+        [Parameter("Use Historical Choppiness Guard", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool UseHistoricalChoppinessGuard { get; set; }
+
+        [Parameter("Alert On News Event", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool AlertOnNewsEvent { get; set; }
+
+        [Parameter("Alert On Session Block", Group = "22 · Complete Intelligence", DefaultValue = false)]
+        public bool AlertOnSessionBlock { get; set; }
+
+        [Parameter("Alert On Spread Block", Group = "22 · Complete Intelligence", DefaultValue = false)]
+        public bool AlertOnSpreadBlock { get; set; }
+
+        [Parameter("Alert On Friday Block", Group = "22 · Complete Intelligence", DefaultValue = false)]
+        public bool AlertOnFridayBlock { get; set; }
+
+        [Parameter("Alert On Regime No Trade", Group = "22 · Complete Intelligence", DefaultValue = false)]
+        public bool AlertOnRegimeNoTrade { get; set; }
+
+        [Parameter("Alert On Cooldown Block", Group = "22 · Complete Intelligence", DefaultValue = false)]
+        public bool AlertOnCooldownBlock { get; set; }
+
+        [Parameter("Alert On Exit Plan Update", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool AlertOnExitPlanUpdate { get; set; }
+
+        [Parameter("Show Engine Status", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool ShowEngineStatus { get; set; }
+
+        [Parameter("Show Level Prices In Unified Panel", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool ShowLevelPricesInUnifiedPanel { get; set; }
+
+        [Parameter("Show Trade Plan Panel", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool ShowTradePlanPanel { get; set; }
+
+        [Parameter("Show Trade Action Buttons", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool ShowTradeActionButtons { get; set; }
+
+        [Parameter("Action Button Margin", Group = "22 · Complete Intelligence", DefaultValue = 2, MinValue = 0, MaxValue = 20)]
+        public int ActionButtonMargin { get; set; }
+
+        [Parameter("Prediction Zone Line Style", Group = "22 · Complete Intelligence", DefaultValue = LineStyle.Dots)]
+        public LineStyle PredictionZoneLineStyle { get; set; }
+
+        [Parameter("Prediction Trigger Line Style", Group = "22 · Complete Intelligence", DefaultValue = LineStyle.Solid)]
+        public LineStyle PredictionTriggerLineStyle { get; set; }
+
+        [Parameter("Prediction Target Line Style", Group = "22 · Complete Intelligence", DefaultValue = LineStyle.Dots)]
+        public LineStyle PredictionTargetLineStyle { get; set; }
+
+        [Parameter("Prediction Color", Group = "22 · Complete Intelligence", DefaultValue = "#4A90E2")]
+        public Color PredictionColor { get; set; }
+
+        [Parameter("Strong BUY Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "Lime")]
+        public Color StrongBuyArrowColor { get; set; }
+
+        [Parameter("Strong SELL Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "Red")]
+        public Color StrongSellArrowColor { get; set; }
+
+        [Parameter("Confirmed BUY Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "Lime")]
+        public Color ConfirmedBuyArrowColor { get; set; }
+
+        [Parameter("Confirmed SELL Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "Red")]
+        public Color ConfirmedSellArrowColor { get; set; }
+
+        [Parameter("Caution BUY Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "#9AA7B4")]
+        public Color CautionBuyArrowColor { get; set; }
+
+        [Parameter("Caution SELL Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "#9AA7B4")]
+        public Color CautionSellArrowColor { get; set; }
+
+        [Parameter("Blocked / Reaction Arrow Color", Group = "22 · Complete Intelligence", DefaultValue = "#9AA7B4")]
+        public Color BlockedReactionArrowColor { get; set; }
+
+        [Parameter("Fallback TP1 RR", Group = "22 · Complete Intelligence", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 10, Step = 0.05)]
+        public double FallbackTp1RR { get; set; }
+
+        [Parameter("Fallback TP2 RR", Group = "22 · Complete Intelligence", DefaultValue = 3.2, MinValue = 0.8, MaxValue = 20, Step = 0.05)]
+        public double FallbackTp2RR { get; set; }
+
+        [Parameter("Fallback TP3 RR", Group = "22 · Complete Intelligence", DefaultValue = 4.8, MinValue = 1.0, MaxValue = 30, Step = 0.05)]
+        public double FallbackTp3RR { get; set; }
+
+        [Parameter("Fallback TP4 RR", Group = "22 · Complete Intelligence", DefaultValue = 6.5, MinValue = 1.5, MaxValue = 40, Step = 0.05)]
+        public double FallbackTp4RR { get; set; }
+
+        // ============================================================
         // RUNTIME MODELS
         // ============================================================
 
@@ -879,6 +1036,7 @@ namespace cAlgo
             public string Kind;
             public string Timeframe;
             public int Age;
+            public int Hits;
         }
 
         private sealed class Zone
@@ -1186,10 +1344,16 @@ namespace cAlgo
         {
             public int Direction;
             public int Confidence;
+            public double Entry;
+            public double StopLoss;
             public double ZoneLow;
             public double ZoneHigh;
             public double Trigger;
             public double Target;
+            public double Target1;
+            public double Target2;
+            public double Target3;
+            public double Target4;
             public string Reason;
         }
 
@@ -1203,6 +1367,8 @@ namespace cAlgo
             public int IndependentEvidence;
             public int StructuralConfirmations;
             public int RetestQuality;
+            public int BuyShare;
+            public int SellShare;
             public string Regime;
             public int RegimeQuality;
             public bool TriggerReady;
@@ -1282,6 +1448,10 @@ namespace cAlgo
 
         private int _lastEvaluatedM5 = -1;
         private int _lastSignalM5 = -1;
+        private int _lastConfirmedM5 = -1;
+        private int _lastConfirmedDirection = 0;
+        private int _lastExitM5 = -1;
+        private bool _outcomeRegistered;
         private int _lastAutoM5 = -1;
         private int _lastEarlyAlertM5 = -1;
         private int _tp1Hit;
@@ -1326,7 +1496,6 @@ namespace cAlgo
             new Dictionary<int, int>();
 
         private DateTime _lastBrokerModifyUtc = DateTime.MinValue;
-        private int _lastEventGuardM5 = -1;
         private int _lastRestrictionM5 = -1;
         private int _lastSmartDecisionAlertM5 = -1;
         private int _lastHistoricalHostBar = -1;
@@ -1539,7 +1708,8 @@ namespace cAlgo
                     }
 
                     if (!_decision.EntryAllowed &&
-                        AlertOnEntryRestriction &&
+                        RestrictionAlertEnabled(
+                            _decision.BlockReason) &&
                         _lastRestrictionM5 !=
                         closedM5 &&
                         !string.IsNullOrWhiteSpace(
@@ -1887,15 +2057,16 @@ namespace cAlgo
         // FRAME ANALYSIS
         // ============================================================
 
-        private Frame AnalyzeFrame(
+                private Frame AnalyzeFrame(
             Bars bars,
             int index)
         {
-            Frame f = new Frame
-            {
-                Bars = bars,
-                Index = index
-            };
+            Frame f =
+                new Frame
+                {
+                    Bars = bars,
+                    Index = index
+                };
 
             if (bars == null ||
                 index < 30 ||
@@ -1923,50 +2094,59 @@ namespace cAlgo
                     f.Atr);
 
             f.MssBull =
+                UseMssChoch &&
                 BullMss(
                     bars,
                     index,
                     f.Atr);
 
             f.MssBear =
+                UseMssChoch &&
                 BearMss(
                     bars,
                     index,
                     f.Atr);
 
             f.ChochBull =
+                UseMssChoch &&
                 BullChoch(
                     bars,
                     index);
 
             f.ChochBear =
+                UseMssChoch &&
                 BearChoch(
                     bars,
                     index);
 
             f.DisplacementBull =
+                UseDisplacement &&
                 BullDisplacement(
                     bars,
                     index,
                     f.Atr);
 
             f.DisplacementBear =
+                UseDisplacement &&
                 BearDisplacement(
                     bars,
                     index,
                     f.Atr);
 
             f.LiquidityBull =
+                UseLiquiditySweep &&
                 BullLiquiditySweep(
                     bars,
                     index);
 
             f.LiquidityBear =
+                UseLiquiditySweep &&
                 BearLiquiditySweep(
                     bars,
                     index);
 
             f.FvgBull =
+                UseFvg &&
                 FindNearestFvg(
                     bars,
                     index,
@@ -1974,6 +2154,7 @@ namespace cAlgo
                     f.Atr) != null;
 
             f.FvgBear =
+                UseFvg &&
                 FindNearestFvg(
                     bars,
                     index,
@@ -1981,6 +2162,7 @@ namespace cAlgo
                     f.Atr) != null;
 
             f.ObBull =
+                UseOrderBlock &&
                 FindNearestOrderBlock(
                     bars,
                     index,
@@ -1988,6 +2170,7 @@ namespace cAlgo
                     f.Atr) != null;
 
             f.ObBear =
+                UseOrderBlock &&
                 FindNearestOrderBlock(
                     bars,
                     index,
@@ -1996,11 +2179,13 @@ namespace cAlgo
 
             f.TrendBull =
                 f.EmaFast > f.EmaSlow &&
-                bars.ClosePrices[index] > f.EmaFast;
+                bars.ClosePrices[index] >
+                f.EmaFast;
 
             f.TrendBear =
                 f.EmaFast < f.EmaSlow &&
-                bars.ClosePrices[index] < f.EmaFast;
+                bars.ClosePrices[index] <
+                f.EmaFast;
 
             f.MomentumBull =
                 Momentum(
@@ -2027,20 +2212,6 @@ namespace cAlgo
                     bars,
                     index,
                     -1);
-
-            f.EqualHigh =
-                FindEqualHigh(
-                    bars,
-                    index,
-                    bars.ClosePrices[index],
-                    f.Atr) > 0;
-
-            f.EqualLow =
-                FindEqualLow(
-                    bars,
-                    index,
-                    bars.ClosePrices[index],
-                    f.Atr) > 0;
 
             f.VolumeBull =
                 HasVolumeExpansion(
@@ -2078,17 +2249,39 @@ namespace cAlgo
                     index,
                     -1);
 
-            f.HealthyBull =
+            f.VolatilityBull =
                 HasHealthyVolatility(
                     bars,
                     index,
                     1);
 
-            f.HealthyBear =
+            f.VolatilityBear =
                 HasHealthyVolatility(
                     bars,
                     index,
                     -1);
+
+            f.Choppy =
+                UseHistoricalChoppinessGuard &&
+                IsChoppy(
+                    bars,
+                    index);
+
+            f.EqualHigh =
+                UseEqualHighLow &&
+                FindEqualHigh(
+                    bars,
+                    index,
+                    bars.ClosePrices[index],
+                    f.Atr) > 0;
+
+            f.EqualLow =
+                UseEqualHighLow &&
+                FindEqualLow(
+                    bars,
+                    index,
+                    bars.ClosePrices[index],
+                    f.Atr) > 0;
 
             int bull = 0;
             int bear = 0;
@@ -2114,16 +2307,16 @@ namespace cAlgo
             AddScore(f.MomentumBear, 8, ref bear, ref evidence);
             AddScore(f.RejectionBull, 6, ref bull, ref evidence);
             AddScore(f.RejectionBear, 6, ref bear, ref evidence);
+            AddScore(f.VolumeBull, 3, ref bull, ref evidence);
+            AddScore(f.VolumeBear, 3, ref bear, ref evidence);
+            AddScore(f.MacdBull, 3, ref bull, ref evidence);
+            AddScore(f.MacdBear, 3, ref bear, ref evidence);
+            AddScore(f.VwapBull, 2, ref bull, ref evidence);
+            AddScore(f.VwapBear, 2, ref bear, ref evidence);
+            AddScore(f.VolatilityBull, 2, ref bull, ref evidence);
+            AddScore(f.VolatilityBear, 2, ref bear, ref evidence);
             AddScore(f.EqualLow, 5, ref bull, ref evidence);
             AddScore(f.EqualHigh, 5, ref bear, ref evidence);
-            AddScore(f.VolumeBull, 4, ref bull, ref evidence);
-            AddScore(f.VolumeBear, 4, ref bear, ref evidence);
-            AddScore(f.MacdBull, 4, ref bull, ref evidence);
-            AddScore(f.MacdBear, 4, ref bear, ref evidence);
-            AddScore(f.VwapBull, 4, ref bull, ref evidence);
-            AddScore(f.VwapBear, 4, ref bear, ref evidence);
-            AddScore(f.HealthyBull, 3, ref bull, ref evidence);
-            AddScore(f.HealthyBear, 3, ref bear, ref evidence);
 
             if (f.Rsi > 50)
                 bull += 3;
@@ -2132,13 +2325,19 @@ namespace cAlgo
 
             if (f.Adx >= AdxMinimum)
             {
-                if (DmiBias(bars, index) > 0)
+                int dmi =
+                    DmiBias(
+                        bars,
+                        index);
+
+                if (dmi > 0)
                     bull += 4;
-                else if (DmiBias(bars, index) < 0)
+                else if (dmi < 0)
                     bear += 4;
             }
 
-            if (UseEmaSlope && index > 2)
+            if (UseEmaSlope &&
+                index > 2)
             {
                 double previous =
                     Ema(
@@ -2155,19 +2354,25 @@ namespace cAlgo
             if (AvoidRsiExhaustion)
             {
                 if (f.Rsi >= 75)
-                    bull = Math.Max(0, bull - 5);
+                    bull = Math.Max(
+                        0,
+                        bull - 5);
 
                 if (f.Rsi <= 25)
-                    bear = Math.Max(0, bear - 5);
+                    bear = Math.Max(
+                        0,
+                        bear - 5);
             }
 
             f.BullScore = bull;
             f.BearScore = bear;
             f.Evidence = evidence;
 
-            if (bull >= 35 && bull >= bear + 8)
+            if (bull >= 35 &&
+                bull >= bear + 8)
                 f.Direction = 1;
-            else if (bear >= 35 && bear >= bull + 8)
+            else if (bear >= 35 &&
+                     bear >= bull + 8)
                 f.Direction = -1;
 
             double total =
@@ -2175,18 +2380,24 @@ namespace cAlgo
                     1,
                     bull + bear);
 
-            int share =
-                (int)Math.Round(
-                    100.0 *
-                    Math.Max(bull, bear) /
-                    total);
+            double strongest =
+                100.0 *
+                Math.Max(
+                    bull,
+                    bear) /
+                total;
 
             f.Quality =
                 ClampInt(
                     (int)Math.Round(
-                        share * 0.55 +
-                        Math.Min(100, f.Adx * 1.5) * 0.15 +
-                        Math.Min(100, evidence * 5) * 0.30),
+                        strongest * 0.50 +
+                        Math.Min(
+                            100,
+                            f.Adx * 1.5) * 0.15 +
+                        Math.Min(
+                            100,
+                            evidence * 5) * 0.25 +
+                        (f.Choppy ? 0 : 10) * 0.10),
                     0,
                     100);
 
@@ -2428,74 +2639,42 @@ namespace cAlgo
         // DECISION
         // ============================================================
 
-        private Decision BuildDecision(
+                private Decision BuildDecision(
             int chartIndex,
             int closedM5,
             DateTime reference)
         {
-            Decision d = new Decision();
+            Decision d =
+                new Decision();
 
             double buy = 0;
             double sell = 0;
             int evidence = 0;
 
-            AddFrame(
-                _m5Frame,
-                M5Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
+            AddFrame(_m5Frame, M5Weight, ref buy, ref sell, ref evidence);
+            AddFrame(_m15Frame, M15Weight, ref buy, ref sell, ref evidence);
+            AddFrame(_m30Frame, M30Weight, ref buy, ref sell, ref evidence);
+            AddFrame(_h1Frame, H1Weight, ref buy, ref sell, ref evidence);
+            AddFrame(_h4Frame, H4Weight, ref buy, ref sell, ref evidence);
+            AddFrame(_d1Frame, D1Weight, ref buy, ref sell, ref evidence);
 
-            AddFrame(
-                _m15Frame,
-                M15Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
-
-            AddFrame(
-                _m30Frame,
-                M30Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
-
-            AddFrame(
-                _h1Frame,
-                H1Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
-
-            AddFrame(
-                _h4Frame,
-                H4Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
-
-            AddFrame(
-                _d1Frame,
-                D1Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
-
-            AddFrame(
-                _w1Frame,
-                W1Weight,
-                ref buy,
-                ref sell,
-                ref evidence);
+            if (SmartWeeklyContext)
+                AddFrame(_w1Frame, W1Weight, ref buy, ref sell, ref evidence);
 
             if (UseAdvancedConfluence)
             {
-                buy += LiveBias(chartIndex, 1);
-                sell += LiveBias(chartIndex, -1);
+                buy +=
+                    LiveBias(
+                        chartIndex,
+                        1);
+
+                sell +=
+                    LiveBias(
+                        chartIndex,
+                        -1);
             }
 
-            if (EnableSmartDecisionEngine &&
-                UsePremiumDiscount)
+            if (UsePremiumDiscount)
             {
                 int pd =
                     PremiumDiscountBias(
@@ -2508,8 +2687,7 @@ namespace cAlgo
                     sell += 6;
             }
 
-            if (EnableSmartDecisionEngine &&
-                UseM1Trigger &&
+            if (UseM1Trigger &&
                 _m1Frame != null)
             {
                 if (_m1Frame.Direction == 1)
@@ -2518,24 +2696,64 @@ namespace cAlgo
                     sell += 3;
             }
 
-            if (UsePremiumDiscount)
-            {
-                int pd = PremiumDiscountBias(
+            string regime =
+                DetectRegime(
                     _m5Bars,
                     closedM5);
 
-                if (pd == 1)
-                    buy += 6;
-                else if (pd == -1)
-                    sell += 6;
+            if (AdaptiveRegimeWeighting &&
+                _m5Frame != null)
+            {
+                if (regime == "EXPANSION")
+                {
+                    if (_m5Frame.DisplacementBull)
+                        buy += 4;
+
+                    if (_m5Frame.DisplacementBear)
+                        sell += 4;
+
+                    if (_m5Frame.VolumeBull)
+                        buy += 2;
+
+                    if (_m5Frame.VolumeBear)
+                        sell += 2;
+                }
+                else if (regime == "RANGE" ||
+                         regime == "TRANSITION")
+                {
+                    if (_m5Frame.LiquidityBull)
+                        buy += 3;
+
+                    if (_m5Frame.LiquidityBear)
+                        sell += 3;
+
+                    if (_m5Frame.FvgBull)
+                        buy += 2;
+
+                    if (_m5Frame.FvgBear)
+                        sell += 2;
+
+                    if (_m5Frame.ObBull)
+                        buy += 2;
+
+                    if (_m5Frame.ObBear)
+                        sell += 2;
+                }
+                else if (regime == "COMPRESSION")
+                {
+                    buy *= 0.95;
+                    sell *= 0.95;
+                }
             }
 
-            if (UseM1Trigger && _m1Frame != null)
+            if (UseHistoricalChoppinessGuard &&
+                _m5Frame != null &&
+                _m15Frame != null &&
+                _m5Frame.Choppy &&
+                _m15Frame.Choppy)
             {
-                if (_m1Frame.Direction == 1)
-                    buy += 3;
-                else if (_m1Frame.Direction == -1)
-                    sell += 3;
+                buy *= 0.90;
+                sell *= 0.90;
             }
 
             double temperature =
@@ -2561,7 +2779,7 @@ namespace cAlgo
                         -12,
                         12));
 
-            double softTotal =
+            double total =
                 Math.Max(
                     1e-9,
                     expBuy + expSell);
@@ -2571,7 +2789,7 @@ namespace cAlgo
                     (int)Math.Round(
                         100.0 *
                         expBuy /
-                        softTotal),
+                        total),
                     0,
                     100);
 
@@ -2579,10 +2797,23 @@ namespace cAlgo
                 100 -
                 buyShare;
 
+            d.BuyShare = buyShare;
+            d.SellShare = sellShare;
+
+            int strongestShare =
+                Math.Max(
+                    buyShare,
+                    sellShare);
+
             d.Direction =
-                buyShare >= sellShare
-                    ? 1
-                    : -1;
+                strongestShare >=
+                Math.Max(
+                    50,
+                    MinimumSmartDirectionShare)
+                    ? (buyShare >= sellShare
+                        ? 1
+                        : -1)
+                    : 0;
 
             d.Edge =
                 Math.Abs(
@@ -2601,40 +2832,57 @@ namespace cAlgo
                 StructuralConfirmations(
                     d.Direction);
 
-            d.Regime =
-                DetectRegime(
-                    _m5Bars,
-                    closedM5);
+            d.Regime = regime;
 
             d.RegimeQuality =
                 RegimeQuality(
-                    d.Regime,
+                    regime,
                     _m5Bars,
                     closedM5);
 
             d.SmartQuality =
                 ClampInt(
                     (int)Math.Round(
-                        Math.Max(buyShare, sellShare) * 0.28 +
-                        d.TimeframeAgreement * 0.24 +
-                        Math.Min(100, d.IndependentEvidence * 14) * 0.18 +
-                        Math.Min(100, d.StructuralConfirmations * 18) * 0.18 +
+                        strongestShare * 0.28 +
+                        d.TimeframeAgreement * 0.23 +
+                        Math.Min(
+                            100,
+                            d.IndependentEvidence * 10) * 0.20 +
+                        Math.Min(
+                            100,
+                            d.StructuralConfirmations * 16) * 0.17 +
                         d.RegimeQuality * 0.12),
                     0,
                     100);
 
-            d.Confidence =
-                ClampInt(
-                    (int)Math.Round(
-                        Math.Max(buyShare, sellShare) * 0.45 +
-                        d.TimeframeAgreement * 0.25 +
-                        d.SmartQuality * 0.30),
-                    0,
-                    100);
+            if (d.Direction == 0)
+            {
+                d.Confidence =
+                    strongestShare;
+
+                d.TriggerReady = false;
+                d.EntryAllowed = false;
+                d.BlockReason =
+                    "SMART CONSENSUS";
+
+                d.Reason =
+                    "NEUTRAL | BUY " +
+                    buyShare +
+                    " | SELL " +
+                    sellShare;
+
+                return d;
+            }
 
             d.Confidence =
                 CalibratedConfidence(
-                    d.Confidence,
+                    ClampInt(
+                        (int)Math.Round(
+                            strongestShare * 0.45 +
+                            d.TimeframeAgreement * 0.25 +
+                            d.SmartQuality * 0.30),
+                        0,
+                        100),
                     d.Direction);
 
             if (HigherTfPenalty > 0)
@@ -2651,7 +2899,8 @@ namespace cAlgo
                     _h4Frame.Direction !=
                     d.Direction;
 
-                if (h1Against || h4Against)
+                if (h1Against ||
+                    h4Against)
                 {
                     d.Confidence =
                         ClampInt(
@@ -2749,8 +2998,13 @@ namespace cAlgo
                         100);
         }
 
-        private int IndependentEvidence(int direction)
+                private int IndependentEvidence(
+            int direction)
         {
+            if (_m5Frame == null ||
+                direction == 0)
+                return 0;
+
             int count = 0;
 
             if (direction == 1)
@@ -2761,6 +3015,10 @@ namespace cAlgo
                 if (_m5Frame.ObBull) count++;
                 if (_m5Frame.DisplacementBull) count++;
                 if (_m5Frame.MomentumBull) count++;
+                if (_m5Frame.VolumeBull) count++;
+                if (_m5Frame.MacdBull) count++;
+                if (_m5Frame.VwapBull) count++;
+                if (_m5Frame.VolatilityBull) count++;
             }
             else
             {
@@ -2770,38 +3028,172 @@ namespace cAlgo
                 if (_m5Frame.ObBear) count++;
                 if (_m5Frame.DisplacementBear) count++;
                 if (_m5Frame.MomentumBear) count++;
+                if (_m5Frame.VolumeBear) count++;
+                if (_m5Frame.MacdBear) count++;
+                if (_m5Frame.VwapBear) count++;
+                if (_m5Frame.VolatilityBear) count++;
             }
 
             return count;
         }
 
-        private int StructuralConfirmations(int direction)
+                private int StructuralConfirmations(
+            int direction)
         {
+            if (_m5Frame == null ||
+                direction == 0)
+                return 0;
+
             int count = 0;
 
             if (direction == 1)
             {
                 if (_m5Frame.StructureBull) count++;
-                if (_m5Frame.MssBull || _m5Frame.ChochBull) count++;
+                if (_m5Frame.MssBull ||
+                    _m5Frame.ChochBull) count++;
                 if (_m5Frame.DisplacementBull) count++;
-                if (_m15Frame.StructureBull) count++;
-                if (_h1Frame.StructureBull) count++;
-                if (_h4Frame.StructureBull) count++;
+                if (_m15Frame != null &&
+                    _m15Frame.StructureBull) count++;
+                if (_h1Frame != null &&
+                    _h1Frame.StructureBull) count++;
+                if (_h4Frame != null &&
+                    _h4Frame.StructureBull) count++;
             }
             else
             {
                 if (_m5Frame.StructureBear) count++;
-                if (_m5Frame.MssBear || _m5Frame.ChochBear) count++;
+                if (_m5Frame.MssBear ||
+                    _m5Frame.ChochBear) count++;
                 if (_m5Frame.DisplacementBear) count++;
-                if (_m15Frame.StructureBear) count++;
-                if (_h1Frame.StructureBear) count++;
-                if (_h4Frame.StructureBear) count++;
+                if (_m15Frame != null &&
+                    _m15Frame.StructureBear) count++;
+                if (_h1Frame != null &&
+                    _h1Frame.StructureBear) count++;
+                if (_h4Frame != null &&
+                    _h4Frame.StructureBear) count++;
             }
 
             return count;
         }
 
-        private bool PassesDecisionFilters(
+        private bool CanAcceptConfirmedDirection(
+            int direction,
+            int closedM5)
+        {
+            if (direction == 0)
+                return false;
+
+            if (!PreventRapidDirectionFlip)
+                return true;
+
+            if (_lastConfirmedDirection == 0 ||
+                _lastConfirmedM5 < 0)
+                return true;
+
+            int elapsed =
+                closedM5 -
+                _lastConfirmedM5;
+
+            if (elapsed < 0)
+                return false;
+
+            if (direction ==
+                _lastConfirmedDirection)
+            {
+                if (_plan != null)
+                    return false;
+
+                if (_lastExitM5 >= 0 &&
+                    closedM5 -
+                    _lastExitM5 <
+                    Math.Max(
+                        0,
+                        ExitReentryCooldownM5))
+                    return false;
+
+                return true;
+            }
+
+            if (elapsed <
+                Math.Max(
+                    1,
+                    OppositeSignalCooldownM5))
+                return false;
+
+            if (_plan != null &&
+                !AllowOppositeWhileActive)
+                return false;
+
+            if (RequireM15ReversalForOpposite)
+            {
+                if (_m15Frame == null ||
+                    _m15Frame.Direction !=
+                    direction)
+                    return false;
+
+                bool structural =
+                    direction == 1
+                        ? (_m15Frame.MssBull ||
+                           _m15Frame.ChochBull)
+                        : (_m15Frame.MssBear ||
+                           _m15Frame.ChochBear);
+
+                bool force =
+                    direction == 1
+                        ? (_m15Frame.DisplacementBull &&
+                           _m15Frame.LiquidityBull)
+                        : (_m15Frame.DisplacementBear &&
+                           _m15Frame.LiquidityBear);
+
+                if (!(RequireReversalForce
+                        ? structural && force
+                        : structural || force))
+                    return false;
+
+                int m15Index =
+                    ClosedIndex(
+                        _m15Bars,
+                        _m5Bars.OpenTimes[closedM5]);
+
+                if (m15Index >= 0 &&
+                    !StableDirection(
+                        _m15Bars,
+                        m15Index,
+                        direction,
+                        Math.Max(
+                            1,
+                            SmartFlipConfirmationBars)))
+                    return false;
+            }
+
+            int m5Evidence = 0;
+
+            if (_m5Frame != null)
+            {
+                if (direction == 1)
+                {
+                    if (_m5Frame.MssBull) m5Evidence++;
+                    if (_m5Frame.ChochBull) m5Evidence++;
+                    if (_m5Frame.DisplacementBull) m5Evidence++;
+                    if (_m5Frame.LiquidityBull) m5Evidence++;
+                }
+                else
+                {
+                    if (_m5Frame.MssBear) m5Evidence++;
+                    if (_m5Frame.ChochBear) m5Evidence++;
+                    if (_m5Frame.DisplacementBear) m5Evidence++;
+                    if (_m5Frame.LiquidityBear) m5Evidence++;
+                }
+            }
+
+            return
+                m5Evidence >=
+                Math.Max(
+                    1,
+                    MinimumOppositeM5Structure);
+        }
+
+                private bool PassesDecisionFilters(
             int chartIndex,
             int closedM5,
             DateTime reference,
@@ -2810,7 +3202,8 @@ namespace cAlgo
         {
             reason = "";
 
-            if (d.Direction == 0)
+            if (d == null ||
+                d.Direction == 0)
             {
                 reason = "NO DIRECTION";
                 return false;
@@ -2835,48 +3228,48 @@ namespace cAlgo
             }
 
             if (RequireHigherTfAgreement &&
-                d.TimeframeAgreement < MinimumTimeframeAgreement)
+                d.TimeframeAgreement <
+                MinimumTimeframeAgreement)
             {
                 reason = "MTF AGREEMENT";
                 return false;
             }
 
-            if (d.IndependentEvidence < MinimumIndependentEvidence)
+            if (d.IndependentEvidence <
+                Math.Max(
+                    MinimumIndependentEvidence,
+                    EnableSmartDecisionEngine
+                        ? SmartMinimumIndependentEvidence
+                        : 0))
             {
                 reason = "INDEPENDENT EVIDENCE";
                 return false;
             }
 
             if (RequireStructuralConfirmation &&
-                d.StructuralConfirmations < MinimumStructuralConfirmations)
+                d.StructuralConfirmations <
+                MinimumStructuralConfirmations)
             {
                 reason = "STRUCTURE";
                 return false;
             }
 
-            if (RequireCoreAgreement)
+            if (RequireCoreAgreement &&
+                _m5Frame != null &&
+                _m15Frame != null)
             {
-                bool m15Neutral =
-                    _m15Frame != null &&
-                    _m15Frame.Direction == 0;
+                bool aligned =
+                    d.Direction == 1
+                        ? _m5Frame.Direction == 1 &&
+                          (_m15Frame.Direction == 1 ||
+                           (_m15Frame.Direction == 0 &&
+                            AllowM15NeutralPullback))
+                        : _m5Frame.Direction == -1 &&
+                          (_m15Frame.Direction == -1 ||
+                           (_m15Frame.Direction == 0 &&
+                            AllowM15NeutralPullback));
 
-                if (d.Direction == 1 &&
-                    (_m5Frame.Direction != 1 ||
-                     (!m15Neutral &&
-                      _m15Frame.Direction != 1) ||
-                     (m15Neutral &&
-                      !AllowM15NeutralPullback)))
-                {
-                    reason = "CORE ALIGNMENT";
-                    return false;
-                }
-
-                if (d.Direction == -1 &&
-                    (_m5Frame.Direction != -1 ||
-                     (!m15Neutral &&
-                      _m15Frame.Direction != -1) ||
-                     (m15Neutral &&
-                      !AllowM15NeutralPullback)))
+                if (!aligned)
                 {
                     reason = "CORE ALIGNMENT";
                     return false;
@@ -2884,10 +3277,9 @@ namespace cAlgo
             }
 
             if (UseM5Confirmation &&
-                ((d.Direction == 1 &&
-                  _m5Frame.Direction != 1) ||
-                 (d.Direction == -1 &&
-                  _m5Frame.Direction != -1)))
+                (_m5Frame == null ||
+                 _m5Frame.Direction !=
+                 d.Direction))
             {
                 reason = "M5 CONFIRMATION";
                 return false;
@@ -2899,89 +3291,85 @@ namespace cAlgo
                     closedM5,
                     d.Direction))
             {
-                reason = "M5 TRIGGER";
-                return false;
+                bool directOverride =
+                    AllowDirectDisplacementOverride &&
+                    d.Confidence >=
+                    SmartStrongSetupQuality &&
+                    d.Edge >=
+                    DirectDisplacementOverrideScore &&
+                    _m5Frame != null &&
+                    (d.Direction == 1
+                        ? _m5Frame.DisplacementBull
+                        : _m5Frame.DisplacementBear);
+
+                bool strongOverride =
+                    AllowStrongTriggerOverride &&
+                    AllowStrongM5TriggerOverride &&
+                    d.Confidence >= 85 &&
+                    d.Edge >= 20;
+
+                if (!(directOverride ||
+                      strongOverride))
+                {
+                    reason = "M5 TRIGGER";
+                    return false;
+                }
             }
 
             if (UseM1Trigger &&
                 _m1Frame != null &&
                 _m1Frame.Direction != 0 &&
-                _m1Frame.Direction != d.Direction)
-            {
-                reason = "M1 MISALIGNMENT";
-                return false;
-            }
-            
-if (UseM1Trigger &&
-                _m1Frame != null &&
-                _m1Frame.Direction != 0 &&
-                _m1Frame.Direction != d.Direction)
+                _m1Frame.Direction !=
+                d.Direction)
             {
                 reason = "M1 MISALIGNMENT";
                 return false;
             }
 
-            if (UseSmartEntryQualityFilter)
+            if (EnableSmartDecisionEngine)
             {
-                int smartFloor =
+                int strongest =
                     Math.Max(
-                        40,
-                        SmartQualityThreshold);
+                        d.BuyShare,
+                        d.SellShare);
 
-                if (EnableSmartDecisionEngine &&
-                    RequireSmartConsensus)
+                if (RequireSmartConsensus &&
+                    strongest <
+                    SmartConsensusThreshold)
                 {
-                    smartFloor =
-                        Math.Max(
-                            smartFloor,
-                            SmartConsensusThreshold);
-                }
-                else if (EnableSmartDecisionEngine &&
-                         AllowSmartSoftGate)
-                {
-                    smartFloor =
-                        Math.Max(
-                            smartFloor,
-                            SmartMinimumConsensusFloor());
+                    bool soft =
+                        AllowSmartSoftGate &&
+                        d.SmartQuality >=
+                        SmartStrongSetupQuality &&
+                        d.Edge >=
+                        SmartStrongSetupEdge &&
+                        d.IndependentEvidence >=
+                        SmartMinimumIndependentEvidence + 1;
+
+                    if (!soft)
+                    {
+                        reason = "SMART CONSENSUS";
+                        return false;
+                    }
                 }
 
-                if (d.SmartQuality <
-                    smartFloor)
+                if (d.TimeframeAgreement <
+                    SmartMinimumTimeframeAgreement)
                 {
-                    reason =
-                        "SMART QUALITY";
+                    reason = "SMART MTF";
                     return false;
                 }
             }
 
-            if (EnableSmartDecisionEngine &&
-                d.IndependentEvidence <
+            if (UseSmartEntryQualityFilter &&
+                d.SmartQuality <
                 Math.Max(
-                    MinimumIndependentEvidence,
-                    SmartMinimumIndependentEvidence))
+                    SmartQualityThreshold,
+                    EnableSmartDecisionEngine
+                        ? SmartMinimumConsensusFloor()
+                        : 0))
             {
-                reason =
-                    "SMART EVIDENCE";
-                return false;
-            }
-
-            if (EnableSmartDecisionEngine &&
-                RequireSmartConsensus &&
-                d.Edge <
-                Math.Max(
-                    MinimumEdge,
-                    SmartStrongSetupEdge))
-            {
-                reason =
-                    "SMART CONSENSUS";
-                return false;
-            }
-
-            if (EnableSmartDecisionEngine &&
-                d.TimeframeAgreement <
-                SmartMinimumTimeframeAgreement)
-            {
-                reason = "SMART MTF";
+                reason = "SMART QUALITY";
                 return false;
             }
 
@@ -3028,13 +3416,18 @@ if (UseM1Trigger &&
                 reason = "REGIME NO-TRADE";
                 return false;
             }
-            
-if (UseM1Trigger &&
-                _m1Frame != null &&
-                _m1Frame.Direction != 0 &&
-                _m1Frame.Direction != d.Direction)
+
+            if (UseHistoricalChoppinessGuard &&
+                _m5Frame != null &&
+                _m15Frame != null &&
+                _m5Frame.Choppy &&
+                _m15Frame.Choppy &&
+                d.SmartQuality <
+                Math.Max(
+                    SmartRegimeQualityFloor + 5,
+                    NoTradeMinimumSmartQuality + 5))
             {
-                reason = "M1 TRIGGER MISALIGNED";
+                reason = "CHOP";
                 return false;
             }
 
@@ -3055,7 +3448,8 @@ if (UseM1Trigger &&
                     reference);
 
             if (RequireStableM15Direction &&
-                m15Closed >= StableM15Bars + 5 &&
+                m15Closed >=
+                StableM15Bars + 5 &&
                 !StableDirection(
                     _m15Bars,
                     m15Closed,
@@ -3067,13 +3461,17 @@ if (UseM1Trigger &&
             }
 
             if (RequireRetestQuality &&
-                d.RetestQuality < MinimumRetestQuality)
+                d.RetestQuality <
+                MinimumRetestQuality)
             {
-                if (!(AllowStrongTriggerOverride &&
-                      AllowStrongM5TriggerOverride &&
-                      d.Confidence >= 85 &&
-                      d.Edge >= 20 &&
-                      d.IndependentEvidence >= MinimumIndependentEvidence + 1))
+                bool retestOverride =
+                    AllowStrongTriggerOverride &&
+                    d.Confidence >= 85 &&
+                    d.Edge >= 20 &&
+                    d.IndependentEvidence >=
+                    MinimumIndependentEvidence + 1;
+
+                if (!retestOverride)
                 {
                     reason = "RETEST QUALITY";
                     return false;
@@ -3086,55 +3484,35 @@ if (UseM1Trigger &&
                 return false;
             }
 
-            if (!SessionAllowed(DateTime.UtcNow))
+            if (!SessionAllowed(
+                    DateTime.UtcNow))
             {
                 reason = "SESSION";
                 return false;
             }
 
-            if (!FridayAllowed(DateTime.UtcNow))
+            if (!FridayAllowed(
+                    DateTime.UtcNow))
             {
                 reason = "FRIDAY";
                 return false;
             }
 
-            if (!SpreadAllowed(_m5Bars, closedM5))
+            if (!SpreadAllowed(
+                    _m5Bars,
+                    closedM5))
             {
                 reason = "SPREAD";
                 return false;
             }
 
-            if (UseVolatilityGuard &&
+            if ((UseVolatilityGuard ||
+                 UseVolatilityEventGuard) &&
                 VolatilityBlocked(
                     _m5Bars,
                     closedM5))
             {
                 reason = "VOLATILITY GUARD";
-                return false;
-            }
-
-            if (UseVolatilityEventGuard &&
-                VolatilityBlocked(
-                    _m5Bars,
-                    closedM5))
-            {
-                _lastEventGuardM5 =
-                    closedM5;
-
-                reason =
-                    "VOLATILITY EVENT";
-                return false;
-            }
-
-            if (UseVolatilityEventGuard &&
-                EventGuardCooldownBars > 0 &&
-                _lastEventGuardM5 >= 0 &&
-                closedM5 -
-                _lastEventGuardM5 <
-                EventGuardCooldownBars)
-            {
-                reason =
-                    "EVENT COOLDOWN";
                 return false;
             }
 
@@ -3144,13 +3522,62 @@ if (UseM1Trigger &&
                     out reason))
                 return false;
 
-            if (CooldownBlocked(closedM5))
+            if (!CanAcceptConfirmedDirection(
+                    d.Direction,
+                    closedM5))
+            {
+                reason = "DIRECTION FLIP";
+                return false;
+            }
+
+            if (CooldownBlocked(
+                    closedM5))
             {
                 reason = "COOLDOWN";
                 return false;
             }
 
             return true;
+        }
+
+        private bool RestrictionAlertEnabled(
+            string reason)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    reason))
+                return AlertOnEntryRestriction;
+
+            switch (reason)
+            {
+                case "NEWS BLACKOUT":
+                    return AlertOnNewsEvent ||
+                           AlertOnEntryRestriction;
+
+                case "SESSION":
+                    return AlertOnSessionBlock ||
+                           AlertOnEntryRestriction;
+
+                case "SPREAD":
+                    return AlertOnSpreadBlock ||
+                           AlertOnEntryRestriction;
+
+                case "FRIDAY":
+                    return AlertOnFridayBlock ||
+                           AlertOnEntryRestriction;
+
+                case "REGIME NO-TRADE":
+                case "CHOP":
+                    return AlertOnRegimeNoTrade ||
+                           AlertOnEntryRestriction;
+
+                case "COOLDOWN":
+                case "DIRECTION FLIP":
+                    return AlertOnCooldownBlock ||
+                           AlertOnEntryRestriction;
+
+                default:
+                    return AlertOnEntryRestriction;
+            }
         }
 
         private string BuildReason(
@@ -4127,7 +4554,7 @@ if (UseM1Trigger &&
             return Tp1MinimumRR;
         }
 
-        private double BuildStructuralStop(
+                private double BuildStructuralStop(
             int closedM5,
             int direction,
             double entry,
@@ -4138,64 +4565,71 @@ if (UseM1Trigger &&
             source = "NONE";
             quality = 0;
 
-            double best =
-                direction == 1
-                    ? FindSwingLowBelow(
-                        _m5Bars,
-                        closedM5,
-                        entry)
-                    : FindSwingHighAbove(
-                        _m5Bars,
-                        closedM5,
-                        entry);
+            if (_m5Bars == null ||
+                !IsFinitePositive(entry) ||
+                atr <= 0)
+                return 0;
 
-            if (IsFinitePositive(best))
+            double best = 0;
+
+            if (UseSwingStructureInTrail)
             {
-                source = "SWING";
-                quality = 84;
+                best =
+                    direction == 1
+                        ? FindSwingLowBelow(
+                            _m5Bars,
+                            closedM5,
+                            entry)
+                        : FindSwingHighAbove(
+                            _m5Bars,
+                            closedM5,
+                            entry);
+
+                if (IsFinitePositive(best))
+                {
+                    source = "M5 SWING";
+                    quality = 84;
+                }
             }
 
             if (UseHtfStructureForStop)
             {
-                int htfIndex =
+                int h1Index =
                     ClosedIndex(
                         _h1Bars,
-                        _m5Bars.OpenTimes[closedM5]);
+                        _m5Bars.OpenTimes[
+                            closedM5]);
 
-                double htf =
-                    direction == 1
-                        ? FindSwingLowBelow(
-                            _h1Bars,
-                            htfIndex,
-                            entry)
-                        : FindSwingHighAbove(
-                            _h1Bars,
-                            htfIndex,
-                            entry);
-
-                if (IsFinitePositive(htf))
+                if (h1Index >= 10)
                 {
-                    if (!IsFinitePositive(best))
+                    double htf =
+                        direction == 1
+                            ? FindSwingLowBelow(
+                                _h1Bars,
+                                h1Index,
+                                entry)
+                            : FindSwingHighAbove(
+                                _h1Bars,
+                                h1Index,
+                                entry);
+
+                    if (IsValidStop(
+                            direction,
+                            entry,
+                            htf))
                     {
-                        best = htf;
-                        source = "HTF STRUCTURE";
-                        quality = 88;
-                    }
-                    else if (direction == 1 &&
-                             htf > best &&
-                             htf < entry)
-                    {
-                        best = htf;
-                        source = "HTF STRUCTURE";
-                        quality = 88;
-                    }
-                    else if (direction == -1 &&
-                             htf < best &&
-                             htf > entry)
-                    {
-                        best = htf;
-                        source = "HTF STRUCTURE";
-                        quality = 88;
+                        bool improve =
+                            !IsFinitePositive(best) ||
+                            (direction == 1
+                                ? htf > best
+                                : htf < best);
+
+                        if (improve)
+                        {
+                            best = htf;
+                            source = "H1 STRUCTURE";
+                            quality = 90;
+                        }
                     }
                 }
             }
@@ -4209,7 +4643,7 @@ if (UseM1Trigger &&
 
             if (zone != null)
             {
-                double level =
+                double zoneLevel =
                     direction == 1
                         ? zone.Low
                         : zone.High;
@@ -4217,22 +4651,33 @@ if (UseM1Trigger &&
                 if (IsValidStop(
                         direction,
                         entry,
-                        level))
+                        zoneLevel))
                 {
                     bool improve =
                         !IsFinitePositive(best) ||
-                        (direction == 1 &&
-                         level > best &&
-                         level < entry) ||
-                        (direction == -1 &&
-                         level < best &&
-                         level > entry);
+                        (direction == 1
+                            ? zoneLevel > best
+                            : zoneLevel < best);
 
                     if (improve)
                     {
-                        best = level;
-                        source = zone.Kind;
-                        quality = zone.Quality;
+                        best =
+                            zoneLevel;
+
+                        source =
+                            zone.Kind;
+
+                        quality =
+                            ClampInt(
+                                zone.Quality +
+                                SmartStopZoneBonus +
+                                (zone.Kind.IndexOf(
+                                    "LIQUIDITY",
+                                    StringComparison.OrdinalIgnoreCase) >= 0
+                                    ? SmartLiquidityPoolBonus
+                                    : 0),
+                                0,
+                                100);
                     }
                 }
             }
@@ -4247,7 +4692,7 @@ if (UseM1Trigger &&
                     StopBufferAtr);
 
             if (source.IndexOf(
-                    "HTF",
+                    "H1",
                     StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 buffer =
@@ -4264,56 +4709,9 @@ if (UseM1Trigger &&
                     ? best - buffer
                     : best + buffer;
 
-            if (source.IndexOf(
-                    "ZONE",
-                    StringComparison.OrdinalIgnoreCase) >= 0 ||
-                source.IndexOf(
-                    "FVG",
-                    StringComparison.OrdinalIgnoreCase) >= 0 ||
-                source.IndexOf(
-                    "ORDER_BLOCK",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                quality =
-                    ClampInt(
-                        quality +
-                        Math.Max(
-                            0,
-                            SmartStopZoneBonus),
-                        0,
-                        100);
-            }
-
-            double liquidityLevel =
-                direction == 1
-                    ? FindEqualLow(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr)
-                    : FindEqualHigh(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr);
-
-            if (liquidityLevel > 0 &&
-                Math.Abs(
-                    best -
-                    liquidityLevel) <=
-                atr * 0.20)
-            {
-                quality =
-                    ClampInt(
-                        quality +
-                        Math.Max(
-                            0,
-                            SmartLiquidityPoolBonus),
-                        0,
-                        100);
-            }
-
-            best = NormalizePrice(best);
+            best =
+                NormalizePrice(
+                    best);
 
             if (!IsValidStop(
                     direction,
@@ -4321,10 +4719,29 @@ if (UseM1Trigger &&
                     best))
                 return 0;
 
+            double risk =
+                Math.Abs(
+                    entry -
+                    best);
+
+            if (risk <
+                    atr *
+                    MinimumSlAtr ||
+                risk >
+                    atr *
+                    Math.Min(
+                        MaximumSlAtr,
+                        MaximumStructuralStopAtr))
+                return 0;
+
+            if (quality <
+                SmartStopQuality)
+                return 0;
+
             return best;
         }
 
-        private List<Level> BuildTargetLevels(
+                private List<Level> BuildTargetLevels(
             int closedM5,
             int direction,
             double entry,
@@ -4332,6 +4749,10 @@ if (UseM1Trigger &&
         {
             List<Level> levels =
                 new List<Level>();
+
+            if (_m5Bars == null ||
+                atr <= 0)
+                return levels;
 
             double swing =
                 direction == 1
@@ -4352,27 +4773,6 @@ if (UseM1Trigger &&
                 0,
                 SwingStructureWeight);
 
-            double equal =
-                direction == 1
-                    ? FindEqualHigh(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr)
-                    : FindEqualLow(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr);
-
-            AddLevel(
-                levels,
-                equal,
-                "EQUAL_POOL",
-                "M5",
-                0,
-                EqualHighLowWeight);
-
             Zone fvg =
                 FindNearestFvg(
                     _m5Bars,
@@ -4381,7 +4781,6 @@ if (UseM1Trigger &&
                     atr);
 
             if (fvg != null)
-            {
                 AddLevel(
                     levels,
                     direction == 1
@@ -4391,7 +4790,6 @@ if (UseM1Trigger &&
                     "M5",
                     fvg.Age,
                     FvgWeight);
-            }
 
             Zone ob =
                 FindNearestOrderBlock(
@@ -4401,7 +4799,6 @@ if (UseM1Trigger &&
                     atr);
 
             if (ob != null)
-            {
                 AddLevel(
                     levels,
                     direction == 1
@@ -4411,21 +4808,6 @@ if (UseM1Trigger &&
                     "M5",
                     ob.Age,
                     OrderBlockWeight);
-            }
-
-            AddHtfTargets(
-                levels,
-                direction,
-                entry,
-                atr,
-                _m5Bars.OpenTimes[closedM5]);
-
-            AddPreviousPeriodLevels(
-                levels,
-                direction,
-                entry,
-                atr,
-                _m5Bars.OpenTimes[closedM5]);
 
             AddSupplyDemandAndLiquidityLevels(
                 levels,
@@ -4434,6 +4816,25 @@ if (UseM1Trigger &&
                 entry,
                 atr);
 
+            if (UseMultiTfLevelMap)
+            {
+                AddHtfTargets(
+                    levels,
+                    direction,
+                    entry,
+                    atr,
+                    _m5Bars.OpenTimes[
+                        closedM5]);
+
+                AddPreviousPeriodLevels(
+                    levels,
+                    direction,
+                    entry,
+                    atr,
+                    _m5Bars.OpenTimes[
+                        closedM5]);
+            }
+
             AddSmartExtraTargetLevels(
                 levels,
                 closedM5,
@@ -4441,34 +4842,34 @@ if (UseM1Trigger &&
                 entry,
                 atr);
 
-            if (levels.Count >
-                Math.Max(
-                    1,
-                    SmartTargetMaxCandidates))
-            {
-                levels =
+            return
+                MergeLevels(
                     levels
+                    .Where(
+                        x =>
+                            IsFinitePositive(
+                                x.Price) &&
+                            x.Price != entry)
                     .OrderByDescending(
                         x => x.Score)
                     .Take(
                         Math.Max(
                             1,
                             SmartTargetMaxCandidates))
-                    .ToList();
-            }
-
-            return MergeLevels(
-                levels,
-                atr);
+                    .ToList(),
+                    atr);
         }
 
-        private void AddSupplyDemandAndLiquidityLevels(
+                private void AddSupplyDemandAndLiquidityLevels(
             List<Level> levels,
             int closedM5,
             int direction,
             double entry,
             double atr)
         {
+            if (_m5Bars == null)
+                return;
+
             double swing =
                 direction == 1
                     ? FindSwingHighAbove(
@@ -4490,63 +4891,50 @@ if (UseM1Trigger &&
                 0,
                 SupplyDemandWeight);
 
-            double liquidity =
-                direction == 1
-                    ? FindEqualHigh(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr)
-                    : FindEqualLow(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr);
-
-            AddLevel(
-                levels,
-                liquidity,
-                "LIQUIDITY_POOL",
-                "M5",
-                0,
-                LiquidityPoolWeight);
-
-            int d1 =
-                ClosedIndex(
-                    _d1Bars,
-                    _m5Bars.OpenTimes[closedM5]);
-
-            if (UseExtendedLiquidityMap &&
-                d1 > 1)
+            if (UseEqualHighLow)
             {
-                AddLiquidityLevel(
-                    levels,
+                double liquidity =
                     direction == 1
-                        ? _d1Bars.HighPrices[d1 - 2]
-                        : _d1Bars.LowPrices[d1 - 2],
+                        ? FindEqualHigh(
+                            _m5Bars,
+                            closedM5,
+                            entry,
+                            atr)
+                        : FindEqualLow(
+                            _m5Bars,
+                            closedM5,
+                            entry,
+                            atr);
+
+                AddLevel(
+                    levels,
+                    liquidity,
                     "LIQUIDITY_POOL",
-                    "D1",
-                    2,
+                    "M5",
+                    0,
                     LiquidityPoolWeight);
             }
 
-            int w1 =
-                ClosedIndex(
-                    _w1Bars,
-                    _m5Bars.OpenTimes[closedM5]);
-
-            if (UseExtendedLiquidityMap &&
-                w1 > 1)
+            if (UseDailyWeeklyLiquidity)
             {
-                AddLiquidityLevel(
-                    levels,
-                    direction == 1
-                        ? _w1Bars.HighPrices[w1 - 2]
-                        : _w1Bars.LowPrices[w1 - 2],
-                    "LIQUIDITY_POOL",
-                    "W1",
-                    2,
-                    PreviousWeekWeight);
+                int d1 =
+                    ClosedIndex(
+                        _d1Bars,
+                        _m5Bars.OpenTimes[
+                            closedM5]);
+
+                if (d1 > 0)
+                {
+                    AddLevel(
+                        levels,
+                        direction == 1
+                            ? _d1Bars.HighPrices[d1 - 1]
+                            : _d1Bars.LowPrices[d1 - 1],
+                        "LIQUIDITY_POOL",
+                        "D1",
+                        1,
+                        LiquidityPoolWeight);
+                }
             }
 
             if (UseSessionLiquidityTargets)
@@ -4562,7 +4950,7 @@ if (UseM1Trigger &&
                     out sessionHigh,
                     out sessionLow);
 
-                AddLiquidityLevel(
+                AddLevel(
                     levels,
                     direction == 1
                         ? sessionHigh
@@ -4570,7 +4958,9 @@ if (UseM1Trigger &&
                     "SESSION",
                     "M5",
                     0,
-                    SessionWeight);
+                    Math.Max(
+                        SessionWeight,
+                        LiquidityTargetMinimumScore));
             }
         }
 
@@ -4643,54 +5033,134 @@ if (UseM1Trigger &&
                     last);
         }
 
-        private void AddSmartExtraTargetLevels(
+
+        private double FindNextLiquidityAbove(
+            Bars bars,
+            int index,
+            double price)
+        {
+            if (bars == null ||
+                index < 10)
+                return 0;
+
+            int first =
+                Math.Max(
+                    2,
+                    index -
+                    LiquidityLookback);
+
+            double best = 0;
+
+            for (int i = first;
+                 i <= index - 2;
+                 i++)
+            {
+                double high =
+                    bars.HighPrices[i];
+
+                if (high <= price)
+                    continue;
+
+                if (best <= 0 ||
+                    high < best)
+                    best = high;
+            }
+
+            return best;
+        }
+
+        private double FindNextLiquidityBelow(
+            Bars bars,
+            int index,
+            double price)
+        {
+            if (bars == null ||
+                index < 10)
+                return 0;
+
+            int first =
+                Math.Max(
+                    2,
+                    index -
+                    LiquidityLookback);
+
+            double best = 0;
+
+            for (int i = first;
+                 i <= index - 2;
+                 i++)
+            {
+                double low =
+                    bars.LowPrices[i];
+
+                if (low >= price)
+                    continue;
+
+                if (best <= 0 ||
+                    low > best)
+                    best = low;
+            }
+
+            return best;
+        }
+
+                private void AddSmartExtraTargetLevels(
             List<Level> levels,
             int closedM5,
             int direction,
             double entry,
             double atr)
         {
-            double swing =
+            if (!UseExtendedLiquidityMap ||
+                _m5Bars == null)
+                return;
+
+            double forecast =
                 direction == 1
-                    ? FindSwingHighAbove(
+                    ? FindNextLiquidityAbove(
                         _m5Bars,
                         closedM5,
                         entry)
-                    : FindSwingLowBelow(
+                    : FindNextLiquidityBelow(
                         _m5Bars,
                         closedM5,
                         entry);
 
             AddLevel(
                 levels,
-                swing,
-                direction == 1
-                    ? "SUPPLY_ZONE"
-                    : "DEMAND_ZONE",
+                forecast,
+                "LIQUIDITY_FORECAST",
                 "M5",
                 0,
-                SupplyDemandWeight);
+                Math.Max(
+                    LiquidityPoolWeight,
+                    LiquidityTargetMinimumScore));
 
-            double liquidity =
-                direction == 1
-                    ? FindEqualHigh(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr)
-                    : FindEqualLow(
-                        _m5Bars,
-                        closedM5,
-                        entry,
-                        atr);
+            if (UseSessionLiquidityTargets)
+            {
+                double high;
+                double low;
 
-            AddLevel(
-                levels,
-                liquidity,
-                "LIQUIDITY_POOL",
-                "M5",
-                0,
-                LiquidityPoolWeight);
+                GetSessionRange(
+                    _m5Bars,
+                    closedM5,
+                    SessionStartUtc,
+                    SessionEndUtc,
+                    out high,
+                    out low);
+
+                AddLevel(
+                    levels,
+                    direction == 1
+                        ? high
+                        : low,
+                    "SESSION_FORECAST",
+                    "M5",
+                    0,
+                    Math.Max(
+                        SessionWeight,
+                        LiquidityTargetMinimumScore));
+            }
         }
 
         private void AddHtfTargets(
@@ -4824,7 +5294,7 @@ if (UseM1Trigger &&
                 baseScore);
         }
 
-        private void AddLevel(
+                private void AddLevel(
             List<Level> levels,
             double price,
             string kind,
@@ -4835,98 +5305,91 @@ if (UseM1Trigger &&
             if (!IsFinitePositive(price))
                 return;
 
-            Level l = new Level();
+            double score =
+                Math.Max(
+                    0,
+                    baseScore) * 0.60;
 
-            l.Price =
-                NormalizePrice(price);
+            if (age <= 5)
+                score += 15;
 
-            l.Kind = kind;
-            l.Timeframe = timeframe;
-            l.Age = Math.Max(0, age);
-            l.Score =
-                baseScore *
-                FamilyWeight(kind) /
-                100.0;
+            if (timeframe == "H1" ||
+                timeframe == "H4" ||
+                timeframe == "D1" ||
+                timeframe == "W1")
+                score += 8;
 
-            levels.Add(l);
-        }
-
-        private double FamilyWeight(string kind)
-        {
-            string k = kind ?? "";
-
-            if (k.IndexOf(
-                    "SUPPLY",
-                    StringComparison.OrdinalIgnoreCase) >= 0 ||
-                k.IndexOf(
-                    "DEMAND",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-                return SupplyDemandWeight;
-
-            if (k.IndexOf(
-                    "FVG",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-                return FvgWeight;
-
-            if (k.IndexOf(
-                    "ORDER_BLOCK",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-                return OrderBlockWeight;
-
-            if (k.IndexOf(
+            if (kind.IndexOf(
                     "LIQUIDITY",
                     StringComparison.OrdinalIgnoreCase) >= 0)
-                return LiquidityPoolWeight;
+                score += 5;
 
-            if (k.IndexOf(
-                    "EQUAL",
+            if (kind.IndexOf(
+                    "FVG",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                kind.IndexOf(
+                    "ORDER_BLOCK",
                     StringComparison.OrdinalIgnoreCase) >= 0)
-                return EqualHighLowWeight;
+                score += 4;
 
-            if (k.IndexOf(
-                    "MTF",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-                return MtfClusterWeight;
+            Level level =
+                new Level
+                {
+                    Price =
+                        NormalizePrice(price),
+                    Score =
+                        Clamp(
+                            score,
+                            0,
+                            100),
+                    Kind = kind,
+                    Timeframe = timeframe,
+                    Age =
+                        Math.Max(
+                            0,
+                            age),
+                    Hits = 1
+                };
 
-            if (k == "PREVIOUS_DAY")
-                return PreviousDayWeight;
-
-            if (k == "PREVIOUS_WEEK")
-                return PreviousWeekWeight;
-
-            if (k == "SESSION")
-                return SessionWeight;
-
-            if (k.IndexOf(
-                    "HTF",
-                    StringComparison.OrdinalIgnoreCase) >= 0)
-                return HtfStructureWeight;
-
-            return SwingStructureWeight;
+            levels.Add(
+                level);
         }
 
-        private List<Level> MergeLevels(
+        
+
+                private List<Level> MergeLevels(
             List<Level> input,
             double atr)
         {
             List<Level> result =
                 new List<Level>();
 
+            if (input == null ||
+                input.Count == 0)
+                return result;
+
             double tolerance =
                 Math.Max(
                     Symbol.PipSize * 2,
-                    atr * 0.10);
+                    atr *
+                    Math.Max(
+                        0.02,
+                        SmartLevelClusterAtr));
 
-            for (int i = 0; i < input.Count; i++)
+            for (int i = 0;
+                 i < input.Count;
+                 i++)
             {
-                Level current = input[i];
+                Level current =
+                    input[i];
 
                 Level match =
                     result.FirstOrDefault(
-                        x => Math.Abs(
-                                 x.Price -
-                                 current.Price) <=
-                             tolerance);
+                        x =>
+                            Math.Abs(
+                                x.Price -
+                                current.Price) <=
+                            tolerance);
 
                 if (match == null)
                 {
@@ -4934,20 +5397,69 @@ if (UseM1Trigger &&
                     continue;
                 }
 
-                if (current.Score > match.Score)
-                    match.Score = current.Score;
+                int matchHits =
+                    Math.Max(
+                        1,
+                        match.Hits);
 
-                if (current.Age < match.Age)
-                    match.Age = current.Age;
+                int currentHits =
+                    Math.Max(
+                        1,
+                        current.Hits);
 
-                if (current.Kind == "MTF_CLUSTER")
-                    match.Kind = current.Kind;
+                match.Price =
+                    NormalizePrice(
+                        (match.Price *
+                         matchHits +
+                         current.Price *
+                         currentHits) /
+                        (matchHits +
+                         currentHits));
+
+                match.Score =
+                    Clamp(
+                        Math.Max(
+                            match.Score,
+                            current.Score) +
+                        Math.Min(
+                            20,
+                            Math.Min(
+                                match.Score,
+                                current.Score) *
+                            0.25),
+                        0,
+                        100);
+
+                match.Hits =
+                    matchHits +
+                    currentHits;
+
+                match.Age =
+                    Math.Min(
+                        match.Age,
+                        current.Age);
+
+                if (current.Timeframe == "H1" ||
+                    current.Timeframe == "H4" ||
+                    current.Timeframe == "D1" ||
+                    current.Timeframe == "W1")
+                    match.Timeframe =
+                        current.Timeframe;
+
+                if (match.Kind == "SWING" &&
+                    current.Kind != "SWING")
+                    match.Kind =
+                        current.Kind;
             }
 
-            return result;
+            return
+                result
+                .OrderByDescending(
+                    x => x.Score)
+                .ToList();
         }
 
-        private List<Level> SelectTargets(
+                private List<Level> SelectTargets(
             List<Level> levels,
             double entry,
             double risk,
@@ -4957,25 +5469,50 @@ if (UseM1Trigger &&
             List<Level> selected =
                 new List<Level>();
 
+            if (levels == null ||
+                levels.Count == 0 ||
+                risk <= 0 ||
+                atr <= 0)
+                return selected;
+
+            double rrStep =
+                Math.Max(
+                    0.10,
+                    StructuralTpRrStep);
+
             double[] requiredRR =
             {
                 Tp1MinimumRR,
-                Tp2MinimumRR,
-                Tp3MinimumRR,
-                Tp4MinimumRR
+                Math.Max(
+                    Tp2MinimumRR,
+                    Tp1MinimumRR + rrStep),
+                Math.Max(
+                    Tp3MinimumRR,
+                    Tp2MinimumRR + rrStep),
+                Math.Max(
+                    Tp4MinimumRR,
+                    Tp3MinimumRR + rrStep)
             };
 
             for (int stage = 0;
-                 stage < requiredRR.Length;
+                 stage < 4;
                  stage++)
             {
-                Level best = null;
+                Level best =
+                    null;
+
+                double bestScore =
+                    double.MinValue;
+
                 double last =
                     selected.Count == 0
                         ? entry
-                        : selected[selected.Count - 1].Price;
+                        : selected[
+                            selected.Count - 1].Price;
 
-                for (int i = 0; i < levels.Count; i++)
+                for (int i = 0;
+                     i < levels.Count;
+                     i++)
                 {
                     Level candidate =
                         levels[i];
@@ -4986,19 +5523,28 @@ if (UseM1Trigger &&
                             candidate.Price))
                         continue;
 
-                    if (selected.Any(
-                        x => Math.Abs(
-                                 x.Price -
-                                 candidate.Price) <=
-                             atr *
-                             MinimumTpSpacingAtr *
-                             0.50))
+                    if (candidate.Age >
+                        MaximumSetupAgeBars)
+                        continue;
+
+                    if (candidate.Score <
+                        SmartTargetQuality)
                         continue;
 
                     double distance =
                         Math.Abs(
                             candidate.Price -
                             entry);
+
+                    double rr =
+                        distance /
+                        Math.Max(
+                            Symbol.PipSize,
+                            risk);
+
+                    if (rr <
+                        requiredRR[stage])
+                        continue;
 
                     if (distance >
                         atr *
@@ -5007,32 +5553,16 @@ if (UseM1Trigger &&
                             MaximumTargetExtensionAtr))
                         continue;
 
-                    double rr =
-                        distance /
-                        Math.Max(
-                            Symbol.PipSize,
-                            risk);
-
-                    if (candidate.Age >
-                        MaximumSetupAgeBars)
-                        continue;
-
-                    if ((candidate.Timeframe == "H1" ||
-                         candidate.Timeframe == "H4" ||
-                         candidate.Timeframe == "D1" ||
-                         candidate.Timeframe == "W1"))
-                    {
-                        if (!UseHigherTfLiquidityTargets)
-                            continue;
-
-                        if (rr <
+                    if (selected.Any(
+                        x =>
+                            Math.Abs(
+                                x.Price -
+                                candidate.Price) <=
+                            atr *
                             Math.Max(
-                                requiredRR[stage],
-                                MinimumHtfTargetRR))
-                            continue;
-                    }
-
-                    if (rr < requiredRR[stage])
+                                0.05,
+                                MinimumTpSpacingAtr) *
+                            0.50))
                         continue;
 
                     if (selected.Count > 0)
@@ -5052,13 +5582,25 @@ if (UseM1Trigger &&
                             continue;
                     }
 
-                    bool requireObstacleFree =
-                        stage == 0
-                            ? RequireObstacleFreeTp1
-                            : true;
+                    bool htf =
+                        candidate.Timeframe == "H1" ||
+                        candidate.Timeframe == "H4" ||
+                        candidate.Timeframe == "D1" ||
+                        candidate.Timeframe == "W1";
+
+                    if (htf)
+                    {
+                        if (!UseHigherTfLiquidityTargets)
+                            continue;
+
+                        if (rr <
+                            Math.Max(
+                                requiredRR[stage],
+                                MinimumHtfTargetRR))
+                            continue;
+                    }
 
                     if (RejectTargetObstacle &&
-                        requireObstacleFree &&
                         HasTargetObstacle(
                             _m5Bars,
                             _m5Bars.Count - 2,
@@ -5068,44 +5610,38 @@ if (UseM1Trigger &&
                             atr))
                         continue;
 
-                    double targetDistance =
-                        Math.Abs(
-                            candidate.Price -
-                            entry);
+                    double normalizedDistance =
+                        distance /
+                        Math.Max(
+                            Symbol.PipSize,
+                            atr);
 
                     double selectionScore =
                         candidate.Score *
                         (1.0 +
                          SmartTargetNearestBias /
                          (1.0 +
-                          targetDistance /
-                          Math.Max(
-                              Symbol.PipSize,
-                              atr)));
+                          normalizedDistance)) +
+                        Math.Min(
+                            20,
+                            candidate.Hits * 2);
 
-                    double bestScore =
-                        best == null
-                            ? double.MinValue
-                            : best.Score *
-                              (1.0 +
-                               SmartTargetNearestBias /
-                               (1.0 +
-                                Math.Abs(
-                                    best.Price -
-                                    entry) /
-                                Math.Max(
-                                    Symbol.PipSize,
-                                    atr)));
+                    if (selectionScore >
+                        bestScore)
+                    {
+                        bestScore =
+                            selectionScore;
 
-                    if (best == null ||
-                        selectionScore > bestScore)
-                        best = candidate;
+                        best =
+                            candidate;
+                    }
                 }
 
                 if (best == null)
                     continue;
 
-                selected.Add(best);
+                selected.Add(
+                    best);
             }
 
             return selected;
@@ -5199,11 +5735,15 @@ if (UseM1Trigger &&
         // ACTIVE PLAN
         // ============================================================
 
-        private void ActivatePlan(Plan plan)
+                private void ActivatePlan(
+            Plan plan)
         {
             _plan = plan;
             _lastSignalM5 = plan.CreatedM5;
+            _lastConfirmedM5 = plan.CreatedM5;
+            _lastConfirmedDirection = plan.Direction;
             _peakPrice = plan.Entry;
+
             _lastMarket =
                 plan.Direction == 1
                     ? Symbol.Bid
@@ -5214,12 +5754,15 @@ if (UseM1Trigger &&
             _tp3Hit = 0;
             _tp4Hit = 0;
             _slHit = false;
+            _outcomeRegistered = false;
 
             ClearWatchObjects();
 
             string message =
                 "CFIP CLEAN30 " +
-                (plan.Direction == 1 ? "BUY" : "SELL") +
+                (plan.Direction == 1
+                    ? "BUY"
+                    : "SELL") +
                 " | CONF " +
                 (_decision == null
                     ? 0
@@ -5248,7 +5791,8 @@ if (UseM1Trigger &&
             }
         }
 
-        private void EvaluateActivePlan(int closedM5)
+                private void EvaluateActivePlan(
+            int closedM5)
         {
             if (_plan == null)
                 return;
@@ -5285,6 +5829,15 @@ if (UseM1Trigger &&
                     ? market - _plan.Entry
                     : _plan.Entry - market;
 
+            double previousStop =
+                _plan.Stop;
+
+            double previousTp1 =
+                _plan.Tp1;
+
+            double previousTp2 =
+                _plan.Tp2;
+
             double peakRR =
                 favorable /
                 Math.Max(
@@ -5312,12 +5865,57 @@ if (UseM1Trigger &&
                 }
 
                 if (UpdateUnhitTargets &&
-                    peakRR >= TargetUpdateTriggerRR)
+                    peakRR >=
+                    TargetUpdateTriggerRR)
                 {
                     UpdateUnhitTargetsLive(
                         closedM5,
                         market);
                 }
+            }
+
+            double updateAtr =
+                Atr(
+                    _m5Bars,
+                    closedM5);
+
+            bool changed =
+                Math.Abs(
+                    previousStop -
+                    _plan.Stop) >=
+                    Math.Max(
+                        Symbol.PipSize,
+                        updateAtr *
+                        Math.Max(
+                            0.01,
+                            SlRepriceStepAtr)) ||
+                Math.Abs(
+                    previousTp1 -
+                    _plan.Tp1) >=
+                    Symbol.PipSize ||
+                Math.Abs(
+                    previousTp2 -
+                    _plan.Tp2) >=
+                    Symbol.PipSize;
+
+            if (changed &&
+                AlertOnExitPlanUpdate)
+            {
+                SendUnifiedAlert(
+                    "PLANUPDATE|" +
+                    closedM5 +
+                    "|" +
+                    Price(_plan.Stop) +
+                    "|" +
+                    Price(_plan.Tp1),
+                    "CFIP CLEAN30 SMART PLAN UPDATE | SL " +
+                    Price(_plan.Stop) +
+                    " | TP1 " +
+                    Price(_plan.Tp1) +
+                    " | EXIT " +
+                    GetSmartExitMode(),
+                    _plan.Direction,
+                    false);
             }
 
             bool hitSl =
@@ -5353,13 +5951,22 @@ if (UseM1Trigger &&
                 !_slHit)
             {
                 _slHit = true;
-                RegisterOutcome(
-                    _plan.Direction,
-                    false);
+                _lastExitM5 = closedM5;
+
+                if (EnableOutcomeTelemetry &&
+                    !_outcomeRegistered)
+                {
+                    RegisterOutcome(
+                        _plan.Direction,
+                        false);
+
+                    _outcomeRegistered = true;
+                }
+
                 _losses++;
 
-                if (AlertOnLevelHit &&
-                    EnableLevelHitAlerts &&
+                if (EnableLevelHitAlerts &&
+                    AlertOnLevelHit &&
                     AlertOnSl)
                 {
                     SendUnifiedAlert(
@@ -5371,6 +5978,11 @@ if (UseM1Trigger &&
                         true);
                 }
 
+                DrawOutcomeMarker(
+                    "SL HIT",
+                    _plan.Stop,
+                    false);
+
                 _plan = null;
                 RemovePlanObjects();
                 return;
@@ -5381,8 +5993,8 @@ if (UseM1Trigger &&
             {
                 _tp1Hit = 1;
 
-                if (AlertOnLevelHit &&
-                    EnableLevelHitAlerts &&
+                if (EnableLevelHitAlerts &&
+                    AlertOnLevelHit &&
                     AlertOnTp1)
                 {
                     SendUnifiedAlert(
@@ -5400,8 +6012,8 @@ if (UseM1Trigger &&
             {
                 _tp2Hit = 1;
 
-                if (AlertOnLevelHit &&
-                    EnableLevelHitAlerts &&
+                if (EnableLevelHitAlerts &&
+                    AlertOnLevelHit &&
                     AlertOnTp2)
                 {
                     SendUnifiedAlert(
@@ -5419,8 +6031,8 @@ if (UseM1Trigger &&
             {
                 _tp3Hit = 1;
 
-                if (AlertOnLevelHit &&
-                    EnableLevelHitAlerts &&
+                if (EnableLevelHitAlerts &&
+                    AlertOnLevelHit &&
                     AlertOnTp3)
                 {
                     SendUnifiedAlert(
@@ -5437,13 +6049,22 @@ if (UseM1Trigger &&
                 _tp4Hit == 0)
             {
                 _tp4Hit = 1;
-                RegisterOutcome(
-                    _plan.Direction,
-                    true);
+                _lastExitM5 = closedM5;
+
+                if (EnableOutcomeTelemetry &&
+                    !_outcomeRegistered)
+                {
+                    RegisterOutcome(
+                        _plan.Direction,
+                        true);
+
+                    _outcomeRegistered = true;
+                }
+
                 _wins++;
 
-                if (AlertOnLevelHit &&
-                    EnableLevelHitAlerts &&
+                if (EnableLevelHitAlerts &&
+                    AlertOnLevelHit &&
                     AlertOnTp4)
                 {
                     SendUnifiedAlert(
@@ -5455,6 +6076,11 @@ if (UseM1Trigger &&
                         true);
                 }
 
+                DrawOutcomeMarker(
+                    "TP4 HIT",
+                    _plan.Tp4,
+                    true);
+
                 _plan = null;
                 RemovePlanObjects();
                 return;
@@ -5462,21 +6088,20 @@ if (UseM1Trigger &&
 
             if (CheckLiveReversalAgainstPlan(
                     closedM5))
-            {
                 return;
-            }
 
             if (UseFalseSignalGuard &&
                 EnableSetupInvalidation &&
                 currentMove < 0 &&
-                Math.Abs(currentMove) >=
+                Math.Abs(
+                    currentMove) >=
                 _plan.Risk *
                 Math.Max(
                     0.25,
-                    FalseSignalAdverseR) &&
-                AlertOnFalseSignalRisk)
+                    FalseSignalAdverseR))
             {
-                if (_lastInvalidationAlertM5 !=
+                if (AlertOnFalseSignalRisk &&
+                    _lastInvalidationAlertM5 !=
                     closedM5)
                 {
                     _lastInvalidationAlertM5 =
@@ -5494,17 +6119,25 @@ if (UseM1Trigger &&
                 }
 
                 if (InvalidateOnFalseSignal &&
-                    Math.Abs(currentMove) >=
+                    Math.Abs(
+                        currentMove) >=
                     _plan.Risk *
                     Math.Max(
                         1.0,
                         FalseSignalAdverseR))
                 {
-                    RegisterOutcome(
-                        _plan.Direction,
-                        false);
+                    if (EnableOutcomeTelemetry &&
+                        !_outcomeRegistered)
+                    {
+                        RegisterOutcome(
+                            _plan.Direction,
+                            false);
+
+                        _outcomeRegistered = true;
+                    }
 
                     _losses++;
+                    _lastExitM5 = closedM5;
                     _plan = null;
                     RemovePlanObjects();
                     return;
@@ -5512,34 +6145,173 @@ if (UseM1Trigger &&
             }
 
             if (currentMove < 0 &&
-                Math.Abs(currentMove) >=
-                _plan.Risk * 1.10 &&
-                AlertOnInvalidated)
+                Math.Abs(
+                    currentMove) >=
+                _plan.Risk *
+                1.10 &&
+                AlertOnInvalidated &&
+                _lastInvalidationAlertM5 !=
+                closedM5)
             {
                 SendUnifiedAlert(
                     "INVALID|" +
-                    _plan.CreatedM5,
+                    closedM5,
                     "CFIP CLEAN30 SETUP UNDER PRESSURE | " +
-                    (_plan.Direction == 1 ? "BUY" : "SELL") +
+                    (_plan.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
                     " | " +
-                    (Math.Abs(currentMove) /
+                    (Math.Abs(
+                         currentMove) /
                      _plan.Risk).ToString("F2") +
                     "R",
                     0,
                     true);
+
+                _lastInvalidationAlertM5 =
+                    closedM5;
             }
         }
 
-        private double CalculateProtectedStop(
+        private int CalculateSmartExitPressure(
+            double market,
+            double currentRR)
+        {
+            if (_plan == null)
+                return 0;
+
+            int pressure = 0;
+            int opposite = _plan.Direction * -1;
+
+            if (_reaction != null &&
+                _reaction.Direction == opposite)
+            {
+                pressure +=
+                    Math.Min(
+                        30,
+                        Math.Max(
+                            0,
+                            _reaction.Confidence / 3));
+
+                if (_reaction.IndependentEvidence >=
+                    MinimumLiveReactionEvidence)
+                    pressure += 10;
+            }
+
+            if (_m5Frame != null)
+            {
+                bool structure =
+                    opposite == 1
+                        ? _m5Frame.StructureBull
+                        : _m5Frame.StructureBear;
+
+                bool reversal =
+                    opposite == 1
+                        ? (_m5Frame.MssBull ||
+                           _m5Frame.ChochBull)
+                        : (_m5Frame.MssBear ||
+                           _m5Frame.ChochBear);
+
+                bool force =
+                    opposite == 1
+                        ? (_m5Frame.DisplacementBull &&
+                           _m5Frame.LiquidityBull)
+                        : (_m5Frame.DisplacementBear &&
+                           _m5Frame.LiquidityBear);
+
+                if (structure)
+                    pressure += 15;
+
+                if (reversal)
+                    pressure += 15;
+
+                if (force)
+                    pressure += 20;
+            }
+
+            double atr =
+                Atr(
+                    _m5Bars,
+                    Math.Max(
+                        1,
+                        _m5Bars.Count - 2));
+
+            if (atr > 0)
+            {
+                Zone zone =
+                    FindNearestOpposingZone(
+                        _m5Bars,
+                        Math.Max(
+                            1,
+                            _m5Bars.Count - 2),
+                        _plan.Direction,
+                        atr);
+
+                if (zone != null &&
+                    DistanceToZone(
+                        market,
+                        zone) <=
+                    atr *
+                    Math.Max(
+                        0.05,
+                        ZoneProximityAtr))
+                    pressure += 10;
+            }
+
+            if (currentRR < 0)
+                pressure += 10;
+
+            return ClampInt(
+                pressure,
+                0,
+                100);
+        }
+
+        private string GetSmartExitMode()
+        {
+            if (_plan == null)
+                return "NO ACTIVE PLAN";
+
+            double risk =
+                Math.Max(
+                    Symbol.PipSize,
+                    _plan.Risk);
+
+            double currentRR =
+                _plan.Direction == 1
+                    ? (_lastMarket - _plan.Entry) / risk
+                    : (_plan.Entry - _lastMarket) / risk;
+
+            int pressure =
+                CalculateSmartExitPressure(
+                    _lastMarket,
+                    currentRR);
+
+            if (pressure >=
+                SmartExitPressureThreshold)
+                return "PROTECT";
+
+            if (pressure >=
+                LiveReactionWatchThreshold)
+                return "WATCH";
+
+            return "HOLD";
+        }
+
+                private double CalculateProtectedStop(
             double market,
             double peakRR,
             int closedM5)
         {
+            if (_plan == null)
+                return 0;
+
             double candidate =
                 _plan.Stop;
 
             if (MoveSlToBreakEven &&
-                peakRR >= BreakEvenTriggerRR)
+                peakRR >=
+                BreakEvenTriggerRR)
             {
                 double be =
                     _plan.Direction == 1
@@ -5565,7 +6337,8 @@ if (UseM1Trigger &&
                 peakRR >=
                 Math.Max(
                     SlRepriceStartRR,
-                    SmartTrailMinimumRR))
+                    SmartTrailMinimumRR) &&
+                UseSwingStructureInTrail)
             {
                 double atr =
                     Atr(
@@ -5574,40 +6347,16 @@ if (UseM1Trigger &&
 
                 if (atr > 0)
                 {
-                    double structural = 0;
-
-                    if (UseSwingStructureInTrail)
-                    {
-                        structural =
-                            _plan.Direction == 1
-                                ? FindSwingLowBelow(
-                                    _m5Bars,
-                                    closedM5,
-                                    market)
-                                : FindSwingHighAbove(
-                                    _m5Bars,
-                                    closedM5,
-                                    market);
-                    }
-
-                    if (!IsFinitePositive(
-                            structural))
-                    {
-                        Zone trailZone =
-                            FindNearestOpposingZone(
+                    double structural =
+                        _plan.Direction == 1
+                            ? FindSwingLowBelow(
                                 _m5Bars,
                                 closedM5,
-                                _plan.Direction,
-                                atr);
-
-                        if (trailZone != null)
-                        {
-                            structural =
-                                _plan.Direction == 1
-                                    ? trailZone.Low
-                                    : trailZone.High;
-                        }
-                    }
+                                market)
+                            : FindSwingHighAbove(
+                                _m5Bars,
+                                closedM5,
+                                market);
 
                     if (IsFinitePositive(
                             structural))
@@ -5616,28 +6365,69 @@ if (UseM1Trigger &&
                             atr *
                             Math.Max(
                                 0.10,
-                                Math.Max(
-                                    SlRepriceBreathingAtr,
-                                    TrailDistanceAtr));
+                                TrailDistanceAtr);
 
                         if (_plan.Direction == 1 &&
                             structural <=
                             market - room)
-                        {
                             candidate =
                                 Math.Max(
                                     candidate,
                                     structural);
-                        }
                         else if (_plan.Direction == -1 &&
                                  structural >=
                                  market + room)
-                        {
                             candidate =
                                 Math.Min(
                                     candidate,
                                     structural);
-                        }
+                    }
+                }
+            }
+
+            int pressure =
+                CalculateSmartExitPressure(
+                    market,
+                    peakRR);
+
+            if (pressure >=
+                SmartExitPressureThreshold &&
+                peakRR >=
+                SmartTrailMinimumRR)
+            {
+                double atr =
+                    Atr(
+                        _m5Bars,
+                        closedM5);
+
+                if (atr > 0)
+                {
+                    double tightRoom =
+                        atr *
+                        Math.Min(
+                            0.45,
+                            Math.Max(
+                                0.10,
+                                SlRepriceBreathingAtr));
+
+                    double tightened =
+                        _plan.Direction == 1
+                            ? market - tightRoom
+                            : market + tightRoom;
+
+                    if (IsValidStop(
+                            _plan.Direction,
+                            _plan.Entry,
+                            tightened))
+                    {
+                        candidate =
+                            _plan.Direction == 1
+                                ? Math.Max(
+                                    candidate,
+                                    tightened)
+                                : Math.Min(
+                                    candidate,
+                                    tightened);
                     }
                 }
             }
@@ -5645,7 +6435,8 @@ if (UseM1Trigger &&
             double minimumDistance =
                 Math.Max(
                     Symbol.PipSize * 2,
-                    Symbol.Ask - Symbol.Bid);
+                    Symbol.Ask -
+                    Symbol.Bid);
 
             candidate =
                 _plan.Direction == 1
@@ -5668,20 +6459,21 @@ if (UseM1Trigger &&
                     candidate))
                 return _plan.Stop;
 
-            double step =
+            double atrValue =
                 Atr(
                     _m5Bars,
-                    closedM5) *
+                    closedM5);
+
+            double step =
+                atrValue *
                 Math.Max(
                     0.01,
-                    Math.Max(
-                        SlRepriceStepAtr,
-                        TrailStepAtr));
+                    TrailStepAtr);
 
             if (!BetterStop(
-                _plan.Direction,
-                candidate,
-                _plan.Stop) ||
+                    _plan.Direction,
+                    candidate,
+                    _plan.Stop) ||
                 Math.Abs(
                     candidate -
                     _plan.Stop) <
@@ -5693,7 +6485,7 @@ if (UseM1Trigger &&
             return candidate;
         }
 
-        private void UpdateUnhitTargetsLive(
+                private void UpdateUnhitTargetsLive(
             int closedM5,
             double market)
         {
@@ -5715,99 +6507,93 @@ if (UseM1Trigger &&
                     market,
                     atr);
 
-            for (int i = 0;
-                 i < levels.Count;
-                 i++)
+            double step =
+                atr *
+                Math.Max(
+                    0.05,
+                    TargetUpdateStepAtr);
+
+            for (int stage = 0;
+                 stage < 4;
+                 stage++)
             {
-                Level level =
-                    levels[i];
+                int hit =
+                    stage == 0
+                        ? _tp1Hit
+                        : stage == 1
+                            ? _tp2Hit
+                            : stage == 2
+                                ? _tp3Hit
+                                : _tp4Hit;
 
-                if (_plan.Direction == 1)
+                if (hit != 0)
+                    continue;
+
+                double current =
+                    stage == 0
+                        ? _plan.Tp1
+                        : stage == 1
+                            ? _plan.Tp2
+                            : stage == 2
+                                ? _plan.Tp3
+                                : _plan.Tp4;
+
+                if (current <= 0)
+                    continue;
+
+                double best =
+                    current;
+
+                for (int i = 0;
+                     i < levels.Count;
+                     i++)
                 {
-                    if (_tp1Hit == 0 &&
-                        level.Price >
-                        _plan.Tp1 +
-                        atr *
-                        Math.Max(
-                            0.05,
-                            TargetUpdateStepAtr))
-                    {
-                        _plan.Tp1 =
-                            level.Price;
+                    Level level =
+                        levels[i];
 
-                        ApplyTargetMeta(
-                            levels,
-                            _plan.Tp1,
-                            atr,
-                            out _plan.Tp1Source,
-                            out _plan.Tp1Quality);
+                    if (level.Score <
+                        SmartTargetQuality)
+                        continue;
 
-                        break;
-                    }
+                    bool improves =
+                        _plan.Direction == 1
+                            ? level.Price >
+                              best + step
+                            : level.Price <
+                              best - step;
 
-                    if (_tp2Hit == 0 &&
-                        _plan.Tp2 > 0 &&
-                        level.Price >
-                        _plan.Tp2 +
-                        atr *
-                        MinimumTpSpacingAtr)
-                    {
-                        _plan.Tp2 =
-                            level.Price;
+                    if (!improves)
+                        continue;
 
-                        ApplyTargetMeta(
-                            levels,
-                            _plan.Tp2,
-                            atr,
-                            out _plan.Tp2Source,
-                            out _plan.Tp2Quality);
+                    if (RejectTargetObstacle &&
+                        HasTargetObstacle(
+                            _m5Bars,
+                            closedM5,
+                            _plan.Direction,
+                            market,
+                            level.Price,
+                            atr))
+                        continue;
 
-                        break;
-                    }
+                    best =
+                        level.Price;
                 }
+
+                if (best == current)
+                    continue;
+
+                if (stage == 0)
+                    _plan.Tp1 =
+                        NormalizePrice(best);
+                else if (stage == 1)
+                    _plan.Tp2 =
+                        NormalizePrice(best);
+                else if (stage == 2)
+                    _plan.Tp3 =
+                        NormalizePrice(best);
                 else
-                {
-                    if (_tp1Hit == 0 &&
-                        level.Price <
-                        _plan.Tp1 -
-                        atr *
-                        Math.Max(
-                            0.05,
-                            TargetUpdateStepAtr))
-                    {
-                        _plan.Tp1 =
-                            level.Price;
-
-                        ApplyTargetMeta(
-                            levels,
-                            _plan.Tp1,
-                            atr,
-                            out _plan.Tp1Source,
-                            out _plan.Tp1Quality);
-
-                        break;
-                    }
-
-                    if (_tp2Hit == 0 &&
-                        _plan.Tp2 > 0 &&
-                        level.Price <
-                        _plan.Tp2 -
-                        atr *
-                        MinimumTpSpacingAtr)
-                    {
-                        _plan.Tp2 =
-                            level.Price;
-
-                        ApplyTargetMeta(
-                            levels,
-                            _plan.Tp2,
-                            atr,
-                            out _plan.Tp2Source,
-                            out _plan.Tp2Quality);
-
-                        break;
-                    }
-                }
+                    _plan.Tp4 =
+                        NormalizePrice(best);
             }
 
             RecalculatePlanRR();
@@ -6270,7 +7056,7 @@ if (UseM1Trigger &&
 
                 double tolerance =
                     atr *
-                    (UseRetestQualityGate
+                    (RequireRetestQuality
                         ? RetestZoneToleranceAtr
                         : ZoneProximityAtr);
 
@@ -6847,7 +7633,7 @@ if (UseM1Trigger &&
         // RETEST / REGIME / FILTERS
         // ============================================================
 
-        private int RetestQuality(
+                private int RetestQuality(
             Bars bars,
             int index,
             int direction)
@@ -6864,7 +7650,7 @@ if (UseM1Trigger &&
             if (atr <= 0)
                 return 0;
 
-            int q = 35;
+            int quality = 35;
 
             Zone zone =
                 FindNearestOpposingZone(
@@ -6873,27 +7659,54 @@ if (UseM1Trigger &&
                     direction,
                     atr);
 
-            double price =
-                bars.ClosePrices[index];
-
             if (zone != null)
             {
+                double price =
+                    bars.ClosePrices[index];
+
                 double tolerance =
                     atr *
                     Math.Max(
-                        0.05,
+                        ZoneProximityAtr,
                         RetestZoneToleranceAtr);
 
-                if (price >=
-                        zone.Low -
-                        tolerance &&
-                    price <=
-                        zone.High +
-                        tolerance)
-                    q += 30;
+                bool near =
+                    price >= zone.Low - tolerance &&
+                    price <= zone.High + tolerance;
 
-                if (zone.Quality >= 80)
-                    q += 15;
+                if (near)
+                    quality += 25;
+
+                if (zone.Quality >=
+                    FastReversalMinimumZoneQuality)
+                    quality += 10;
+
+                int first =
+                    Math.Max(
+                        2,
+                        index -
+                        RetestLookbackBars);
+
+                bool touched = false;
+
+                for (int i = first;
+                     i <= index;
+                     i++)
+                {
+                    if (bars.HighPrices[i] >= zone.Low &&
+                        bars.LowPrices[i] <= zone.High)
+                    {
+                        touched = true;
+                        break;
+                    }
+                }
+
+                if (touched)
+                    quality += 15;
+
+                if (RequireRetestCloseConfirmation &&
+                    !near)
+                    quality -= 15;
             }
 
             double body =
@@ -6903,80 +7716,51 @@ if (UseM1Trigger &&
 
             if (body >=
                 atr *
-                (UseRetestQualityGate
-                    ? RetestRejectionBodyAtr
-                    : MinimumTriggerBodyAtr))
-                q += 10;
+                Math.Max(
+                    RetestRejectionBodyAtr,
+                    MinimumTriggerBodyAtr))
+                quality += 10;
 
-            bool directionalClose =
+            bool directional =
                 direction == 1
                     ? bars.ClosePrices[index] >
                       bars.OpenPrices[index]
                     : bars.ClosePrices[index] <
                       bars.OpenPrices[index];
 
-            if (directionalClose)
-                q += 5;
+            if (directional)
+                quality += 5;
 
-            int displacementAge = -1;
-            int first =
+            int firstRecent =
                 Math.Max(
-                    5,
+                    2,
                     index -
-                    Math.Max(
-                        1,
-                        RetestLookbackBars));
+                    RetestMaxBarsAfterDisplacement);
 
-            for (int i = index;
-                 i >= first;
-                 i--)
+            for (int i = firstRecent;
+                 i <= index;
+                 i++)
             {
-                bool displacement =
-                    direction == 1
-                        ? BullDisplacement(
-                            bars,
-                            i,
-                            atr)
-                        : BearDisplacement(
-                            bars,
-                            i,
-                            atr);
+                double bodySize =
+                    Math.Abs(
+                        bars.ClosePrices[i] -
+                        bars.OpenPrices[i]);
 
-                if (displacement)
+                if (bodySize >=
+                        atr * DisplacementAtr &&
+                    (direction == 1
+                        ? bars.ClosePrices[i] >
+                          bars.OpenPrices[i]
+                        : bars.ClosePrices[i] <
+                          bars.OpenPrices[i]))
                 {
-                    displacementAge =
-                        index - i;
+                    quality += 10;
                     break;
                 }
             }
 
-            if (displacementAge >= 0)
-            {
-                if (displacementAge <=
-                    Math.Max(
-                        1,
-                        RetestMaxBarsAfterDisplacement))
-                    q += 10;
-                else
-                    q = Math.Max(
-                        0,
-                        q - 10);
-            }
-
-            if (RequireRetestCloseConfirmation &&
-                zone != null &&
-                !directionalClose)
-                return 0;
-
-            if (zone != null &&
-                (price < zone.Low - atr * RetestZoneToleranceAtr ||
-                 price > zone.High + atr * RetestZoneToleranceAtr))
-                q = Math.Max(
-                    0,
-                    q - 20);
-
             return ClampInt(
-                q,
+                quality,
                 0,
                 100);
         }
@@ -7124,37 +7908,62 @@ if (UseM1Trigger &&
                    MaximumSpreadAtr;
         }
 
-        private bool VolatilityBlocked(
+                private bool VolatilityBlocked(
             Bars bars,
             int index)
         {
-            double atr =
-                Atr(
-                    bars,
-                    index);
-
-            double oldAtr =
-                Atr(
-                    bars,
-                    Math.Max(
-                        5,
-                        index - 10));
-
-            if (atr <= 0 ||
-                oldAtr <= 0)
+            if ((!UseVolatilityGuard &&
+                 !UseVolatilityEventGuard) ||
+                bars == null ||
+                index < 10)
                 return false;
 
-            double range =
-                bars.HighPrices[index] -
-                bars.LowPrices[index];
+            int window =
+                UseVolatilityEventGuard
+                    ? Math.Max(
+                        0,
+                        EventGuardCooldownBars)
+                    : 0;
 
-            return
-                range >=
-                atr *
-                EventShockRangeAtr &&
-                atr >=
-                oldAtr *
-                EventShockAtrExpansion;
+            int first =
+                Math.Max(
+                    1,
+                    index - window);
+
+            for (int i = first;
+                 i <= index;
+                 i++)
+            {
+                double barAtr =
+                    Atr(
+                        bars,
+                        i);
+
+                double priorAtr =
+                    Atr(
+                        bars,
+                        Math.Max(
+                            5,
+                            i - 10));
+
+                if (barAtr <= 0 ||
+                    priorAtr <= 0)
+                    continue;
+
+                double range =
+                    bars.HighPrices[i] -
+                    bars.LowPrices[i];
+
+                if (range >=
+                        barAtr *
+                        EventShockRangeAtr &&
+                    barAtr >=
+                        priorAtr *
+                        EventShockAtrExpansion)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool NewsBlocked(
@@ -7303,7 +8112,7 @@ if (UseM1Trigger &&
                   stop > entry;
         }
 
-        private bool HasTargetObstacle(
+                private bool HasTargetObstacle(
             Bars bars,
             int index,
             int direction,
@@ -7312,41 +8121,36 @@ if (UseM1Trigger &&
             double atr)
         {
             if (bars == null ||
-                index < 5)
+                index < 5 ||
+                atr <= 0)
                 return false;
+
+            double clearance =
+                atr *
+                Math.Max(
+                    TargetClearanceAtr,
+                    TargetObstacleBufferAtr);
 
             int start =
                 Math.Max(
                     2,
                     index -
-                    Math.Max(
-                        3,
-                        TargetObstacleLookbackBars));
+                    12);
 
             for (int i = start;
                  i < index;
                  i++)
             {
                 if (direction == 1 &&
-                    bars.HighPrices[i] >
-                    entry &&
+                    bars.HighPrices[i] > entry &&
                     bars.HighPrices[i] <
-                    target -
-                    atr *
-                    Math.Max(
-                        TargetClearanceAtr,
-                        TargetObstacleBufferAtr))
+                    target - clearance)
                     return true;
 
                 if (direction == -1 &&
-                    bars.LowPrices[i] <
-                    entry &&
+                    bars.LowPrices[i] < entry &&
                     bars.LowPrices[i] >
-                    target +
-                    atr *
-                    Math.Max(
-                        TargetClearanceAtr,
-                        TargetObstacleBufferAtr))
+                    target + clearance)
                     return true;
             }
 
@@ -7954,6 +8758,28 @@ if (UseM1Trigger &&
             _reactionAlertBar = value;
         }
 
+        private Color SignalArrowColorFor(
+            int direction,
+            string state)
+        {
+            if (state == "REACTION")
+                return BlockedReactionArrowColor;
+
+            if (state == "WATCH")
+                return direction == 1
+                    ? CautionBuyArrowColor
+                    : CautionSellArrowColor;
+
+            if (state == "CONFIRMED")
+                return direction == 1
+                    ? ConfirmedBuyArrowColor
+                    : ConfirmedSellArrowColor;
+
+            return direction == 1
+                ? StrongBuyArrowColor
+                : StrongSellArrowColor;
+        }
+
         private void DrawIcon(
             string name,
             ChartIconType type,
@@ -8111,8 +8937,15 @@ if (UseM1Trigger &&
                 _cancelButton.Click +=
                     args => CancelAllOrders();
 
-                _closeButton.Margin = 2;
-                _cancelButton.Margin = 2;
+                _closeButton.Margin =
+                    Math.Max(
+                        0,
+                        ActionButtonMargin);
+
+                _cancelButton.Margin =
+                    Math.Max(
+                        0,
+                        ActionButtonMargin);
 
                 _buttonStack.AddChild(
                     _closeButton);
@@ -8395,7 +9228,8 @@ if (UseM1Trigger &&
             SetPanelAlignment();
 
             bool buttons =
-                EnableAutoTrading;
+                EnableAutoTrading &&
+                ShowTradeActionButtons;
 
             _buttonStack.IsVisible =
                 buttons;
@@ -8515,7 +9349,7 @@ if (UseM1Trigger &&
                     PanelCornerRadius);
         }
 
-        private string BuildPanelText()
+                private string BuildPanelText()
         {
             List<string> lines =
                 new List<string>();
@@ -8547,11 +9381,9 @@ if (UseM1Trigger &&
                 Bars.TimeFrame);
 
             if (ShowEngineStatus)
-            {
                 lines.Add(
                     "STATUS  " +
                     _status);
-            }
 
             if (_decision != null)
             {
@@ -8585,22 +9417,24 @@ if (UseM1Trigger &&
                     " | RETEST " +
                     _decision.RetestQuality);
 
+                lines.Add(
+                    "SHARE  " +
+                    _decision.BuyShare +
+                    "/" +
+                    _decision.SellShare);
+
                 if (!string.IsNullOrWhiteSpace(
                         _decision.BlockReason))
                     lines.Add(
                         "BLOCK  " +
                         _decision.BlockReason);
 
-                if (!string.IsNullOrWhiteSpace(
-                        _decision.Reason))
-                    lines.Add(
-                        "WHY  " +
-                        _decision.Reason);
-
                 if (_prediction != null &&
                     _prediction.Direction != 0 &&
                     _prediction.Confidence >=
-                    MinimumEarlyConfidence)
+                    Math.Max(
+                        MinimumEarlyConfidence,
+                        EarlySetupConfidence))
                 {
                     lines.Add(
                         "EARLY  " +
@@ -8612,79 +9446,81 @@ if (UseM1Trigger &&
 
                     lines.Add(
                         "PRED  TRG " +
-                        Price(
-                            _prediction.Trigger) +
+                        Price(_prediction.Trigger) +
                         " | TGT " +
-                        Price(
-                            _prediction.Target));
+                        Price(_prediction.Target));
                 }
             }
 
-            if (_plan != null)
+            if (_plan != null &&
+                ShowTradePlanPanel)
             {
                 lines.Add("");
                 lines.Add("TRADE PLAN");
 
-                if (ShowEntry)
-                    lines.Add(
-                        "ENTRY  " +
-                        Price(_plan.Entry));
+                if (ShowLevelPricesInUnifiedPanel)
+                {
+                    if (ShowEntry)
+                        lines.Add(
+                            "ENTRY  " +
+                            Price(_plan.Entry));
 
-                if (ShowSL)
-                    lines.Add(
-                        "SL     " +
-                        Price(_plan.Stop) +
-                        " | " +
-                        _plan.StopSource +
-                        " | Q" +
-                        _plan.StopQuality);
+                    if (ShowSL)
+                        lines.Add(
+                            "SL     " +
+                            Price(_plan.Stop) +
+                            " | " +
+                            _plan.StopSource +
+                            " | Q" +
+                            _plan.StopQuality);
 
-                if (ShowTP1)
-                    lines.Add(
-                        "TP1    " +
-                        Price(_plan.Tp1) +
-                        " | RR " +
-                        _plan.Tp1RR.ToString("F2") +
-                        " | " +
-                        _plan.Tp1Source +
-                        " | Q" +
-                        _plan.Tp1Quality);
+                    if (ShowTP1)
+                        lines.Add(
+                            "TP1    " +
+                            Price(_plan.Tp1) +
+                            " | RR " +
+                            _plan.Tp1RR.ToString("F2") +
+                            " | " +
+                            _plan.Tp1Source +
+                            " | Q" +
+                            _plan.Tp1Quality);
 
-                if (ShowTP2 &&
-                    _plan.Tp2 > 0)
-                    lines.Add(
-                        "TP2    " +
-                        Price(_plan.Tp2) +
-                        " | RR " +
-                        _plan.Tp2RR.ToString("F2") +
-                        " | " +
-                        _plan.Tp2Source +
-                        " | Q" +
-                        _plan.Tp2Quality);
+                    if (ShowTP2 &&
+                        _plan.Tp2 > 0)
+                        lines.Add(
+                            "TP2    " +
+                            Price(_plan.Tp2) +
+                            " | RR " +
+                            _plan.Tp2RR.ToString("F2") +
+                            " | " +
+                            _plan.Tp2Source +
+                            " | Q" +
+                            _plan.Tp2Quality);
 
-                if (ShowTP3 &&
-                    _plan.Tp3 > 0)
-                    lines.Add(
-                        "TP3    " +
-                        Price(_plan.Tp3) +
-                        " | RR " +
-                        _plan.Tp3RR.ToString("F2") +
-                        " | " +
-                        _plan.Tp3Source +
-                        " | Q" +
-                        _plan.Tp3Quality);
+                    if (ShowTP3 &&
+                        _plan.Tp3 > 0)
+                        lines.Add(
+                            "TP3    " +
+                            Price(_plan.Tp3) +
+                            " | RR " +
+                            _plan.Tp3RR.ToString("F2") +
+                            " | " +
+                            _plan.Tp3Source +
+                            " | Q" +
+                            _plan.Tp3Quality);
 
-                if (ShowTP4 &&
-                    _plan.Tp4 > 0)
-                    lines.Add(
-                        "TP4    " +
-                        Price(_plan.Tp4) +
-                        " | RR " +
-                        _plan.Tp4RR.ToString("F2") +
-                        " | " +
-                        _plan.Tp4Source +
-                        " | Q" +
-                        _plan.Tp4Quality);
+                    if (ShowTP4 &&
+                        _plan.Tp4 > 0)
+                        lines.Add(
+                            "TP4    " +
+                            Price(_plan.Tp4) +
+                            " | RR " +
+                            _plan.Tp4RR.ToString("F2") +
+                            " | " +
+                            _plan.Tp4Source +
+                            " | Q" +
+                            _plan.Tp4Quality);
+                }
 
                 double liveRR =
                     _plan.Risk > 0
@@ -8702,11 +9538,18 @@ if (UseM1Trigger &&
                     _tp2Hit + "/" +
                     _tp3Hit + "/" +
                     _tp4Hit);
+
+                lines.Add(
+                    "EXIT  " +
+                    GetSmartExitMode() +
+                    " | PRESS " +
+                    CalculateSmartExitPressure(
+                        _lastMarket,
+                        liveRR));
             }
-            else if (_reaction != null &&
-                     _reaction.EntryAllowed)
-            {
-                lines.Add("");
+
+            if (_reaction != null &&
+                _reaction.EntryAllowed)
                 lines.Add(
                     "REACTION  " +
                     (_reaction.Direction == 1
@@ -8716,41 +9559,35 @@ if (UseM1Trigger &&
                     _reaction.Confidence +
                     " | EVID " +
                     _reaction.IndependentEvidence);
-            }
 
             lines.Add("");
             lines.Add("MTF");
-
-            if (UseVolumeExpansion ||
-                UseMacdBias ||
-                UseVwapBias ||
-                UseHealthyVolatility)
-            {
-                lines.Add(
-                    "CONFL  " +
-                    ConfluenceText(
-                        _m5Frame));
-            }
-
             lines.Add(
                 "M5  " +
                 FrameText(_m5Frame));
-
             lines.Add(
                 "M15 " +
                 FrameText(_m15Frame));
-
             lines.Add(
                 "M30 " +
                 FrameText(_m30Frame));
-
             lines.Add(
                 "H1  " +
                 FrameText(_h1Frame));
-
             lines.Add(
                 "H4  " +
                 FrameText(_h4Frame));
+
+            if (SmartWeeklyContext)
+            {
+                lines.Add(
+                    "D1  " +
+                    FrameText(_d1Frame));
+
+                lines.Add(
+                    "W1  " +
+                    FrameText(_w1Frame));
+            }
 
             if (ShowOutcomeDiagnostics)
             {
@@ -9920,7 +10757,7 @@ if (UseM1Trigger &&
                       "%";
         }
 
-        private Prediction BuildEarlyPrediction(
+                private Prediction BuildEarlyPrediction(
             int closedM5)
         {
             Prediction p =
@@ -9928,7 +10765,8 @@ if (UseM1Trigger &&
 
             if (!EnableEarlyPrediction ||
                 _m5Frame == null ||
-                _m15Frame == null)
+                _m15Frame == null ||
+                closedM5 < 10)
                 return p;
 
             double buy =
@@ -9947,6 +10785,18 @@ if (UseM1Trigger &&
                 if (_m5Frame.LiquidityBear)
                     sell += 8;
             }
+
+            if (_m5Frame.VolumeBull)
+                buy += 2;
+
+            if (_m5Frame.VolumeBear)
+                sell += 2;
+
+            if (_m5Frame.VwapBull)
+                buy += 1;
+
+            if (_m5Frame.VwapBear)
+                sell += 1;
 
             p.Direction =
                 buy >= sell
@@ -9970,7 +10820,9 @@ if (UseM1Trigger &&
                     100);
 
             if (p.Confidence <
-                MinimumEarlyConfidence)
+                Math.Max(
+                    MinimumEarlyConfidence,
+                    EarlySetupConfidence))
                 return p;
 
             double atr =
@@ -9980,6 +10832,11 @@ if (UseM1Trigger &&
 
             if (atr <= 0)
                 return p;
+
+            p.Entry =
+                NormalizePrice(
+                    _m5Bars.ClosePrices[
+                        closedM5]);
 
             Zone zone =
                 FindNearestOpposingZone(
@@ -9995,15 +10852,12 @@ if (UseM1Trigger &&
             }
             else
             {
-                double price =
-                    _m5Bars.ClosePrices[closedM5];
-
                 p.ZoneLow =
-                    price -
+                    p.Entry -
                     atr * 0.30;
 
                 p.ZoneHigh =
-                    price +
+                    p.Entry +
                     atr * 0.30;
             }
 
@@ -10014,35 +10868,91 @@ if (UseM1Trigger &&
                     : p.ZoneLow -
                       atr * EntryBufferAtr;
 
-            p.Target =
-                p.Direction == 1
-                    ? FindEqualHigh(
-                        _m5Bars,
-                        closedM5,
-                        _m5Bars.ClosePrices[closedM5],
-                        atr)
-                    : FindEqualLow(
-                        _m5Bars,
-                        closedM5,
-                        _m5Bars.ClosePrices[closedM5],
-                        atr);
+            string stopSource;
+            int stopQuality;
+
+            p.StopLoss =
+                BuildStructuralStop(
+                    closedM5,
+                    p.Direction,
+                    p.Entry,
+                    atr,
+                    out stopSource,
+                    out stopQuality);
 
             if (!IsFinitePositive(
-                    p.Target))
+                    p.StopLoss) &&
+                AllowExecutionFrameStopFallback)
             {
-                p.Target =
+                p.StopLoss =
                     p.Direction == 1
-                        ? p.Trigger +
-                          atr *
-                          Math.Max(
-                              1.5,
-                              SmartTargetMinimumRR)
-                        : p.Trigger -
-                          atr *
-                          Math.Max(
-                              1.5,
-                              SmartTargetMinimumRR);
+                        ? p.Entry -
+                          atr * FallbackSlAtr
+                        : p.Entry +
+                          atr * FallbackSlAtr;
             }
+
+            double risk =
+                Math.Abs(
+                    p.Entry -
+                    p.StopLoss);
+
+            if (risk <= 0)
+                return p;
+
+            List<Level> candidates =
+                BuildTargetLevels(
+                    closedM5,
+                    p.Direction,
+                    p.Entry,
+                    atr);
+
+            List<Level> selected =
+                SelectTargets(
+                    candidates,
+                    p.Entry,
+                    risk,
+                    p.Direction,
+                    atr);
+
+            p.Target1 =
+                SelectTarget(
+                    selected,
+                    0,
+                    p.Entry,
+                    risk,
+                    p.Direction,
+                    Tp1MinimumRR);
+
+            p.Target2 =
+                SelectTarget(
+                    selected,
+                    1,
+                    p.Entry,
+                    risk,
+                    p.Direction,
+                    Tp2MinimumRR);
+
+            p.Target3 =
+                SelectTarget(
+                    selected,
+                    2,
+                    p.Entry,
+                    risk,
+                    p.Direction,
+                    Tp3MinimumRR);
+
+            p.Target4 =
+                SelectTarget(
+                    selected,
+                    3,
+                    p.Entry,
+                    risk,
+                    p.Direction,
+                    Tp4MinimumRR);
+
+            p.Target =
+                p.Target1;
 
             p.Reason =
                 (p.Direction == 1
@@ -10054,7 +10964,7 @@ if (UseM1Trigger &&
             return p;
         }
 
-        private void RenderPredictionObjects(
+                private void RenderPredictionObjects(
             Prediction prediction,
             int closedM5)
         {
@@ -10065,7 +10975,9 @@ if (UseM1Trigger &&
                 prediction == null ||
                 prediction.Direction == 0 ||
                 prediction.Confidence <
-                MinimumEarlyConfidence)
+                Math.Max(
+                    MinimumEarlyConfidence,
+                    EarlySetupConfidence))
                 return;
 
             int start =
@@ -10105,32 +11017,57 @@ if (UseM1Trigger &&
                         prediction.ZoneHigh,
                         end,
                         prediction.ZoneLow,
-                        predictionColor(),
+                        PredictionColor,
                         1,
-                        PlanLineStyle);
+                        PredictionZoneLineStyle);
 
-                zone.IsFilled =
-                    true;
+                zone.IsFilled = true;
 
                 zone.Color =
                     Color.FromArgb(
                         35,
-                        predictionColor());
+                        PredictionColor);
 
-                zone.IsInteractive =
-                    false;
+                zone.IsInteractive = false;
             }
+
+            if (prediction.Entry > 0)
+                DrawPredictionLine(
+                    P + "PRED_ENTRY",
+                    prediction.Entry);
+
+            if (prediction.StopLoss > 0)
+                DrawPredictionLine(
+                    P + "PRED_STOP",
+                    prediction.StopLoss);
 
             if (prediction.Trigger > 0)
                 DrawPredictionLine(
                     P + "PRED_TRIGGER",
                     prediction.Trigger);
 
-            if (ShowPredictionTargets &&
-                prediction.Target > 0)
-                DrawPredictionLine(
-                    P + "PRED_TARGET",
-                    prediction.Target);
+            if (ShowPredictionTargets)
+            {
+                if (prediction.Target1 > 0)
+                    DrawPredictionLine(
+                        P + "PRED_TARGET1",
+                        prediction.Target1);
+
+                if (prediction.Target2 > 0)
+                    DrawPredictionLine(
+                        P + "PRED_TARGET2",
+                        prediction.Target2);
+
+                if (prediction.Target3 > 0)
+                    DrawPredictionLine(
+                        P + "PRED_TARGET3",
+                        prediction.Target3);
+
+                if (prediction.Target4 > 0)
+                    DrawPredictionLine(
+                        P + "PRED_TARGET4",
+                        prediction.Target4);
+            }
         }
 
         private Color predictionColor()
@@ -10866,6 +11803,56 @@ if (UseM1Trigger &&
             RemovePlanObjects();
         }
 
+        private void DrawOutcomeMarker(
+            string label,
+            double price,
+            bool success)
+        {
+            if (!ShowContextEventMarker ||
+                Bars == null ||
+                Bars.Count < 2 ||
+                !IsFinitePositive(price))
+                return;
+
+            try
+            {
+                string name =
+                    P +
+                    "OUTCOME_" +
+                    label.Replace(
+                        " ",
+                        "_") +
+                    "_" +
+                    Bars.Count +
+                    "_" +
+                    _outcomeDrawn.Count;
+
+                ChartText marker =
+                    Chart.DrawText(
+                        name,
+                        label,
+                        Bars.OpenTimes[
+                            Bars.Count - 1],
+                        NormalizePrice(price),
+                        success
+                            ? ConfirmedBuyArrowColor
+                            : ConfirmedSellArrowColor);
+
+                marker.FontSize =
+                    Math.Max(
+                        8,
+                        PanelFontSize);
+
+                marker.IsBold = true;
+                marker.IsInteractive = false;
+
+                _outcomeDrawn.Add(name);
+            }
+            catch
+            {
+            }
+        }
+
         // ============================================================
         // HISTORICAL
         // ============================================================
@@ -11183,10 +12170,15 @@ if (UseM1Trigger &&
             return value;
         }
 
-        private void RemoveAllChartObjects()
+                private void RemoveAllChartObjects()
         {
             RemovePlanObjects();
             RemoveHistoricalObjects();
+
+            foreach (string name in _outcomeDrawn)
+                Chart.RemoveObject(name);
+
+            _outcomeDrawn.Clear();
         }
 
         // ============================================================
