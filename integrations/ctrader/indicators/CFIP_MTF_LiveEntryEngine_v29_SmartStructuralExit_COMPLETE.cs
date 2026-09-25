@@ -619,6 +619,9 @@ namespace cAlgo
         [Parameter("Trade Plan Width", Group = "Display", DefaultValue = 315, MinValue = 180, MaxValue = 600)]
         public int TradePlanWidth { get; set; }
 
+        [Parameter("Panel State Hold Seconds", Group = "Display", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
+        public int PanelStateHoldSeconds { get; set; }
+
         [Parameter("Entry Color", Group = "Display", DefaultValue = "White")]
         public Color EntryColor { get; set; }
 
@@ -634,7 +637,7 @@ namespace cAlgo
         [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "White")]
         public Color TradePlanTextColor { get; set; }
 
-        [Parameter("Unified Panel Text Color", Group = "Display", DefaultValue = "White")]
+        [Parameter("Unified Panel Text Color", Group = "Display", DefaultValue = "Lime")]
         public Color UnifiedPanelTextColor { get; set; }
 
         [Parameter("Trade Plan Font Family", Group = "Display", DefaultValue = "Arial")]
@@ -1237,6 +1240,8 @@ namespace cAlgo
         private StackPanel _tradePlanActionStack;
         private Button _closeAllPositionsButton;
         private Button _cancelAllOrdersButton;
+        private string _panelStableHeader = "";
+        private DateTime _panelStableHeaderSinceUtc = DateTime.MinValue;
 
         private Border _alertPopupBorder;
         private TextBlock _alertPopupText;
@@ -1445,6 +1450,8 @@ namespace cAlgo
             _reactionTp3 = 0;
             _reactionTp4 = 0;
             _lastHistoricalRenderM5Bar = -1;
+            _panelStableHeader = "";
+            _panelStableHeaderSinceUtc = DateTime.MinValue;
             _cachedM1Index = _cachedM5Index = _cachedM15Index = -1;
             _cachedM30Index = _cachedH1Index = _cachedH4Index = -1;
             _cachedM1Analysis = _cachedM5Analysis = _cachedM15Analysis = null;
@@ -4830,11 +4837,13 @@ namespace cAlgo
             try
             {
                 // Draw a finite, thin, horizontal segment as the primary object.
+                // Use the documented DateTime overload so the segment is
+                // anchored to real chart times and cannot drift with bar-index mapping.
                 ChartTrendLine segment = Chart.DrawTrendLine(
                     name,
-                    startIndex,
+                    Bars.OpenTimes[startIndex],
                     normalizedPrice,
-                    endIndex,
+                    Bars.OpenTimes[endIndex],
                     normalizedPrice,
                     color,
                     Math.Max(1, LevelLineThickness),
@@ -5284,6 +5293,57 @@ namespace cAlgo
                    Math.Round(pressure).ToString();
         }
 
+        private string GetStablePanelHeader()
+        {
+            string candidate;
+
+            if (_signalActive && _signalDirection != 0)
+                candidate = _signalDirection == 1 ? "BUY ACTIVE" : "SELL ACTIVE";
+            else if (_liveReactionDirection != 0)
+                candidate = _liveReactionDirection == 1 ? "BUY REACTION" : "SELL REACTION";
+            else if (_predictionDirection != 0)
+                candidate = _predictionDirection == 1 ? "BUY WATCH" : "SELL WATCH";
+            else if (EnableSmartDecisionEngine && _smartQuality >= Math.Max(0, MinimumSmartQuality - 8))
+            {
+                if (_smartAction == "BUY WATCH" || (_smartDirection == 1 && _smartAction == "BUY"))
+                    candidate = "BUY SMART WATCH";
+                else if (_smartAction == "SELL WATCH" || (_smartDirection == -1 && _smartAction == "SELL"))
+                    candidate = "SELL SMART WATCH";
+                else
+                    candidate = "WAITING";
+            }
+            else if (!string.IsNullOrWhiteSpace(_contextStatusText))
+                candidate = "CONTEXT";
+            else if (_signalDirection != 0 && !string.IsNullOrWhiteSpace(_signalOutcome) && _signalOutcome != "ACTIVE")
+                candidate = _signalOutcome;
+            else
+                candidate = "WAITING";
+
+            DateTime now = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(_panelStableHeader))
+            {
+                _panelStableHeader = candidate;
+                _panelStableHeaderSinceUtc = now;
+                return _panelStableHeader;
+            }
+
+            if (string.Equals(candidate, _panelStableHeader, StringComparison.Ordinal))
+                return _panelStableHeader;
+
+            // Confirmed ACTIVE/terminal states are authoritative immediately.
+            bool authoritative = _signalActive || candidate == "CONTEXT" ||
+                                 (!string.IsNullOrWhiteSpace(_signalOutcome) && _signalOutcome != "ACTIVE" &&
+                                  candidate == _signalOutcome);
+            double heldSeconds = (now - _panelStableHeaderSinceUtc).TotalSeconds;
+            if (authoritative || PanelStateHoldSeconds <= 0 || heldSeconds >= PanelStateHoldSeconds)
+            {
+                _panelStableHeader = candidate;
+                _panelStableHeaderSinceUtc = now;
+            }
+
+            return _panelStableHeader;
+        }
+
         private void DrawUnifiedPanel()
         {
             if (_suppressIntermediatePanelRender)
@@ -5358,16 +5418,21 @@ namespace cAlgo
 
             List<string> lines = new List<string>();
 
-            // STATUS is deliberately compact. Direction share, quality and
-            // level intelligence live in the dedicated SMART / PLAN rows below.
-            if (showStatus &&
-                !string.IsNullOrWhiteSpace(_engineStatusText))
+            // The panel is intentionally divided into stable semantic sections.
+            // The header is held briefly so fast intrabar transitions do not make
+            // the entire box appear to flicker between WAITING/WATCH/REACTION.
+            string stableHeader = GetStablePanelHeader();
+
+            if (showStatus)
             {
-                lines.Add(_engineStatusText);
+                lines.Add("STATUS");
+                lines.Add(stableHeader);
             }
 
             if (showPlan)
             {
+                lines.Add("");
+                lines.Add("TRADE PLAN");
                 string directionText =
                     _signalDirection == 1 ? "BUY" : "SELL";
 
@@ -5471,6 +5536,9 @@ namespace cAlgo
                 }
             }
 
+            if (EnableSmartDecisionEngine && _smartDecision != null)
+                lines.Add("");
+
             // One compact SMART row: percentages are explicitly labelled
             // EVIDENCE SHARE, not probability, because softmax share is not            // statistical calibration.
             if (EnableSmartDecisionEngine &&
@@ -5508,6 +5576,8 @@ namespace cAlgo
             if (showReaction &&
                 !string.IsNullOrWhiteSpace(_earlyStatusText))
             {
+                lines.Add("");
+                lines.Add("LIVE REACTION");
                 lines.Add(_earlyStatusText);
 
                 if (!_signalActive &&
@@ -5546,6 +5616,8 @@ namespace cAlgo
             }
             else if (showEarly)
             {
+                lines.Add("");
+                lines.Add("WATCH SETUP");
                 lines.Add(
                     "WATCH  " +
                     (_predictionDirection == 1 ? "BUY" : "SELL") +
@@ -5586,10 +5658,18 @@ namespace cAlgo
             }
 
             if (showContext)
+            {
+                lines.Add("");
+                lines.Add("CONTEXT");
                 lines.Add(_contextStatusText);
+            }
 
             if (!string.IsNullOrWhiteSpace(_tradeActionStatusText))
+            {
+                lines.Add("");
+                lines.Add("ACTIONS");
                 lines.Add(_tradeActionStatusText);
+            }
 
             if (lines.Count == 0)
             {
@@ -5598,6 +5678,7 @@ namespace cAlgo
             }
 
             // One authoritative text color for every intelligence-panel state.
+            // Default is fluorescent green and never changes with BUY/SELL/WAIT state.
             Color panelColor = UnifiedPanelTextColor;
 
             if (_tradePlanPanelBorder == null)
@@ -14005,6 +14086,8 @@ for (int j = impulse + 1; j <= index; j++)
             _contextStatusText = "";
             _earlyStatusText = "";
             _tradeActionStatusText = "";
+            _panelStableHeader = "";
+            _panelStableHeaderSinceUtc = DateTime.MinValue;
         }
 
         private void ClearHistoricalObjects()
