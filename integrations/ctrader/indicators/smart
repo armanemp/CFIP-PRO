@@ -637,7 +637,7 @@ namespace cAlgo
         [Parameter("Trade Plan Width", Group = "17 Display & Panel", DefaultValue = 420, MinValue = 180, MaxValue = 600)]
         public int TradePlanWidth { get; set; }
 
-        [Parameter("Trade Plan Minimum Height", Group = "17 Display & Panel", DefaultValue = 360, MinValue = 160, MaxValue = 700)]
+        [Parameter("Trade Plan Minimum Height", Group = "17 Display & Panel", DefaultValue = 420, MinValue = 220, MaxValue = 700)]
         public int TradePlanMinimumHeight { get; set; }
 
         [Parameter("Panel State Hold Seconds", Group = "17 Display & Panel", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
@@ -940,6 +940,15 @@ namespace cAlgo
 
         [Parameter("Auto Trade Risk % Equity", Group = "15 Auto Trading", DefaultValue = 0.50, MinValue = 0.05, MaxValue = 5.00, Step = 0.05)]
         public double AutoTradeRiskPercentEquity { get; set; }
+
+        [Parameter("Auto Trade Minimum Confidence", Group = "15 Auto Trading", DefaultValue = 78, MinValue = 50, MaxValue = 99)]
+        public int AutoTradeMinimumConfidence { get; set; }
+
+        [Parameter("Auto Trade Minimum Smart Quality", Group = "15 Auto Trading", DefaultValue = 70, MinValue = 50, MaxValue = 95)]
+        public int AutoTradeMinimumSmartQuality { get; set; }
+
+        [Parameter("Require Structural SL/TP", Group = "15 Auto Trading", DefaultValue = true)]
+        public bool AutoTradeRequireStructuralPlan { get; set; }
 
         [Parameter("Auto Trade Fixed Lots", Group = "15 Auto Trading", DefaultValue = 0.01, MinValue = 0.001, MaxValue = 100.0, Step = 0.001)]
         public double AutoTradeFixedLots { get; set; }
@@ -1496,7 +1505,7 @@ namespace cAlgo
 
         // Rendering invariants: one owner per visible level, fixed panel rows,
         // and in-place icon updates so repeated Calculate() calls do not flicker.
-        private const int TradePlanPanelFixedRows = 48;
+        // Content rows stay above the action row; the whole panel is bottom-anchored.\n        // A compact fixed row budget avoids Grid minimum-row expansion pushing buttons downward.\n        private const int TradePlanPanelFixedRows = 26;
         private const int TradePlanPanelSpacerRow = 0;
         private const int TradePlanPanelFirstContentRow = 1;
         private const int TradePlanPanelLastContentRow =
@@ -5267,6 +5276,36 @@ namespace cAlgo
                     _signalTp4,
                     _signalEntry);
 
+            if (_signalConfidence <
+                Math.Max(50, AutoTradeMinimumConfidence))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | CONFIDENCE " +
+                    _signalConfidence;
+                return;
+            }
+
+            if (_smartQuality <
+                Math.Max(50, AutoTradeMinimumSmartQuality))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | SMART QUALITY " +
+                    _smartQuality;
+                return;
+            }
+
+            if (AutoTradeRequireStructuralPlan &&
+                (!IsFinitePositive(_signalSl) ||
+                 !IsFinitePositive(target) ||
+                 string.IsNullOrWhiteSpace(_signalSlSource) ||
+                 _signalSlSource == "FALLBACK" ||
+                 _signalSlSource == "SYNTHETIC"))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | NON-STRUCTURAL PLAN";
+                return;
+            }
+
             if (!IsAutoTradePlanValid(
                     _signalDirection,
                     _signalEntry,
@@ -5968,15 +6007,47 @@ namespace cAlgo
 
             try
             {
+                if (fullWidth)
+                {
+                    // Native horizontal lines are the authoritative full-width
+                    // representation. This avoids timeframe/bar-index conversion
+                    // entirely and uses cTrader's dedicated Y-axis drawing API.
+                    ChartHorizontalLine horizontal =
+                        Chart.FindObject(name) as ChartHorizontalLine;
+
+                    if (horizontal == null)
+                    {
+                        Chart.RemoveObject(name);
+                        horizontal =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                style);
+                    }
+
+                    if (horizontal == null)
+                        throw new InvalidOperationException(
+                            "Chart.DrawHorizontalLine returned null.");
+
+                    horizontal.Y = normalizedPrice;
+                    horizontal.Color = color;
+                    horizontal.Thickness =
+                        Math.Max(1, LevelLineThickness);
+                    horizontal.LineStyle = style;
+
+                    Chart.RemoveObject(name + "_SEG");
+                    Chart.RemoveObject(name + "_FALLBACK");
+                    return;
+                }
+
                 ChartTrendLine line =
                     Chart.FindObject(name) as ChartTrendLine;
 
                 if (line == null)
                 {
-                    // One authoritative object type for all plan/prediction lines.
-                    // The bar-index overload avoids timeframe/date-index mismatch.
                     Chart.RemoveObject(name);
-
                     line =
                         Chart.DrawTrendLine(
                             name,
@@ -5985,9 +6056,7 @@ namespace cAlgo
                             safeEnd,
                             normalizedPrice,
                             color,
-                            Math.Max(
-                                1,
-                                LevelLineThickness),
+                            Math.Max(1, LevelLineThickness),
                             style);
                 }
 
@@ -5995,37 +6064,51 @@ namespace cAlgo
                     throw new InvalidOperationException(
                         "Chart.DrawTrendLine returned null.");
 
-                line.Time1 =
-                    Bars.OpenTimes[safeStart];
-                line.Y1 =
-                    normalizedPrice;
-                line.Time2 =
-                    Bars.OpenTimes[safeEnd];
-                line.Y2 =
-                    normalizedPrice;
-                line.Color =
-                    color;
-                line.Thickness =
-                    Math.Max(
-                        1,
-                        LevelLineThickness);
-                line.LineStyle =
-                    style;
-                line.ExtendToInfinity =
-                    fullWidth;
-                line.IsInteractive =
-                    false;
+                line.Time1 = Bars.OpenTimes[safeStart];
+                line.Y1 = normalizedPrice;
+                line.Time2 = Bars.OpenTimes[safeEnd];
+                line.Y2 = normalizedPrice;
+                line.Color = color;
+                line.Thickness = Math.Max(1, LevelLineThickness);
+                line.LineStyle = style;
+                line.ExtendToInfinity = false;
+                line.IsInteractive = false;
 
-                Chart.RemoveObject(
-                    name + "_SEG");
-                Chart.RemoveObject(
-                    name + "_FALLBACK");
+                Chart.RemoveObject(name + "_SEG");
+                Chart.RemoveObject(name + "_FALLBACK");
             }
             catch (Exception ex)
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(
                     name + "_SEG");
+
+                if (fullWidth)
+                {
+                    try
+                    {
+                        ChartHorizontalLine fallback =
+                            Chart.DrawHorizontalLine(
+                                name + "_FALLBACK",
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                style);
+
+                        if (fallback != null)
+                        {
+                            fallback.Y = normalizedPrice;
+                            fallback.Color = color;
+                            fallback.Thickness = Math.Max(1, LevelLineThickness);
+                            fallback.LineStyle = style;
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // Fall through to finite trend-line fallback.
+                    }
+                }
 
                 if (!TryDrawLevelFallback(
                         name + "_FALLBACK",
@@ -6034,7 +6117,7 @@ namespace cAlgo
                         normalizedPrice,
                         color,
                         style,
-                        fullWidth))
+                        false))
                 {
                     Print(
                         "CFIP level draw failed [{0}]: {1}",
