@@ -1328,6 +1328,8 @@ namespace cAlgo
         private int _fastReversalDirection;
         private int _fastReversalQuality;
         private int _fastReversalEvidence;
+        private int _fastReversalCalculatedM5Bar = -1;
+        private int _fastReversalCalculatedCandidateDirection;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
         private int _lastSmartDecisionAlertDirection;
         private string _lastSmartDecisionAlertAction = "";
@@ -8159,12 +8161,19 @@ private void UpdateBrokerPositionProtection()
 
                 if (candidateDirection != 0)
                 {
-                    _fastReversalQuality =
-                        CalculateFastReversalQuality(
-                            _m5,
-                            m5Index,
-                            candidateDirection,
-                            out _fastReversalEvidence);
+                    if (_fastReversalCalculatedM5Bar != m5Index ||
+                        _fastReversalCalculatedCandidateDirection != candidateDirection)
+                    {
+                        _fastReversalQuality =
+                            CalculateFastReversalQuality(
+                                _m5,
+                                m5Index,
+                                candidateDirection,
+                                out _fastReversalEvidence);
+
+                        _fastReversalCalculatedM5Bar = m5Index;
+                        _fastReversalCalculatedCandidateDirection = candidateDirection;
+                    }
 
                     if (_fastReversalQuality >= Math.Max(55, FastReversalMinimumQuality))
                     {
