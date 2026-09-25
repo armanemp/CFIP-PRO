@@ -7369,7 +7369,7 @@ namespace cAlgo
                      i++)
                 {
                     int gridRow =
-                        TradePlanPanelFirstContentRow +
+                        TradePlanPanelLastContentRow -
                         i;
 
                     _tradePlanPanelGrid.Rows[
