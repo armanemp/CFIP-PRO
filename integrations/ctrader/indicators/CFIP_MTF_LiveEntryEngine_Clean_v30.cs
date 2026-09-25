@@ -10167,9 +10167,9 @@ namespace cAlgo
 
             if (UseHealthyVolatility)
                 parts.Add(
-                    frame.HealthyBull
+                    frame.VolatilityBull
                         ? "ATR+"
-                        : frame.HealthyBear
+                        : frame.VolatilityBear
                             ? "ATR-"
                             : "ATR0");
 
