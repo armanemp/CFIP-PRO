@@ -614,6 +614,9 @@ namespace cAlgo
         [Parameter("Panel Margin", Group = "14 · Display", DefaultValue = 8, MinValue = 0, MaxValue = 30)]
         public int PanelMargin { get; set; }
 
+        [Parameter("Panel Row Gap", Group = "14 · Display", DefaultValue = 1, MinValue = 0, MaxValue = 6)]
+        public int PanelRowGap { get; set; }
+
         [Parameter("Panel Text Color", Group = "14 · Display", DefaultValue = "White")]
         public Color PanelTextColor { get; set; }
 
@@ -1545,7 +1548,8 @@ namespace cAlgo
 
         private Border _panel;
         private StackPanel _panelStack;
-        private TextBlock _panelText;
+        private readonly List<TextBlock> _panelRows =
+            new List<TextBlock>();
         private StackPanel _buttonStack;
         private Button _closeButton;
         private Button _cancelButton;
@@ -9377,6 +9381,8 @@ namespace cAlgo
         // PANEL
         // ============================================================
 
+        private const int PanelRowCount = 36;
+
         private void CreatePanel()
         {
             if (_panel != null)
@@ -9384,23 +9390,13 @@ namespace cAlgo
 
             try
             {
-                _panelText =
-                    new TextBlock
+                _panelStack =
+                    new StackPanel
                     {
-                        Text = "",
-                        IsHitTestVisible = false,
-                        TextWrapping = TextWrapping.Wrap,
-                        TextAlignment = TextAlignment.Left,
+                        Orientation = Orientation.Vertical,
                         HorizontalAlignment = HorizontalAlignment.Left,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        Margin = 0
+                        VerticalAlignment = VerticalAlignment.Top
                     };
-
-                _closeButton =
-                    new Button();
-
-                _cancelButton =
-                    new Button();
 
                 _buttonStack =
                     new StackPanel
@@ -9410,38 +9406,19 @@ namespace cAlgo
                         VerticalAlignment = VerticalAlignment.Bottom
                     };
 
+                _closeButton =
+                    new Button();
+
+                _cancelButton =
+                    new Button();
+
                 _closeButton.Click +=
                     args => CloseAllPositions();
 
                 _cancelButton.Click +=
                     args => CancelAllOrders();
 
-                _closeButton.Margin =
-                    Math.Max(
-                        0,
-                        ActionButtonMargin);
-
-                _cancelButton.Margin =
-                    Math.Max(
-                        0,
-                        ActionButtonMargin);
-
-                _buttonStack.AddChild(
-                    _closeButton);
-
-                _buttonStack.AddChild(
-                    _cancelButton);
-
-                _panelStack =
-                    new StackPanel
-                    {
-                        Orientation = Orientation.Vertical,
-                        HorizontalAlignment = HorizontalAlignment.Left,
-                        VerticalAlignment = VerticalAlignment.Bottom
-                    };
-
-                _panelStack.AddChild(
-                    _panelText);
+                CreatePanelRows();
 
                 _panelStack.AddChild(
                     _buttonStack);
@@ -9466,10 +9443,42 @@ namespace cAlgo
 
                 _panel = null;
                 _panelStack = null;
-                _panelText = null;
+                _panelRows.Clear();
                 _buttonStack = null;
                 _closeButton = null;
                 _cancelButton = null;
+            }
+        }
+
+        private void CreatePanelRows()
+        {
+            if (_panelStack == null ||
+                _panelRows.Count == PanelRowCount)
+                return;
+
+            _panelRows.Clear();
+
+            for (int i = 0;
+                 i < PanelRowCount;
+                 i++)
+            {
+                TextBlock row =
+                    new TextBlock
+                    {
+                        Text = "",
+                        IsVisible = false,
+                        IsHitTestVisible = false,
+                        TextWrapping = TextWrapping.Wrap,
+                        TextAlignment = TextAlignment.Left,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Top
+                    };
+
+                _panelRows.Add(
+                    row);
+
+                _panelStack.AddChild(
+                    row);
             }
         }
 
@@ -9489,18 +9498,19 @@ namespace cAlgo
 
                 _panelToggleButton.Width =
                     Math.Max(
-                        80,
+                        90,
                         PanelToggleWidth);
 
                 _panelToggleButton.Height =
                     Math.Max(
-                        20,
+                        22,
                         PanelToggleHeight);
 
                 _panelToggleButton.Margin =
                     Math.Max(
                         0,
                         PanelMargin);
+
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
 
@@ -9510,20 +9520,18 @@ namespace cAlgo
                         PanelFontSize - 1);
 
                 _panelToggleButton.FontWeight =
-                    PanelBold
-                        ? FontWeight.Bold
-                        : FontWeight.Normal;
+                    FontWeight.Bold;
 
                 _panelToggleButton.BackgroundColor =
-                Color.FromArgb(
-                    ShowPanelBackground
-                        ? Math.Max(
-                            0,
-                            Math.Min(
-                                255,
-                                PanelBackgroundAlpha))
-                        : 0,
-                    PanelBackground);
+                    Color.FromArgb(
+                        ShowPanelBackground
+                            ? Math.Max(
+                                0,
+                                Math.Min(
+                                    255,
+                                    PanelBackgroundAlpha))
+                            : 0,
+                        PanelBackground);
 
                 _panelToggleButton.BorderColor =
                     Color.FromArgb(
@@ -9532,7 +9540,7 @@ namespace cAlgo
                             Math.Min(
                                 255,
                                 PanelBorderAlpha)),
-                    PanelBorder);
+                        PanelBorder);
 
                 _panelToggleButton.BorderThickness =
                     Math.Max(
@@ -9625,7 +9633,8 @@ namespace cAlgo
                 CreatePanel();
 
             if (_panel == null ||
-                _panelText == null)
+                _panelStack == null ||
+                _panelRows.Count != PanelRowCount)
                 return;
 
             if (_panelToggleButton == null)
@@ -9642,36 +9651,60 @@ namespace cAlgo
 
             SetPanelToggleAlignment();
 
-            _panelText.Text =
-                BuildPanelText();
-
-            _panelText.FontSize =
+            int contentWidth =
                 Math.Max(
-                    8,
-                    PanelFontSize);
+                    190,
+                    PanelWidth -
+                    Math.Max(
+                        0,
+                        PanelPadding * 2) -
+                    Math.Max(
+                        0,
+                        PanelBorderThickness * 2));
 
-            _panelText.FontFamily =
-                string.IsNullOrWhiteSpace(
-                    PanelFontFamily)
-                    ? "Arial"
-                    : PanelFontFamily;
+            for (int i = 0;
+                 i < _panelRows.Count;
+                 i++)
+            {
+                TextBlock row =
+                    _panelRows[i];
 
-            _panelText.FontWeight =
-                PanelBold
-                    ? FontWeight.Bold
-                    : FontWeight.Normal;
+                row.Width =
+                    contentWidth;
 
-            _panelText.ForegroundColor =
-                PanelTextColor;
+                row.FontSize =
+                    Math.Max(
+                        8,
+                        PanelFontSize);
 
-            _panelText.LineHeight =
-                Math.Max(
-                    13,
-                    PanelFontSize + 2);
+                row.FontFamily =
+                    string.IsNullOrWhiteSpace(
+                        PanelFontFamily)
+                        ? "Arial"
+                        : PanelFontFamily;
+
+                row.LineHeight =
+                    Math.Max(
+                        13,
+                        PanelFontSize + 3);
+
+                row.Margin =
+                    i == 0
+                        ? 0
+                        : Math.Max(
+                            1,
+                            PanelRowGap);
+
+                row.IsVisible =
+                    false;
+            }
+
+            RenderPanelRows(
+                contentWidth);
 
             _panel.Width =
                 Math.Max(
-                    220,
+                    260,
                     PanelWidth);
 
             _panel.Padding =
@@ -9729,34 +9762,39 @@ namespace cAlgo
             _cancelButton.IsVisible =
                 buttons;
 
-            _closeButton.Width =
+            int buttonWidth =
                 Math.Max(
-                    100,
-                    ActionButtonWidth);
+                    110,
+                    Math.Min(
+                        ActionButtonWidth,
+                        Math.Max(
+                            110,
+                            contentWidth / 2)));
+
+            _closeButton.Width =
+                buttonWidth;
 
             _cancelButton.Width =
-                Math.Max(
-                    100,
-                    ActionButtonWidth);
+                buttonWidth;
 
             _closeButton.Height =
                 Math.Max(
-                    20,
+                    22,
                     ActionButtonHeight);
 
             _cancelButton.Height =
                 Math.Max(
-                    20,
+                    22,
                     ActionButtonHeight);
 
             _closeButton.Text =
-                "CLOSE ALL POSITIONS";
+                "CLOSE POSITIONS";
 
             _cancelButton.Text =
-                "CANCEL ALL ORDERS";
+                "CANCEL ORDERS";
 
             _closeButton.ForegroundColor =
-                PanelTextColor;
+                SlLineColor;
 
             _cancelButton.ForegroundColor =
                 PanelTextColor;
@@ -9772,54 +9810,30 @@ namespace cAlgo
                     PanelFontSize - 1);
 
             _closeButton.FontWeight =
-                PanelBold
-                    ? FontWeight.Bold
-                    : FontWeight.Normal;
+                FontWeight.Bold;
 
             _cancelButton.FontWeight =
-                PanelBold
-                    ? FontWeight.Bold
-                    : FontWeight.Normal;
+                FontWeight.Bold;
 
             _closeButton.BackgroundColor =
                 Color.FromArgb(
                     ShowPanelBackground
-                        ? Math.Max(
-                            0,
-                            Math.Min(
-                                255,
-                                PanelBackgroundAlpha))
+                        ? 60
                         : 0,
-                    PanelBackground);
+                    SlLineColor);
 
             _cancelButton.BackgroundColor =
                 Color.FromArgb(
                     ShowPanelBackground
-                        ? Math.Max(
-                            0,
-                            Math.Min(
-                                255,
-                                PanelBackgroundAlpha))
+                        ? 40
                         : 0,
                     PanelBackground);
 
             _closeButton.BorderColor =
-                Color.FromArgb(
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            255,
-                            PanelBorderAlpha)),
-                    PanelBorder);
+                SlLineColor;
 
             _cancelButton.BorderColor =
-                Color.FromArgb(
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            255,
-                            PanelBorderAlpha)),
-                    PanelBorder);
+                PanelBorder;
 
             _closeButton.BorderThickness =
                 Math.Max(
@@ -9840,6 +9854,606 @@ namespace cAlgo
                 Math.Max(
                     0,
                     PanelCornerRadius);
+
+            _closeButton.Margin =
+                Math.Max(
+                    0,
+                    ActionButtonMargin);
+
+            _cancelButton.Margin =
+                Math.Max(
+                    0,
+                    ActionButtonMargin);
+        }
+
+        private void RenderPanelRows(
+            int contentWidth)
+        {
+            int slot = 0;
+
+            string candidateState =
+                _plan != null
+                    ? (_plan.Direction == 1
+                        ? "BUY ACTIVE"
+                        : "SELL ACTIVE")
+                    : _reaction != null &&
+                      _reaction.Direction != 0
+                        ? (_reaction.Direction == 1
+                            ? "BUY REACTION"
+                            : "SELL REACTION")
+                        : _decision != null &&
+                          _decision.Direction != 0
+                            ? (_decision.EntryAllowed
+                                ? (_decision.Direction == 1
+                                    ? "BUY READY"
+                                    : "SELL READY")
+                                : (_decision.Direction == 1
+                                    ? "BUY WATCH"
+                                    : "SELL WATCH"))
+                            : "WAITING";
+
+            string state =
+                GetStablePanelState(
+                    candidateState);
+
+            int stateDirection =
+                state.StartsWith(
+                    "BUY",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? 1
+                    : state.StartsWith(
+                        "SELL",
+                        StringComparison.OrdinalIgnoreCase)
+                        ? -1
+                        : 0;
+
+            SetPanelRow(
+                slot++,
+                "CFIP SMART CLEAN30  •  " +
+                state,
+                PanelDirectionColor(
+                    stateDirection),
+                true,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                SymbolName +
+                "  •  " +
+                Bars.TimeFrame +
+                "  •  " +
+                DateTime.UtcNow.ToString(
+                    "HH:mm:ss") +
+                " UTC",
+                PanelTextColor,
+                false,
+                contentWidth);
+
+            if (ShowEngineStatus)
+            {
+                SetPanelRow(
+                    slot++,
+                    "STATUS  " +
+                    _status,
+                    _status.IndexOf(
+                        "WAIT",
+                        StringComparison.OrdinalIgnoreCase) >= 0
+                        ? PanelTextColor
+                        : TpLineColor,
+                    false,
+                    contentWidth);
+            }
+
+            if (_decision != null)
+            {
+                int direction =
+                    _decision.Direction;
+
+                string decisionState =
+                    direction == 1
+                        ? "BUY"
+                        : direction == -1
+                            ? "SELL"
+                            : "NEUTRAL";
+
+                SetPanelRow(
+                    slot++,
+                    "SMART DECISION  •  " +
+                    decisionState +
+                    "  •  " +
+                    (_decision.EntryAllowed
+                        ? "READY"
+                        : "WATCH / BLOCKED") +
+                    "  •  CONF " +
+                    _decision.Confidence +
+                    "  •  EDGE " +
+                    _decision.Edge,
+                    PanelDirectionColor(
+                        direction),
+                    true,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    "SMART QUALITY " +
+                    _decision.SmartQuality +
+                    "  •  MTF " +
+                    _decision.TimeframeAgreement +
+                    "  •  EVID " +
+                    _decision.IndependentEvidence +
+                    "  •  STRUCT " +
+                    _decision.StructuralConfirmations,
+                    PanelDirectionColor(
+                        direction),
+                    false,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    "REGIME  " +
+                    _decision.Regime +
+                    "  •  Q" +
+                    _decision.RegimeQuality +
+                    "  •  RETEST " +
+                    _decision.RetestQuality +
+                    "  •  SHARE " +
+                    _decision.BuyShare +
+                    "/" +
+                    _decision.SellShare,
+                    PanelTextColor,
+                    false,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    "CONFLUENCE  " +
+                    ConfluenceText(_m5Frame),
+                    PanelTextColor,
+                    false,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    _decision.TriggerReady
+                        ? "TRIGGER  CONFIRMED"
+                        : "TRIGGER  WAITING",
+                    _decision.TriggerReady
+                        ? TpLineColor
+                        : PanelTextColor,
+                    _decision.TriggerReady,
+                    contentWidth);
+
+                if (!string.IsNullOrWhiteSpace(
+                        _decision.BlockReason))
+                {
+                    SetPanelRow(
+                        slot++,
+                        "BLOCK  " +
+                        _decision.BlockReason,
+                        SlLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (_prediction != null &&
+                    _prediction.Direction != 0 &&
+                    _prediction.Confidence >=
+                    Math.Max(
+                        MinimumEarlyConfidence,
+                        EarlySetupConfidence))
+                {
+                    SetPanelRow(
+                        slot++,
+                        "EARLY ANALYSIS  •  " +
+                        (_prediction.Direction == 1
+                            ? "BUY"
+                            : "SELL") +
+                        "  •  CONF " +
+                        _prediction.Confidence,
+                        PanelDirectionColor(
+                            _prediction.Direction),
+                        true,
+                        contentWidth);
+
+                    SetPanelRow(
+                        slot++,
+                        "PREDICTION  ENTRY " +
+                        Price(_prediction.Entry) +
+                        "  •  TRIGGER " +
+                        Price(_prediction.Trigger) +
+                        "  •  TP1 " +
+                        Price(_prediction.Target1),
+                        PanelDirectionColor(
+                            _prediction.Direction),
+                        false,
+                        contentWidth);
+                }
+            }
+
+            if (_plan != null &&
+                ShowTradePlanPanel)
+            {
+                SetPanelRow(
+                    slot++,
+                    "TRADE PLAN  •  " +
+                    (_plan.Direction == 1
+                        ? "BUY"
+                        : "SELL"),
+                    PanelDirectionColor(
+                        _plan.Direction),
+                    true,
+                    contentWidth);
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowEntry)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "ENTRY  " +
+                        Price(_plan.Entry),
+                        EntryLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowSL)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "STOP LOSS  " +
+                        Price(_plan.Stop) +
+                        "  •  " +
+                        _plan.StopSource +
+                        "  •  Q" +
+                        _plan.StopQuality,
+                        SlLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowTP1)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "TAKE PROFIT 1  " +
+                        Price(_plan.Tp1) +
+                        "  •  RR " +
+                        _plan.Tp1RR.ToString(
+                            "F2") +
+                        "  •  " +
+                        _plan.Tp1Source +
+                        "  •  Q" +
+                        _plan.Tp1Quality +
+                        (_tp1Hit != 0
+                            ? "  •  HIT"
+                            : ""),
+                        TpLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowTP2 &&
+                    _plan.Tp2 > 0)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "TAKE PROFIT 2  " +
+                        Price(_plan.Tp2) +
+                        "  •  RR " +
+                        _plan.Tp2RR.ToString(
+                            "F2") +
+                        "  •  " +
+                        _plan.Tp2Source +
+                        "  •  Q" +
+                        _plan.Tp2Quality +
+                        (_tp2Hit != 0
+                            ? "  •  HIT"
+                            : ""),
+                        TpLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowTP3 &&
+                    _plan.Tp3 > 0)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "TAKE PROFIT 3  " +
+                        Price(_plan.Tp3) +
+                        "  •  RR " +
+                        _plan.Tp3RR.ToString(
+                            "F2") +
+                        "  •  " +
+                        _plan.Tp3Source +
+                        "  •  Q" +
+                        _plan.Tp3Quality +
+                        (_tp3Hit != 0
+                            ? "  •  HIT"
+                            : ""),
+                        TpLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                if (ShowLevelPricesInUnifiedPanel &&
+                    ShowTP4 &&
+                    _plan.Tp4 > 0)
+                {
+                    SetPanelRow(
+                        slot++,
+                        "TAKE PROFIT 4  " +
+                        Price(_plan.Tp4) +
+                        "  •  RR " +
+                        _plan.Tp4RR.ToString(
+                            "F2") +
+                        "  •  " +
+                        _plan.Tp4Source +
+                        "  •  Q" +
+                        _plan.Tp4Quality +
+                        (_tp4Hit != 0
+                            ? "  •  HIT"
+                            : ""),
+                        TpLineColor,
+                        true,
+                        contentWidth);
+                }
+
+                double liveRR =
+                    _plan.Risk > 0
+                        ? (_plan.Direction == 1
+                            ? _lastMarket - _plan.Entry
+                            : _plan.Entry - _lastMarket) /
+                          _plan.Risk
+                        : 0;
+
+                int exitPressure =
+                    CalculateSmartExitPressure(
+                        _lastMarket,
+                        liveRR);
+
+                SetPanelRow(
+                    slot++,
+                    "LIVE  RR " +
+                    liveRR.ToString(
+                        "F2") +
+                    "  •  TP HIT " +
+                    _tp1Hit +
+                    "/" +
+                    _tp2Hit +
+                    "/" +
+                    _tp3Hit +
+                    "/" +
+                    _tp4Hit,
+                    liveRR >= 0
+                        ? TpLineColor
+                        : SlLineColor,
+                    true,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    "SMART EXIT  " +
+                    GetSmartExitMode() +
+                    "  •  PRESSURE " +
+                    exitPressure,
+                    exitPressure >= 70
+                        ? SlLineColor
+                        : exitPressure >= 45
+                            ? PanelTextColor
+                            : TpLineColor,
+                    false,
+                    contentWidth);
+            }
+
+            if (_reaction != null &&
+                _reaction.Direction != 0)
+            {
+                SetPanelRow(
+                    slot++,
+                    "LIVE REACTION  •  " +
+                    (_reaction.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    "  •  Q" +
+                    _reaction.Confidence +
+                    "  •  EVID " +
+                    _reaction.IndependentEvidence +
+                    (_reaction.EntryAllowed
+                        ? "  •  READY"
+                        : "  •  WATCH"),
+                    PanelDirectionColor(
+                        _reaction.Direction),
+                    true,
+                    contentWidth);
+            }
+
+            SetPanelRow(
+                slot++,
+                "MTF ALIGNMENT",
+                PanelTextColor,
+                true,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "M1   " +
+                FrameText(_m1Frame),
+                PanelDirectionColor(
+                    FrameDirection(_m1Frame)),
+                false,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "M5   " +
+                FrameText(_m5Frame),
+                PanelDirectionColor(
+                    FrameDirection(_m5Frame)),
+                false,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "M15  " +
+                FrameText(_m15Frame),
+                PanelDirectionColor(
+                    FrameDirection(_m15Frame)),
+                false,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "M30  " +
+                FrameText(_m30Frame),
+                PanelDirectionColor(
+                    FrameDirection(_m30Frame)),
+                false,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "H1   " +
+                FrameText(_h1Frame),
+                PanelDirectionColor(
+                    FrameDirection(_h1Frame)),
+                false,
+                contentWidth);
+
+            SetPanelRow(
+                slot++,
+                "H4   " +
+                FrameText(_h4Frame),
+                PanelDirectionColor(
+                    FrameDirection(_h4Frame)),
+                false,
+                contentWidth);
+
+            if (SmartWeeklyContext)
+            {
+                SetPanelRow(
+                    slot++,
+                    "D1   " +
+                    FrameText(_d1Frame),
+                    PanelDirectionColor(
+                        FrameDirection(_d1Frame)),
+                    false,
+                    contentWidth);
+
+                SetPanelRow(
+                    slot++,
+                    "W1   " +
+                    FrameText(_w1Frame),
+                    PanelDirectionColor(
+                        FrameDirection(_w1Frame)),
+                    false,
+                    contentWidth);
+            }
+
+            if (ShowOutcomeDiagnostics)
+            {
+                SetPanelRow(
+                    slot++,
+                    "OUTCOME  W" +
+                    _wins +
+                    "  •  L" +
+                    _losses +
+                    "  •  CAL " +
+                    CalibrationText(),
+                    PanelTextColor,
+                    false,
+                    contentWidth);
+            }
+
+            SetPanelRow(
+                slot++,
+                "AUTO  " +
+                (EnableAutoTrading
+                    ? (EnableAggressiveAutoEntry
+                        ? "ARMED + REACTION"
+                        : "ARMED")
+                    : "OFF"),
+                EnableAutoTrading
+                    ? TpLineColor
+                    : PanelTextColor,
+                false,
+                contentWidth);
+
+            if (AutoProtectBrokerPositions)
+            {
+                SetPanelRow(
+                    slot++,
+                    "BROKER  PROTECTION ACTIVE",
+                    TpLineColor,
+                    false,
+                    contentWidth);
+            }
+
+            while (slot < _panelRows.Count)
+            {
+                _panelRows[slot].IsVisible =
+                    false;
+                slot++;
+            }
+        }
+
+        private void SetPanelRow(
+            int index,
+            string text,
+            Color color,
+            bool bold,
+            int width)
+        {
+            if (index < 0 ||
+                index >= _panelRows.Count)
+                return;
+
+            TextBlock row =
+                _panelRows[index];
+
+            row.Text =
+                text ?? "";
+
+            row.Width =
+                Math.Max(
+                    180,
+                    width);
+
+            row.ForegroundColor =
+                color;
+
+            row.FontWeight =
+                bold || PanelBold
+                    ? FontWeight.Bold
+                    : FontWeight.Normal;
+
+            row.IsVisible =
+                !string.IsNullOrWhiteSpace(
+                    text);
+        }
+
+        private Color PanelDirectionColor(
+            int direction)
+        {
+            if (direction == 1)
+                return BuyArrowColor;
+
+            if (direction == -1)
+                return SellArrowColor;
+
+            return PanelTextColor;
+        }
+
+        private int FrameDirection(
+            Frame frame)
+        {
+            return frame == null
+                ? 0
+                : frame.Direction;
         }
 
         private string GetStablePanelState(
@@ -9896,282 +10510,40 @@ namespace cAlgo
             return _panelStableHeader;
         }
 
-        private string BuildPanelText()
+        private void SetPanelAlignment()
         {
-            List<string> lines =
-                new List<string>();
+            VerticalAlignment vertical;
+            HorizontalAlignment horizontal;
 
-            string candidateState =
-                _plan != null
-                    ? (_plan.Direction == 1
-                        ? "BUY ACTIVE"
-                        : "SELL ACTIVE")
-                    : _reaction != null &&
-                      _reaction.EntryAllowed
-                        ? (_reaction.Direction == 1
-                            ? "BUY REACTION"
-                            : "SELL REACTION")
-                        : _decision != null &&
-                          _decision.Direction != 0
-                            ? (_decision.Direction == 1
-                                ? "BUY WATCH"
-                                : "SELL WATCH")
-                            : "WAITING";
-
-            string state =
-                GetStablePanelState(
-                    candidateState);
-
-            lines.Add(
-                "CFIP SMART CLEAN30 | " +
-                state);
-
-            lines.Add(
-                SymbolName +
-                " | " +
-                Bars.TimeFrame);
-
-            if (ShowEngineStatus)
-                lines.Add(
-                    "STATUS  " +
-                    _status);
-
-            if (_decision != null)
+            switch (PanelPosition)
             {
-                lines.Add(
-                    "DECISION  " +
-                    (_decision.Direction == 1
-                        ? "BUY"
-                        : _decision.Direction == -1
-                            ? "SELL"
-                            : "NEUTRAL") +
-                    " | CONF " +
-                    _decision.Confidence +
-                    " | EDGE " +
-                    _decision.Edge);
+                case CFIPClean30PanelCorner.TopLeft:
+                    vertical = VerticalAlignment.Top;
+                    horizontal = HorizontalAlignment.Left;
+                    break;
 
-                lines.Add(
-                    "SMART  Q" +
-                    _decision.SmartQuality +
-                    " | MTF " +
-                    _decision.TimeframeAgreement +
-                    " | EVID " +
-                    _decision.IndependentEvidence +
-                    " | STRUCT " +
-                    _decision.StructuralConfirmations);
+                case CFIPClean30PanelCorner.TopRight:
+                    vertical = VerticalAlignment.Top;
+                    horizontal = HorizontalAlignment.Right;
+                    break;
 
-                lines.Add(
-                    "REGIME  " +
-                    _decision.Regime +
-                    " | Q" +
-                    _decision.RegimeQuality +
-                    " | RETEST " +
-                    _decision.RetestQuality);
+                case CFIPClean30PanelCorner.BottomRight:
+                    vertical = VerticalAlignment.Bottom;
+                    horizontal = HorizontalAlignment.Right;
+                    break;
 
-                lines.Add(
-                    "SHARE  " +
-                    _decision.BuyShare +
-                    "/" +
-                    _decision.SellShare);
-
-                lines.Add(
-                    "CONFLUENCE  " +
-                    ConfluenceText(_m5Frame));
-
-                if (!string.IsNullOrWhiteSpace(
-                        _decision.BlockReason))
-                    lines.Add(
-                        "BLOCK  " +
-                        _decision.BlockReason);
-
-                if (_prediction != null &&
-                    _prediction.Direction != 0 &&
-                    _prediction.Confidence >=
-                    Math.Max(
-                        MinimumEarlyConfidence,
-                        EarlySetupConfidence))
-                {
-                    lines.Add(
-                        "EARLY  " +
-                        (_prediction.Direction == 1
-                            ? "BUY"
-                            : "SELL") +
-                        " | CONF " +
-                        _prediction.Confidence);
-
-                    lines.Add(
-                        "PRED  TRG " +
-                        Price(_prediction.Trigger) +
-                        " | TGT " +
-                        Price(_prediction.Target));
-                }
+                default:
+                    vertical = VerticalAlignment.Bottom;
+                    horizontal = HorizontalAlignment.Left;
+                    break;
             }
 
-            if (_plan != null &&
-                ShowTradePlanPanel)
-            {
-                lines.Add("");
-                lines.Add("TRADE PLAN");
+            _panel.VerticalAlignment =
+                vertical;
 
-                if (ShowLevelPricesInUnifiedPanel)
-                {
-                    if (ShowEntry)
-                        lines.Add(
-                            "ENTRY  " +
-                            Price(_plan.Entry));
-
-                    if (ShowSL)
-                        lines.Add(
-                            "SL     " +
-                            Price(_plan.Stop) +
-                            " | " +
-                            _plan.StopSource +
-                            " | Q" +
-                            _plan.StopQuality);
-
-                    if (ShowTP1)
-                        lines.Add(
-                            "TP1    " +
-                            Price(_plan.Tp1) +
-                            " | RR " +
-                            _plan.Tp1RR.ToString("F2") +
-                            " | " +
-                            _plan.Tp1Source +
-                            " | Q" +
-                            _plan.Tp1Quality);
-
-                    if (ShowTP2 &&
-                        _plan.Tp2 > 0)
-                        lines.Add(
-                            "TP2    " +
-                            Price(_plan.Tp2) +
-                            " | RR " +
-                            _plan.Tp2RR.ToString("F2") +
-                            " | " +
-                            _plan.Tp2Source +
-                            " | Q" +
-                            _plan.Tp2Quality);
-
-                    if (ShowTP3 &&
-                        _plan.Tp3 > 0)
-                        lines.Add(
-                            "TP3    " +
-                            Price(_plan.Tp3) +
-                            " | RR " +
-                            _plan.Tp3RR.ToString("F2") +
-                            " | " +
-                            _plan.Tp3Source +
-                            " | Q" +
-                            _plan.Tp3Quality);
-
-                    if (ShowTP4 &&
-                        _plan.Tp4 > 0)
-                        lines.Add(
-                            "TP4    " +
-                            Price(_plan.Tp4) +
-                            " | RR " +
-                            _plan.Tp4RR.ToString("F2") +
-                            " | " +
-                            _plan.Tp4Source +
-                            " | Q" +
-                            _plan.Tp4Quality);
-                }
-
-                double liveRR =
-                    _plan.Risk > 0
-                        ? (_plan.Direction == 1
-                            ? _lastMarket - _plan.Entry
-                            : _plan.Entry - _lastMarket) /
-                          _plan.Risk
-                        : 0;
-
-                lines.Add(
-                    "LIVE  RR " +
-                    liveRR.ToString("F2") +
-                    " | HIT " +
-                    _tp1Hit + "/" +
-                    _tp2Hit + "/" +
-                    _tp3Hit + "/" +
-                    _tp4Hit);
-
-                lines.Add(
-                    "EXIT  " +
-                    GetSmartExitMode() +
-                    " | PRESS " +
-                    CalculateSmartExitPressure(
-                        _lastMarket,
-                        liveRR));
-            }
-
-            if (_reaction != null &&
-                _reaction.EntryAllowed)
-                lines.Add(
-                    "REACTION  " +
-                    (_reaction.Direction == 1
-                        ? "BUY"
-                        : "SELL") +
-                    " | Q" +
-                    _reaction.Confidence +
-                    " | EVID " +
-                    _reaction.IndependentEvidence);
-
-            lines.Add("");
-            lines.Add("MTF");
-            lines.Add(
-                "M5  " +
-                FrameText(_m5Frame));
-            lines.Add(
-                "M15 " +
-                FrameText(_m15Frame));
-            lines.Add(
-                "M30 " +
-                FrameText(_m30Frame));
-            lines.Add(
-                "H1  " +
-                FrameText(_h1Frame));
-            lines.Add(
-                "H4  " +
-                FrameText(_h4Frame));
-
-            if (SmartWeeklyContext)
-            {
-                lines.Add(
-                    "D1  " +
-                    FrameText(_d1Frame));
-
-                lines.Add(
-                    "W1  " +
-                    FrameText(_w1Frame));
-            }
-
-            if (ShowOutcomeDiagnostics)
-            {
-                lines.Add(
-                    "OUTCOME  W" +
-                    _wins +
-                    " | L" +
-                    _losses +
-                    " | CAL " +
-                    CalibrationText());
-            }
-
-            lines.Add(
-                "AUTO  " +
-                (EnableAutoTrading
-                    ? (EnableAggressiveAutoEntry
-                        ? "ARMED + REACTION"
-                        : "ARMED")
-                    : "OFF"));
-
-            if (AutoProtectBrokerPositions)
-                lines.Add(
-                    "BROKER  PROTECTION");
-
-            return string.Join(
-                Environment.NewLine,
-                lines.ToArray());
+            _panel.HorizontalAlignment =
+                horizontal;
         }
-
 
         private string ConfluenceText(
             Frame frame)
@@ -10304,7 +10676,7 @@ namespace cAlgo
             _panelHidden = false;
             _panel = null;
             _panelStack = null;
-            _panelText = null;
+            _panelRows.Clear();
             _buttonStack = null;
             _closeButton = null;
             _cancelButton = null;
