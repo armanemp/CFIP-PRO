@@ -12819,6 +12819,8 @@ namespace cAlgo
                     VerticalAlignment.Center;
             }
 
+            SetPanelAlignment();
+
             if (_panelToggleButton != null)
             {
                 int toggleMargin =
