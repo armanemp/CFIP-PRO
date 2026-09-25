@@ -83,6 +83,10 @@ namespace cAlgo
         [Parameter("Alert On Entry Block / Restriction", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnEntryRestriction { get; set; }
 
+        // Entry-block popups are opt-in and independent from critical entry/exit alerts.
+        [Parameter("Show Entry Restriction Popup", Group = "Alerts", DefaultValue = false)]
+        public bool ShowEntryRestrictionPopup { get; set; }
+
         [Parameter("Alert On High Confidence Entry", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnHighConfidenceEntry { get; set; }
 
@@ -618,10 +622,10 @@ namespace cAlgo
         [Parameter("TP Color", Group = "Display", DefaultValue = "Lime")]
         public Color TpColor { get; set; }
 
-        [Parameter("Status Color", Group = "Display", DefaultValue = "Lime")]
+        [Parameter("Status Color", Group = "Display", DefaultValue = "White")]
         public Color StatusColor { get; set; }
 
-        [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "Lime")]
+        [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "White")]
         public Color TradePlanTextColor { get; set; }
 
         [Parameter("Trade Plan Font Family", Group = "Display", DefaultValue = "Arial")]
@@ -837,7 +841,7 @@ namespace cAlgo
         [Parameter("Popup Padding", Group = "Alerts", DefaultValue = 9, MinValue = 0, MaxValue = 30)]
         public int PopupPadding { get; set; }
 
-        [Parameter("Popup Text Color", Group = "Alerts", DefaultValue = "Lime")]
+        [Parameter("Popup Text Color", Group = "Alerts", DefaultValue = "White")]
         public Color PopupTextColor { get; set; }
 
         [Parameter("Popup Bold", Group = "Alerts", DefaultValue = false)]
@@ -1039,6 +1043,21 @@ namespace cAlgo
 
         [Parameter("Enable Setup Invalidation", Group = "Accuracy", DefaultValue = true)]
         public bool EnableSetupInvalidation { get; set; }
+
+        [Parameter("Enable Live Structural Reversal", Group = "Accuracy", DefaultValue = true)]
+        public bool EnableLiveStructuralReversal { get; set; }
+
+        [Parameter("Live Reversal Minimum Confidence", Group = "Accuracy", DefaultValue = 68, MinValue = 50, MaxValue = 95)]
+        public int LiveReversalMinimumConfidence { get; set; }
+
+        [Parameter("Live Reversal Minimum Evidence", Group = "Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 6)]
+        public int LiveReversalMinimumEvidence { get; set; }
+
+        [Parameter("Live Reversal Minimum Structural Score", Group = "Accuracy", DefaultValue = 72, MinValue = 50, MaxValue = 100)]
+        public int LiveReversalMinimumStructuralScore { get; set; }
+
+        [Parameter("Allow Reversal Against Stale HTF", Group = "Accuracy", DefaultValue = true)]
+        public bool AllowReversalAgainstStaleHtf { get; set; }
         [Parameter("Invalidation Structure ATR", Group = "Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.50)]
         public double InvalidationStructureAtr { get; set; }
         [Parameter("Invalidation Zone Close ATR", Group = "Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.75)]
@@ -1230,9 +1249,13 @@ namespace cAlgo
         private double _cachedSmartStructuralStop;
         private DateTime _bulkActionStartedUtc = DateTime.MinValue;
         private string _tradeActionStatusText = "";
-        private bool _bulkActionInProgress;        private DateTime _lastBulkActionUtc = DateTime.MinValue;
+        private bool _bulkActionInProgress;
+        private DateTime _lastBulkActionUtc = DateTime.MinValue;
         private int _lastExitM5Bar = -1;
         private bool _suppressIntermediatePanelRender;
+        private int _liveReversalDirection;
+        private int _liveReversalScore;
+        private int _lastLiveReversalBar = -1;
 
         private string _pendingExitAlertMessage = "";
         private int _pendingExitAlertDirection;
@@ -1413,6 +1436,9 @@ namespace cAlgo
             _lastAlertSignature = "";
             _lastAlertUtc = DateTime.MinValue;
             _alertPopupExpiresUtc = DateTime.MinValue;
+            _liveReversalDirection = 0;
+            _liveReversalScore = 0;
+            _lastLiveReversalBar = -1;
             _lastSmartTargetCalcM5Bar = -1;
             _lastSmartTargetCalcPrice = 0;
             _lastSmartStructuralStopCalcM5Bar = -1;
@@ -3453,7 +3479,7 @@ namespace cAlgo
             int anchorIndex = Math.Max(0, Math.Min(index, Bars.Count - 1));
             GetFinitePredictionRange(anchorIndex, out int startIndex, out int endIndex);
             Color color = PredictionColor;
-            Color directionColor = p.Direction == 1 ? Color.Lime : Color.Red;
+            Color directionColor = p.Direction == 1 ? ConfirmedBuyArrowColor : ConfirmedSellArrowColor;
 
             int m5Anchor = _m5 != null && _m5.Count > 2
                 ? Math.Max(1, Math.Min(_m5.Count - 1, (_lastConfirmedSignalM5Bar > 0 ? _lastConfirmedSignalM5Bar - 1 : _m5.Count - 1)))
@@ -5418,22 +5444,6 @@ namespace cAlgo
             if (showContext)
                 lines.Add(_contextStatusText);
 
-            if (EnableSmartDecisionEngine)
-            {
-                lines.Add(
-                    "SMART " + (_smartAction ?? "WAIT") +
-                    " | Q " + _smartQuality +
-                    " | B" + _smartBuyShare +
-                    "/S" + _smartSellShare +
-                    " | EDGE " + GetSmartEdge() +
-                    " | " + (_smartRegime ?? "UNKNOWN"));
-
-                lines.Add(
-                    "REGIME-Q " + _smartRegimeQuality +
-                    " | CONS " + _smartConsensusQuality +
-                    " | EVID " + _smartIndependentEvidence);
-            }
-
             if (!string.IsNullOrWhiteSpace(_tradeActionStatusText))
                 lines.Add(_tradeActionStatusText);
 
@@ -5872,7 +5882,7 @@ namespace cAlgo
                 }
             }
 
-            if (ShowPopupAlert)
+            if (ShowPopupAlert && ShowEntryRestrictionPopup)
             {
                 try
                 {
@@ -6148,6 +6158,92 @@ namespace cAlgo
             return (int)Clamp(baseConfidence + adjustment, 50, 95);
         }
 
+        private bool EvaluateLiveStructuralReversalAgainstActiveSignal(
+            int liveIndex,
+            int closedIndex,
+            double market,
+            double atr)
+        {
+            _liveReversalDirection = 0;
+            _liveReversalScore = 0;
+
+            if (!EnableLiveStructuralReversal ||
+                !_signalActive ||
+                _signalDirection == 0 ||
+                _m5 == null ||
+                liveIndex < 25 ||
+                closedIndex < 20 ||
+                atr <= 0)
+                return false;
+
+            int opposite = _signalDirection == 1 ? -1 : 1;
+            int reactionConfidence = _liveReactionDirection == opposite ? _liveReactionConfidence : 0;
+            int reactionEvidence = _liveReactionDirection == opposite ? _liveReactionEvidence : 0;
+
+            if (reactionConfidence < Math.Max(50, LiveReversalMinimumConfidence) ||
+                reactionEvidence < Math.Max(2, LiveReversalMinimumEvidence))
+                return false;
+
+            bool structural = opposite == 1
+                ? (HasBullMss(_m5, liveIndex) || HasBullChoch(_m5, liveIndex) || HasBullDisplacement(_m5, liveIndex))
+                : (HasBearMss(_m5, liveIndex) || HasBearChoch(_m5, liveIndex) || HasBearDisplacement(_m5, liveIndex));
+
+            bool sweep = opposite == 1
+                ? HasBullLiquiditySweep(_m5, liveIndex)
+                : HasBearLiquiditySweep(_m5, liveIndex);
+
+            bool microBreak = opposite == 1
+                ? market > _m5.HighPrices[closedIndex]
+                : market < _m5.LowPrices[closedIndex];
+
+            double fast = GetEma(_m5, liveIndex, FastEma);
+            bool fastBreak = opposite == 1 ? market > fast : market < fast;
+
+            Zone oppositeZone = opposite == 1
+                ? FindNearestBullishZone(_m5, closedIndex)
+                : FindNearestBearishZone(_m5, closedIndex);
+            bool zone = oppositeZone != null;
+
+            int structuralScore = 0;
+            if (structural) structuralScore += 32;
+            if (sweep) structuralScore += 22;
+            if (microBreak) structuralScore += 24;
+            if (fastBreak) structuralScore += 10;
+            if (zone) structuralScore += 12;
+
+            int totalScore = (int)Clamp(
+                reactionConfidence * 0.55 +
+                reactionEvidence * 7.0 +
+                structuralScore * 0.55,
+                0,
+                100);
+
+            bool strong =
+                structural &&
+                (sweep || microBreak) &&
+                fastBreak &&
+                structuralScore >= Math.Max(50, LiveReversalMinimumStructuralScore) &&
+                totalScore >= Math.Max(60, LiveReversalMinimumStructuralScore);
+
+            if (!AllowReversalAgainstStaleHtf)
+            {
+                Analysis m15 = GetCachedClosedAnalysis(
+                    _m15,
+                    GetLastClosedIndexBefore(_m15, _m5.OpenTimes[liveIndex]));
+
+                if (m15 != null && m15.Direction == _signalDirection)
+                    strong = false;
+            }
+
+            if (!strong)
+                return false;
+
+            _liveReversalDirection = opposite;
+            _liveReversalScore = totalScore;
+            _lastLiveReversalBar = liveIndex;
+            return true;
+        }
+
         private bool EvaluateActiveSignalInvalidation(int closedIndex, double market, double atr)
         {
             if (!EnableSetupInvalidation || !_signalActive || _signalDirection == 0 || _m5 == null || closedIndex < 30 || atr <= 0) return false;
@@ -6283,6 +6379,29 @@ namespace cAlgo
                 DrawOutcomeMarker("TIMEOUT", price, false);
             }
 
+            if (_signalActive && EnableLiveStructuralReversal && monitorAtr > 0 &&
+                EvaluateLiveStructuralReversalAgainstActiveSignal(liveM5Bar, closedIndex, price, monitorAtr))
+            {
+                int oldDirection = _signalDirection;
+                int reversalDirection = _liveReversalDirection;
+                _signalActive = false;
+                _signalOutcome = "LIVE STRUCTURAL REVERSAL";
+                _lastExitM5Bar = liveM5Bar;
+                RecordSignalOutcome(false);
+                QueueExitDecisionAlert(
+                    (oldDirection == 1 ? "BUY" : "SELL") +
+                    " INVALIDATED BY LIVE " +
+                    (reversalDirection == 1 ? "BUY" : "SELL") +
+                    " REVERSAL | " + SymbolName +
+                    " | SCORE " + _liveReversalScore,
+                    reversalDirection,
+                    liveM5Bar);
+                DrawOutcomeMarker("REVERSAL", price, false);
+                if (!_suppressIntermediatePanelRender)
+                    DrawUnifiedPanel();
+                return;
+            }
+
             if (_signalActive && EnableSetupInvalidation && monitorAtr > 0 &&
                 EvaluateActiveSignalInvalidation(closedIndex, price, monitorAtr))
             {
@@ -6309,7 +6428,7 @@ namespace cAlgo
                     " | " + (_smartRegime ?? "UNKNOWN");
 
                 if (AlertOnFalseSignalRisk)
-                    QueueRestrictionDecisionAlert(falseMessage, 0, liveM5Bar);
+                    QueueExitDecisionAlert(falseMessage, 0, liveM5Bar);
 
                 if (InvalidateOnFalseSignal)
                 {
@@ -7467,6 +7586,67 @@ private void UpdateBrokerPositionProtection()
                 Clamp(consensus, 0.0, 100.0));
         }
 
+        private bool GetStrongClosedStructuralReversal(
+            Bars bars,
+            int index,
+            Analysis a5,
+            out int direction,
+            out int quality)
+        {
+            direction = 0;
+            quality = 0;
+
+            if (bars == null || a5 == null || index < 25 || index >= bars.Count)
+                return false;
+
+            double atr = GetAtr(bars, index, AtrPeriod);
+            if (atr <= 0)
+                return false;
+
+            bool bullStructure = a5.MssBull || a5.ChochBull || a5.DisplacementBull;
+            bool bearStructure = a5.MssBear || a5.ChochBear || a5.DisplacementBear;
+            bool bullSweep = HasBullLiquiditySweep(bars, index);
+            bool bearSweep = HasBearLiquiditySweep(bars, index);
+            bool bullZone = a5.FvgBull || a5.ObBull || a5.LiquidityBull;
+            bool bearZone = a5.FvgBear || a5.ObBear || a5.LiquidityBear;
+            bool bullBreak = bars.ClosePrices[index] > HighestHigh(bars, Math.Max(0, index - 4), index - 1);
+            bool bearBreak = bars.ClosePrices[index] < LowestLow(bars, Math.Max(0, index - 4), index - 1);
+
+            double body = Math.Abs(bars.ClosePrices[index] - bars.OpenPrices[index]);
+            bool bullBody = bars.ClosePrices[index] > bars.OpenPrices[index] &&
+                            body >= atr * Math.Max(0.06, MinimumTriggerBodyAtr * 0.75);
+            bool bearBody = bars.ClosePrices[index] < bars.OpenPrices[index] &&
+                            body >= atr * Math.Max(0.06, MinimumTriggerBodyAtr * 0.75);
+
+            int bull = (bullStructure ? 38 : 0) +
+                       (bullSweep ? 22 : 0) +
+                       (bullBreak ? 22 : 0) +
+                       (bullZone ? 10 : 0) +
+                       (bullBody ? 8 : 0);
+
+            int bear = (bearStructure ? 38 : 0) +
+                       (bearSweep ? 22 : 0) +
+                       (bearBreak ? 22 : 0) +
+                       (bearZone ? 10 : 0) +
+                       (bearBody ? 8 : 0);
+
+            if (bull >= bear + 12 && bullStructure && (bullSweep || bullBreak) && bull >= 65)
+            {
+                direction = 1;
+                quality = Math.Min(100, bull);
+                return true;
+            }
+
+            if (bear >= bull + 12 && bearStructure && (bearSweep || bearBreak) && bear >= 65)
+            {
+                direction = -1;
+                quality = Math.Min(100, bear);
+                return true;
+            }
+
+            return false;
+        }
+
         private void EvaluateSmartDecision(int chartIndex)
         {
             _smartDecision = null;
@@ -7898,8 +8078,22 @@ private void UpdateBrokerPositionProtection()
                         Math.Max(50, SmartMinimumTimeframeAgreement)
                     );
 
-                if (weakRegime || weakConsensus)
+                bool strongClosedReversal =
+                    GetStrongClosedStructuralReversal(
+                        _m5,
+                        m5Index,
+                        a5,
+                        out int reversalDirection,
+                        out int reversalQuality);
+
+                if (weakRegime ||
+                    (weakConsensus && !strongClosedReversal))
                     direction = 0;
+
+                if (strongClosedReversal &&
+                    reversalDirection != 0 &&
+                    reversalQuality >= Math.Max(65, MinimumStructuralSequence))
+                    direction = reversalDirection;
             }
 
             // Do not allow one weak bar to flip an established decision.
@@ -13022,8 +13216,8 @@ for (int j = impulse + 1; j <= index; j++)
 
             Color color =
                 direction == 1
-                    ? Color.Lime
-                    : Color.Red;
+                    ? ConfirmedBuyArrowColor
+                    : ConfirmedSellArrowColor;
 
             double atr = GetAtr(Bars, Math.Max(1, Math.Min(index, Bars.Count - 1)), AtrPeriod);
             double arrowOffset = atr > 0
