@@ -6294,26 +6294,6 @@ namespace cAlgo
                 DrawOutcomeMarker("INVALIDATED", price, false);
             }
 
-            double initialRisk = Math.Max(Symbol.PipSize, _signalInitialRisk);
-            double favorableR = Math.Max(0, favorableMove) / initialRisk;
-            double adverseR = Math.Max(0, adverseMove) / initialRisk;
-            if (favorableR > _signalMfeR) { _signalMfeR = favorableR; _signalMfeBars = barsSinceEntry; }
-            if (adverseR > _signalMaeR) { _signalMaeR = adverseR; _signalMaeBars = barsSinceEntry; }
-            _signalMfe = Math.Max(_signalMfe, Math.Max(0, favorableMove));
-            _signalMae = Math.Max(_signalMae, Math.Max(0, adverseMove));
-
-            int liveM5Bar = Math.Max(1, _m5 != null ? _m5.Count - 1 : _signalCreatedM5Bar);
-            int barsSinceEntry = _signalCreatedM5Bar >= 0
-                ? Math.Max(0, liveM5Bar - _signalCreatedM5Bar)
-                : 0;
-
-            int closedIndex = GetLastClosedIndexBefore(
-                _m5,
-                _m5.OpenTimes[Math.Max(1, _m5.Count - 1)]);
-            double monitorAtr = closedIndex >= 30
-                ? GetAtr(_m5, closedIndex, AtrPeriod)
-                : 0;
-
             if (UseFalseSignalGuard &&
                 !_falseSignalAlerted &&
                 barsSinceEntry <= Math.Max(1, FalseSignalWatchBars) &&
