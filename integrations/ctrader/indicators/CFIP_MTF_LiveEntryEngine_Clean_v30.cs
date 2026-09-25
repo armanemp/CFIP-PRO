@@ -9188,7 +9188,7 @@ namespace cAlgo
                 if (AlertOnReaction &&
                     AlertOnLiveReaction &&
                     _lastReactionAlertBar !=
-                    _m5Bars.Count - 1))
+                    _m5Bars.Count - 1)
                 {
                     SendUnifiedAlert(
                         "REACTION|" +
