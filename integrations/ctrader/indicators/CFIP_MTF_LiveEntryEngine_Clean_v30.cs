@@ -1058,8 +1058,9 @@ namespace cAlgo
             public bool MacdBear;
             public bool VwapBull;
             public bool VwapBear;
-            public bool HealthyBull;
-            public bool HealthyBear;
+            public bool VolatilityBull;
+            public bool VolatilityBear;
+            public bool Choppy;
         }
 
         private sealed class Level
@@ -2333,9 +2334,11 @@ namespace cAlgo
 
             f.Choppy =
                 UseHistoricalChoppinessGuard &&
-                IsChoppy(
-                    bars,
-                    index);
+                f.Adx < AdxMinimum &&
+                Math.Abs(
+                    f.EmaFast -
+                    f.EmaSlow) <
+                f.Atr * 0.35;
 
             f.EqualHigh =
                 UseEqualHighLow &&
@@ -2435,7 +2438,7 @@ namespace cAlgo
 
             if (f.Adx >= AdxMinimum)
             {
-                int dmi =
+                double dmi =
                     DmiBias(
                         bars,
                         index);
@@ -3903,8 +3906,8 @@ namespace cAlgo
                     entryThreshold,
                     LiveReactionStrongThreshold);
 
-            if (buyQuality < minimumQuality &&
-                sellQuality < minimumQuality)
+            if (buyQuality < watchThreshold &&
+                sellQuality < watchThreshold)
                 return new Decision();
 
             Decision d =
@@ -6349,23 +6352,32 @@ namespace cAlgo
                         StructureLookback,
                         closedM5 - 1));
 
+            int swingStart =
+                Math.Max(
+                    1,
+                    closedM5 -
+                    swingLookback);
+
             double swingHigh =
-                HighestHigh(
-                    _m5Bars,
-                    Math.Max(
-                        10,
-                        closedM5 -
-                        swingLookback),
-                    closedM5 - 1);
+                _m5Bars.HighPrices[swingStart];
 
             double swingLow =
-                LowestLow(
-                    _m5Bars,
+                _m5Bars.LowPrices[swingStart];
+
+            for (int i = swingStart + 1;
+                 i < closedM5;
+                 i++)
+            {
+                swingHigh =
                     Math.Max(
-                        10,
-                        closedM5 -
-                        swingLookback),
-                    closedM5 - 1);
+                        swingHigh,
+                        _m5Bars.HighPrices[i]);
+
+                swingLow =
+                    Math.Min(
+                        swingLow,
+                        _m5Bars.LowPrices[i]);
+            }
 
             double structureBuffer =
                 atr *
