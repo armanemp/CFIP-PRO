@@ -2676,6 +2676,49 @@ namespace cAlgo
                     direction,
                     liveIndex);
             }
+
+            // Evaluate the fresh live reaction immediately after it is calculated.
+            // MonitorActiveLevels runs earlier in Calculate() to protect a newly
+            // created plan from self-triggering; this second pass handles a true
+            // same-tick structural reversal without waiting for the next tick.
+            if (_signalActive &&
+                EnableLiveStructuralReversal &&
+                direction != 0 &&
+                direction != _signalDirection &&
+                actionableReaction)
+            {
+                double reversalMarket = direction == 1 ? bullPrice : bearPrice;
+                int liveClosedIndex = GetLastClosedIndexBefore(
+                    _m5,
+                    _m5.OpenTimes[liveIndex]);
+                double reversalAtr = liveClosedIndex >= 30
+                    ? GetAtr(_m5, liveClosedIndex, AtrPeriod)
+                    : atr;
+
+                if (reversalAtr > 0 &&
+                    EvaluateLiveStructuralReversalAgainstActiveSignal(
+                        liveIndex,
+                        liveClosedIndex,
+                        reversalMarket,
+                        reversalAtr))
+                {
+                    int oldDirection = _signalDirection;
+                    int reversalDirection = _liveReversalDirection;
+                    _signalActive = false;
+                    _signalOutcome = "LIVE STRUCTURAL REVERSAL";
+                    _lastExitM5Bar = liveIndex;
+                    RecordSignalOutcome(false);
+                    QueueExitDecisionAlert(
+                        (oldDirection == 1 ? "BUY" : "SELL") +
+                        " INVALIDATED BY LIVE " +
+                        (reversalDirection == 1 ? "BUY" : "SELL") +
+                        " REVERSAL | " + SymbolName +
+                        " | SCORE " + _liveReversalScore,
+                        reversalDirection,
+                        liveIndex);
+                    DrawOutcomeMarker("REVERSAL", reversalMarket, false);
+                }
+            }
         }
 
         private void BuildLiveReactionPlan(
@@ -8086,7 +8129,7 @@ private void UpdateBrokerPositionProtection()
                         out int reversalDirection,
                         out int reversalQuality);
 
-                if (weakRegime ||
+                if ((weakRegime && !strongClosedReversal) ||
                     (weakConsensus && !strongClosedReversal))
                     direction = 0;
 
