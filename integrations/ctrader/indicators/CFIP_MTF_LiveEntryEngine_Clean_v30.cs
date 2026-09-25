@@ -8075,8 +8075,7 @@ if (UseM1Trigger &&
                     {
                         Text = "",
                         IsHitTestVisible = false,
-                        TextWrapping = TextWrapping.NoWrap,
-                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        TextWrapping = TextWrapping.Wrap,
                         TextAlignment = TextAlignment.Left,
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Top,
@@ -8178,11 +8177,6 @@ if (UseM1Trigger &&
                         PanelToggleHeight);
 
                 _panelToggleButton.Margin = 8;
-                _panelToggleButton.BackgroundColor =
-                    Color.FromArgb(
-                        225,
-                        Color.Black);
-
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
 
@@ -8198,11 +8192,21 @@ if (UseM1Trigger &&
 
                 _panelToggleButton.BackgroundColor =
                     Color.FromArgb(
-                        225,
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                255,
+                                PanelBackgroundAlpha)),
                         PanelBackground);
 
                 _panelToggleButton.BorderColor =
-                    PanelBorder;
+                    Color.FromArgb(
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                255,
+                                PanelBorderAlpha)),
+                    PanelBorder);
 
                 _panelToggleButton.BorderThickness =
                     Math.Max(
@@ -8447,19 +8451,39 @@ if (UseM1Trigger &&
 
             _closeButton.BackgroundColor =
                 Color.FromArgb(
-                    225,
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PanelBackgroundAlpha)),
                     PanelBackground);
 
             _cancelButton.BackgroundColor =
                 Color.FromArgb(
-                    225,
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PanelBackgroundAlpha)),
                     PanelBackground);
 
             _closeButton.BorderColor =
-                PanelBorder;
+                Color.FromArgb(
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PanelBorderAlpha)),
+                    PanelBorder);
 
             _cancelButton.BorderColor =
-                PanelBorder;
+                Color.FromArgb(
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PanelBorderAlpha)),
+                    PanelBorder);
 
             _closeButton.BorderThickness =
                 Math.Max(
