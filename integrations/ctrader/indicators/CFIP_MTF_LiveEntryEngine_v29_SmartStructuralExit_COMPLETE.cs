@@ -10755,11 +10755,30 @@ private void UpdateBrokerPositionProtection()
 
         private double CalculateProxyExpectedValue(int quality, double rr)
         {
-            if (quality <= 0 || rr <= 0) return -1.0;
-            // This is deliberately a calibration proxy, not a claimed historical
-            // win probability. Real probability must come from outcome data.
+            if (quality <= 0 || rr <= 0)
+                return -1.0;
+
             double probability = 0.42 + Clamp(quality, 0, 100) * 0.0042;
             probability = Clamp(probability, 0.42, 0.84);
+
+            // Once enough closed outcomes exist for the current direction/regime,
+            // replace the synthetic prior with a conservatively shrunk empirical
+            // estimate. Until then, keep the prior so the first signals are not
+            // overfit to a tiny sample.
+            if (UseEmpiricalCalibration &&
+                EnableOutcomeTelemetry &&
+                _signalDirection != 0)
+            {
+                int samples;
+                double empirical = GetEmpiricalWinRate(
+                    _signalDirection,
+                    _smartRegime,
+                    out samples);
+
+                if (samples >= Math.Max(5, CalibrationDirectionalMinimumSamples))
+                    probability = Clamp(empirical, 0.35, 0.80);
+            }
+
             return probability * rr - (1.0 - probability);
         }
 
