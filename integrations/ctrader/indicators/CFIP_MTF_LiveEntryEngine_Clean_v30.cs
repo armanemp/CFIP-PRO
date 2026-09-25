@@ -611,6 +611,9 @@ namespace cAlgo
         [Parameter("Panel Padding", Group = "14 · Display", DefaultValue = 9, MinValue = 0, MaxValue = 30)]
         public int PanelPadding { get; set; }
 
+        [Parameter("Panel Margin", Group = "14 · Display", DefaultValue = 8, MinValue = 0, MaxValue = 30)]
+        public int PanelMargin { get; set; }
+
         [Parameter("Panel Text Color", Group = "14 · Display", DefaultValue = "White")]
         public Color PanelTextColor { get; set; }
 
@@ -9462,7 +9465,10 @@ namespace cAlgo
                         20,
                         PanelToggleHeight);
 
-                _panelToggleButton.Margin = 8;
+                _panelToggleButton.Margin =
+                    Math.Max(
+                        0,
+                        PanelMargin);
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
 
@@ -9641,7 +9647,10 @@ namespace cAlgo
                     0,
                     PanelPadding);
 
-            _panel.Margin = 8;
+            _panel.Margin =
+                Math.Max(
+                    0,
+                    PanelMargin);
 
             _panel.BackgroundColor =
                 Color.FromArgb(
