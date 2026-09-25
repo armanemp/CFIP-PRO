@@ -2967,11 +2967,17 @@ if (UseM1Trigger &&
                 out sellQuality,
                 out sellEvidence);
 
-            if (buyQuality < 74 &&
-                sellQuality < 74)
+            int minimumQuality =
+                Math.Max(
+                    50,
+                    FastReversalMinimumQuality);
+
+            if (buyQuality < minimumQuality &&
+                sellQuality < minimumQuality)
                 return new Decision();
 
-            Decision d = new Decision();
+            Decision d =
+                new Decision();
 
             if (buyQuality >= sellQuality)
             {
@@ -2986,10 +2992,45 @@ if (UseM1Trigger &&
                 d.IndependentEvidence = sellEvidence;
             }
 
-            d.SmartQuality = d.Confidence;
+            d.SmartQuality =
+                d.Confidence;
+
             d.EntryAllowed =
-                d.Confidence >= 74 &&
-                d.IndependentEvidence >= 3;
+                d.Confidence >=
+                minimumQuality &&
+                d.IndependentEvidence >=
+                Math.Max(
+                    2,
+                    LiveReversalMinimumEvidence);
+
+            if (!AllowFastM5ReversalBeforeM15 &&
+                (_m15Frame == null ||
+                 _m15Frame.Direction !=
+                 d.Direction))
+            {
+                d.EntryAllowed = false;
+                d.BlockReason =
+                    "M15 REVERSAL";
+            }
+
+            if (d.EntryAllowed)
+            {
+                Zone reactionZone =
+                    FindNearestOpposingZone(
+                        _m5Bars,
+                        live,
+                        d.Direction,
+                        atr);
+
+                if (reactionZone != null &&
+                    reactionZone.Quality <
+                    FastReversalMinimumZoneQuality)
+                {
+                    d.EntryAllowed = false;
+                    d.BlockReason =
+                        "REACTION ZONE";
+                }
+            }
 
             d.Reason =
                 (d.Direction == 1
@@ -3013,6 +3054,11 @@ if (UseM1Trigger &&
         {
             quality = 0;
             evidence = 0;
+
+            if (bars == null ||
+                index < 6 ||
+                atr <= 0)
+                return;
 
             double range =
                 Math.Max(
@@ -3042,39 +3088,67 @@ if (UseM1Trigger &&
                       range;
 
             bool closeStrong =
-                closeLocation >= 0.65;
+                closeLocation >=
+                MinimumCloseLocation;
 
             bool displacement =
-                body >= atr * 0.60;
+                body >=
+                atr *
+                Math.Max(
+                    MinimumTriggerBodyAtr,
+                    0.60);
+
+            int lookback =
+                Math.Max(
+                    2,
+                    FastReversalLookbackBars);
+
+            int previous =
+                Math.Max(
+                    0,
+                    index - lookback);
 
             bool breakMicro =
                 direction == 1
                     ? bars.ClosePrices[index] >
                       Highest(
                           bars,
-                          Math.Max(
-                              0,
-                              index - 5),
+                          previous,
                           index - 1)
                     : bars.ClosePrices[index] <
                       Lowest(
                           bars,
-                          Math.Max(
-                              0,
-                              index - 5),
+                          previous,
                           index - 1);
+
+            double rsi =
+                Rsi(
+                    bars,
+                    index);
 
             bool rsiSupport =
                 direction == 1
-                    ? Rsi(bars, index) >= 52
-                    : Rsi(bars, index) <= 48;
+                    ? rsi >= 52
+                    : rsi <= 48;
 
             bool emaSupport =
                 direction == 1
-                    ? Ema(bars, index, true) >
-                      Ema(bars, index, false)
-                    : Ema(bars, index, true) <
-                      Ema(bars, index, false);
+                    ? Ema(
+                        bars,
+                        index,
+                        true) >
+                      Ema(
+                        bars,
+                        index,
+                        false)
+                    : Ema(
+                        bars,
+                        index,
+                        true) <
+                      Ema(
+                        bars,
+                        index,
+                        false);
 
             if (directional)
             {
@@ -3107,6 +3181,21 @@ if (UseM1Trigger &&
             }
 
             if (emaSupport)
+            {
+                quality += 10;
+                evidence++;
+            }
+
+            Zone reversalZone =
+                FindNearestOpposingZone(
+                    bars,
+                    index,
+                    direction,
+                    atr);
+
+            if (reversalZone != null &&
+                reversalZone.Quality >=
+                FastReversalMinimumZoneQuality)
             {
                 quality += 10;
                 evidence++;
@@ -8189,6 +8278,17 @@ if (UseM1Trigger &&
                 "H4  " +
                 FrameText(_h4Frame));
 
+            if (ShowOutcomeDiagnostics)
+            {
+                lines.Add(
+                    "OUTCOME  W" +
+                    _wins +
+                    " | L" +
+                    _losses +
+                    " | CAL " +
+                    CalibrationText());
+            }
+
             lines.Add(
                 "AUTO  " +
                 (EnableAutoTrading
@@ -8383,7 +8483,7 @@ if (UseM1Trigger &&
                         PanelFontSize));
 
             _popupText.ForegroundColor =
-                PanelTextColor;
+                PopupTextColor;
 
             _popup.Width =
                 Math.Max(
@@ -8392,8 +8492,8 @@ if (UseM1Trigger &&
 
             _popup.Padding =
                 Math.Max(
-                    6,
-                    PanelPadding);
+                    0,
+                    PopupPadding);
 
             _popup.Margin = 8;
 
@@ -9774,6 +9874,19 @@ if (UseM1Trigger &&
                 closedM5 -
                 _lastSignalM5 <
                 OppositeSignalCooldownM5)
+                return false;
+
+            int flipBars =
+                Math.Max(
+                    1,
+                    SmartFlipConfirmationBars);
+
+            if (flipBars > 1 &&
+                !StableDirection(
+                    _m5Bars,
+                    closedM5,
+                    opposite,
+                    flipBars))
                 return false;
 
             SendUnifiedAlert(
