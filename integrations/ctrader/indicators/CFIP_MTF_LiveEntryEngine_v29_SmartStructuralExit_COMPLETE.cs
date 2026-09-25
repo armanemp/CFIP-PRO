@@ -807,6 +807,12 @@ namespace cAlgo
         [Parameter("Popup Font Family", Group = "Alerts", DefaultValue = "Arial")]
         public string PopupFontFamily { get; set; }
 
+        [Parameter("Keep Popup Until Next Alert", Group = "Alerts", DefaultValue = true)]
+        public bool KeepPopupUntilNextAlert { get; set; }
+
+        [Parameter("Show Popup Close Button", Group = "Alerts", DefaultValue = true)]
+        public bool ShowPopupCloseButton { get; set; }
+
         [Parameter("Alert On Exit Plan Update", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnExitPlanUpdate { get; set; }
 
@@ -928,6 +934,18 @@ namespace cAlgo
         [Parameter("Smart Target Nearest Bias", Group = "Smart Intelligence", DefaultValue = 0.65, MinValue = 0.20, MaxValue = 1.00, Step = 0.05)]
         public double SmartTargetNearestBias { get; set; }
 
+        [Parameter("Require Smart Consensus", Group = "Smart Intelligence", DefaultValue = true)]
+        public bool RequireSmartConsensus { get; set; }
+
+        [Parameter("Smart Consensus Threshold", Group = "Smart Intelligence", DefaultValue = 62, MinValue = 50, MaxValue = 95)]
+        public int SmartConsensusThreshold { get; set; }
+
+        [Parameter("Smart Minimum Independent Evidence", Group = "Smart Intelligence", DefaultValue = 3, MinValue = 2, MaxValue = 6)]
+        public int SmartMinimumIndependentEvidence { get; set; }
+
+        [Parameter("Smart Regime Quality Floor", Group = "Smart Intelligence", DefaultValue = 48, MinValue = 30, MaxValue = 80)]
+        public int SmartRegimeQualityFloor { get; set; }
+
         [Parameter("Smart Stop Zone Bonus", Group = "Smart Intelligence", DefaultValue = 10, MinValue = 0, MaxValue = 25)]
         public int SmartStopZoneBonus { get; set; }
 
@@ -1047,6 +1065,8 @@ namespace cAlgo
 
         private Border _alertPopupBorder;
         private TextBlock _alertPopupText;
+        private Button _alertPopupCloseButton;
+        private StackPanel _alertPopupStack;
         private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
         private string _lastAlertSignature = "";
         private DateTime _lastAlertUtc = DateTime.MinValue;
@@ -1120,6 +1140,8 @@ namespace cAlgo
         private string _smartAction = "WAIT";
         private string _smartReason = "";
         private int _smartRegimeQuality;
+        private int _smartConsensusQuality;
+        private int _smartIndependentEvidence;
         private int _smartLastStableDirection;
         private int _smartOppositeBars;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
@@ -1202,6 +1224,8 @@ namespace cAlgo
             _bearStabilityCount = 0;
             _directionalBiasBootstrapped = false;
             _smartRegimeQuality = 0;
+            _smartConsensusQuality = 0;
+            _smartIndependentEvidence = 0;
             _smartLastStableDirection = 0;
             _smartOppositeBars = 0;
             _lastEarlyBias = 0;
@@ -5131,7 +5155,9 @@ namespace cAlgo
                     Math.Round(_smartDecision.EvidenceCoverage) + "%" +
                     " | EDGE " +
                     Math.Abs(_smartBuyShare - _smartSellShare) +
-                    "pp");
+                    "pp" +
+                    " | CONS " + _smartConsensusQuality +
+                    " | EVID " + _smartIndependentEvidence);
 
                 if (!string.IsNullOrWhiteSpace(_smartReason))
                     lines.Add("WHY  " + _smartReason);
@@ -5231,7 +5257,9 @@ namespace cAlgo
                     " | " + (_smartRegime ?? "UNKNOWN"));
 
                 lines.Add(
-                    "REGIME-Q " + _smartRegimeQuality);
+                    "REGIME-Q " + _smartRegimeQuality +
+                    " | CONS " + _smartConsensusQuality +
+                    " | EVID " + _smartIndependentEvidence);
             }
 
             if (!string.IsNullOrWhiteSpace(_tradeActionStatusText))
@@ -5243,7 +5271,10 @@ namespace cAlgo
                 return;
             }
 
-            Color panelColor = TradePlanTextColor;
+            Color panelColor =
+                showPlan
+                    ? TradePlanTextColor
+                    : StatusColor;
 
             if (_tradePlanPanelBorder == null)
             {
@@ -5470,25 +5501,74 @@ namespace cAlgo
         {
             if (!ShowPopupAlert || string.IsNullOrWhiteSpace(message))
                 return;
+
             try
             {
                 if (_alertPopupBorder == null)
                 {
-                    _alertPopupText = new TextBlock { IsHitTestVisible = false, TextWrapping = TextWrapping.Wrap };
-                    _alertPopupBorder = new Border { Child = _alertPopupText, IsHitTestVisible = false };
+                    _alertPopupText =
+                        new TextBlock
+                        {
+                            IsHitTestVisible = false,
+                            TextWrapping = TextWrapping.Wrap
+                        };
+
+                    _alertPopupCloseButton =
+                        new Button
+                        {
+                            Text = "×",
+                            Width = 28,
+                            Height = 22,
+                            Margin = 2,
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            ForegroundColor = PopupTextColor,
+                            BackgroundColor = PopupBackgroundColor,
+                            BorderColor = PopupBorderColor,
+                            BorderThickness = Math.Max(0, PopupBorderThickness),
+                            CornerRadius = Math.Max(0, PopupCornerRadius)
+                        };
+
+                    _alertPopupCloseButton.Click += CloseAlertPopup;
+
+                    _alertPopupStack =
+                        new StackPanel
+                        {
+                            Orientation = Orientation.Vertical
+                        };
+
+                    _alertPopupStack.AddChild(_alertPopupText);
+                    _alertPopupStack.AddChild(_alertPopupCloseButton);
+
+                    _alertPopupBorder =
+                        new Border
+                        {
+                            Child = _alertPopupStack,
+                            IsHitTestVisible = true
+                        };
+
                     Chart.AddControl(_alertPopupBorder);
                 }
 
                 VerticalAlignment vertical = VerticalAlignment.Bottom;
                 HorizontalAlignment horizontal = HorizontalAlignment.Right;
+
                 switch (CustomPopupPosition)
                 {
                     case CFIPPanelCorner.TopLeft:
-                        vertical = VerticalAlignment.Top; horizontal = HorizontalAlignment.Left; break;
+                        vertical = VerticalAlignment.Top;
+                        horizontal = HorizontalAlignment.Left;
+                        break;
+
                     case CFIPPanelCorner.TopRight:
-                        vertical = VerticalAlignment.Top; horizontal = HorizontalAlignment.Right; break;
+                        vertical = VerticalAlignment.Top;
+                        horizontal = HorizontalAlignment.Right;
+                        break;
+
                     case CFIPPanelCorner.BottomLeft:
-                        vertical = VerticalAlignment.Bottom; horizontal = HorizontalAlignment.Left; break;
+                        vertical = VerticalAlignment.Bottom;
+                        horizontal = HorizontalAlignment.Left;
+                        break;
                 }
 
                 _alertPopupBorder.HorizontalAlignment = horizontal;
@@ -5498,20 +5578,62 @@ namespace cAlgo
                 _alertPopupBorder.Padding = Math.Max(0, PopupPadding);
                 _alertPopupBorder.BorderThickness = Math.Max(0, PopupBorderThickness);
                 _alertPopupBorder.CornerRadius = Math.Max(0, PopupCornerRadius);
-                _alertPopupBorder.BorderColor = Color.FromArgb(Math.Max(0, Math.Min(255, PopupBorderAlpha)), PopupBorderColor);
-                _alertPopupBorder.BackgroundColor = Color.FromArgb(Math.Max(0, Math.Min(255, PopupBackgroundAlpha)), PopupBackgroundColor);
-                _alertPopupText.Text = string.IsNullOrWhiteSpace(title) ? message : title + "\n" + message;
+                _alertPopupBorder.BorderColor =
+                    Color.FromArgb(
+                        Math.Max(0, Math.Min(255, PopupBorderAlpha)),
+                        PopupBorderColor);
+                _alertPopupBorder.BackgroundColor =
+                    Color.FromArgb(
+                        Math.Max(0, Math.Min(255, PopupBackgroundAlpha)),
+                        PopupBackgroundColor);
+
+                _alertPopupText.Text =
+                    string.IsNullOrWhiteSpace(title)
+                        ? message
+                        : title + "\n" + message;
+
                 _alertPopupText.ForegroundColor = PopupTextColor;
                 _alertPopupText.FontSize = Math.Max(8, PopupFontSize);
-                _alertPopupText.FontWeight = PopupBold ? FontWeight.Bold : FontWeight.Normal;
+                _alertPopupText.FontWeight =
+                    PopupBold
+                        ? FontWeight.Bold
+                        : FontWeight.Normal;
                 _alertPopupText.FontFamily =
                     string.IsNullOrWhiteSpace(PopupFontFamily)
                         ? "Arial"
                         : PopupFontFamily;
                 _alertPopupText.TextAlignment = TextAlignment.Left;
                 _alertPopupText.HorizontalAlignment = HorizontalAlignment.Left;
+
+                _alertPopupCloseButton.ForegroundColor = PopupTextColor;
+                _alertPopupCloseButton.BackgroundColor = PopupBackgroundColor;
+                _alertPopupCloseButton.BorderColor = PopupBorderColor;
+                _alertPopupCloseButton.BorderThickness =
+                    Math.Max(0, PopupBorderThickness);
+                _alertPopupCloseButton.CornerRadius =
+                    Math.Max(0, PopupCornerRadius);
+                _alertPopupCloseButton.FontSize =
+                    Math.Max(8, PopupFontSize);
+                _alertPopupCloseButton.FontWeight =
+                    PopupBold
+                        ? FontWeight.Bold
+                        : FontWeight.Normal;
+                _alertPopupCloseButton.FontFamily =
+                    string.IsNullOrWhiteSpace(PopupFontFamily)
+                        ? "Arial"
+                        : PopupFontFamily;
+                _alertPopupCloseButton.IsVisible =
+                    ShowPopupCloseButton;
+                _alertPopupCloseButton.IsEnabled =
+                    ShowPopupCloseButton;
+
                 _alertPopupBorder.IsVisible = true;
-                _alertPopupExpiresUtc = DateTime.UtcNow.AddSeconds(Math.Max(1, PopupDurationSeconds));
+
+                _alertPopupExpiresUtc =
+                    KeepPopupUntilNextAlert
+                        ? DateTime.MinValue
+                        : DateTime.UtcNow.AddSeconds(
+                            Math.Max(1, PopupDurationSeconds));
             }
             catch (Exception ex)
             {
@@ -5519,21 +5641,42 @@ namespace cAlgo
             }
         }
 
+        private void CloseAlertPopup(ButtonClickEventArgs args)
+        {
+            RemoveAlertPopup();
+        }
+
         private void UpdateAlertPopupLifetime()
         {
-            if (_alertPopupBorder != null && _alertPopupExpiresUtc != DateTime.MinValue && DateTime.UtcNow >= _alertPopupExpiresUtc)
+            if (KeepPopupUntilNextAlert)
+                return;
+
+            if (_alertPopupBorder != null &&
+                _alertPopupExpiresUtc != DateTime.MinValue &&
+                DateTime.UtcNow >= _alertPopupExpiresUtc)
+            {
                 RemoveAlertPopup();
+            }
         }
 
         private void RemoveAlertPopup()
         {
             if (_alertPopupBorder != null)
             {
-                try { Chart.RemoveControl(_alertPopupBorder); }
-                catch (Exception ex) { Print("CFIP popup removal failed: {0}", ex.Message); }
+                try
+                {
+                    Chart.RemoveControl(_alertPopupBorder);
+                }
+                catch (Exception ex)
+                {
+                    Print("CFIP popup removal failed: {0}", ex.Message);
+                }
             }
+
             _alertPopupBorder = null;
             _alertPopupText = null;
+            _alertPopupCloseButton = null;
+            _alertPopupStack = null;
             _alertPopupExpiresUtc = DateTime.MinValue;
         }
 
@@ -6722,6 +6865,155 @@ private void UpdateBrokerPositionProtection()
             return (int)Math.Round(Clamp(q, 0, 100));
         }
 
+        private int CalculateSmartConsensusQuality(
+            int direction,
+            Analysis a5,
+            Analysis a15,
+            Analysis a30,
+            Analysis h1,
+            Analysis h4,
+            Analysis w1,
+            int liveTriggerScore,
+            double entryQuality,
+            out int independentEvidence)
+        {
+            independentEvidence = 0;
+
+            if (direction == 0)
+                return 0;
+
+            Analysis[] frames =
+            {
+                a5,
+                a15,
+                a30,
+                h1,
+                h4,
+                w1
+            };
+
+            double[] weights =
+            {
+                Math.Max(0.0, M5Weight),
+                Math.Max(0.0, M15Weight),
+                Math.Max(0.0, M30Weight),
+                Math.Max(0.0, H1Weight),
+                Math.Max(0.0, H4Weight),
+                SmartWeeklyContext
+                    ? Math.Max(
+                        0.5,
+                        Math.Min(
+                            3.0,
+                            Math.Max(0.5, H4Weight * 0.75)))
+                    : 0.0
+            };
+
+            double weightedAgreement = 0.0;
+            double totalWeight = 0.0;
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null || weights[i] <= 0)
+                    continue;
+
+                totalWeight += weights[i];
+
+                if (frames[i].Direction == direction)
+                    weightedAgreement += weights[i];
+            }
+
+            double tfAgreement =
+                totalWeight > 0
+                    ? weightedAgreement / totalWeight * 100.0
+                    : 0.0;
+
+            Analysis core = a5;
+            if (core == null)
+                return 0;
+
+            bool structure =
+                direction == 1
+                    ? (core.MssBull ||
+                       core.ChochBull ||
+                       core.DisplacementBull ||
+                       core.StructureBull)
+                    : (core.MssBear ||
+                       core.ChochBear ||
+                       core.DisplacementBear ||
+                       core.StructureBear);
+
+            bool liquidity =
+                direction == 1
+                    ? (core.LiquidityBull ||
+                       core.EqualLow ||
+                       core.Discount)
+                    : (core.LiquidityBear ||
+                       core.EqualHigh ||
+                       core.Premium);
+
+            bool zone =
+                direction == 1
+                    ? (core.FvgBull || core.ObBull)
+                    : (core.FvgBear || core.ObBear);
+
+            bool momentum =
+                direction == 1
+                    ? (core.TrendBull ||
+                       core.MomentumBull ||
+                       core.VolumeBull ||
+                       core.MacdBull ||
+                       core.VwapBull)
+                    : (core.TrendBear ||
+                       core.MomentumBear ||
+                       core.VolumeBear ||
+                       core.MacdBear ||
+                       core.VwapBear);
+
+            bool trigger =
+                liveTriggerScore >=
+                Math.Max(
+                    1,
+                    Math.Min(
+                        6,
+                        LiveTriggerScore));
+
+            bool entry =
+                entryQuality >= 60.0;
+
+            if (tfAgreement >= 60.0) independentEvidence++;
+            if (structure) independentEvidence++;
+            if (liquidity || zone) independentEvidence++;
+            if (momentum) independentEvidence++;
+            if (trigger) independentEvidence++;
+            if (entry) independentEvidence++;
+
+            double structureScore = structure ? 100.0 : 0.0;
+            double liquidityZoneScore =
+                liquidity && zone
+                    ? 100.0
+                    : liquidity || zone
+                        ? 65.0
+                        : 0.0;
+            double momentumScore = momentum ? 100.0 : 0.0;
+            double triggerScore =
+                Clamp(
+                    liveTriggerScore / 6.0 * 100.0,
+                    0.0,
+                    100.0);
+            double entryScore = Clamp(entryQuality, 0.0, 100.0);
+
+            double consensus =
+                tfAgreement * 0.40 +
+                structureScore * 0.18 +
+                liquidityZoneScore * 0.14 +
+                momentumScore * 0.10 +
+                triggerScore * 0.10 +
+                entryScore * 0.08;
+
+            return (int)Math.Round(
+                Clamp(consensus, 0.0, 100.0));
+        }
+
         private void EvaluateSmartDecision(int chartIndex)
         {
             _smartDecision = null;
@@ -6733,6 +7025,8 @@ private void UpdateBrokerPositionProtection()
             _smartRegime = "UNKNOWN";
             _smartAction = "WAIT";
             _smartReason = "";
+            _smartConsensusQuality = 0;
+            _smartIndependentEvidence = 0;
 
             if (!EnableSmartDecisionEngine ||
                 _m5 == null ||
@@ -7089,6 +7383,48 @@ private void UpdateBrokerPositionProtection()
                     Math.Max(
                         0,
                         quality - 10);
+
+            int provisionalDirection = direction;
+            int consensusQuality =
+                provisionalDirection != 0
+                    ? CalculateSmartConsensusQuality(
+                        provisionalDirection,
+                        a5,
+                        a15,
+                        a30,
+                        ah1,
+                        ah4,
+                        aw1,
+                        provisionalDirection == 1
+                            ? liveBull
+                            : liveBear,
+                        provisionalDirection == 1
+                            ? bullEntryQuality
+                            : bearEntryQuality,
+                        out int independentEvidence)
+                    : 0;
+
+            _smartConsensusQuality = consensusQuality;
+            _smartIndependentEvidence = independentEvidence;
+
+            if (direction != 0)
+            {
+                bool weakRegime =
+                    _smartRegimeQuality <
+                    Math.Max(30, SmartRegimeQualityFloor);
+
+                bool weakConsensus =
+                    RequireSmartConsensus &&
+                    (
+                        consensusQuality <
+                        Math.Max(50, SmartConsensusThreshold) ||
+                        independentEvidence <
+                        Math.Max(2, SmartMinimumIndependentEvidence)
+                    );
+
+                if (weakRegime || weakConsensus)
+                    direction = 0;
+            }
 
             // Do not allow one weak bar to flip an established decision.
             // A genuine MSS/CHOCH/displacement can still break the hysteresis.
