@@ -736,7 +736,7 @@ namespace cAlgo
         [Parameter("Stable M15 Bars", Group = "11 · Accuracy & Filters", DefaultValue = 2, MinValue = 1, MaxValue = 4)]
         public int StableM15Bars { get; set; }
 
-        [Parameter("Minimum Fresh Trigger Evidence", Group = "11 · Accuracy & Filters", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
+        [Parameter("Minimum Fresh Trigger Evidence", Group = "11 · Accuracy & Filters", DefaultValue = 3, MinValue = 1, MaxValue = 5)]
         public int MinimumFreshTriggerEvidence { get; set; }
 
         [Parameter("Use False Signal Guard", Group = "11 · Accuracy & Filters", DefaultValue = true)]
@@ -5258,7 +5258,7 @@ namespace cAlgo
                     " | TP " +
                     FormatPrice(takeProfit);
 
-                QueueSmartDecisionAlert(
+                string autoExecutionEvent =
                     "AUTO " +
                     (aggressive ? "AGGRESSIVE " : "") +
                     (direction == 1 ? "BUY" : "SELL") +
@@ -5267,9 +5267,22 @@ namespace cAlgo
                     " | SL " +
                     FormatPrice(stopLoss) +
                     " | TP " +
-                    FormatPrice(takeProfit),
-                    direction,
-                    m5Bar);
+                    FormatPrice(takeProfit);
+
+                if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage) &&
+                    _pendingSignalAlertDirection == direction &&
+                    _pendingSignalAlertBar == m5Bar)
+                {
+                    _pendingSignalAlertMessage +=
+                        " | " + autoExecutionEvent;
+                }
+                else
+                {
+                    QueueSmartDecisionAlert(
+                        autoExecutionEvent,
+                        direction,
+                        m5Bar);
+                }
 
                 return true;
             }
@@ -7520,7 +7533,7 @@ namespace cAlgo
             _tradePlanPanelBorder.VerticalAlignment =
                 vertical;
 
-            _tradePlanPanelBorder.Margin = 10;
+            _tradePlanPanelBorder.Margin = 8;
             _tradePlanPanelBorder.Width =
                 Math.Max(180, TradePlanWidth);
 
@@ -12356,7 +12369,7 @@ private void UpdateBrokerPositionProtection()
                             Hits = Math.Max(2, poolCluster + 1),
                             AgeBars = 0,
                             SourceTimeframe = GetSmartTimeframeName(b),
-                            Kind = "LIQUIDITY_FORECAST"
+                            Kind = "EQUAL_HIGH_LOW_POOL"
                         });
                     }
                 }
@@ -12600,66 +12613,8 @@ private void UpdateBrokerPositionProtection()
                     });
                 }
             }
-        }
-
-        private double ApplySmartLevelWeight(
-            string kind,
-            double score)
-        {
-            string k = (kind ?? string.Empty).ToUpperInvariant();
-            double weight = 100.0;
-
-            if (k.Contains("SUPPLY_ZONE") || k.Contains("DEMAND_ZONE"))
-                weight = SupplyDemandLevelWeight;
-            else if (k.Contains("FVG"))
-                weight = FvgLevelWeight;
-            else if (k.Contains("OB"))
-                weight = OrderBlockLevelWeight;
-            else if (k.Contains("LIQUIDITY_POOL") || k.Contains("LIQUIDITY_FORECAST"))
-                weight = LiquidityPoolLevelWeight;
-            else if (k.Contains("EQUAL"))
-                weight = EqualHighLowLevelWeight;
-            else if (k.Contains("PREVIOUS_WEEK"))
-                weight = PreviousWeekLevelWeight;
-            else if (k.Contains("PREVIOUS_DAY"))
-                weight = PreviousDayLevelWeight;
-            else if (k.Contains("SESSION"))
-                weight = SessionLevelWeight;
-            else if (k.Contains("MTF_LIQUIDITY_CLUSTER"))
-                weight = MtfClusterLevelWeight;
-            else if (k.Contains("HTF_STRUCTURE"))
-                weight = HtfStructureLevelWeight;
-            else if (k.Contains("STRUCTURAL_SWING") ||
-                     k.Contains("M5_STRUCTURE") ||
-                     k.Contains("STRUCTURAL"))
-                weight = SwingStructureLevelWeight;
-
-            return Clamp(
-                score * Math.Max(0.50, Math.Min(2.00, weight / 100.0)),
-                0.0,
-                100.0);
-        }
-
-        private double GetSmartLevelTypeBonus(string kind)
-        {
-            string k = (kind ?? string.Empty).ToUpperInvariant();
-
-            double baseBonus =
-                k.Contains("SUPPLY_ZONE") || k.Contains("DEMAND_ZONE") ? 24.0 :
-                k.Contains("OPPOSING_OB") ? 21.0 :
-                k.Contains("OPPOSING_FVG") ? 20.0 :
-                k.Contains("LIQUIDITY_POOL") ? 22.0 :
-                k.Contains("PREVIOUS_WEEK") ? 23.0 :
-                k.Contains("PREVIOUS_DAY") ? 19.0 :
-                k.Contains("LIQUIDITY_FORECAST") ? 22.0 :
-                k.Contains("MTF_LIQUIDITY_CLUSTER") ? 20.0 :
-                k.Contains("STRUCTURAL_SWING") ? 14.0 :
-                k.Contains("HTF_STRUCTURE") ? 16.0 :
-                9.0;
-
-            return ApplySmartLevelWeight(k, baseBonus);
-        }
-
+            // Explicit execution-facing supply/demand level from the opposing
+            // order-block zone. This complements the OB boundary candidates.
             if (bestOb != null)
             {
                 double zoneLevel = direction == 1 ? bestOb.Low : bestOb.High;
@@ -12700,6 +12655,68 @@ private void UpdateBrokerPositionProtection()
                 }
             }
 
+        }
+
+        private double ApplySmartLevelWeight(
+            string kind,
+            double score)
+        {
+            string k = (kind ?? string.Empty).ToUpperInvariant();
+            double weight = 100.0;
+
+            if (k.Contains("SUPPLY_ZONE") || k.Contains("DEMAND_ZONE"))
+                weight = SupplyDemandLevelWeight;
+            else if (k.Contains("EQUAL_HIGH_LOW"))
+                weight = EqualHighLowLevelWeight;
+            else if (k.Contains("FVG"))
+                weight = FvgLevelWeight;
+            else if (k.Contains("OB"))
+                weight = OrderBlockLevelWeight;
+            else if (k.Contains("LIQUIDITY_POOL") || k.Contains("LIQUIDITY_FORECAST"))
+                weight = LiquidityPoolLevelWeight;
+            else if (k.Contains("EQUAL"))
+                weight = EqualHighLowLevelWeight;
+            else if (k.Contains("PREVIOUS_WEEK"))
+                weight = PreviousWeekLevelWeight;
+            else if (k.Contains("PREVIOUS_DAY"))
+                weight = PreviousDayLevelWeight;
+            else if (k.Contains("SESSION"))
+                weight = SessionLevelWeight;
+            else if (k.Contains("MTF_LIQUIDITY_CLUSTER"))
+                weight = MtfClusterLevelWeight;
+            else if (k.Contains("HTF_STRUCTURE"))
+                weight = HtfStructureLevelWeight;
+            else if (k.Contains("STRUCTURAL_SWING") ||
+                     k.Contains("M5_STRUCTURE") ||
+                     k.Contains("STRUCTURAL"))
+                weight = SwingStructureLevelWeight;
+
+            return Clamp(
+                score * Math.Max(0.50, Math.Min(2.00, weight / 100.0)),
+                0.0,
+                100.0);
+        }
+
+        private double GetSmartLevelTypeBonus(string kind)
+        {
+            string k = (kind ?? string.Empty).ToUpperInvariant();
+
+            double baseBonus =
+                k.Contains("SUPPLY_ZONE") || k.Contains("DEMAND_ZONE") ? 24.0 :
+                k.Contains("EQUAL_HIGH_LOW") ? 23.0 :
+                k.Contains("OPPOSING_OB") ? 21.0 :
+                k.Contains("OPPOSING_FVG") ? 20.0 :
+                k.Contains("LIQUIDITY_POOL") ? 22.0 :
+                k.Contains("PREVIOUS_WEEK") ? 23.0 :
+                k.Contains("PREVIOUS_DAY") ? 19.0 :
+                k.Contains("LIQUIDITY_FORECAST") ? 22.0 :
+                k.Contains("MTF_LIQUIDITY_CLUSTER") ? 20.0 :
+                k.Contains("STRUCTURAL_SWING") ? 14.0 :
+                k.Contains("HTF_STRUCTURE") ? 16.0 :
+                9.0;
+
+            return ApplySmartLevelWeight(k, baseBonus);
+        }
 
         private List<double> SelectSmartTargetSequence(
             List<SmartLevel> candidates,
