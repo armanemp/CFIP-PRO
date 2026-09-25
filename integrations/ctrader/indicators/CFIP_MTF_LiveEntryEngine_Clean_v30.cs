@@ -777,6 +777,40 @@ namespace cAlgo
         public bool RequireObstacleFreeTp1 { get; set; }
 
         // ============================================================
+        // 22 · CONFLUENCE EXTENSIONS
+        // ============================================================
+
+        [Parameter("Use Volume Expansion", Group = "22 · Confluence Extensions", DefaultValue = false)]
+        public bool UseVolumeExpansion { get; set; }
+
+        [Parameter("Volume Expansion Ratio", Group = "22 · Confluence Extensions", DefaultValue = 1.15, MinValue = 1.0, MaxValue = 3.0, Step = 0.05)]
+        public double VolumeExpansionRatio { get; set; }
+
+        [Parameter("Use MACD Bias", Group = "22 · Confluence Extensions", DefaultValue = false)]
+        public bool UseMacdBias { get; set; }
+
+        [Parameter("MACD Fast Period", Group = "22 · Confluence Extensions", DefaultValue = 12, MinValue = 2, MaxValue = 50)]
+        public int MacdFastPeriod { get; set; }
+
+        [Parameter("MACD Slow Period", Group = "22 · Confluence Extensions", DefaultValue = 26, MinValue = 3, MaxValue = 100)]
+        public int MacdSlowPeriod { get; set; }
+
+        [Parameter("Use VWAP Bias", Group = "22 · Confluence Extensions", DefaultValue = false)]
+        public bool UseVwapBias { get; set; }
+
+        [Parameter("VWAP Lookback Bars", Group = "22 · Confluence Extensions", DefaultValue = 48, MinValue = 10, MaxValue = 200)]
+        public int VwapLookbackBars { get; set; }
+
+        [Parameter("Use Healthy Volatility", Group = "22 · Confluence Extensions", DefaultValue = false)]
+        public bool UseHealthyVolatility { get; set; }
+
+        [Parameter("Healthy ATR Minimum Ratio", Group = "22 · Confluence Extensions", DefaultValue = 0.85, MinValue = 0.50, MaxValue = 1.50, Step = 0.05)]
+        public double HealthyAtrMinimumRatio { get; set; }
+
+        [Parameter("Healthy ATR Maximum Ratio", Group = "22 · Confluence Extensions", DefaultValue = 1.80, MinValue = 1.0, MaxValue = 3.0, Step = 0.05)]
+        public double HealthyAtrMaximumRatio { get; set; }
+
+        // ============================================================
         // RUNTIME MODELS
         // ============================================================
 
@@ -816,6 +850,14 @@ namespace cAlgo
             public bool RejectionBear;
             public bool EqualHigh;
             public bool EqualLow;
+            public bool VolumeBull;
+            public bool VolumeBear;
+            public bool MacdBull;
+            public bool MacdBear;
+            public bool VwapBull;
+            public bool VwapBear;
+            public bool HealthyBull;
+            public bool HealthyBear;
         }
 
         private sealed class Level
@@ -1192,6 +1234,8 @@ namespace cAlgo
             public AverageTrueRange Atr;
             public RelativeStrengthIndex Rsi;
             public DirectionalMovementSystem Dms;
+            public ExponentialMovingAverage MacdFast;
+            public ExponentialMovingAverage MacdSlow;
         }
 
         // ============================================================
@@ -1676,6 +1720,26 @@ namespace cAlgo
                         bars,
                         Math.Max(2, AdxPeriod),
                         MovingAverageType.WilderSmoothing);
+
+                int macdFastPeriod =
+                    Math.Max(
+                        2,
+                        MacdFastPeriod);
+
+                int macdSlowPeriod =
+                    Math.Max(
+                        macdFastPeriod + 1,
+                        MacdSlowPeriod);
+
+                set.MacdFast =
+                    Indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        macdFastPeriod);
+
+                set.MacdSlow =
+                    Indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        macdSlowPeriod);
             }
             catch (Exception ex)
             {
@@ -1967,6 +2031,54 @@ namespace cAlgo
                     bars.ClosePrices[index],
                     f.Atr) > 0;
 
+            f.VolumeBull =
+                HasVolumeExpansion(
+                    bars,
+                    index,
+                    1);
+
+            f.VolumeBear =
+                HasVolumeExpansion(
+                    bars,
+                    index,
+                    -1);
+
+            f.MacdBull =
+                HasMacdBias(
+                    bars,
+                    index,
+                    1);
+
+            f.MacdBear =
+                HasMacdBias(
+                    bars,
+                    index,
+                    -1);
+
+            f.VwapBull =
+                HasVwapBias(
+                    bars,
+                    index,
+                    1);
+
+            f.VwapBear =
+                HasVwapBias(
+                    bars,
+                    index,
+                    -1);
+
+            f.HealthyBull =
+                HasHealthyVolatility(
+                    bars,
+                    index,
+                    1);
+
+            f.HealthyBear =
+                HasHealthyVolatility(
+                    bars,
+                    index,
+                    -1);
+
             int bull = 0;
             int bear = 0;
             int evidence = 0;
@@ -1993,6 +2105,14 @@ namespace cAlgo
             AddScore(f.RejectionBear, 6, ref bear, ref evidence);
             AddScore(f.EqualLow, 5, ref bull, ref evidence);
             AddScore(f.EqualHigh, 5, ref bear, ref evidence);
+            AddScore(f.VolumeBull, 4, ref bull, ref evidence);
+            AddScore(f.VolumeBear, 4, ref bear, ref evidence);
+            AddScore(f.MacdBull, 4, ref bull, ref evidence);
+            AddScore(f.MacdBear, 4, ref bear, ref evidence);
+            AddScore(f.VwapBull, 4, ref bull, ref evidence);
+            AddScore(f.VwapBear, 4, ref bear, ref evidence);
+            AddScore(f.HealthyBull, 3, ref bull, ref evidence);
+            AddScore(f.HealthyBear, 3, ref bear, ref evidence);
 
             if (f.Rsi > 50)
                 bull += 3;
@@ -2073,6 +2193,224 @@ namespace cAlgo
 
             total += score;
             evidence++;
+        }
+
+        private bool HasVolumeExpansion(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (!UseVolumeExpansion ||
+                bars == null ||
+                index < 25)
+                return false;
+
+            double average = 0;
+            int count = 0;
+            int first =
+                Math.Max(
+                    0,
+                    index - 20);
+
+            for (int i = first;
+                 i < index;
+                 i++)
+            {
+                average +=
+                    Math.Max(
+                        0,
+                        bars.TickVolumes[i]);
+
+                count++;
+            }
+
+            if (count == 0 ||
+                average <= 0)
+                return false;
+
+            average /= count;
+
+            bool directional =
+                direction == 1
+                    ? bars.ClosePrices[index] >
+                      bars.OpenPrices[index]
+                    : bars.ClosePrices[index] <
+                      bars.OpenPrices[index];
+
+            return
+                directional &&
+                bars.TickVolumes[index] >=
+                average *
+                Math.Max(
+                    1.0,
+                    VolumeExpansionRatio);
+        }
+
+        private bool HasMacdBias(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (!UseMacdBias ||
+                bars == null ||
+                index < 35)
+                return false;
+
+            Native set =
+                GetNative(bars);
+
+            if (set == null ||
+                set.MacdFast == null ||
+                set.MacdSlow == null ||
+                index >= set.MacdFast.Result.Count ||
+                index >= set.MacdSlow.Result.Count)
+                return false;
+
+            double histogram =
+                set.MacdFast.Result[index] -
+                set.MacdSlow.Result[index];
+
+            int previousIndex =
+                Math.Max(
+                    0,
+                    index - 2);
+
+            double previous =
+                set.MacdFast.Result[previousIndex] -
+                set.MacdSlow.Result[previousIndex];
+
+            if (double.IsNaN(histogram) ||
+                double.IsInfinity(histogram) ||
+                double.IsNaN(previous) ||
+                double.IsInfinity(previous))
+                return false;
+
+            return
+                direction == 1
+                    ? histogram > 0 &&
+                      histogram >= previous
+                    : histogram < 0 &&
+                      histogram <= previous;
+        }
+
+        private bool HasVwapBias(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (!UseVwapBias ||
+                bars == null ||
+                index < 20)
+                return false;
+
+            int first =
+                Math.Max(
+                    0,
+                    index -
+                    Math.Max(
+                        10,
+                        VwapLookbackBars - 1));
+
+            double priceVolume = 0;
+            double volume = 0;
+
+            for (int i = first;
+                 i <= index;
+                 i++)
+            {
+                double typical =
+                    (bars.HighPrices[i] +
+                     bars.LowPrices[i] +
+                     bars.ClosePrices[i]) /
+                    3.0;
+
+                double v =
+                    Math.Max(
+                        1.0,
+                        bars.TickVolumes[i]);
+
+                priceVolume +=
+                    typical *
+                    v;
+
+                volume +=
+                    v;
+            }
+
+            if (volume <= 0)
+                return false;
+
+            double vwap =
+                priceVolume /
+                volume;
+
+            return
+                direction == 1
+                    ? bars.ClosePrices[index] >
+                      vwap
+                    : bars.ClosePrices[index] <
+                      vwap;
+        }
+
+        private bool HasHealthyVolatility(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (!UseHealthyVolatility ||
+                bars == null ||
+                index < 30)
+                return false;
+
+            double atr =
+                Atr(
+                    bars,
+                    index);
+
+            double oldAtr =
+                Atr(
+                    bars,
+                    Math.Max(
+                        5,
+                        index - 10));
+
+            if (atr <= 0 ||
+                oldAtr <= 0)
+                return false;
+
+            double body =
+                Math.Abs(
+                    bars.ClosePrices[index] -
+                    bars.OpenPrices[index]);
+
+            bool directional =
+                direction == 1
+                    ? bars.ClosePrices[index] >
+                      bars.OpenPrices[index]
+                    : bars.ClosePrices[index] <
+                      bars.OpenPrices[index];
+
+            double minRatio =
+                Math.Max(
+                    0.50,
+                    HealthyAtrMinimumRatio);
+
+            double maxRatio =
+                Math.Max(
+                    minRatio,
+                    HealthyAtrMaximumRatio);
+
+            return
+                directional &&
+                body >=
+                atr *
+                MinimumTriggerBodyAtr &&
+                atr >=
+                oldAtr *
+                minRatio &&
+                atr <=
+                oldAtr *
+                maxRatio;
         }
 
         // ============================================================
