@@ -80,7 +80,7 @@ namespace cAlgo
         [Parameter("Show Popup Alert", Group = "Alerts", DefaultValue = true)]
         public bool ShowPopupAlert { get; set; }
 
-        [Parameter("Alert On Entry Block / Restriction", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Entry Block / Restriction", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnEntryRestriction { get; set; }
 
         [Parameter("Alert On High Confidence Entry", Group = "Alerts", DefaultValue = true)]
@@ -95,19 +95,19 @@ namespace cAlgo
         [Parameter("Alert On News / Event Guard", Group = "Alerts", DefaultValue = true)]
         public bool AlertOnNewsEventGuard { get; set; }
 
-        [Parameter("Alert On Session Block", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Session Block", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnSessionBlock { get; set; }
 
-        [Parameter("Alert On Spread Block", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Spread Block", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnSpreadBlock { get; set; }
 
-        [Parameter("Alert On Friday Block", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Friday Block", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnFridayBlock { get; set; }
 
-        [Parameter("Alert On Regime No-Trade", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Regime No-Trade", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnRegimeNoTrade { get; set; }
 
-        [Parameter("Alert On Cooldown Block", Group = "Alerts", DefaultValue = true)]
+        [Parameter("Alert On Cooldown Block", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnCooldownBlock { get; set; }
 
         // ============================================================
@@ -373,7 +373,7 @@ namespace cAlgo
         [Parameter("Target Clearance ATR", Group = "Risk", DefaultValue = 0.08, MinValue = 0.01, MaxValue = 0.50)]
         public double TargetClearanceAtr { get; set; }
 
-        [Parameter("Reject Target Obstacle", Group = "Risk", DefaultValue = false)]
+        [Parameter("Reject Target Obstacle", Group = "Risk", DefaultValue = true)]
         public bool RejectTargetObstacle { get; set; }
 
         [Parameter("Use HTF Structure For Stop", Group = "Risk", DefaultValue = true)]
@@ -1019,6 +1019,63 @@ namespace cAlgo
         public bool AllowSmartSoftGate { get; set; }
 
         // ============================================================
+        // ADVANCED PRECISION / OUTCOME / LIQUIDITY
+        // ============================================================
+
+        [Parameter("Use Retest Quality Gate", Group = "Precision Entry", DefaultValue = true)]
+        public bool UseRetestQualityGate { get; set; }
+        [Parameter("Minimum Retest Quality", Group = "Precision Entry", DefaultValue = 70, MinValue = 40, MaxValue = 100)]
+        public int MinimumRetestQuality { get; set; }
+        [Parameter("Retest Lookback Bars", Group = "Precision Entry", DefaultValue = 8, MinValue = 3, MaxValue = 20)]
+        public int RetestLookbackBars { get; set; }
+        [Parameter("Retest Max Bars After Displacement", Group = "Precision Entry", DefaultValue = 6, MinValue = 1, MaxValue = 12)]
+        public int RetestMaxBarsAfterDisplacement { get; set; }
+        [Parameter("Retest Zone Tolerance ATR", Group = "Precision Entry", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 0.75)]
+        public double RetestZoneToleranceAtr { get; set; }
+        [Parameter("Retest Rejection Body ATR", Group = "Precision Entry", DefaultValue = 0.12, MinValue = 0.02, MaxValue = 0.75)]
+        public double RetestRejectionBodyAtr { get; set; }
+        [Parameter("Require Retest Close Confirmation", Group = "Precision Entry", DefaultValue = true)]
+        public bool RequireRetestCloseConfirmation { get; set; }
+
+        [Parameter("Enable Setup Invalidation", Group = "Accuracy", DefaultValue = true)]
+        public bool EnableSetupInvalidation { get; set; }
+        [Parameter("Invalidation Structure ATR", Group = "Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.50)]
+        public double InvalidationStructureAtr { get; set; }
+        [Parameter("Invalidation Zone Close ATR", Group = "Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.75)]
+        public double InvalidationZoneCloseAtr { get; set; }
+        [Parameter("Invalidation Max Adverse R", Group = "Accuracy", DefaultValue = 0.75, MinValue = 0.30, MaxValue = 2.00, Step = 0.05)]
+        public double InvalidationMaxAdverseR { get; set; }
+        [Parameter("Require MTF Flip For Invalidation", Group = "Accuracy", DefaultValue = true)]
+        public bool RequireMtfFlipForInvalidation { get; set; }
+
+        [Parameter("Use Extended Liquidity Map", Group = "Liquidity", DefaultValue = true)]
+        public bool UseExtendedLiquidityMap { get; set; }
+        [Parameter("Use Session Liquidity Targets", Group = "Liquidity", DefaultValue = true)]
+        public bool UseSessionLiquidityTargets { get; set; }
+        [Parameter("Use Daily Weekly Liquidity Targets", Group = "Liquidity", DefaultValue = true)]
+        public bool UseDailyWeeklyLiquidityTargets { get; set; }
+        [Parameter("Liquidity Target Minimum Score", Group = "Liquidity", DefaultValue = 65, MinValue = 40, MaxValue = 100)]
+        public int LiquidityTargetMinimumScore { get; set; }
+
+        [Parameter("Target Obstacle Buffer ATR", Group = "Risk", DefaultValue = 0.12, MinValue = 0.02, MaxValue = 0.75)]
+        public double TargetObstacleBufferAtr { get; set; }
+        [Parameter("Require Obstacle Free TP1", Group = "Risk", DefaultValue = true)]
+        public bool RequireObstacleFreeTp1 { get; set; }
+
+        [Parameter("Enable Outcome Telemetry", Group = "Accuracy", DefaultValue = true)]
+        public bool EnableOutcomeTelemetry { get; set; }
+        [Parameter("Outcome Maximum Bars", Group = "Accuracy", DefaultValue = 48, MinValue = 5, MaxValue = 500)]
+        public int OutcomeMaximumBars { get; set; }
+        [Parameter("Use Empirical Calibration", Group = "Accuracy", DefaultValue = true)]
+        public bool UseEmpiricalCalibration { get; set; }
+        [Parameter("Calibration Directional Minimum Samples", Group = "Accuracy", DefaultValue = 20, MinValue = 5, MaxValue = 200)]
+        public int CalibrationDirectionalMinimumSamples { get; set; }
+        [Parameter("Calibration Max Confidence Adjustment", Group = "Accuracy", DefaultValue = 6, MinValue = 0, MaxValue = 15)]
+        public int CalibrationMaxConfidenceAdjustment { get; set; }
+        [Parameter("Show Outcome Diagnostics", Group = "Display", DefaultValue = true)]
+        public bool ShowOutcomeDiagnostics { get; set; }
+
+        // ============================================================
         // DATA
         // ============================================================
 
@@ -1075,6 +1132,39 @@ namespace cAlgo
         private int _outcomeLosses;
         private int _outcomeHighConfidenceWins;
         private int _outcomeHighConfidenceLosses;
+
+        private int _signalMfeBars;
+        private int _signalMaeBars;
+        private int _signalTp1Bars = -1;
+        private int _signalTp2Bars = -1;
+        private int _signalTp3Bars = -1;
+        private int _signalTp4Bars = -1;
+        private int _signalSlBars = -1;
+        private int _signalOutcomeBar = -1;
+        private double _signalMfeR;
+        private double _signalMaeR;
+        private int _smartRetestQuality;
+        private int _smartInvalidationScore;
+        private int _rejectionRetest;
+        private int _rejectionLocation;
+        private int _rejectionRisk;
+        private int _rejectionObstacle;
+        private int _rejectionCalibration;
+        private class OutcomeRecord
+        {
+            public int Direction { get; set; }
+            public bool Win { get; set; }
+            public int Confidence { get; set; }
+            public int Quality { get; set; }
+            public string Regime { get; set; }
+            public string Session { get; set; }
+            public double InitialRisk { get; set; }
+            public double MfeR { get; set; }
+            public double MaeR { get; set; }
+            public int BarsHeld { get; set; }
+            public string Outcome { get; set; }
+        }
+        private readonly List<OutcomeRecord> _outcomeHistory = new List<OutcomeRecord>();
 
         private string _engineStatusText = "";
         private string _contextStatusText = "";
@@ -1990,6 +2080,13 @@ namespace cAlgo
                 (m5.MssBear || m5.ChochBear || m5.DisplacementBear || m5.LiquidityBear) &&
                 m15.Direction <= 0;
 
+            int bullRetestQuality = CalculateRetestQuality(_m5, m5Index, 1);
+            int bearRetestQuality = CalculateRetestQuality(_m5, m5Index, -1);
+            _smartRetestQuality = Math.Max(bullRetestQuality, bearRetestQuality);
+
+            bool bullRetestGate = !UseRetestQualityGate || bullRetestQuality >= MinimumRetestQuality || bullStrongOverride;
+            bool bearRetestGate = !UseRetestQualityGate || bearRetestQuality >= MinimumRetestQuality || bearStrongOverride;
+
             bool bullZoneConfluence = !UseZoneConfluence ||
                 ((bullM5Zone && bullM15Zone) ||
                  (bullM5Zone && bullLive >= PrecisionTriggerScore) ||
@@ -2050,10 +2147,12 @@ namespace cAlgo
                                (bullStrongOverride && bullScore >= bearScore);
             bool bearScoreOk = bearScore >= bullScore + 2 ||
                                (bearStrongOverride && bearScore >= bullScore);
-            bool bullConfidenceOk = bullConfidence >= MinimumConfidence ||
-                                    (bullStrongOverride && bullConfidence >= Math.Max(50, MinimumConfidence - 10));
-            bool bearConfidenceOk = bearConfidence >= MinimumConfidence ||
-                                    (bearStrongOverride && bearConfidence >= Math.Max(50, MinimumConfidence - 10));
+            int calibratedBullMinimum = GetCalibratedMinimumConfidence(MinimumConfidence, 1);
+            int calibratedBearMinimum = GetCalibratedMinimumConfidence(MinimumConfidence, -1);
+            bool bullConfidenceOk = bullConfidence >= calibratedBullMinimum ||
+                                    (bullStrongOverride && bullConfidence >= Math.Max(50, calibratedBullMinimum - 10));
+            bool bearConfidenceOk = bearConfidence >= calibratedBearMinimum ||
+                                    (bearStrongOverride && bearConfidence >= Math.Max(50, calibratedBearMinimum - 10));
             if (EnableSmartDecisionEngine)
             {
                 bullConfidenceOk = bullConfidenceOk ||
@@ -2131,7 +2230,8 @@ namespace cAlgo
                 sessionOk && spreadOk && fridayOk && newsOk && regimeOk &&
                 cooldownOk && activeOk && bullDirectionOk &&
                 bullEntryReady &&
-                bullBiasReady;
+                bullBiasReady &&
+                bullRetestGate;
 
             bool bearCandidate =
                 triggerFrameOk &&
@@ -2152,7 +2252,8 @@ namespace cAlgo
                 sessionOk && spreadOk && fridayOk && newsOk && regimeOk &&
                 cooldownOk && activeOk && bearDirectionOk &&
                 bearEntryReady &&
-                bearBiasReady;
+                bearBiasReady &&
+                bearRetestGate;
 
             // Simultaneous BUY and SELL candidates are ambiguous. Do not force
             // a direction simply because one branch is evaluated first.
@@ -4362,6 +4463,17 @@ namespace cAlgo
             _signalCreatedM5Bar = m5LiveIndex;
             _signalMfe = 0;
             _signalMae = 0;
+            _signalMfeR = 0;
+            _signalMaeR = 0;
+            _signalMfeBars = 0;
+            _signalMaeBars = 0;
+            _signalTp1Bars = -1;
+            _signalTp2Bars = -1;
+            _signalTp3Bars = -1;
+            _signalTp4Bars = -1;
+            _signalSlBars = -1;
+            _signalOutcomeBar = -1;
+            _smartInvalidationScore = 0;
             _falseSignalAlerted = false;
             _outcomeRecorded = false;
             SetEngineStateHeader(direction == 1 ? "BUY ACTIVE" : "SELL ACTIVE");
@@ -5891,23 +6003,208 @@ namespace cAlgo
 
 
 
+        private int CalculateRetestQuality(Bars bars, int index, int direction)
+        {
+            if (bars == null || direction == 0 || index < 30 || index >= bars.Count) return 0;
+            double atr = GetAtr(bars, index, AtrPeriod);
+            if (!IsFinitePositive(atr)) return 0;
+            int start = Math.Max(20, index - Math.Max(3, RetestLookbackBars));
+            int sweep = -1, structure = -1, displacement = -1, retest = -1;
+
+            for (int i = start; i <= index; i++)
+            {
+                bool sweepFound = direction == 1 ? HasBullLiquiditySweep(bars, i) : HasBearLiquiditySweep(bars, i);
+                bool structureFound = direction == 1 ? (HasBullMss(bars, i) || HasBullChoch(bars, i)) : (HasBearMss(bars, i) || HasBearChoch(bars, i));
+                bool displacementFound = direction == 1 ? HasBullDisplacement(bars, i) : HasBearDisplacement(bars, i);
+                if (sweepFound && sweep < 0) sweep = i;
+                if (structureFound && (sweep < 0 || i >= sweep)) structure = i;
+                if (displacementFound && (structure < 0 || i >= structure)) displacement = i;
+
+                if (displacement >= 0 && i > displacement)
+                {
+                    double tol = atr * Math.Max(0.05, RetestZoneToleranceAtr);
+                    bool touch = direction == 1 ? bars.LowPrices[i] <= bars.ClosePrices[displacement] + tol : bars.HighPrices[i] >= bars.ClosePrices[displacement] - tol;
+                    double body = Math.Abs(bars.ClosePrices[i] - bars.OpenPrices[i]);
+                    bool reject = direction == 1 ? bars.ClosePrices[i] > bars.OpenPrices[i] && body >= atr * Math.Max(0.02, RetestRejectionBodyAtr) : bars.ClosePrices[i] < bars.OpenPrices[i] && body >= atr * Math.Max(0.02, RetestRejectionBodyAtr);
+                    bool closeConfirmed = direction == 1 ? bars.ClosePrices[i] > bars.HighPrices[Math.Max(0, i - 1)] : bars.ClosePrices[i] < bars.LowPrices[Math.Max(0, i - 1)];
+                    if (i - displacement <= Math.Max(1, RetestMaxBarsAfterDisplacement) && touch && reject && (!RequireRetestCloseConfirmation || closeConfirmed))
+                        retest = i;
+                }
+            }
+
+            int q = 0;
+            if (sweep >= 0) q += 18;
+            if (structure >= 0 && (sweep < 0 || structure >= sweep)) q += 22;
+            if (displacement >= 0 && (structure < 0 || displacement >= structure)) q += 22;
+            if (retest >= 0)
+            {
+                q += 24;
+                double body = Math.Abs(bars.ClosePrices[retest] - bars.OpenPrices[retest]);
+                if (body >= atr * 0.25) q += 7;
+                q += Math.Max(0, 10 - (retest - displacement) * 2);
+            }
+            return (int)Clamp(q, 0, 100);
+        }
+
+        private void AddExtendedLiquidityTargets(List<SmartLevel> targets, Bars bars, int index, int direction, double entry, double atr, DateTime reference)
+        {
+            if (!UseExtendedLiquidityMap || targets == null || bars == null || index < 20 || atr <= 0) return;
+            double minDistance = Math.Max(Symbol.PipSize * 3.0, atr * 0.05);
+            Action<double, double, int, int, string, string> add = (price, score, priority, age, tf, kind) =>
+            {
+                if (!IsFinitePositive(price)) return;
+                double distance = direction == 1 ? price - entry : entry - price;
+                if (distance <= minDistance || score < LiquidityTargetMinimumScore) return;
+                foreach (SmartLevel existing in targets)
+                {
+                    if (existing != null && Math.Abs(existing.Price - price) <= atr * Math.Max(0.05, SmartLevelClusterAtr))
+                    {
+                        existing.Score = Math.Max(existing.Score, score);
+                        existing.Hits++;
+                        return;
+                    }
+                }
+                targets.Add(new SmartLevel { Price = NormalizePrice(price), Score = score, TimeframePriority = priority, Hits = 1, AgeBars = Math.Max(0, age), SourceTimeframe = tf, Kind = kind });
+            };
+
+            double swingHigh = HighestHigh(bars, Math.Max(0, index - LiquidityLookback), index - 1);
+            double swingLow = LowestLow(bars, Math.Max(0, index - LiquidityLookback), index - 1);
+            add(direction == 1 ? swingHigh : swingLow, 74, 5, 1, "M5", "SWING_LIQUIDITY");
+
+            for (int i = Math.Max(10, index - LiquidityLookback); i <= index - 2; i++)
+            {
+                for (int j = i + 1; j <= index - 1; j++)
+                {
+                    double a = direction == 1 ? bars.HighPrices[i] : bars.LowPrices[i];
+                    double b = direction == 1 ? bars.HighPrices[j] : bars.LowPrices[j];
+                    if (Math.Abs(a - b) <= atr * Math.Max(0.02, EqualLevelToleranceAtr))
+                    {
+                        add((a + b) * 0.5, 82, 6, index - j, "M5", "LIQUIDITY_POOL");
+                        break;
+                    }
+                }
+            }
+
+            if (UseSessionLiquidityTargets)
+            {
+                DateTime day = bars.OpenTimes[index].Date;
+                int start = index;
+                while (start > 0 && bars.OpenTimes[start - 1].Date == day) start--;
+                if (index - 1 >= start)
+                {
+                    double sh = HighestHigh(bars, start, index - 1);
+                    double sl = LowestLow(bars, start, index - 1);
+                    add(direction == 1 ? sh : sl, 78, 7, 1, "SESSION", direction == 1 ? "SESSION_HIGH" : "SESSION_LOW");
+                }
+            }
+
+            if (UseDailyWeeklyLiquidityTargets)
+            {
+                if (_d1 != null && _d1.Count >= 3)
+                {
+                    int d = GetLastClosedIndexBefore(_d1, reference);
+                    if (d >= 1) add(direction == 1 ? _d1.HighPrices[d - 1] : _d1.LowPrices[d - 1], 90, 9, 1, "D1", direction == 1 ? "PREVIOUS_DAY_HIGH" : "PREVIOUS_DAY_LOW");
+                }
+                if (_w1 != null && _w1.Count >= 3)
+                {
+                    int w = GetLastClosedIndexBefore(_w1, reference);
+                    if (w >= 1) add(direction == 1 ? _w1.HighPrices[w - 1] : _w1.LowPrices[w - 1], 96, 10, 1, "W1", direction == 1 ? "PREVIOUS_WEEK_HIGH" : "PREVIOUS_WEEK_LOW");
+                }
+            }
+        }
+
+        private string GetCalibrationSession(DateTime time)
+        {
+            int h = time.Hour;
+            if (h >= 7 && h < 12) return "LONDON";
+            if (h >= 12 && h < 17) return "NEW_YORK";
+            if (h >= 17 && h < 22) return "OVERLAP_LATE";
+            if (h >= 22 || h < 2) return "ROLLOVER";
+            return "ASIA";
+        }
+
+        private double GetEmpiricalWinRate(int direction, string regime, out int samples)
+        {
+            samples = 0;
+            int wins = 0;
+            foreach (OutcomeRecord r in _outcomeHistory)
+            {
+                if (r.Direction != direction) continue;
+                if (!string.IsNullOrWhiteSpace(regime) && !string.IsNullOrWhiteSpace(r.Regime) && !string.Equals(r.Regime, regime, StringComparison.OrdinalIgnoreCase)) continue;
+                samples++;
+                if (r.Win) wins++;
+            }
+            return samples > 0 ? (wins + 2.0) / (samples + 4.0) : 0.5;
+        }
+
+        private int GetCalibratedMinimumConfidence(int baseConfidence, int direction)
+        {
+            if (!UseEmpiricalCalibration || !EnableConfidenceCalibration || _outcomeHistory.Count < Math.Max(1, CalibrationMinimumSamples))
+                return baseConfidence;
+            int samples;
+            double rate = GetEmpiricalWinRate(direction, _smartRegime, out samples);
+            if (samples < Math.Max(5, CalibrationDirectionalMinimumSamples)) return baseConfidence;
+            int adjustment = rate < 0.45 ? Math.Min(CalibrationMaxConfidenceAdjustment, 6) : rate < 0.50 ? Math.Min(CalibrationMaxConfidenceAdjustment, 3) : rate > 0.72 ? -Math.Min(CalibrationMaxConfidenceAdjustment, 2) : rate > 0.65 ? -Math.Min(CalibrationMaxConfidenceAdjustment, 1) : 0;
+            return (int)Clamp(baseConfidence + adjustment, 50, 95);
+        }
+
+        private bool EvaluateActiveSignalInvalidation(int closedIndex, double market, double atr)
+        {
+            if (!EnableSetupInvalidation || !_signalActive || _signalDirection == 0 || _m5 == null || closedIndex < 30 || atr <= 0) return false;
+            bool structureFailure = false, zoneFailure = false, mtfFlip = false;
+            double swingHigh = HighestHigh(_m5, Math.Max(10, closedIndex - SlStructureLookback), closedIndex - 1);
+            double swingLow = LowestLow(_m5, Math.Max(10, closedIndex - SlStructureLookback), closedIndex - 1);
+            if (_signalDirection == 1) structureFailure = market < swingLow - atr * Math.Max(0.02, InvalidationStructureAtr);
+            else structureFailure = market > swingHigh + atr * Math.Max(0.02, InvalidationStructureAtr);
+
+            double risk = Math.Max(Symbol.PipSize, _signalInitialRisk);
+            double adverseR = _signalDirection == 1 ? (_signalEntry - market) / risk : (market - _signalEntry) / risk;
+            if (adverseR >= Math.Max(0.30, InvalidationMaxAdverseR)) structureFailure = true;
+
+            Analysis current = GetCachedClosedAnalysis(_m5, closedIndex);
+            if (current != null)
+                mtfFlip = _signalDirection == 1 ? current.Direction == -1 && (current.MssBear || current.ChochBear) : current.Direction == 1 && (current.MssBull || current.ChochBull);
+
+            double zoneTolerance = atr * Math.Max(0.02, InvalidationZoneCloseAtr);
+            if (_signalDirection == 1) zoneFailure = market < _signalSl - zoneTolerance && (current == null || current.StructureBear || current.MssBear || current.ChochBear);
+            else zoneFailure = market > _signalSl + zoneTolerance && (current == null || current.StructureBull || current.MssBull || current.ChochBull);
+
+            bool invalid = (structureFailure || zoneFailure) && (!RequireMtfFlipForInvalidation || mtfFlip || adverseR >= InvalidationMaxAdverseR);
+            if (!invalid) return false;
+            _smartInvalidationScore = (int)Clamp((structureFailure ? 40 : 0) + (zoneFailure ? 30 : 0) + (mtfFlip ? 30 : 0), 0, 100);
+            return true;
+        }
+
         private void RecordSignalOutcome(bool win)
         {
-            if (_outcomeRecorded)
-                return;
-
+            if (_outcomeRecorded) return;
             _outcomeRecorded = true;
-            if (win)
-                _outcomeWins++;
-            else
-                _outcomeLosses++;
+            _signalOutcomeBar = _m5 != null ? Math.Max(1, _m5.Count - 1) : _signalOutcomeBar;
 
+            if (win) _outcomeWins++; else _outcomeLosses++;
             if (_signalConfidence >= HighConfidenceThreshold)
             {
-                if (win)
-                    _outcomeHighConfidenceWins++;
-                else
-                    _outcomeHighConfidenceLosses++;
+                if (win) _outcomeHighConfidenceWins++; else _outcomeHighConfidenceLosses++;
+            }
+
+            if (EnableOutcomeTelemetry)
+            {
+                int barsHeld = _signalCreatedM5Bar >= 0 && _signalOutcomeBar >= 0 ? Math.Max(0, _signalOutcomeBar - _signalCreatedM5Bar) : 0;
+                _outcomeHistory.Add(new OutcomeRecord
+                {
+                    Direction = _signalDirection,
+                    Win = win,
+                    Confidence = _signalConfidence,
+                    Quality = _smartQuality,
+                    Regime = _smartRegime ?? "UNKNOWN",
+                    Session = _m5 != null && _signalCreatedM5Bar >= 0 && _signalCreatedM5Bar < _m5.Count ? GetCalibrationSession(_m5.OpenTimes[_signalCreatedM5Bar]) : "UNKNOWN",
+                    InitialRisk = _signalInitialRisk,
+                    MfeR = _signalMfeR,
+                    MaeR = _signalMaeR,
+                    BarsHeld = barsHeld,
+                    Outcome = _signalOutcome ?? "UNKNOWN"
+                });
+                while (_outcomeHistory.Count > 250) _outcomeHistory.RemoveAt(0);
             }
         }
 
@@ -5945,6 +6242,11 @@ namespace cAlgo
                 ? _signalEntry - price
                 : price - _signalEntry;
 
+            double initialRisk = Math.Max(Symbol.PipSize, _signalInitialRisk);
+            double favorableR = Math.Max(0, favorableMove) / initialRisk;
+            double adverseR = Math.Max(0, adverseMove) / initialRisk;
+            if (favorableR > _signalMfeR) { _signalMfeR = favorableR; _signalMfeBars = barsSinceEntry; }
+            if (adverseR > _signalMaeR) { _signalMaeR = adverseR; _signalMaeBars = barsSinceEntry; }
             _signalMfe = Math.Max(_signalMfe, Math.Max(0, favorableMove));
             _signalMae = Math.Max(_signalMae, Math.Max(0, adverseMove));
 
@@ -8192,6 +8494,8 @@ private void UpdateBrokerPositionProtection()
                     atr,
                     reference);
 
+            AddExtendedLiquidityTargets(targets, executionBars, executionIndex, direction, entry, atr, reference);
+
             List<double> selected =
                 SelectSmartTargetSequence(
                     targets,
@@ -9834,13 +10138,23 @@ private void UpdateBrokerPositionProtection()
                     if (alreadySelected)
                         continue;
 
+                    bool pathObstacle =
+                        _m5 != null &&
+                        HasSmartTargetObstacle(_m5, Math.Max(1, _m5.Count - 1), direction, entry, c.Price, atr);
+
+                    if (slot == 0 && RequireObstacleFreeTp1 && pathObstacle)
+                        continue;
+
+                    double obstaclePenalty = pathObstacle ? Math.Min(28.0, 12.0 + TargetObstacleBufferAtr * 40.0) : 0.0;
+
                     double utility =
                         c.Score * 0.68 +
                         nearestScore +
                         typeBonus +
                         clusterBonus +
                         rrBonus +
-                        freshnessBonus;
+                        freshnessBonus -
+                        obstaclePenalty;
 
                     if (slot > 0)
                         utility += Math.Min(8.0, rr * 1.5);
