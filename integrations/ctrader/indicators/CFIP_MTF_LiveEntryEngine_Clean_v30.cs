@@ -295,7 +295,7 @@ namespace cAlgo
         public double MaximumSlAtr { get; set; }
 
         [Parameter("alternate SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.00, MinValue = 0.1, MaxValue = 5)]
-        public double alternateSlAtr { get; set; }
+        public double FallbackSlAtr { get; set; }
 
         [Parameter("TP1 Minimum RR", Group = "09 · Risk & Targets", DefaultValue = 2.00, MinValue = 0.5, MaxValue = 10)]
         public double Tp1MinimumRR { get; set; }
@@ -657,6 +657,305 @@ namespace cAlgo
             public int Quality;
         }
 
+[Parameter("Enable Early Prediction", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool EnableEarlyPrediction { get; set; }
+
+[Parameter("Minimum Early Confidence", Group = "15 · Early Intelligence", DefaultValue = 56, MinValue = 40, MaxValue = 95)]
+        public int MinimumEarlyConfidence { get; set; }
+
+[Parameter("Prediction Lookahead Bars", Group = "15 · Early Intelligence", DefaultValue = 10, MinValue = 2, MaxValue = 30)]
+        public int PredictionLookaheadBars { get; set; }
+
+[Parameter("Show Prediction Zone", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool ShowPredictionZone { get; set; }
+
+[Parameter("Show Prediction Targets", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool ShowPredictionTargets { get; set; }
+
+[Parameter("Use Liquidity Forecast", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool UseLiquidityForecast { get; set; }
+
+[Parameter("Alert On Early Setup", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool AlertOnEarlySetup { get; set; }
+
+[Parameter("Alert On BOS", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool AlertOnBos { get; set; }
+
+[Parameter("Alert On MSS / CHOCH", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool AlertOnMssChoch { get; set; }
+
+[Parameter("Alert On Liquidity Sweep", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool AlertOnLiquiditySweep { get; set; }
+
+[Parameter("Enable Outcome Telemetry", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool EnableOutcomeTelemetry { get; set; }
+
+[Parameter("Outcome Maximum M5 Bars", Group = "15 · Early Intelligence", DefaultValue = 72, MinValue = 10, MaxValue = 500)]
+        public int OutcomeMaximumM5Bars { get; set; }
+
+[Parameter("Enable Confidence Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool EnableConfidenceCalibration { get; set; }
+
+[Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
+        public int CalibrationDirectionalMinimumSamples { get; set; }
+
+[Parameter("Calibration Max Confidence Adjustment", Group = "15 · Early Intelligence", DefaultValue = 8, MinValue = 0, MaxValue = 20)]
+        public int CalibrationMaxConfidenceAdjustment { get; set; }
+
+[Parameter("Show Outcome Diagnostics", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool ShowOutcomeDiagnostics { get; set; }
+
+[Parameter("Use Smart Entry Quality Filter", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool UseSmartEntryQualityFilter { get; set; }
+
+[Parameter("Smart Quality Threshold", Group = "16 · Accuracy", DefaultValue = 70, MinValue = 40, MaxValue = 95)]
+        public int SmartQualityThreshold { get; set; }
+
+[Parameter("Require Fresh M5 Trigger", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool RequireFreshM5Trigger { get; set; }
+
+[Parameter("Minimum Fresh Trigger Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 8)]
+        public int MinimumFreshTriggerEvidence { get; set; }
+
+[Parameter("Use False Signal Guard", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool UseFalseSignalGuard { get; set; }
+
+[Parameter("False Signal Adverse R", Group = "16 · Accuracy", DefaultValue = 1.10, MinValue = 0.25, MaxValue = 5)]
+        public double FalseSignalAdverseR { get; set; }
+
+[Parameter("Invalidate On False Signal", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool InvalidateOnFalseSignal { get; set; }
+
+[Parameter("Enable Setup Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool EnableSetupInvalidation { get; set; }
+
+[Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool EnableLiveStructuralReversal { get; set; }
+
+[Parameter("Live Reversal Minimum Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 8)]
+        public int LiveReversalMinimumEvidence { get; set; }
+
+[Parameter("Live Reversal Structural Score", Group = "16 · Accuracy", DefaultValue = 72, MinValue = 50, MaxValue = 100)]
+        public int LiveReversalStructuralScore { get; set; }
+
+[Parameter("Require Reversal Force", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool RequireReversalForce { get; set; }
+
+[Parameter("Opposite Signal Cooldown M5", Group = "16 · Accuracy", DefaultValue = 5, MinValue = 0, MaxValue = 50)]
+        public int OppositeSignalCooldownM5 { get; set; }
+
+[Parameter("Require M15 Reversal For Opposite", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool RequireM15ReversalForOpposite { get; set; }
+
+[Parameter("Minimum Opposite M5 Structure", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 6)]
+        public int MinimumOppositeM5Structure { get; set; }
+
+[Parameter("Exit Reentry Cooldown M5", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 0, MaxValue = 50)]
+        public int ExitReentryCooldownM5 { get; set; }
+
+[Parameter("Use Structural Sequence Gate", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool UseStructuralSequenceGate { get; set; }
+
+[Parameter("Minimum Structural Sequence", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
+        public int MinimumStructuralSequence { get; set; }
+
+[Parameter("Require Entry Location Confluence", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool RequireEntryLocationConfluence { get; set; }
+
+[Parameter("Minimum Entry Location Quality", Group = "16 · Accuracy", DefaultValue = 64, MinValue = 40, MaxValue = 95)]
+        public int MinimumEntryLocationQuality { get; set; }
+
+[Parameter("Use Proxy Expected Value Gate", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool UseProxyExpectedValueGate { get; set; }
+
+[Parameter("Minimum Proxy Expected Value", Group = "16 · Accuracy", DefaultValue = 0.20, MinValue = -1, MaxValue = 2, Step = 0.05)]
+        public double MinimumProxyExpectedValue { get; set; }
+
+[Parameter("Enable Smart Decision Engine", Group = "17 · Smart Engine", DefaultValue = true)]
+        public bool EnableSmartDecisionEngine { get; set; }
+
+[Parameter("Smart Minimum Timeframe Agreement", Group = "17 · Smart Engine", DefaultValue = 72, MinValue = 50, MaxValue = 95)]
+        public int SmartMinimumTimeframeAgreement { get; set; }
+
+[Parameter("Smart Target Minimum RR", Group = "17 · Smart Engine", DefaultValue = 1.50, MinValue = 0.5, MaxValue = 8, Step = 0.05)]
+        public double SmartTargetMinimumRR { get; set; }
+
+[Parameter("Smart Target Max Candidates", Group = "17 · Smart Engine", DefaultValue = 32, MinValue = 8, MaxValue = 64)]
+        public int SmartTargetMaxCandidates { get; set; }
+
+[Parameter("Smart Regime Quality Floor", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
+        public int SmartRegimeQualityFloor { get; set; }
+
+[Parameter("No Trade Minimum Smart Quality", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
+        public int NoTradeMinimumSmartQuality { get; set; }
+
+[Parameter("Block Compression Regime", Group = "17 · Smart Engine", DefaultValue = true)]
+        public bool BlockCompressionRegime { get; set; }
+
+[Parameter("Block Weak Range Transition", Group = "17 · Smart Engine", DefaultValue = true)]
+        public bool BlockWeakRangeTransition { get; set; }
+
+[Parameter("Alert On Live Reaction", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnLiveReaction { get; set; }
+
+[Parameter("Enable Level Hit Alerts", Group = "18 · Alerts", DefaultValue = true)]
+        public bool EnableLevelHitAlerts { get; set; }
+
+[Parameter("Alert On TP1", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnTp1 { get; set; }
+
+[Parameter("Alert On TP2", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnTp2 { get; set; }
+
+[Parameter("Alert On TP3", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnTp3 { get; set; }
+
+[Parameter("Alert On TP4", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnTp4 { get; set; }
+
+[Parameter("Alert On SL", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnSl { get; set; }
+
+[Parameter("Alert On False Signal Risk", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnFalseSignalRisk { get; set; }
+
+[Parameter("Alert On Entry Restriction", Group = "18 · Alerts", DefaultValue = false)]
+        public bool AlertOnEntryRestriction { get; set; }
+
+[Parameter("Alert On High Confidence Entry", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnHighConfidenceEntry { get; set; }
+
+[Parameter("High Confidence Threshold", Group = "18 · Alerts", DefaultValue = 82, MinValue = 70, MaxValue = 99)]
+        public int HighConfidenceThreshold { get; set; }
+
+[Parameter("Alert Sound Type", Group = "18 · Alerts", DefaultValue = SoundType.PositiveNotification)]
+        public cAlgo.API.SoundType AlertSoundType { get; set; }
+
+[Parameter("Sound File Path", Group = "18 · Alerts", DefaultValue = "")]
+        public string SoundFilePath { get; set; }
+
+[Parameter("Popup Position", Group = "18 · Alerts", DefaultValue = CFIPClean30PanelCorner.TopRight)]
+        public CFIPClean30PanelCorner PopupPosition { get; set; }
+
+[Parameter("Popup Width", Group = "18 · Alerts", DefaultValue = 430, MinValue = 220, MaxValue = 700)]
+        public int PopupWidth { get; set; }
+
+[Parameter("Keep Popup Until Next Alert", Group = "18 · Alerts", DefaultValue = false)]
+        public bool KeepPopupUntilNextAlert { get; set; }
+
+[Parameter("Show Popup Close Button", Group = "18 · Alerts", DefaultValue = true)]
+        public bool ShowPopupCloseButton { get; set; }
+
+[Parameter("Popup Background", Group = "18 · Alerts", DefaultValue = "Black")]
+        public Color PopupBackgroundColor { get; set; }
+
+[Parameter("Popup Background Alpha", Group = "18 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        public int PopupBackgroundAlpha { get; set; }
+
+[Parameter("Popup Border", Group = "18 · Alerts", DefaultValue = "#3A4656")]
+        public Color PopupBorderColor { get; set; }
+
+[Parameter("Popup Border Thickness", Group = "18 · Alerts", DefaultValue = 1, MinValue = 0, MaxValue = 4)]
+        public int PopupBorderThickness { get; set; }
+
+[Parameter("Popup Corner Radius", Group = "18 · Alerts", DefaultValue = 5, MinValue = 0, MaxValue = 20)]
+        public int PopupCornerRadius { get; set; }
+
+[Parameter("Popup Padding", Group = "18 · Alerts", DefaultValue = 8, MinValue = 0, MaxValue = 30)]
+        public int PopupPadding { get; set; }
+
+[Parameter("Popup Text Color", Group = "18 · Alerts", DefaultValue = "White")]
+        public Color PopupTextColor { get; set; }
+
+[Parameter("Line Length Bars", Group = "19 · Display Advanced", DefaultValue = 40, MinValue = 5, MaxValue = 300)]
+        public int LineLengthBars { get; set; }
+
+[Parameter("Line Forward Bars", Group = "19 · Display Advanced", DefaultValue = 10, MinValue = 1, MaxValue = 100)]
+        public int LineForwardBars { get; set; }
+
+[Parameter("Show Signal Labels", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowSignalLabels { get; set; }
+
+[Parameter("Show Level Price Labels", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowLevelPriceLabels { get; set; }
+
+[Parameter("Show Context Event Marker", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowContextEventMarker { get; set; }
+
+[Parameter("Show Prediction Objects", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowPredictionObjects { get; set; }
+
+[Parameter("Arrow Offset ATR", Group = "19 · Display Advanced", DefaultValue = 0.18, MinValue = 0.02, MaxValue = 1)]
+        public double ArrowOffsetAtr { get; set; }
+
+[Parameter("Minimum Arrow Offset Pips", Group = "19 · Display Advanced", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 20)]
+        public double MinimumArrowOffsetPips { get; set; }
+
+[Parameter("Show Early Arrow", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowEarlyArrow { get; set; }
+
+[Parameter("Show Panel Toggle Button", Group = "19 · Display Advanced", DefaultValue = true)]
+        public bool ShowPanelToggleButton { get; set; }
+
+[Parameter("Panel Toggle Width", Group = "19 · Display Advanced", DefaultValue = 110, MinValue = 80, MaxValue = 220)]
+        public int PanelToggleWidth { get; set; }
+
+[Parameter("Panel Toggle Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
+        public int PanelToggleHeight { get; set; }
+
+[Parameter("Action Button Width", Group = "19 · Display Advanced", DefaultValue = 150, MinValue = 100, MaxValue = 240)]
+        public int ActionButtonWidth { get; set; }
+
+[Parameter("Action Button Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
+        public int ActionButtonHeight { get; set; }
+
+[Parameter("Auto Protect Broker Positions", Group = "20 · Broker Protection", DefaultValue = false)]
+        public bool AutoProtectBrokerPositions { get; set; }
+
+[Parameter("Managed Position Label", Group = "20 · Broker Protection", DefaultValue = "")]
+        public string ManagedPositionLabel { get; set; }
+
+[Parameter("Sync Broker Take Profit", Group = "20 · Broker Protection", DefaultValue = false)]
+        public bool SyncBrokerTakeProfit { get; set; }
+
+[Parameter("Prevent Broker TP Backward Move", Group = "20 · Broker Protection", DefaultValue = true)]
+        public bool PreventBrokerTpBackwardMove { get; set; }
+
+[Parameter("Broker Modify Cooldown ms", Group = "20 · Broker Protection", DefaultValue = 750, MinValue = 100, MaxValue = 5000, Step = 50)]
+        public int BrokerModifyCooldownMs { get; set; }
+
+[Parameter("Enable Aggressive Auto Entry", Group = "21 · Auto Intelligence", DefaultValue = false)]
+        public bool EnableAggressiveAutoEntry { get; set; }
+
+[Parameter("Aggressive Minimum Confidence", Group = "21 · Auto Intelligence", DefaultValue = 88, MinValue = 50, MaxValue = 99)]
+        public int AggressiveMinimumConfidence { get; set; }
+
+[Parameter("Aggressive Minimum Evidence", Group = "21 · Auto Intelligence", DefaultValue = 4, MinValue = 1, MaxValue = 8)]
+        public int AggressiveMinimumEvidence { get; set; }
+
+[Parameter("Aggressive Minimum Smart Quality", Group = "21 · Auto Intelligence", DefaultValue = 78, MinValue = 50, MaxValue = 95)]
+        public int AggressiveMinimumSmartQuality { get; set; }
+
+[Parameter("Aggressive Risk % Equity", Group = "21 · Auto Intelligence", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 5)]
+        public double AggressiveRiskPercentEquity { get; set; }
+
+[Parameter("Aggressive TP Stage", Group = "21 · Auto Intelligence", DefaultValue = CFIPClean30TargetStage.TP1)]
+        public CFIPClean30TargetStage AggressiveTpStage { get; set; }
+
+[Parameter("Aggressive Require Smart Agreement", Group = "21 · Auto Intelligence", DefaultValue = true)]
+        public bool AggressiveRequireSmartAgreement { get; set; }
+
+        private sealed class Prediction
+        {
+            public int Direction;
+            public int Confidence;
+            public double ZoneLow;
+            public double ZoneHigh;
+            public double Trigger;
+            public double Target;
+            public string Reason;
+        }
+
         private sealed class Decision
         {
             public int Direction;
@@ -740,6 +1039,7 @@ namespace cAlgo
         private Plan _plan;
         private Decision _decision;
         private Decision _reaction;
+        private Prediction _prediction;
 
         private int _lastEvaluatedM5 = -1;
         private int _lastSignalM5 = -1;
@@ -773,6 +1073,20 @@ namespace cAlgo
         private const string P = "CFIP_CLEAN30_";
         private const string H = "CFIP_CLEAN30_H_";
 
+        private int _lastContextM5 = -1;
+        private int _lastBrokerModifyM5 = -1;
+        private int _lastInvalidationAlertM5 = -1;
+        private int _lastHighConfidenceM5 = -1;
+        private bool _panelHidden;
+        private Button _panelToggleButton;
+        private Button _popupCloseButton;
+
+        private readonly Dictionary<int, int> _directionSamples =
+            new Dictionary<int, int>();
+
+        private readonly Dictionary<int, int> _directionWins =
+            new Dictionary<int, int>();
+
         // ============================================================
         // LIFECYCLE
         // ============================================================
@@ -797,6 +1111,7 @@ namespace cAlgo
             RemoveAllChartObjects();
             RemovePanel();
             RemovePopup();
+            RemovePredictionObjects();
             base.OnDestroy();
         }
 
@@ -823,6 +1138,18 @@ namespace cAlgo
             }
 
             DateTime reference = _m5Bars.OpenTimes[_m5Bars.Count - 1];
+
+            int m1Index =
+                ClosedIndex(
+                    _m1Bars,
+                    reference);
+
+            _m1Frame =
+                m1Index >= 30
+                    ? AnalyzeFrame(
+                        _m1Bars,
+                        m1Index)
+                    : null;
 
             int m15Index = ClosedIndex(_m15Bars, reference);
             int m30Index = ClosedIndex(_m30Bars, reference);
@@ -855,8 +1182,48 @@ namespace cAlgo
 
             EvaluateActivePlan(closedM5);
 
-            _decision = BuildDecision(index, closedM5, reference);
-            _reaction = BuildReaction();
+            _decision =
+                BuildDecision(
+                    index,
+                    closedM5,
+                    reference);
+
+            _prediction =
+                BuildEarlyPrediction(
+                    closedM5);
+
+            _reaction =
+                BuildReaction();
+
+            RenderPredictionObjects(
+                _prediction,
+                closedM5);
+
+            EmitContextAlerts(
+                closedM5);
+
+            if (AlertOnHighConfidenceEntry &&
+                _decision != null &&
+                _decision.Confidence >=
+                HighConfidenceThreshold &&
+                _lastHighConfidenceM5 !=
+                closedM5)
+            {
+                SendUnifiedAlert(
+                    "HIGH|" +
+                    closedM5,
+                    "CFIP CLEAN30 HIGH CONFIDENCE | " +
+                    (_decision.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " | CONF " +
+                    _decision.Confidence,
+                    _decision.Direction,
+                    true);
+
+                _lastHighConfidenceM5 =
+                    closedM5;
+            }
 
             if (_plan == null &&
                 _decision != null &&
@@ -878,6 +1245,10 @@ namespace cAlgo
             }
 
             TryAutoTrade(closedM5);
+            TryAggressiveAutoTrade(
+                closedM5);
+            ProtectBrokerPositions(
+                closedM5);
             RenderPanel();
 
             if (ShowHistoricalSignals)
@@ -1427,6 +1798,28 @@ namespace cAlgo
                 sell += LiveBias(chartIndex, -1);
             }
 
+            if (EnableSmartDecisionEngine)
+            {
+                int pd =
+                    PremiumDiscountBias(
+                        _m5Bars,
+                        closedM5);
+
+                if (pd == 1)
+                    buy += 6;
+                else if (pd == -1)
+                    sell += 6;
+
+                if (UseM1Trigger &&
+                    _m1Frame != null)
+                {
+                    if (_m1Frame.Direction == 1)
+                        buy += 3;
+                    else if (_m1Frame.Direction == -1)
+                        sell += 3;
+                }
+            }
+
             if (UsePremiumDiscount)
             {
                 int pd = PremiumDiscountBias(
@@ -1515,6 +1908,11 @@ namespace cAlgo
                         d.SmartQuality * 0.30),
                     0,
                     100);
+
+            d.Confidence =
+                CalibratedConfidence(
+                    d.Confidence,
+                    d.Direction);
 
             d.RetestQuality =
                 RetestQuality(
@@ -1725,6 +2123,83 @@ namespace cAlgo
                     reason = "CORE ALIGNMENT";
                     return false;
                 }
+            }
+            
+            if (UseM5Confirmation &&
+                ((d.Direction == 1 &&
+                  _m5Frame.Direction != 1) ||
+                 (d.Direction == -1 &&
+                  _m5Frame.Direction != -1)))
+            {
+                reason = "M5 CONFIRMATION";
+                return false;
+            }
+
+            if (UseM1Trigger &&
+                _m1Frame != null &&
+                _m1Frame.Direction != 0 &&
+                _m1Frame.Direction != d.Direction)
+            {
+                reason = "M1 MISALIGNMENT";
+                return false;
+            }
+
+            if (UseSmartEntryQualityFilter &&
+                d.SmartQuality <
+                SmartQualityThreshold)
+            {
+                reason = "SMART QUALITY";
+                return false;
+            }
+
+            if (EnableSmartDecisionEngine &&
+                d.TimeframeAgreement <
+                SmartMinimumTimeframeAgreement)
+            {
+                reason = "SMART MTF";
+                return false;
+            }
+
+            if (UseStructuralSequenceGate &&
+                StructuralSequence(
+                    _m5Bars,
+                    closedM5,
+                    d.Direction) <
+                MinimumStructuralSequence)
+            {
+                reason = "STRUCTURAL SEQUENCE";
+                return false;
+            }
+
+            if (RequireEntryLocationConfluence &&
+                EntryLocationQuality(
+                    _m5Bars,
+                    closedM5,
+                    d.Direction) <
+                MinimumEntryLocationQuality)
+            {
+                reason = "ENTRY LOCATION";
+                return false;
+            }
+
+            if (UseProxyExpectedValueGate &&
+                ProxyExpectedValue(
+                    d.SmartQuality,
+                    Math.Max(
+                        1.0,
+                        SmartTargetMinimumRR)) <
+                MinimumProxyExpectedValue)
+            {
+                reason = "EXPECTED VALUE";
+                return false;
+            }
+
+            if (NoTradeRegimeBlocked(
+                    d.Regime,
+                    d.SmartQuality))
+            {
+                reason = "REGIME NO-TRADE";
+                return false;
             }
             
             if (UseM5Confirmation &&
@@ -2246,6 +2721,14 @@ namespace cAlgo
                       bars.ClosePrices[index] -
                       triggerBuffer;
 
+            if (RequireFreshM5Trigger &&
+                FreshTriggerEvidence(
+                    bars,
+                    index,
+                    direction) <
+                MinimumFreshTriggerEvidence)
+                return false;
+
             if (trigger >= 5 &&
                 breakReady &&
                 bufferPassed)
@@ -2402,10 +2885,10 @@ namespace cAlgo
                     direction == 1
                         ? entry -
                           atr *
-                          alternateSlAtr
+                          FallbackSlAtr
                         : entry +
                           atr *
-                          alternateSlAtr;
+                          FallbackSlAtr;
 
                 stopSource = "ATR";
                 stopQuality = 50;
@@ -2855,6 +3338,29 @@ namespace cAlgo
                 entry,
                 atr);
 
+            AddSmartExtraTargetLevels(
+                levels,
+                closedM5,
+                direction,
+                entry,
+                atr);
+
+            if (levels.Count >
+                Math.Max(
+                    1,
+                    SmartTargetMaxCandidates))
+            {
+                levels =
+                    levels
+                    .OrderByDescending(
+                        x => x.Score)
+                    .Take(
+                        Math.Max(
+                            1,
+                            SmartTargetMaxCandidates))
+                    .ToList();
+            }
+
             return MergeLevels(
                 levels,
                 atr);
@@ -3016,6 +3522,56 @@ namespace cAlgo
                     bars,
                     first,
                     last);
+        }
+
+        private void AddSmartExtraTargetLevels(
+            List<Level> levels,
+            int closedM5,
+            int direction,
+            double entry,
+            double atr)
+        {
+            double swing =
+                direction == 1
+                    ? FindSwingHighAbove(
+                        _m5Bars,
+                        closedM5,
+                        entry)
+                    : FindSwingLowBelow(
+                        _m5Bars,
+                        closedM5,
+                        entry);
+
+            AddLevel(
+                levels,
+                swing,
+                direction == 1
+                    ? "SUPPLY_ZONE"
+                    : "DEMAND_ZONE",
+                "M5",
+                0,
+                SupplyDemandWeight);
+
+            double liquidity =
+                direction == 1
+                    ? FindEqualHigh(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr)
+                    : FindEqualLow(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr);
+
+            AddLevel(
+                levels,
+                liquidity,
+                "LIQUIDITY_POOL",
+                "M5",
+                0,
+                LiquidityPoolWeight);
         }
 
         private void AddHtfTargets(
@@ -3687,6 +4243,57 @@ namespace cAlgo
                 _plan = null;
                 RemovePlanObjects();
                 return;
+            }
+
+            if (CheckLiveReversalAgainstPlan(
+                    closedM5))
+            {
+                return;
+            }
+
+            if (UseFalseSignalGuard &&
+                EnableSetupInvalidation &&
+                currentMove < 0 &&
+                Math.Abs(currentMove) >=
+                _plan.Risk *
+                Math.Max(
+                    0.25,
+                    FalseSignalAdverseR) &&
+                AlertOnFalseSignalRisk)
+            {
+                if (_lastInvalidationAlertM5 !=
+                    closedM5)
+                {
+                    _lastInvalidationAlertM5 =
+                        closedM5;
+
+                    SendUnifiedAlert(
+                        "INVALID-RISK|" +
+                        closedM5,
+                        "CFIP CLEAN30 FALSE SIGNAL RISK | " +
+                        (_plan.Direction == 1
+                            ? "BUY"
+                            : "SELL"),
+                        0,
+                        true);
+                }
+
+                if (InvalidateOnFalseSignal &&
+                    Math.Abs(currentMove) >=
+                    _plan.Risk *
+                    Math.Max(
+                        1.0,
+                        FalseSignalAdverseR))
+                {
+                    RegisterOutcome(
+                        _plan.Direction,
+                        false);
+
+                    _losses++;
+                    _plan = null;
+                    RemovePlanObjects();
+                    return;
+                }
             }
 
             if (currentMove < 0 &&
@@ -5490,6 +6097,11 @@ namespace cAlgo
                     ShowTP4);
             }
 
+            if (ShowLevelPriceLabels)
+                RenderPlanLabels();
+            else
+                RemovePlanLabels();
+
             if (!ShowSignalArrow ||
                 Bars == null ||
                 Bars.Count < 2)
@@ -5535,6 +6147,144 @@ namespace cAlgo
                 _plan.Direction == 1
                     ? BuyArrowColor
                     : SellArrowColor);
+        }
+
+        private void RenderPlanLabels()
+        {
+            if (_plan == null ||
+                !ShowLevelPriceLabels ||
+                Bars == null ||
+                Bars.Count < 2)
+                return;
+
+            RemovePlanLabels();
+
+            int bar =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        Bars.Count - 1,
+                        MapM5ToChart(
+                            _plan.CreatedM5,
+                            Bars.Count - 1)));
+
+            DrawPlanLabel(
+                P + "ENTRY_LABEL",
+                "ENTRY " +
+                Price(
+                    _plan.Entry),
+                bar,
+                _plan.Entry,
+                EntryLineColor);
+
+            DrawPlanLabel(
+                P + "SL_LABEL",
+                "SL " +
+                Price(
+                    _plan.Stop),
+                bar,
+                _plan.Stop,
+                SlLineColor);
+
+            DrawPlanLabel(
+                P + "TP1_LABEL",
+                "TP1 " +
+                Price(
+                    _plan.Tp1),
+                bar,
+                _plan.Tp1,
+                TpLineColor);
+
+            if (_plan.Tp2 > 0)
+                DrawPlanLabel(
+                    P + "TP2_LABEL",
+                    "TP2 " +
+                    Price(
+                        _plan.Tp2),
+                    bar,
+                    _plan.Tp2,
+                    TpLineColor);
+
+            if (_plan.Tp3 > 0)
+                DrawPlanLabel(
+                    P + "TP3_LABEL",
+                    "TP3 " +
+                    Price(
+                        _plan.Tp3),
+                    bar,
+                    _plan.Tp3,
+                    TpLineColor);
+
+            if (_plan.Tp4 > 0)
+                DrawPlanLabel(
+                    P + "TP4_LABEL",
+                    "TP4 " +
+                    Price(
+                        _plan.Tp4),
+                    bar,
+                    _plan.Tp4,
+                    TpLineColor);
+        }
+
+        private void DrawPlanLabel(
+            string name,
+            string text,
+            int bar,
+            double price,
+            Color color)
+        {
+            try
+            {
+                if (!IsFinitePositive(price))
+                    return;
+
+                ChartText label =
+                    Chart.DrawText(
+                        name,
+                        text,
+                        Bars.OpenTimes[bar],
+                        price,
+                        color);
+
+                label.FontSize =
+                    Math.Max(
+                        8,
+                        PanelFontSize);
+
+                label.FontFamily =
+                    string.IsNullOrWhiteSpace(
+                        PanelFontFamily)
+                        ? "Arial"
+                        : PanelFontFamily;
+
+                label.IsBold =
+                    PanelBold;
+
+                label.IsInteractive =
+                    false;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN30 plan label failed: {0}",
+                    ex.Message);
+            }
+        }
+
+        private void RemovePlanLabels()
+        {
+            Chart.RemoveObject(
+                P + "ENTRY_LABEL");
+            Chart.RemoveObject(
+                P + "SL_LABEL");
+            Chart.RemoveObject(
+                P + "TP1_LABEL");
+            Chart.RemoveObject(
+                P + "TP2_LABEL");
+            Chart.RemoveObject(
+                P + "TP3_LABEL");
+            Chart.RemoveObject(
+                P + "TP4_LABEL");
         }
 
         private void DrawPlanLine(
@@ -5930,6 +6680,8 @@ namespace cAlgo
         private void RemovePlanObjects()
         {
             ClearPlanObjects();
+            RemovePlanLabels();
+            RemovePredictionObjects();
         }
 
         // ============================================================
@@ -6008,6 +6760,8 @@ namespace cAlgo
 
                 Chart.AddControl(
                     _panel);
+
+                CreatePanelToggleButton();
             }
             catch (Exception ex)
             {
@@ -6021,6 +6775,108 @@ namespace cAlgo
                 _buttonStack = null;
                 _closeButton = null;
                 _cancelButton = null;
+            }
+        }
+
+        private void CreatePanelToggleButton()
+        {
+            if (!ShowPanelToggleButton ||
+                _panelToggleButton != null)
+                return;
+
+            try
+            {
+                _panelToggleButton =
+                    new Button();
+
+                _panelToggleButton.Text =
+                    "HIDE PANEL";
+
+                _panelToggleButton.Width =
+                    Math.Max(
+                        80,
+                        PanelToggleWidth);
+
+                _panelToggleButton.Height =
+                    Math.Max(
+                        20,
+                        PanelToggleHeight);
+
+                _panelToggleButton.Margin = 8;
+                _panelToggleButton.BackgroundColor =
+                    Color.FromArgb(
+                        225,
+                        Color.Black);
+
+                _panelToggleButton.ForegroundColor =
+                    PanelTextColor;
+
+                _panelToggleButton.Click +=
+                    args => TogglePanel();
+
+                Chart.AddControl(
+                    _panelToggleButton);
+
+                SetPanelToggleAlignment();
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN30 panel toggle failed: {0}",
+                    ex.Message);
+            }
+        }
+
+        private void TogglePanel()
+        {
+            _panelHidden =
+                !_panelHidden;
+
+            if (_panel != null)
+                _panel.IsVisible =
+                    !_panelHidden;
+
+            if (_panelToggleButton != null)
+                _panelToggleButton.Text =
+                    _panelHidden
+                        ? "SHOW PANEL"
+                        : "HIDE PANEL";
+        }
+
+        private void SetPanelToggleAlignment()
+        {
+            if (_panelToggleButton == null)
+                return;
+
+            switch (PanelPosition)
+            {
+                case CFIPClean30PanelCorner.TopLeft:
+                    _panelToggleButton.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _panelToggleButton.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
+
+                case CFIPClean30PanelCorner.TopRight:
+                    _panelToggleButton.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _panelToggleButton.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+
+                case CFIPClean30PanelCorner.BottomRight:
+                    _panelToggleButton.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _panelToggleButton.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+
+                default:
+                    _panelToggleButton.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _panelToggleButton.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
             }
         }
 
@@ -6038,6 +6894,20 @@ namespace cAlgo
             if (_panel == null ||
                 _panelText == null)
                 return;
+
+            if (_panelToggleButton == null)
+                CreatePanelToggleButton();
+
+            _panel.IsVisible =
+                !_panelHidden;
+
+            if (_panelToggleButton != null)
+                _panelToggleButton.Text =
+                    _panelHidden
+                        ? "SHOW PANEL"
+                        : "HIDE PANEL";
+
+            SetPanelToggleAlignment();
 
             _panelText.Text =
                 BuildPanelText();
@@ -6120,10 +6990,25 @@ namespace cAlgo
             _cancelButton.IsVisible =
                 buttons;
 
-            _closeButton.Width = 150;
-            _cancelButton.Width = 150;
-            _closeButton.Height = 25;
-            _cancelButton.Height = 25;
+            _closeButton.Width =
+                Math.Max(
+                    100,
+                    ActionButtonWidth);
+
+            _cancelButton.Width =
+                Math.Max(
+                    100,
+                    ActionButtonWidth);
+
+            _closeButton.Height =
+                Math.Max(
+                    20,
+                    ActionButtonHeight);
+
+            _cancelButton.Height =
+                Math.Max(
+                    20,
+                    ActionButtonHeight);
 
             _closeButton.Text =
                 "CLOSE ALL POSITIONS";
@@ -6216,6 +7101,28 @@ namespace cAlgo
                     lines.Add(
                         "WHY  " +
                         _decision.Reason);
+
+                if (_prediction != null &&
+                    _prediction.Direction != 0 &&
+                    _prediction.Confidence >=
+                    MinimumEarlyConfidence)
+                {
+                    lines.Add(
+                        "EARLY  " +
+                        (_prediction.Direction == 1
+                            ? "BUY"
+                            : "SELL") +
+                        " | CONF " +
+                        _prediction.Confidence);
+
+                    lines.Add(
+                        "PRED  TRG " +
+                        Price(
+                            _prediction.Trigger) +
+                        " | TGT " +
+                        Price(
+                            _prediction.Target));
+                }
             }
 
             if (_plan != null)
@@ -6345,11 +7252,28 @@ namespace cAlgo
                 " | L" +
                 _losses);
 
+            if (ShowOutcomeDiagnostics)
+            {
+                lines.Add(
+                    "OUTCOME  W" +
+                    _wins +
+                    " | L" +
+                    _losses +
+                    " | CAL " +
+                    CalibrationText());
+            }
+
             lines.Add(
                 "AUTO  " +
                 (EnableAutoTrading
-                    ? "ARMED"
+                    ? (EnableAggressiveAutoEntry
+                        ? "ARMED + REACTION"
+                        : "ARMED")
                     : "OFF"));
+
+            if (AutoProtectBrokerPositions)
+                lines.Add(
+                    "BROKER  PROTECTION");
 
             return string.Join(
                 Environment.NewLine,
@@ -6456,11 +7380,38 @@ namespace cAlgo
                             Margin = 0
                         };
 
+                    StackPanel popupStack =
+                        new StackPanel
+                        {
+                            Orientation =
+                                Orientation.Vertical
+                        };
+
+                    popupStack.AddChild(
+                        _popupText);
+
+                    _popupCloseButton =
+                        new Button();
+
+                    _popupCloseButton.Text =
+                        "CLOSE";
+
+                    _popupCloseButton.Width = 70;
+                    _popupCloseButton.Height = 22;
+                    _popupCloseButton.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+
+                    _popupCloseButton.Click +=
+                        args => RemovePopup();
+
+                    popupStack.AddChild(
+                        _popupCloseButton);
+
                     _popup =
                         new Border
                         {
-                            Child = _popupText,
-                            IsHitTestVisible = false
+                            Child = popupStack,
+                            IsHitTestVisible = true
                         };
 
                     Chart.AddControl(
@@ -6496,8 +7447,8 @@ namespace cAlgo
 
             _popup.Width =
                 Math.Max(
-                    240,
-                    PanelWidth);
+                    220,
+                    PopupWidth);
 
             _popup.Padding =
                 Math.Max(
@@ -6508,25 +7459,60 @@ namespace cAlgo
 
             _popup.BackgroundColor =
                 Color.FromArgb(
-                    235,
-                    PanelBackground);
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PopupBackgroundAlpha)),
+                    PopupBackgroundColor);
 
             _popup.BorderColor =
-                PanelBorder;
+                PopupBorderColor;
 
             _popup.BorderThickness =
-                1;
+                Math.Max(
+                    0,
+                    PopupBorderThickness);
 
             _popup.CornerRadius =
                 Math.Max(
                     0,
-                    PanelCornerRadius);
+                    PopupCornerRadius);
 
-            _popup.VerticalAlignment =
-                VerticalAlignment.Top;
+            switch (PopupPosition)
+            {
+                case CFIPClean30PanelCorner.TopLeft:
+                    _popup.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _popup.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
 
-            _popup.HorizontalAlignment =
-                HorizontalAlignment.Right;
+                case CFIPClean30PanelCorner.BottomLeft:
+                    _popup.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _popup.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
+
+                case CFIPClean30PanelCorner.BottomRight:
+                    _popup.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _popup.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+
+                default:
+                    _popup.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _popup.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+            }
+
+            if (_popupCloseButton != null)
+                _popupCloseButton.IsVisible =
+                    ShowPopupCloseButton;
 
             _popupUntilUtc =
                 DateTime.UtcNow.AddSeconds(
@@ -6538,6 +7524,9 @@ namespace cAlgo
         private void RemoveExpiredPopup()
         {
             if (_popup == null)
+                return;
+
+            if (KeepPopupUntilNextAlert)
                 return;
 
             if (_popupUntilUtc >
@@ -6563,6 +7552,7 @@ namespace cAlgo
 
             _popup = null;
             _popupText = null;
+            _popupCloseButton = null;
             _popupUntilUtc =
                 DateTime.MinValue;
         }
@@ -6601,10 +7591,23 @@ namespace cAlgo
             {
                 try
                 {
-                    Notifications.PlaySound();
+                    if (!string.IsNullOrWhiteSpace(
+                            SoundFilePath))
+                    {
+                        Notifications.PlaySound(
+                            SoundFilePath);
+                    }
+                    else
+                    {
+                        Notifications.PlaySound(
+                            AlertSoundType);
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Print(
+                        "CFIP CLEAN30 sound alert failed: {0}",
+                        ex.Message);
                 }
             }
 
@@ -6999,6 +8002,1137 @@ namespace cAlgo
                         "CFIP CLEAN30 cancel failed: {0}",
                         ex.Message);
                 }
+            }
+        }
+
+        private int PremiumDiscountBias(
+            Bars bars,
+            int index)
+        {
+            if (!UsePremiumDiscount ||
+                bars == null ||
+                index < 10)
+                return 0;
+
+            double high =
+                Highest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index -
+                        StructureLookback),
+                    index);
+
+            double low =
+                Lowest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index -
+                        StructureLookback),
+                    index);
+
+            if (high <= low)
+                return 0;
+
+            double midpoint =
+                (high + low) * 0.5;
+
+            if (bars.ClosePrices[index] <
+                midpoint)
+                return 1;
+
+            if (bars.ClosePrices[index] >
+                midpoint)
+                return -1;
+
+            return 0;
+        }
+
+        private int FreshTriggerEvidence(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (bars == null || index < 5)
+                return 0;
+
+            int evidence = 0;
+
+            double atr =
+                Atr(
+                    bars,
+                    index);
+
+            double body =
+                Math.Abs(
+                    bars.ClosePrices[index] -
+                    bars.OpenPrices[index]);
+
+            if (direction == 1 &&
+                bars.ClosePrices[index] >
+                bars.OpenPrices[index])
+                evidence++;
+
+            if (direction == -1 &&
+                bars.ClosePrices[index] <
+                bars.OpenPrices[index])
+                evidence++;
+
+            if (atr > 0 &&
+                body >=
+                atr *
+                MinimumTriggerBodyAtr)
+                evidence++;
+
+            if (direction == 1 &&
+                bars.ClosePrices[index] >
+                Highest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index - 5),
+                    index - 1))
+                evidence++;
+
+            if (direction == -1 &&
+                bars.ClosePrices[index] <
+                Lowest(
+                    bars,
+                    Math.Max(
+                        0,
+                        index - 5),
+                    index - 1))
+                evidence++;
+
+            return evidence;
+        }
+
+        private int StructuralSequence(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (bars == null ||
+                index < 8)
+                return 0;
+
+            double atr =
+                Atr(
+                    bars,
+                    index);
+
+            int result = 0;
+
+            if (direction == 1)
+            {
+                if (BullStructure(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+
+                if (BullMss(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+
+                if (BullDisplacement(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+            }
+            else
+            {
+                if (BearStructure(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+
+                if (BearMss(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+
+                if (BearDisplacement(
+                        bars,
+                        index,
+                        atr))
+                    result++;
+            }
+
+            return result;
+        }
+
+        private int EntryLocationQuality(
+            Bars bars,
+            int index,
+            int direction)
+        {
+            if (bars == null ||
+                index < 10)
+                return 0;
+
+            double atr =
+                Atr(
+                    bars,
+                    index);
+
+            if (atr <= 0)
+                return 0;
+
+            int quality = 40;
+
+            Zone zone =
+                FindNearestOpposingZone(
+                    bars,
+                    index,
+                    direction,
+                    atr);
+
+            if (zone != null)
+            {
+                double price =
+                    bars.ClosePrices[index];
+
+                if (price >=
+                        zone.Low -
+                        atr *
+                        ZoneProximityAtr &&
+                    price <=
+                        zone.High +
+                        atr *
+                        ZoneProximityAtr)
+                    quality += 30;
+
+                if (zone.Quality >= 80)
+                    quality += 15;
+            }
+
+            if (PremiumDiscountBias(
+                    bars,
+                    index) ==
+                direction)
+                quality += 10;
+
+            return ClampInt(
+                quality,
+                0,
+                100);
+        }
+
+        private double ProxyExpectedValue(
+            int quality,
+            double rr)
+        {
+            double winRate =
+                Clamp(
+                    quality / 100.0,
+                    0.05,
+                    0.95);
+
+            return
+                winRate * rr -
+                (1.0 - winRate);
+        }
+
+        private bool NoTradeRegimeBlocked(
+            string regime,
+            int quality)
+        {
+            if (quality <
+                NoTradeMinimumSmartQuality)
+                return true;
+
+            if (BlockCompressionRegime &&
+                regime == "COMPRESSION")
+                return true;
+
+            if (BlockWeakRangeTransition &&
+                (regime == "RANGE" ||
+                 regime == "TRANSITION") &&
+                quality <
+                SmartRegimeQualityFloor)
+                return true;
+
+            return false;
+        }
+
+        private int CalibratedConfidence(
+            int baseConfidence,
+            int direction)
+        {
+            if (!EnableConfidenceCalibration ||
+                !EnableOutcomeTelemetry ||
+                !_directionSamples.ContainsKey(
+                    direction))
+                return baseConfidence;
+
+            int samples =
+                _directionSamples[direction];
+
+            if (samples <
+                CalibrationDirectionalMinimumSamples)
+                return baseConfidence;
+
+            int wins =
+                _directionWins.ContainsKey(
+                    direction)
+                    ? _directionWins[direction]
+                    : 0;
+
+            double rate =
+                samples <= 0
+                    ? 0.5
+                    : (double)wins /
+                      samples;
+
+            int adjustment =
+                ClampInt(
+                    (int)Math.Round(
+                        (rate - 0.5) *
+                        2.0 *
+                        CalibrationMaxConfidenceAdjustment),
+                    -CalibrationMaxConfidenceAdjustment,
+                    CalibrationMaxConfidenceAdjustment);
+
+            return ClampInt(
+                baseConfidence +
+                adjustment,
+                0,
+                100);
+        }
+
+        private void RegisterOutcome(
+            int direction,
+            bool win)
+        {
+            if (!EnableOutcomeTelemetry)
+                return;
+
+            if (!_directionSamples.ContainsKey(
+                    direction))
+                _directionSamples[direction] = 0;
+
+            if (!_directionWins.ContainsKey(
+                    direction))
+                _directionWins[direction] = 0;
+
+            _directionSamples[direction]++;
+
+            if (win)
+                _directionWins[direction]++;
+        }
+
+        private string CalibrationText()
+        {
+            int total =
+                _wins +
+                _losses;
+
+            return
+                total <= 0
+                    ? "W0/L0"
+                    : (100.0 *
+                       _wins /
+                       total)
+                      .ToString("F0") +
+                      "%";
+        }
+
+        private Prediction BuildEarlyPrediction(
+            int closedM5)
+        {
+            Prediction p =
+                new Prediction();
+
+            if (!EnableEarlyPrediction ||
+                _m5Frame == null ||
+                _m15Frame == null)
+                return p;
+
+            double buy =
+                _m5Frame.BullScore * 0.55 +
+                _m15Frame.BullScore * 0.45;
+
+            double sell =
+                _m5Frame.BearScore * 0.55 +
+                _m15Frame.BearScore * 0.45;
+
+            if (UseLiquidityForecast)
+            {
+                if (_m5Frame.LiquidityBull)
+                    buy += 8;
+
+                if (_m5Frame.LiquidityBear)
+                    sell += 8;
+            }
+
+            p.Direction =
+                buy >= sell
+                    ? 1
+                    : -1;
+
+            double total =
+                Math.Max(
+                    1,
+                    buy + sell);
+
+            p.Confidence =
+                ClampInt(
+                    (int)Math.Round(
+                        100.0 *
+                        Math.Max(
+                            buy,
+                            sell) /
+                        total),
+                    0,
+                    100);
+
+            if (p.Confidence <
+                MinimumEarlyConfidence)
+                return p;
+
+            double atr =
+                Atr(
+                    _m5Bars,
+                    closedM5);
+
+            if (atr <= 0)
+                return p;
+
+            Zone zone =
+                FindNearestOpposingZone(
+                    _m5Bars,
+                    closedM5,
+                    p.Direction,
+                    atr);
+
+            if (zone != null)
+            {
+                p.ZoneLow = zone.Low;
+                p.ZoneHigh = zone.High;
+            }
+            else
+            {
+                double price =
+                    _m5Bars.ClosePrices[closedM5];
+
+                p.ZoneLow =
+                    price -
+                    atr * 0.30;
+
+                p.ZoneHigh =
+                    price +
+                    atr * 0.30;
+            }
+
+            p.Trigger =
+                p.Direction == 1
+                    ? p.ZoneHigh +
+                      atr * EntryBufferAtr
+                    : p.ZoneLow -
+                      atr * EntryBufferAtr;
+
+            p.Target =
+                p.Direction == 1
+                    ? FindEqualHigh(
+                        _m5Bars,
+                        closedM5,
+                        _m5Bars.ClosePrices[closedM5],
+                        atr)
+                    : FindEqualLow(
+                        _m5Bars,
+                        closedM5,
+                        _m5Bars.ClosePrices[closedM5],
+                        atr);
+
+            if (!IsFinitePositive(
+                    p.Target))
+            {
+                p.Target =
+                    p.Direction == 1
+                        ? p.Trigger +
+                          atr *
+                          Math.Max(
+                              1.5,
+                              SmartTargetMinimumRR)
+                        : p.Trigger -
+                          atr *
+                          Math.Max(
+                              1.5,
+                              SmartTargetMinimumRR);
+            }
+
+            p.Reason =
+                (p.Direction == 1
+                    ? "BUY"
+                    : "SELL") +
+                " EARLY | CONF " +
+                p.Confidence;
+
+            return p;
+        }
+
+        private void RenderPredictionObjects(
+            Prediction prediction,
+            int closedM5)
+        {
+            RemovePredictionObjects();
+
+            if (!ShowPredictionObjects ||
+                !EnableEarlyPrediction ||
+                prediction == null ||
+                prediction.Direction == 0 ||
+                prediction.Confidence <
+                MinimumEarlyConfidence)
+                return;
+
+            int start =
+                MapM5ToChart(
+                    Math.Max(
+                        0,
+                        closedM5 -
+                        Math.Max(
+                            2,
+                            PredictionLookaheadBars / 2)),
+                    Bars.Count - 1);
+
+            int end =
+                MapM5ToChart(
+                    Math.Min(
+                        _m5Bars.Count - 1,
+                        closedM5 +
+                        Math.Max(
+                            2,
+                            PredictionLookaheadBars)),
+                    Bars.Count - 1);
+
+            if (end <= start)
+                end =
+                    Math.Min(
+                        Bars.Count - 1,
+                        start + 4);
+
+            if (ShowPredictionZone &&
+                prediction.ZoneHigh >
+                prediction.ZoneLow)
+            {
+                ChartRectangle zone =
+                    Chart.DrawRectangle(
+                        P + "PRED_ZONE",
+                        start,
+                        prediction.ZoneHigh,
+                        end,
+                        prediction.ZoneLow,
+                        predictionColor(),
+                        1,
+                        PlanLineStyle);
+
+                zone.IsFilled =
+                    true;
+
+                zone.Color =
+                    Color.FromArgb(
+                        35,
+                        predictionColor());
+
+                zone.IsInteractive =
+                    false;
+            }
+
+            if (prediction.Trigger > 0)
+                DrawPredictionLine(
+                    P + "PRED_TRIGGER",
+                    prediction.Trigger);
+
+            if (ShowPredictionTargets &&
+                prediction.Target > 0)
+                DrawPredictionLine(
+                    P + "PRED_TARGET",
+                    prediction.Target);
+        }
+
+        private Color predictionColor()
+        {
+            return
+                _prediction != null &&
+                _prediction.Direction == -1
+                    ? SellArrowColor
+                    : BuyArrowColor;
+        }
+
+        private void DrawPredictionLine(
+            string name,
+            double price)
+        {
+            try
+            {
+                ChartHorizontalLine line =
+                    Chart.FindObject(name)
+                    as ChartHorizontalLine;
+
+                if (line == null)
+                {
+                    ChartObject existing =
+                        Chart.FindObject(name);
+
+                    if (existing != null)
+                        Chart.RemoveObject(name);
+
+                    line =
+                        Chart.DrawHorizontalLine(
+                            name,
+                            NormalizePrice(price),
+                            predictionColor(),
+                            Math.Max(
+                                1,
+                                LevelLineThickness),
+                            LineStyle.Dots);
+                }
+
+                if (line == null)
+                    return;
+
+                line.Y =
+                    NormalizePrice(price);
+
+                line.Color =
+                    predictionColor();
+
+                line.Thickness =
+                    Math.Max(
+                        1,
+                        LevelLineThickness);
+
+                line.LineStyle =
+                    LineStyle.Dots;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN30 prediction render failed: {0}",
+                    ex.Message);
+            }
+        }
+
+        private void RemovePredictionObjects()
+        {
+            Chart.RemoveObject(
+                P + "PRED_ZONE");
+
+            Chart.RemoveObject(
+                P + "PRED_TRIGGER");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET");
+        }
+
+        private void EmitContextAlerts(
+            int closedM5)
+        {
+            if (_lastContextM5 ==
+                closedM5 ||
+                _m5Frame == null)
+                return;
+
+            _lastContextM5 =
+                closedM5;
+
+            if (AlertOnBos &&
+                (_m5Frame.StructureBull ||
+                 _m5Frame.StructureBear))
+            {
+                int direction =
+                    _m5Frame.StructureBull
+                        ? 1
+                        : -1;
+
+                SendUnifiedAlert(
+                    "BOS|" +
+                    closedM5 +
+                    "|" +
+                    direction,
+                    "CFIP CLEAN30 BOS | " +
+                    (direction == 1
+                        ? "BUY"
+                        : "SELL"),
+                    direction,
+                    false);
+            }
+
+            if (AlertOnMssChoch &&
+                (_m5Frame.MssBull ||
+                 _m5Frame.MssBear ||
+                 _m5Frame.ChochBull ||
+                 _m5Frame.ChochBear))
+            {
+                int direction =
+                    _m5Frame.MssBull ||
+                    _m5Frame.ChochBull
+                        ? 1
+                        : -1;
+
+                SendUnifiedAlert(
+                    "MSS|" +
+                    closedM5 +
+                    "|" +
+                    direction,
+                    "CFIP CLEAN30 MSS/CHOCH | " +
+                    (direction == 1
+                        ? "BUY"
+                        : "SELL"),
+                    direction,
+                    false);
+            }
+
+            if (AlertOnLiquiditySweep &&
+                (_m5Frame.LiquidityBull ||
+                 _m5Frame.LiquidityBear))
+            {
+                int direction =
+                    _m5Frame.LiquidityBull
+                        ? 1
+                        : -1;
+
+                SendUnifiedAlert(
+                    "SWEEP|" +
+                    closedM5 +
+                    "|" +
+                    direction,
+                    "CFIP CLEAN30 LIQUIDITY SWEEP | " +
+                    (direction == 1
+                        ? "BUY"
+                        : "SELL"),
+                    direction,
+                    false);
+            }
+
+            if (AlertOnEarlySetup &&
+                _prediction != null &&
+                _prediction.Confidence >=
+                MinimumEarlyConfidence &&
+                _prediction.Confidence <
+                MinimumConfidence &&
+                _lastEarlyAlertM5 !=
+                closedM5)
+            {
+                SendUnifiedAlert(
+                    "EARLY|" +
+                    closedM5 +
+                    "|" +
+                    _prediction.Direction,
+                    _prediction.Reason,
+                    _prediction.Direction,
+                    false);
+
+                _lastEarlyAlertM5 =
+                    closedM5;
+            }
+        }
+
+        private bool CheckLiveReversalAgainstPlan(
+            int closedM5)
+        {
+            if (_plan == null ||
+                _m5Frame == null ||
+                !EnableLiveStructuralReversal)
+                return false;
+
+            int opposite =
+                _plan.Direction * -1;
+
+            bool structural =
+                opposite == 1
+                    ? (_m5Frame.MssBull ||
+                       _m5Frame.ChochBull)
+                    : (_m5Frame.MssBear ||
+                       _m5Frame.ChochBear);
+
+            bool force =
+                opposite == 1
+                    ? (_m5Frame.DisplacementBull &&
+                       _m5Frame.LiquidityBull)
+                    : (_m5Frame.DisplacementBear &&
+                       _m5Frame.LiquidityBear);
+
+            if (!structural ||
+                _m5Frame.Quality <
+                LiveReversalStructuralScore ||
+                _m5Frame.Evidence <
+                LiveReversalMinimumEvidence)
+                return false;
+
+            if (RequireReversalForce &&
+                !force)
+                return false;
+
+            if (RequireM15ReversalForOpposite &&
+                _m15Frame != null &&
+                _m15Frame.Direction !=
+                opposite)
+                return false;
+
+            if (StructuralSequence(
+                    _m5Bars,
+                    closedM5,
+                    opposite) <
+                MinimumOppositeM5Structure)
+                return false;
+
+            if (PreventRapidDirectionFlip &&
+                _lastSignalM5 >= 0 &&
+                closedM5 -
+                _lastSignalM5 <
+                OppositeSignalCooldownM5)
+                return false;
+
+            SendUnifiedAlert(
+                "REVERSAL|" +
+                closedM5 +
+                "|" +
+                opposite,
+                "CFIP CLEAN30 ACTIVE PLAN INVALIDATED | " +
+                (opposite == 1
+                    ? "BUY"
+                    : "SELL") +
+                " REVERSAL | Q " +
+                _m5Frame.Quality,
+                opposite,
+                true);
+
+            RegisterOutcome(
+                _plan.Direction,
+                false);
+
+            _losses++;
+            _plan = null;
+            RemovePlanObjects();
+
+            return true;
+        }
+
+        private double CalculateAggressiveVolume(
+            double stopPips)
+        {
+            try
+            {
+                if (stopPips <= 0)
+                    return 0;
+
+                double amount =
+                    Math.Max(
+                        0,
+                        Account.Equity) *
+                    Math.Max(
+                        0.05,
+                        AggressiveRiskPercentEquity) /
+                    100.0;
+
+                if (amount <= 0)
+                    return 0;
+
+                double volume =
+                    Symbol.VolumeForFixedRisk(
+                        amount,
+                        stopPips,
+                        RoundingMode.Down);
+
+                return
+                    Symbol.NormalizeVolumeInUnits(
+                        volume,
+                        RoundingMode.Down);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private double AggressiveTargetRR()
+        {
+            switch (AggressiveTpStage)
+            {
+                case CFIPClean30TargetStage.TP4:
+                    return Math.Max(
+                        3.0,
+                        Tp4MinimumRR);
+
+                case CFIPClean30TargetStage.TP3:
+                    return Math.Max(
+                        2.5,
+                        Tp3MinimumRR);
+
+                case CFIPClean30TargetStage.TP2:
+                    return Math.Max(
+                        2.0,
+                        Tp2MinimumRR);
+
+                default:
+                    return Math.Max(
+                        1.5,
+                        Tp1MinimumRR);
+            }
+        }
+
+        private void ProtectBrokerPositions(
+            int closedM5)
+        {
+            if (!AutoProtectBrokerPositions ||
+                _plan == null ||
+                _lastBrokerModifyM5 ==
+                closedM5)
+                return;
+
+            string label =
+                string.IsNullOrWhiteSpace(
+                    ManagedPositionLabel)
+                    ? NormalizeLabel()
+                    : ManagedPositionLabel.Trim();
+
+            foreach (Position position in Positions)
+            {
+                if (position == null ||
+                    position.SymbolName !=
+                    SymbolName ||
+                    position.Label !=
+                    label)
+                    continue;
+
+                try
+                {
+                    if (IsValidStop(
+                            _plan.Direction,
+                            position.EntryPrice,
+                            _plan.Stop))
+                    {
+                        position.ModifyStopLossPrice(
+                            NormalizePrice(
+                                _plan.Stop));
+                    }
+
+                    if (SyncBrokerTakeProfit)
+                    {
+                        double target =
+                            AutoTarget(
+                                _plan,
+                                AutoTpStage);
+
+                        if (IsValidTarget(
+                                _plan.Direction,
+                                position.EntryPrice,
+                                target))
+                        {
+                            bool move =
+                                true;
+
+                            if (PreventBrokerTpBackwardMove &&
+                                position.TakeProfit.HasValue)
+                            {
+                                double current =
+                                    position.TakeProfit.Value;
+
+                                move =
+                                    _plan.Direction == 1
+                                        ? target >= current
+                                        : target <= current;
+                            }
+
+                            if (move)
+                            {
+                                position.ModifyTakeProfitPrice(
+                                    NormalizePrice(
+                                        target));
+                            }
+                        }
+                    }
+
+                    _lastBrokerModifyM5 =
+                        closedM5;
+
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Print(
+                        "CFIP CLEAN30 broker protection failed: {0}",
+                        ex.Message);
+                }
+            }
+        }
+
+        private void TryAggressiveAutoTrade(
+            int closedM5)
+        {
+            if (!EnableAutoTrading ||
+                !EnableAggressiveAutoEntry ||
+                _plan != null ||
+                _reaction == null ||
+                !_reaction.EntryAllowed ||
+                _reaction.Direction == 0)
+                return;
+
+            if (_reaction.Confidence <
+                AggressiveMinimumConfidence ||
+                _reaction.IndependentEvidence <
+                AggressiveMinimumEvidence)
+                return;
+
+            if (AggressiveRequireSmartAgreement &&
+                (_decision == null ||
+                 _decision.Direction !=
+                 _reaction.Direction ||
+                 _decision.SmartQuality <
+                 AggressiveMinimumSmartQuality))
+                return;
+
+            if (ManagedPositionCount() >=
+                Math.Max(
+                    1,
+                    MaximumOpenPositions))
+                return;
+
+            double entry =
+                NormalizePrice(
+                    _reaction.Direction == 1
+                        ? Symbol.Ask
+                        : Symbol.Bid);
+
+            double atr =
+                Atr(
+                    _m5Bars,
+                    closedM5);
+
+            if (atr <= 0)
+                return;
+
+            string source;
+            int quality;
+
+            double stop =
+                BuildStructuralStop(
+                    closedM5,
+                    _reaction.Direction,
+                    entry,
+                    atr,
+                    out source,
+                    out quality);
+
+            if (!IsFinitePositive(stop))
+                return;
+
+            double target =
+                _reaction.Direction == 1
+                    ? entry +
+                      Math.Abs(
+                          entry -
+                          stop) *
+                      AggressiveTargetRR()
+                    : entry -
+                      Math.Abs(
+                          entry -
+                          stop) *
+                      AggressiveTargetRR();
+
+            if (!IsAutoPlanValid(
+                    _reaction.Direction,
+                    entry,
+                    stop,
+                    target))
+                return;
+
+            double stopPips =
+                Math.Abs(
+                    entry -
+                    stop) /
+                Symbol.PipSize;
+
+            double tpPips =
+                Math.Abs(
+                    target -
+                    entry) /
+                Symbol.PipSize;
+
+            double volume =
+                CalculateAggressiveVolume(
+                    stopPips);
+
+            if (volume <
+                Symbol.VolumeInUnitsMin)
+                return;
+
+            try
+            {
+                TradeType type =
+                    _reaction.Direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell;
+
+                TradeResult result =
+                    ExecuteMarketOrder(
+                        type,
+                        SymbolName,
+                        volume,
+                        NormalizeLabel(),
+                        stopPips,
+                        tpPips);
+
+                if (result == null ||
+                    !result.IsSuccessful ||
+                    result.Position == null)
+                    return;
+
+                _lastAutoM5 =
+                    closedM5;
+
+                if (AutoBrokerProtection)
+                {
+                    try
+                    {
+                        result.Position.ModifyStopLossPrice(
+                            NormalizePrice(
+                                stop));
+
+                        result.Position.ModifyTakeProfitPrice(
+                            NormalizePrice(
+                                target));
+                    }
+                    catch (Exception ex)
+                    {
+                        Print(
+                            "CFIP CLEAN30 aggressive protection failed: {0}",
+                            ex.Message);
+                    }
+                }
+
+                SendUnifiedAlert(
+                    "AUTO-REACTION|" +
+                    closedM5,
+                    "CFIP CLEAN30 AUTO REACTION " +
+                    (_reaction.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " EXECUTED | #" +
+                    result.Position.Id +
+                    " | ENTRY " +
+                    Price(
+                        result.Position.EntryPrice) +
+                    " | SL " +
+                    Price(stop) +
+                    " | TP " +
+                    Price(target),
+                    _reaction.Direction,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN30 aggressive auto trade failed: {0}",
+                    ex.Message);
             }
         }
 
