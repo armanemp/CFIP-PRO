@@ -4831,6 +4831,11 @@ namespace cAlgo
                 signalAlert,
                 direction,
                 m5LiveIndex);
+            if (EnableAutoTrading &&
+                AutoTradeConfirmedSignalsOnly)
+            {
+                TryExecuteConfirmedAutoTrade();
+            }
         }
 
         private string NormalizeAutoTradeLabel()
