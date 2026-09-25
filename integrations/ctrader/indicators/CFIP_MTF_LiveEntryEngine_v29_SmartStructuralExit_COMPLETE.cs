@@ -13819,39 +13819,19 @@ for (int j = impulse + 1; j <= index; j++)
                 Prefix + "ENTRY");
 
             Chart.RemoveObject(
-                Prefix + "ENTRY_TEXT");
-
-            Chart.RemoveObject(
                 Prefix + "SL");
-
-            Chart.RemoveObject(
-                Prefix + "SL_TEXT");
 
             Chart.RemoveObject(
                 Prefix + "TP1");
 
             Chart.RemoveObject(
-                Prefix + "TP1_TEXT");
-
-            Chart.RemoveObject(
                 Prefix + "TP2");
 
             Chart.RemoveObject(
-                Prefix + "TP2_TEXT");
-            Chart.RemoveObject(
                 Prefix + "TP3");
-            Chart.RemoveObject(
-                Prefix + "TP3_TEXT");
+
             Chart.RemoveObject(
                 Prefix + "TP4");
-            Chart.RemoveObject(
-                Prefix + "TP4_TEXT");
-            Chart.RemoveObject(Prefix + "ENTRY_H");
-            Chart.RemoveObject(Prefix + "SL_H");
-            Chart.RemoveObject(Prefix + "TP1_H");
-            Chart.RemoveObject(Prefix + "TP2_H");
-            Chart.RemoveObject(Prefix + "TP3_H");
-            Chart.RemoveObject(Prefix + "TP4_H");
 
             Chart.RemoveObject(
                 Prefix + "SIGNAL");
