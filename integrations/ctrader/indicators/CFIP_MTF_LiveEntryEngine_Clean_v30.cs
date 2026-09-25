@@ -420,6 +420,15 @@ namespace cAlgo
         [Parameter("Popup Duration Seconds", Group = "12 · Alerts", DefaultValue = 6, MinValue = 1, MaxValue = 60)]
         public int PopupDurationSeconds { get; set; }
 
+[Parameter("Popup Font Size", Group = "12 · Alerts", DefaultValue = 11, MinValue = 8, MaxValue = 22)]
+        public int PopupFontSize { get; set; }
+
+[Parameter("Show Entry Restriction Popup", Group = "12 · Alerts", DefaultValue = true)]
+        public bool ShowEntryRestrictionPopup { get; set; }
+
+[Parameter("Alert On News / Event Guard", Group = "12 · Alerts", DefaultValue = true)]
+        public bool AlertOnNewsEventGuard { get; set; }
+
 [Parameter("Popup Margin", Group = "12 · Alerts", DefaultValue = 10, MinValue = 0, MaxValue = 50)]
         public int PopupMargin { get; set; }
 
@@ -758,6 +767,9 @@ namespace cAlgo
         [Parameter("Allow Smart Soft Gate", Group = "15 · Advanced Control", DefaultValue = true)]
         public bool AllowSmartSoftGate { get; set; }
 
+[Parameter("Enable Fast Reversal Intelligence", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool EnableFastReversalIntelligence { get; set; }
+
         [Parameter("Fast Reversal Minimum Quality", Group = "15 · Advanced Control", DefaultValue = 74, MinValue = 50, MaxValue = 95)]
         public int FastReversalMinimumQuality { get; set; }
 
@@ -940,6 +952,9 @@ namespace cAlgo
         [Parameter("Show Engine Status", Group = "22 · Complete Intelligence", DefaultValue = true)]
         public bool ShowEngineStatus { get; set; }
 
+[Parameter("Panel State Hold Seconds", Group = "22 · Complete Intelligence", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
+        public int PanelStateHoldSeconds { get; set; }
+
         [Parameter("Show Level Prices In Unified Panel", Group = "22 · Complete Intelligence", DefaultValue = true)]
         public bool ShowLevelPricesInUnifiedPanel { get; set; }
 
@@ -1112,6 +1127,9 @@ namespace cAlgo
 [Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
         public int CalibrationDirectionalMinimumSamples { get; set; }
 
+[Parameter("Calibration Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 5, MinValue = 1, MaxValue = 100)]
+        public int CalibrationMinimumSamples { get; set; }
+
 [Parameter("Calibration Max Confidence Adjustment", Group = "15 · Early Intelligence", DefaultValue = 8, MinValue = 0, MaxValue = 20)]
         public int CalibrationMaxConfidenceAdjustment { get; set; }
 
@@ -1136,6 +1154,9 @@ namespace cAlgo
 [Parameter("False Signal Adverse R", Group = "16 · Accuracy", DefaultValue = 1.10, MinValue = 0.25, MaxValue = 5)]
         public double FalseSignalAdverseR { get; set; }
 
+[Parameter("False Signal Watch Bars", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 12)]
+        public int FalseSignalWatchBars { get; set; }
+
 [Parameter("Invalidate On False Signal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool InvalidateOnFalseSignal { get; set; }
 
@@ -1159,6 +1180,9 @@ namespace cAlgo
 
 [Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableLiveStructuralReversal { get; set; }
+
+[Parameter("Live Reversal Minimum Confidence", Group = "16 · Accuracy", DefaultValue = 68, MinValue = 50, MaxValue = 95)]
+        public int LiveReversalMinimumConfidence { get; set; }
 
 [Parameter("Live Reversal Minimum Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 8)]
         public int LiveReversalMinimumEvidence { get; set; }
@@ -1531,6 +1555,8 @@ namespace cAlgo
         private int _lastInvalidationAlertM5 = -1;
         private bool _panelHidden;
         private Button _panelToggleButton;
+        private string _panelStableHeader = "";
+        private DateTime _panelStableHeaderSinceUtc = DateTime.MinValue;
         private Button _popupCloseButton;
 
         private readonly Dictionary<int, int> _directionSamples =
@@ -3664,7 +3690,8 @@ namespace cAlgo
             switch (reason)
             {
                 case "NEWS BLACKOUT":
-                    return AlertOnNewsEvent ||
+                    return AlertOnNewsEventGuard ||
+                           AlertOnNewsEvent ||
                            AlertOnEntryRestriction;
 
                 case "SESSION":
@@ -3820,6 +3847,7 @@ namespace cAlgo
         private Decision BuildReaction()
         {
             if (!EnableLiveReaction ||
+                !EnableFastReversalIntelligence ||
                 _m5Bars == null ||
                 _m5Bars.Count < 10)
                 return new Decision();
@@ -6202,9 +6230,19 @@ namespace cAlgo
                     market))
                 return;
 
+            int barsSincePlan =
+                Math.Max(
+                    0,
+                    closedM5 -
+                    _plan.CreatedM5);
+
             if (UseFalseSignalGuard &&
                 EnableSetupInvalidation &&
                 currentMove < 0 &&
+                barsSincePlan <=
+                Math.Max(
+                    1,
+                    FalseSignalWatchBars) &&
                 Math.Abs(
                     currentMove) >=
                 _plan.Risk *
@@ -9751,12 +9789,66 @@ namespace cAlgo
                     PanelCornerRadius);
         }
 
-                private string BuildPanelText()
+                private string GetStablePanelState(
+            string candidate)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    candidate))
+                candidate = "WAITING";
+
+            DateTime now =
+                DateTime.UtcNow;
+
+            bool authoritative =
+                _plan != null ||
+                candidate.IndexOf(
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (authoritative ||
+                PanelStateHoldSeconds <= 0 ||
+                string.IsNullOrWhiteSpace(
+                    _panelStableHeader))
+            {
+                _panelStableHeader =
+                    candidate;
+
+                _panelStableHeaderSinceUtc =
+                    now;
+
+                return _panelStableHeader;
+            }
+
+            double heldSeconds =
+                (now -
+                 _panelStableHeaderSinceUtc)
+                .TotalSeconds;
+
+            if (!string.Equals(
+                    _panelStableHeader,
+                    candidate,
+                    StringComparison.OrdinalIgnoreCase) &&
+                heldSeconds >=
+                Math.Max(
+                    0,
+                    PanelStateHoldSeconds))
+            {
+                _panelStableHeader =
+                    candidate;
+
+                _panelStableHeaderSinceUtc =
+                    now;
+            }
+
+            return _panelStableHeader;
+        }
+
+        private string BuildPanelText()
         {
             List<string> lines =
                 new List<string>();
 
-            string state =
+            string candidateState =
                 _plan != null
                     ? (_plan.Direction == 1
                         ? "BUY ACTIVE"
@@ -9772,6 +9864,10 @@ namespace cAlgo
                                 ? "BUY WATCH"
                                 : "SELL WATCH")
                             : "WAITING";
+
+            string state =
+                GetStablePanelState(
+                    candidateState);
 
             lines.Add(
                 "CFIP SMART CLEAN30 | " +
@@ -10159,6 +10255,9 @@ namespace cAlgo
             _buttonStack = null;
             _closeButton = null;
             _cancelButton = null;
+            _panelStableHeader = "";
+            _panelStableHeaderSinceUtc =
+                DateTime.MinValue;
         }
 
         // ============================================================
@@ -10246,9 +10345,7 @@ namespace cAlgo
                     8,
                     Math.Min(
                         22,
-                        Math.Max(
-                            8,
-                            PanelFontSize)));
+                        PopupFontSize));
 
             _popupText.FontWeight =
                 PopupBold
@@ -10472,9 +10569,20 @@ namespace cAlgo
                 }
             }
 
+            bool restrictionAlert =
+                key.StartsWith(
+                    "RESTRICT|",
+                    StringComparison.OrdinalIgnoreCase);
+
+            bool restrictionPopup =
+                restrictionAlert &&
+                ShowEntryRestrictionPopup;
+
             if (ShowPopupAlerts &&
-                (!PopupCriticalOnly ||
-                 critical))
+                (restrictionPopup ||
+                 (!restrictionAlert &&
+                  (!PopupCriticalOnly ||
+                   critical))))
             {
                 ShowPopup(
                     message);
@@ -11122,6 +11230,15 @@ namespace cAlgo
                 !EnableOutcomeTelemetry ||
                 !_directionSamples.ContainsKey(
                     direction))
+                return baseConfidence;
+
+            int totalSamples =
+                _directionSamples.Values.Sum();
+
+            if (totalSamples <
+                Math.Max(
+                    1,
+                    CalibrationMinimumSamples))
                 return baseConfidence;
 
             int samples =
@@ -11812,7 +11929,8 @@ namespace cAlgo
         {
             if (_plan == null ||
                 _m5Frame == null ||
-                !EnableLiveStructuralReversal)
+                !EnableLiveStructuralReversal ||
+                !EnableFastReversalIntelligence)
                 return false;
 
             int opposite =
@@ -11831,6 +11949,19 @@ namespace cAlgo
                        _m5Frame.LiquidityBull)
                     : (_m5Frame.DisplacementBear &&
                        _m5Frame.LiquidityBear);
+
+            int reversalConfidence =
+                _reaction != null
+                    ? Math.Max(
+                        _reaction.Confidence,
+                        _m5Frame.Quality)
+                    : _m5Frame.Quality;
+
+            if (reversalConfidence <
+                Math.Max(
+                    50,
+                    LiveReversalMinimumConfidence))
+                return false;
 
             if (!structural ||
                 _m5Frame.Quality <
