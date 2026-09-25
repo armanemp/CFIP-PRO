@@ -5795,9 +5795,8 @@ namespace cAlgo
 
             try
             {
-                // Always use the public cTrader draw API as the authoritative
-                // source. Same-name drawing replaces the previous object,
-                // avoiding stale type/cast state that can suppress rendering.
+                // Direct draw calls are the only authoritative rendering path.
+                // cTrader replaces an existing object with the same name.
                 if (fullWidth)
                 {
                     ChartHorizontalLine line =
@@ -6386,6 +6385,140 @@ namespace cAlgo
             return _panelStableHeader;
         }
 
+        private List<string> BuildBottomUpPanelLines(
+            List<string> source)
+        {
+            Dictionary<string, List<string>> sections =
+                new Dictionary<string, List<string>>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            string current = "STATUS";
+
+            for (int i = 0;
+                 i < source.Count;
+                 i++)
+            {
+                string line =
+                    source[i] ?? "";
+
+                string trimmed =
+                    line.Trim();
+
+                string section =
+                    GetPanelSectionKey(trimmed);
+
+                if (!string.IsNullOrWhiteSpace(section))
+                {
+                    current = section;
+
+                    if (!sections.ContainsKey(current))
+                        sections[current] =
+                            new List<string>();
+
+                    sections[current].Add(line);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
+
+                if (!sections.ContainsKey(current))
+                    sections[current] =
+                        new List<string>();
+
+                sections[current].Add(line);
+            }
+
+            // Bottom-up ordering keeps the lower sections stable while added
+            // diagnostics expand toward the top of the panel.
+            string[] order =
+            {
+                "ACTIONS",
+                "AUTO",
+                "CONTEXT",
+                "REACTION",
+                "WATCH",
+                "SMART",
+                "TRADE",
+                "STATUS"
+            };
+
+            List<string> result =
+                new List<string>();
+
+            for (int i = 0;
+                 i < order.Length;
+                 i++)
+            {
+                if (!sections.TryGetValue(
+                        order[i],
+                        out List<string> sectionLines))
+                    continue;
+
+                if (result.Count > 0)
+                    result.Add("");
+
+                for (int j = 0;
+                     j < sectionLines.Count;
+                     j++)
+                {
+                    result.Add(
+                        sectionLines[j]);
+                }
+            }
+
+            return result;
+        }
+
+        private string GetPanelSectionKey(
+            string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return "";
+
+            if (line.Equals(
+                    "STATUS",
+                    StringComparison.OrdinalIgnoreCase))
+                return "STATUS";
+
+            if (line.Equals(
+                    "TRADE PLAN",
+                    StringComparison.OrdinalIgnoreCase))
+                return "TRADE";
+
+            if (line.StartsWith(
+                    "SMART DECISION",
+                    StringComparison.OrdinalIgnoreCase))
+                return "SMART";
+
+            if (line.Equals(
+                    "LIVE REACTION",
+                    StringComparison.OrdinalIgnoreCase))
+                return "REACTION";
+
+            if (line.Equals(
+                    "WATCH SETUP",
+                    StringComparison.OrdinalIgnoreCase))
+                return "WATCH";
+
+            if (line.Equals(
+                    "CONTEXT",
+                    StringComparison.OrdinalIgnoreCase))
+                return "CONTEXT";
+
+            if (line.Equals(
+                    "ACTIONS",
+                    StringComparison.OrdinalIgnoreCase))
+                return "ACTIONS";
+
+            if (line.Equals(
+                    "AUTO TRADING",
+                    StringComparison.OrdinalIgnoreCase))
+                return "AUTO";
+
+            return "";
+        }
+
         private void DrawUnifiedPanel()
         {
             if (_suppressIntermediatePanelRender)
@@ -6747,6 +6880,31 @@ namespace cAlgo
                 lines.Add(_tradeActionStatusText);
             }
 
+            if (EnableAutoTrading)
+            {
+                lines.Add("");
+                lines.Add("AUTO TRADING");
+                lines.Add(_autoTradeStatusText);
+
+                if (EnableAggressiveAutoEntry)
+                {
+                    lines.Add(
+                        "AGGRESSIVE  CONF " +
+                        AggressiveMinConfidence +
+                        " | EVID " +
+                        AggressiveMinEvidence +
+                        " | SMART Q " +
+                        AggressiveSmartMinimumQuality);
+                }
+
+                if (_autoTradeLastPositionId > 0)
+                {
+                    lines.Add(
+                        "LAST ORDER  POSITION #" +
+                        _autoTradeLastPositionId);
+                }
+            }
+
             if (lines.Count == 0)
             {
                 RemoveTradePlanPanel();
@@ -6871,75 +7029,112 @@ namespace cAlgo
                     .SetHeightInPixels(actionRowHeight);
             }
 
+            List<string> bottomUpLines =
+                BuildBottomUpPanelLines(lines);
+
             int visibleRows =
                 Math.Min(
-                    lines.Count,
+                    bottomUpLines.Count,
                     TradePlanPanelFixedRows);
 
+            // Bottom row is directly above the action buttons. New information
+            // is placed into progressively higher rows, so the panel grows only
+            // upward and its bottom edge never moves.
             for (int i = 0;
                  i < TradePlanPanelFixedRows;
                  i++)
             {
-                bool visible = i < visibleRows;
-                TextBlock row = _tradePlanPanelRows[i];
+                TextBlock row =
+                    _tradePlanPanelRows[i];
 
-                _tradePlanPanelGrid.Rows[i]
-                    .SetHeightInPixels(
-                        visible ? rowHeight : 0);
-
-                row.Text =
-                    visible
-                        ? lines[i]
-                        : "";
-
-                row.IsVisible = visible;
-                row.ForegroundColor = panelColor;
+                row.Text = "";
+                row.IsVisible = false;
+                row.ForegroundColor =
+                    panelColor;
                 row.FontSize =
                     showPlan
-                        ? Math.Max(8, TradePlanFontSize)
-                        : Math.Max(8, TextFontSize);
-
+                        ? Math.Max(
+                            8,
+                            TradePlanFontSize)
+                        : Math.Max(
+                            8,
+                            TextFontSize);
                 row.FontWeight =
                     TradePlanBold
                         ? FontWeight.Bold
                         : FontWeight.Normal;
-
                 row.FontFamily =
                     string.IsNullOrWhiteSpace(
                         TradePlanFontFamily)
                         ? "Arial"
                         : TradePlanFontFamily;
+                row.LineHeight =
+                    rowHeight;
+                row.TextWrapping =
+                    TextWrapping.NoWrap;
+                row.TextTrimming =
+                    TextTrimming.CharacterEllipsis;
 
-                row.LineHeight = rowHeight;
-                row.TextWrapping = TextWrapping.NoWrap;
-                row.TextTrimming = TextTrimming.CharacterEllipsis;
+                _tradePlanPanelGrid.Rows[i]
+                    .SetHeightInPixels(0);
             }
 
-            if (lines.Count > TradePlanPanelFixedRows)
+            for (int i = 0;
+                 i < visibleRows;
+                 i++)
             {
-                TextBlock overflowRow =
-                    _tradePlanPanelRows[
-                        TradePlanPanelFixedRows - 1];
+                int rowIndex =
+                    TradePlanPanelFixedRows -
+                    1 -
+                    i;
 
-                overflowRow.Text =
+                _tradePlanPanelRows[rowIndex].Text =
+                    bottomUpLines[i];
+
+                _tradePlanPanelRows[rowIndex].IsVisible =
+                    true;
+
+                _tradePlanPanelGrid.Rows[rowIndex]
+                    .SetHeightInPixels(
+                        rowHeight);
+            }
+
+            if (bottomUpLines.Count >
+                TradePlanPanelFixedRows)
+            {
+                _tradePlanPanelRows[0].Text =
                     "… " +
-                    (lines.Count -
+                    (bottomUpLines.Count -
                      TradePlanPanelFixedRows +
                      1) +
                     " additional lines";
 
-                overflowRow.IsVisible = true;
+                _tradePlanPanelRows[0].IsVisible =
+                    true;
+
+                _tradePlanPanelGrid.Rows[0]
+                    .SetHeightInPixels(
+                        rowHeight);
             }
 
             _tradePlanPanelGrid.Width =
                 Math.Max(180, TradePlanWidth);
 
-            int panelHeight =
+            int padding =
+                Math.Max(
+                    0,
+                    TradePlanPadding);
+
+            int innerPanelHeight =
                 visibleRows * rowHeight +
                 actionRowHeight;
 
+            int outerPanelHeight =
+                innerPanelHeight +
+                padding * 2;
+
             _tradePlanPanelGrid.Height =
-                panelHeight;
+                innerPanelHeight;
 
             _tradePlanPanelBorder.HorizontalAlignment =
                 horizontal;
@@ -6952,9 +7147,9 @@ namespace cAlgo
                 Math.Max(180, TradePlanWidth);
 
             _tradePlanPanelBorder.Height =
-                panelHeight;
+                outerPanelHeight;
             _tradePlanPanelBorder.Padding =
-                Math.Max(0, TradePlanPadding);
+                padding;
 
             _tradePlanPanelBorder.BorderThickness =
                 Math.Max(
