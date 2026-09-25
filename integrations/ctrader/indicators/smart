@@ -6158,6 +6158,12 @@ namespace cAlgo
                         1,
                         AutoTradeMaxOpenPositions));
 
+                lines.Add(
+                    "PROTECTION  SERVER SL + TP1" +
+                    (AutoProtectBrokerPositions
+                        ? " | DYNAMIC BROKER SYNC ON"
+                        : " | DYNAMIC BROKER SYNC OFF"));
+
                 if (!string.IsNullOrWhiteSpace(
                         _autoTradeStatusText))
                     lines.Add(
@@ -8707,7 +8713,9 @@ private void UpdateBrokerPositionProtection()
                         "AUTO FAILED | " +
                         (result == null
                             ? "NO RESULT"
-                            : result.Error.ToString());
+                            : result.Error == null
+                                ? "TRADE ERROR"
+                                : result.Error.ToString());
                     return false;
                 }
 
