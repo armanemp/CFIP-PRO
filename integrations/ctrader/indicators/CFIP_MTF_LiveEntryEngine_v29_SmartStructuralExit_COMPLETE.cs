@@ -80,6 +80,9 @@ namespace cAlgo
         [Parameter("Show Popup Alert", Group = "Alerts", DefaultValue = true)]
         public bool ShowPopupAlert { get; set; }
 
+        [Parameter("Popup Only Critical Alerts", Group = "Alerts", DefaultValue = true)]
+        public bool PopupOnlyCriticalAlerts { get; set; }
+
         [Parameter("Alert On Entry Block / Restriction", Group = "Alerts", DefaultValue = false)]
         public bool AlertOnEntryRestriction { get; set; }
 
@@ -628,6 +631,9 @@ namespace cAlgo
         [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "White")]
         public Color TradePlanTextColor { get; set; }
 
+        [Parameter("Unified Panel Text Color", Group = "Display", DefaultValue = "White")]
+        public Color UnifiedPanelTextColor { get; set; }
+
         [Parameter("Trade Plan Font Family", Group = "Display", DefaultValue = "Arial")]
         public string TradePlanFontFamily { get; set; }
 
@@ -1022,6 +1028,21 @@ namespace cAlgo
         [Parameter("Allow Smart Soft Gate", Group = "Smart Intelligence", DefaultValue = true)]
         public bool AllowSmartSoftGate { get; set; }
 
+        [Parameter("Enable Fast Reversal Intelligence", Group = "Smart Intelligence", DefaultValue = true)]
+        public bool EnableFastReversalIntelligence { get; set; }
+
+        [Parameter("Fast Reversal Minimum Quality", Group = "Smart Intelligence", DefaultValue = 74, MinValue = 55, MaxValue = 95)]
+        public int FastReversalMinimumQuality { get; set; }
+
+        [Parameter("Fast Reversal Lookback Bars", Group = "Smart Intelligence", DefaultValue = 6, MinValue = 3, MaxValue = 15)]
+        public int FastReversalLookbackBars { get; set; }
+
+        [Parameter("Fast Reversal Minimum Zone Quality", Group = "Smart Intelligence", DefaultValue = 60, MinValue = 40, MaxValue = 90)]
+        public int FastReversalMinimumZoneQuality { get; set; }
+
+        [Parameter("Allow Fast M5 Reversal Before M15", Group = "Smart Intelligence", DefaultValue = true)]
+        public bool AllowFastM5ReversalBeforeM15 { get; set; }
+
         // ============================================================
         // ADVANCED PRECISION / OUTCOME / LIQUIDITY
         // ============================================================
@@ -1304,6 +1325,9 @@ namespace cAlgo
         private string _smartEntryGateReason = "";
         private int _smartLastStableDirection;
         private int _smartOppositeBars;
+        private int _fastReversalDirection;
+        private int _fastReversalQuality;
+        private int _fastReversalEvidence;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
         private int _lastSmartDecisionAlertDirection;
         private string _lastSmartDecisionAlertAction = "";
@@ -7690,6 +7714,80 @@ private void UpdateBrokerPositionProtection()
             return false;
         }
 
+        private int CalculateFastReversalQuality(
+            Bars bars,
+            int index,
+            int direction,
+            out int evidence)
+        {
+            evidence = 0;
+            if (!EnableFastReversalIntelligence || bars == null || direction == 0 ||
+                index < 30 || index >= bars.Count)
+                return 0;
+
+            double atr = GetAtr(bars, index, AtrPeriod);
+            if (!IsFinitePositive(atr))
+                return 0;
+
+            int lookback = Math.Max(3, FastReversalLookbackBars);
+            int start = Math.Max(20, index - lookback + 1);
+            int score = 0;
+            bool sweep = false, structure = false, displacement = false;
+            bool zone = false, rejection = false, microBreak = false;
+            bool emaReclaim = false, momentum = false;
+
+            for (int i = start; i <= index; i++)
+            {
+                bool s = direction == 1 ? HasBullLiquiditySweep(bars, i) : HasBearLiquiditySweep(bars, i);
+                bool st = direction == 1 ? (HasBullMss(bars, i) || HasBullChoch(bars, i)) : (HasBearMss(bars, i) || HasBearChoch(bars, i));
+                bool d = direction == 1 ? HasBullDisplacement(bars, i) : HasBearDisplacement(bars, i);
+                bool z = direction == 1 ? (HasBullFvg(bars, i) || HasBullOb(bars, i)) : (HasBearFvg(bars, i) || HasBearOb(bars, i));
+                bool r = direction == 1 ? HasBullRejection(bars, i) : HasBearRejection(bars, i);
+
+                sweep |= s; structure |= st; displacement |= d; zone |= z; rejection |= r;
+
+                double body = Math.Abs(bars.ClosePrices[i] - bars.OpenPrices[i]);
+                bool directional = direction == 1 ? bars.ClosePrices[i] > bars.OpenPrices[i] : bars.ClosePrices[i] < bars.OpenPrices[i];
+                if (directional && body >= atr * Math.Max(0.05, MinimumTriggerBodyAtr * 0.75))
+                    momentum = true;
+
+                if (i > 0)
+                    microBreak |= direction == 1 ? bars.ClosePrices[i] > bars.HighPrices[i - 1] : bars.ClosePrices[i] < bars.LowPrices[i - 1];
+
+                double fast = GetEma(bars, i, FastEma);
+                double slow = GetEma(bars, i, SlowEma);
+                emaReclaim |= direction == 1 ? bars.ClosePrices[i] > fast && fast >= slow : bars.ClosePrices[i] < fast && fast <= slow;
+            }
+
+            if (structure) { score += 26; evidence++; }
+            if (sweep) { score += 18; evidence++; }
+            if (displacement) { score += 17; evidence++; }
+            if (zone) { score += 12; evidence++; }
+            if (rejection) { score += 8; evidence++; }
+            if (microBreak) { score += 10; evidence++; }
+            if (emaReclaim) score += 5;
+            if (momentum) score += 4;
+
+            int locationQuality = CalculateEntryLocationQuality(bars, index, direction);
+            if (locationQuality >= Math.Max(40, FastReversalMinimumZoneQuality))
+                score += 10;
+
+            if (!structure && !sweep)
+                score -= 12;
+
+            if (structure && displacement && (sweep || zone))
+                score += 8;
+
+            int retest = CalculateRetestQuality(bars, index, direction);
+            if (retest >= MinimumRetestQuality)
+            {
+                score += 7;
+                evidence++;
+            }
+
+            return (int)Clamp(score, 0, 100);
+        }
+
         private void EvaluateSmartDecision(int chartIndex)
         {
             _smartDecision = null;
@@ -7970,6 +8068,45 @@ private void UpdateBrokerPositionProtection()
                     ref bearEvidence);
             }
 
+            _fastReversalDirection = 0;
+            _fastReversalQuality = 0;
+            _fastReversalEvidence = 0;
+
+            if (EnableFastReversalIntelligence)
+            {
+                int candidateDirection =
+                    _smartLastStableDirection != 0
+                        ? -_smartLastStableDirection
+                        : (bull > bear ? 1 : bear > bull ? -1 : 0);
+
+                if (candidateDirection != 0)
+                {
+                    _fastReversalQuality =
+                        CalculateFastReversalQuality(
+                            _m5,
+                            m5Index,
+                            candidateDirection,
+                            out _fastReversalEvidence);
+
+                    if (_fastReversalQuality >= Math.Max(55, FastReversalMinimumQuality))
+                    {
+                        _fastReversalDirection = candidateDirection;
+                        double reversalBoost = _fastReversalQuality * 0.22;
+
+                        if (_fastReversalDirection == 1)
+                        {
+                            bull += reversalBoost;
+                            bear = Math.Max(0, bear - reversalBoost * 0.35);
+                        }
+                        else
+                        {
+                            bear += reversalBoost;
+                            bull = Math.Max(0, bull - reversalBoost * 0.35);
+                        }
+                    }
+                }
+            }
+
             double conflict =
                 CalculateSmartConflictPenalty(
                     a5, a15, a30, ah1, ah4, aw1);
@@ -8137,6 +8274,24 @@ private void UpdateBrokerPositionProtection()
                     reversalDirection != 0 &&
                     reversalQuality >= Math.Max(65, MinimumStructuralSequence))
                     direction = reversalDirection;
+
+                if (_fastReversalDirection != 0 &&
+                    _fastReversalQuality >= Math.Max(55, FastReversalMinimumQuality) &&
+                    _fastReversalEvidence >= 2)
+                {
+                    bool htfHardConflict =
+                        ah1 != null && ah4 != null &&
+                        ah1.Direction == -_fastReversalDirection &&
+                        ah4.Direction == -_fastReversalDirection;
+
+                    if (!htfHardConflict &&
+                        (AllowFastM5ReversalBeforeM15 ||
+                         a15.Direction == _fastReversalDirection))
+                    {
+                        direction = _fastReversalDirection;
+                        quality = Math.Max(quality, Math.Min(100, _fastReversalQuality + 4));
+                    }
+                }
             }
 
             // Do not allow one weak bar to flip an established decision.
@@ -8150,7 +8305,13 @@ private void UpdateBrokerPositionProtection()
                         ? (a5.MssBull || a5.ChochBull || a5.DisplacementBull)
                         : (a5.MssBear || a5.ChochBear || a5.DisplacementBear);
 
+                bool fastFlip =
+                    _fastReversalDirection == direction &&
+                    _fastReversalQuality >= Math.Max(55, FastReversalMinimumQuality) &&
+                    _fastReversalEvidence >= 2;
+
                 if (!genuineFlip &&
+                    !fastFlip &&
                     quality < adaptiveQualityThreshold + 6)
                     direction = 0;
             }
