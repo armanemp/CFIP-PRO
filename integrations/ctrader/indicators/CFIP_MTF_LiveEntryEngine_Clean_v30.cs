@@ -1142,6 +1142,9 @@ namespace cAlgo
 [Parameter("Require M15 Reversal For Opposite", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireM15ReversalForOpposite { get; set; }
 
+[Parameter("Allow Opposite While Active", Group = "16 · Accuracy", DefaultValue = false)]
+        public bool AllowOppositeWhileActive { get; set; }
+
 [Parameter("Minimum Opposite M5 Structure", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 6)]
         public int MinimumOppositeM5Structure { get; set; }
 
@@ -1192,6 +1195,9 @@ namespace cAlgo
 
 [Parameter("Alert On Live Reaction", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnLiveReaction { get; set; }
+
+[Parameter("Alert On Smart Decision", Group = "18 · Alerts", DefaultValue = true)]
+        public bool AlertOnSmartDecision { get; set; }
 
 [Parameter("Enable Level Hit Alerts", Group = "18 · Alerts", DefaultValue = true)]
         public bool EnableLevelHitAlerts { get; set; }
