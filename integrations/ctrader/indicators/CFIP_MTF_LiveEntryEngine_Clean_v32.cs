@@ -8170,14 +8170,17 @@ namespace cAlgo
         {
             if (!UseEqualHighLow ||
                 bars == null ||
-                index < 10)
+                index < 10 ||
+                atr <= 0)
                 return 0;
 
             double tolerance =
-                atr *
-                EqualLevelToleranceAtr;
-
-            double best = 0;
+                Math.Max(
+                    Symbol.PipSize * 2,
+                    atr *
+                    Math.Max(
+                        0.02,
+                        EqualLevelToleranceAtr));
 
             int first =
                 Math.Max(
@@ -8185,30 +8188,76 @@ namespace cAlgo
                     index -
                     LiquidityLookback);
 
+            Dictionary<long, List<double>> buckets =
+                new Dictionary<long, List<double>>();
+
+            double best = 0;
+
             for (int i = first;
-                 i < index - 2;
+                 i < index - 1;
                  i++)
             {
-                for (int j = i + 2;
-                     j < index;
-                     j++)
+                double high =
+                    bars.HighPrices[i];
+
+                if (!IsFinitePositive(high))
+                    continue;
+
+                long bucket =
+                    (long)Math.Floor(
+                        high /
+                        tolerance);
+
+                for (long b = bucket - 1;
+                     b <= bucket + 1;
+                     b++)
                 {
-                    if (Math.Abs(
-                            bars.HighPrices[i] -
-                            bars.HighPrices[j]) >
-                        tolerance)
+                    List<double> values;
+
+                    if (!buckets.TryGetValue(
+                            b,
+                            out values))
                         continue;
 
-                    double level =
-                        Math.Max(
-                            bars.HighPrices[i],
-                            bars.HighPrices[j]);
+                    for (int j = 0;
+                         j < values.Count;
+                         j++)
+                    {
+                        if (Math.Abs(
+                                high -
+                                values[j]) >
+                            tolerance)
+                            continue;
 
-                    if (level > reference &&
-                        (best == 0 ||
-                         level < best))
-                        best = level;
+                        double level =
+                            Math.Max(
+                                high,
+                                values[j]);
+
+                        if (level > reference &&
+                            (best <= 0 ||
+                             level < best))
+                            best = level;
+
+                        break;
+                    }
                 }
+
+                List<double> bucketValues;
+
+                if (!buckets.TryGetValue(
+                        bucket,
+                        out bucketValues))
+                {
+                    bucketValues =
+                        new List<double>();
+
+                    buckets[bucket] =
+                        bucketValues;
+                }
+
+                bucketValues.Add(
+                    high);
             }
 
             return best;
@@ -8222,14 +8271,17 @@ namespace cAlgo
         {
             if (!UseEqualHighLow ||
                 bars == null ||
-                index < 10)
+                index < 10 ||
+                atr <= 0)
                 return 0;
 
             double tolerance =
-                atr *
-                EqualLevelToleranceAtr;
-
-            double best = 0;
+                Math.Max(
+                    Symbol.PipSize * 2,
+                    atr *
+                    Math.Max(
+                        0.02,
+                        EqualLevelToleranceAtr));
 
             int first =
                 Math.Max(
@@ -8237,30 +8289,76 @@ namespace cAlgo
                     index -
                     LiquidityLookback);
 
+            Dictionary<long, List<double>> buckets =
+                new Dictionary<long, List<double>>();
+
+            double best = 0;
+
             for (int i = first;
-                 i < index - 2;
+                 i < index - 1;
                  i++)
             {
-                for (int j = i + 2;
-                     j < index;
-                     j++)
+                double low =
+                    bars.LowPrices[i];
+
+                if (!IsFinitePositive(low))
+                    continue;
+
+                long bucket =
+                    (long)Math.Floor(
+                        low /
+                        tolerance);
+
+                for (long b = bucket - 1;
+                     b <= bucket + 1;
+                     b++)
                 {
-                    if (Math.Abs(
-                            bars.LowPrices[i] -
-                            bars.LowPrices[j]) >
-                        tolerance)
+                    List<double> values;
+
+                    if (!buckets.TryGetValue(
+                            b,
+                            out values))
                         continue;
 
-                    double level =
-                        Math.Min(
-                            bars.LowPrices[i],
-                            bars.LowPrices[j]);
+                    for (int j = 0;
+                         j < values.Count;
+                         j++)
+                    {
+                        if (Math.Abs(
+                                low -
+                                values[j]) >
+                            tolerance)
+                            continue;
 
-                    if (level < reference &&
-                        (best == 0 ||
-                         level > best))
-                        best = level;
+                        double level =
+                            Math.Min(
+                                low,
+                                values[j]);
+
+                        if (level < reference &&
+                            (best <= 0 ||
+                             level > best))
+                            best = level;
+
+                        break;
+                    }
                 }
+
+                List<double> bucketValues;
+
+                if (!buckets.TryGetValue(
+                        bucket,
+                        out bucketValues))
+                {
+                    bucketValues =
+                        new List<double>();
+
+                    buckets[bucket] =
+                        bucketValues;
+                }
+
+                bucketValues.Add(
+                    low);
             }
 
             return best;
@@ -8825,8 +8923,10 @@ namespace cAlgo
             double atr)
         {
             if (bars == null ||
-                index < 5 ||
-                atr <= 0)
+                index < 8 ||
+                atr <= 0 ||
+                !IsFinitePositive(entry) ||
+                !IsFinitePositive(target))
                 return false;
 
             double clearance =
@@ -8835,27 +8935,109 @@ namespace cAlgo
                     TargetClearanceAtr,
                     TargetObstacleBufferAtr);
 
+            int strength =
+                Math.Max(
+                    1,
+                    Math.Min(
+                        SwingStrength,
+                        3));
+
             int start =
                 Math.Max(
-                    2,
+                    strength + 1,
                     index -
                     Math.Max(
-                        3,
+                        5,
                         TargetObstacleLookbackBars));
 
+            int last =
+                Math.Max(
+                    start,
+                    index -
+                    strength -
+                    1);
+
             for (int i = start;
-                 i < index;
+                 i <= last;
                  i++)
             {
+                bool swing = true;
+
+                for (int j = 1;
+                     j <= strength;
+                     j++)
+                {
+                    if (direction == 1)
+                    {
+                        if (bars.HighPrices[i] <=
+                            bars.HighPrices[i - j] ||
+                            bars.HighPrices[i] <=
+                            bars.HighPrices[i + j])
+                        {
+                            swing = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (bars.LowPrices[i] >=
+                            bars.LowPrices[i - j] ||
+                            bars.LowPrices[i] >=
+                            bars.LowPrices[i + j])
+                        {
+                            swing = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!swing)
+                    continue;
+
+                if (direction == 1)
+                {
+                    double level =
+                        bars.HighPrices[i];
+
+                    if (level > entry &&
+                        level < target - clearance)
+                        return true;
+                }
+                else
+                {
+                    double level =
+                        bars.LowPrices[i];
+
+                    if (level < entry &&
+                        level > target + clearance)
+                        return true;
+                }
+            }
+
+            if (UseEqualHighLow)
+            {
+                double liquidityLevel =
+                    direction == 1
+                        ? FindEqualHigh(
+                            bars,
+                            index,
+                            entry,
+                            atr)
+                        : FindEqualLow(
+                            bars,
+                            index,
+                            entry,
+                            atr);
+
                 if (direction == 1 &&
-                    bars.HighPrices[i] > entry &&
-                    bars.HighPrices[i] <
+                    liquidityLevel > entry &&
+                    liquidityLevel <
                     target - clearance)
                     return true;
 
                 if (direction == -1 &&
-                    bars.LowPrices[i] < entry &&
-                    bars.LowPrices[i] >
+                    liquidityLevel < entry &&
+                    liquidityLevel >
                     target + clearance)
                     return true;
             }
