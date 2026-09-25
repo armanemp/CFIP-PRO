@@ -1440,6 +1440,7 @@ namespace cAlgo
 
         private readonly List<Native> _native = new List<Native>();
         private readonly HashSet<string> _historicalDrawn = new HashSet<string>();
+        private readonly HashSet<string> _outcomeDrawn = new HashSet<string>();
 
         private Plan _plan;
         private Decision _decision;
@@ -1454,6 +1455,7 @@ namespace cAlgo
         private bool _outcomeRegistered;
         private int _lastAutoM5 = -1;
         private int _lastEarlyAlertM5 = -1;
+        private int _lastHighConfidenceM5 = -1;
         private int _tp1Hit;
         private int _tp2Hit;
         private int _tp3Hit;
@@ -2307,14 +2309,54 @@ namespace cAlgo
             AddScore(f.MomentumBear, 8, ref bear, ref evidence);
             AddScore(f.RejectionBull, 6, ref bull, ref evidence);
             AddScore(f.RejectionBear, 6, ref bear, ref evidence);
-            AddScore(f.VolumeBull, 3, ref bull, ref evidence);
-            AddScore(f.VolumeBear, 3, ref bear, ref evidence);
-            AddScore(f.MacdBull, 3, ref bull, ref evidence);
-            AddScore(f.MacdBear, 3, ref bear, ref evidence);
-            AddScore(f.VwapBull, 2, ref bull, ref evidence);
-            AddScore(f.VwapBear, 2, ref bear, ref evidence);
-            AddScore(f.VolatilityBull, 2, ref bull, ref evidence);
-            AddScore(f.VolatilityBear, 2, ref bear, ref evidence);
+            AddScore(
+                f.VolumeBull,
+                3,
+                ref bull,
+                ref evidence,
+                UseVolumeExpansionEvidence);
+            AddScore(
+                f.VolumeBear,
+                3,
+                ref bear,
+                ref evidence,
+                UseVolumeExpansionEvidence);
+            AddScore(
+                f.MacdBull,
+                3,
+                ref bull,
+                ref evidence,
+                UseMacdEvidence);
+            AddScore(
+                f.MacdBear,
+                3,
+                ref bear,
+                ref evidence,
+                UseMacdEvidence);
+            AddScore(
+                f.VwapBull,
+                2,
+                ref bull,
+                ref evidence,
+                UseVwapEvidence);
+            AddScore(
+                f.VwapBear,
+                2,
+                ref bear,
+                ref evidence,
+                UseVwapEvidence);
+            AddScore(
+                f.VolatilityBull,
+                2,
+                ref bull,
+                ref evidence,
+                UseHealthyVolatilityEvidence);
+            AddScore(
+                f.VolatilityBear,
+                2,
+                ref bear,
+                ref evidence,
+                UseHealthyVolatilityEvidence);
             AddScore(f.EqualLow, 5, ref bull, ref evidence);
             AddScore(f.EqualHigh, 5, ref bear, ref evidence);
 
@@ -2415,6 +2457,22 @@ namespace cAlgo
 
             total += score;
             evidence++;
+        }
+
+        private void AddScore(
+            bool condition,
+            int score,
+            ref int total,
+            ref int evidence,
+            bool countAsEvidence)
+        {
+            if (!condition)
+                return;
+
+            total += score;
+
+            if (countAsEvidence)
+                evidence++;
         }
 
         private bool HasVolumeExpansion(
@@ -3705,7 +3763,8 @@ namespace cAlgo
 
         private Decision BuildReaction()
         {
-            if (_m5Bars == null ||
+            if (!EnableLiveReaction ||
+                _m5Bars == null ||
                 _m5Bars.Count < 10)
                 return new Decision();
 
@@ -3743,10 +3802,22 @@ namespace cAlgo
                 out sellQuality,
                 out sellEvidence);
 
-            int minimumQuality =
+            int watchThreshold =
                 Math.Max(
                     50,
-                    FastReversalMinimumQuality);
+                    Math.Max(
+                        FastReversalMinimumQuality,
+                        LiveReactionWatchThreshold));
+
+            int entryThreshold =
+                Math.Max(
+                    watchThreshold,
+                    LiveReactionThreshold);
+
+            int strongThreshold =
+                Math.Max(
+                    entryThreshold,
+                    LiveReactionStrongThreshold);
 
             if (buyQuality < minimumQuality &&
                 sellQuality < minimumQuality)
@@ -3773,7 +3844,7 @@ namespace cAlgo
 
             d.EntryAllowed =
                 d.Confidence >=
-                minimumQuality &&
+                entryThreshold &&
                 d.IndependentEvidence >=
                 Math.Max(
                     2,
@@ -3809,6 +3880,9 @@ namespace cAlgo
             }
 
             d.Reason =
+                (d.Confidence >= strongThreshold
+                    ? "STRONG "
+                    : "") +
                 (d.Direction == 1
                     ? "BUY"
                     : "SELL") +
@@ -4364,7 +4438,7 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    Tp1MinimumRR);
+                    FallbackTp1RR);
 
             double tp2 =
                 SelectTarget(
@@ -4373,7 +4447,7 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    Tp2MinimumRR);
+                    FallbackTp2RR);
 
             double tp3 =
                 SelectTarget(
@@ -4382,7 +4456,7 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    Tp3MinimumRR);
+                    FallbackTp3RR);
 
             double tp4 =
                 SelectTarget(
@@ -4391,7 +4465,7 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    Tp4MinimumRR);
+                    FallbackTp4RR);
 
             if (!IsValidTarget(
                     direction,
@@ -4912,7 +4986,7 @@ namespace cAlgo
                     "LIQUIDITY_POOL",
                     "M5",
                     0,
-                    LiquidityPoolWeight);
+                    EqualHighLowWeight);
             }
 
             if (UseDailyWeeklyLiquidity)
@@ -5269,29 +5343,6 @@ namespace cAlgo
                     1,
                     PreviousWeekWeight);
             }
-        }
-
-        private void AddLiquidityLevel(
-            List<Level> levels,
-            double price,
-            string kind,
-            string timeframe,
-            int age,
-            double baseScore)
-        {
-            if (baseScore <
-                Math.Max(
-                    0,
-                    LiquidityTargetMinimumScore))
-                return;
-
-            AddLevel(
-                levels,
-                price,
-                kind,
-                timeframe,
-                age,
-                baseScore);
         }
 
                 private void AddLevel(
@@ -8135,7 +8186,9 @@ namespace cAlgo
                 Math.Max(
                     2,
                     index -
-                    12);
+                    Math.Max(
+                        3,
+                        TargetObstacleLookbackBars));
 
             for (int i = start;
                  i < index;
@@ -8166,6 +8219,10 @@ namespace cAlgo
 
             if (_decision == null ||
                 !_decision.EntryAllowed)
+                return false;
+
+            if (BlockSameBarReentryAfterExit &&
+                _lastExitM5 == closedM5)
                 return false;
 
             if (_lastSignalM5 >= 0 &&
@@ -8321,9 +8378,13 @@ namespace cAlgo
                     : ChartIconType.DownArrow,
                 hostBar,
                 y,
-                _plan.Direction == 1
-                    ? BuyArrowColor
-                    : SellArrowColor);
+                SignalArrowColorFor(
+                    _plan.Direction,
+                    _decision != null &&
+                    _decision.SmartQuality >=
+                    SmartStrongSetupQuality
+                        ? "STRONG"
+                        : "CONFIRMED"));
         }
 
         private void RenderPlanLabels()
@@ -8695,12 +8756,13 @@ namespace cAlgo
                           offset
                         : Bars.HighPrices[hostBar] +
                           offset,
-                    _decision.Direction == 1
-                        ? BuyArrowColor
-                        : SellArrowColor);
+                    SignalArrowColorFor(
+                        _decision.Direction,
+                        "WATCH"));
             }
 
-            if (ShowReactionArrow &&
+            if (EnableLiveReaction &&
+                ShowReactionArrow &&
                 _reaction != null &&
                 _reaction.EntryAllowed)
             {
@@ -8723,9 +8785,14 @@ namespace cAlgo
                                   _m5Bars.Count - 1,
                                   chartIndex)] +
                           offset,
-                    _reaction.Direction == 1
-                        ? BuyArrowColor
-                        : SellArrowColor);
+                    SignalArrowColorFor(
+                        _reaction.Direction,
+                        _reaction.Confidence >=
+                            Math.Max(
+                                LiveReactionThreshold,
+                                LiveReactionStrongThreshold)
+                            ? "STRONG"
+                            : "REACTION"));
 
                 if (AlertOnReaction &&
                     AlertOnLiveReaction &&
@@ -9423,6 +9490,10 @@ namespace cAlgo
                     "/" +
                     _decision.SellShare);
 
+                lines.Add(
+                    "CONFLUENCE  " +
+                    ConfluenceText(_m5Frame));
+
                 if (!string.IsNullOrWhiteSpace(
                         _decision.BlockReason))
                     lines.Add(
@@ -9976,11 +10047,21 @@ namespace cAlgo
 
             if (SuppressDuplicateAlerts)
             {
+                int cooldownSeconds =
+                    (key.StartsWith(
+                        "SMART|",
+                        StringComparison.OrdinalIgnoreCase) ||
+                     key.StartsWith(
+                        "REACTION|",
+                        StringComparison.OrdinalIgnoreCase))
+                        ? SmartAlertCooldownSeconds
+                        : AlertCooldownSeconds;
+
                 if (key == _alertKey &&
                     (now - _alertUtc).TotalSeconds <
                     Math.Max(
                         1,
-                        AlertCooldownSeconds))
+                        cooldownSeconds))
                     return;
             }
 
@@ -11145,6 +11226,24 @@ namespace cAlgo
                     Chart.FindObject(name)
                     as ChartTrendLine;
 
+                LineStyle lineStyle =
+                    LineStyle.Solid;
+
+                if (name.IndexOf(
+                        "PRED_TRIGGER",
+                        StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    lineStyle =
+                        PredictionTriggerLineStyle;
+                }
+                else if (name.IndexOf(
+                            "PRED_TARGET",
+                            StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    lineStyle =
+                        PredictionTargetLineStyle;
+                }
+
                 if (line == null)
                 {
                     ChartObject existing =
@@ -11164,7 +11263,7 @@ namespace cAlgo
                             Math.Max(
                                 1,
                                 LevelLineThickness),
-                            LineStyle.Dots);
+                            lineStyle);
                 }
 
                 if (line == null)
@@ -11185,7 +11284,7 @@ namespace cAlgo
                         1,
                         LevelLineThickness);
                 line.LineStyle =
-                    LineStyle.Dots;
+                    lineStyle;
                 line.ExtendToInfinity =
                     false;
                 line.IsInteractive =
@@ -11205,10 +11304,25 @@ namespace cAlgo
                 P + "PRED_ZONE");
 
             Chart.RemoveObject(
+                P + "PRED_ENTRY");
+
+            Chart.RemoveObject(
+                P + "PRED_STOP");
+
+            Chart.RemoveObject(
                 P + "PRED_TRIGGER");
 
             Chart.RemoveObject(
-                P + "PRED_TARGET");
+                P + "PRED_TARGET1");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET2");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET3");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET4");
         }
 
         private void EmitContextAlerts(
@@ -11247,8 +11361,6 @@ namespace cAlgo
                             : SellArrowColor);
                 }
 
-                int direction =
-            {
                 int direction =
                     _m5Frame.StructureBull
                         ? 1
@@ -12186,5 +12298,4 @@ namespace cAlgo
         // ============================================================
 
     }
-}
 }
