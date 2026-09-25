@@ -596,6 +596,186 @@ namespace cAlgo
         [Parameter("SELL Arrow Color", Group = "14 · Display", DefaultValue = "Red")]
         public Color SellArrowColor { get; set; }
 
+        [Parameter("Live Trigger Score", Group = "15 · Advanced Control", DefaultValue = 4, MinValue = 1, MaxValue = 6)]
+        public int LiveTriggerScore { get; set; }
+
+        [Parameter("Precision Trigger Score", Group = "15 · Advanced Control", DefaultValue = 5, MinValue = 2, MaxValue = 6)]
+        public int PrecisionTriggerScore { get; set; }
+
+        [Parameter("Allow Strong M5 Trigger Override", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowStrongM5TriggerOverride { get; set; }
+
+        [Parameter("M5 Only Confirmed Trigger", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool M5OnlyConfirmedTrigger { get; set; }
+
+        [Parameter("Allow M15 Neutral Pullback", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowM15NeutralPullback { get; set; }
+
+        [Parameter("Higher TF Penalty", Group = "15 · Advanced Control", DefaultValue = 7, MinValue = 0, MaxValue = 20)]
+        public int HigherTfPenalty { get; set; }
+
+        [Parameter("Use Zone Confluence", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseZoneConfluence { get; set; }
+
+        [Parameter("Use Higher TF Liquidity Targets", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseHigherTfLiquidityTargets { get; set; }
+
+        [Parameter("Minimum HTF Target RR", Group = "15 · Advanced Control", DefaultValue = 2.50, MinValue = 1, MaxValue = 20)]
+        public double MinimumHtfTargetRR { get; set; }
+
+        [Parameter("Structural TP RR Step", Group = "15 · Advanced Control", DefaultValue = 0.50, MinValue = 0.10, MaxValue = 2.0, Step = 0.05)]
+        public double StructuralTpRrStep { get; set; }
+
+        [Parameter("Minimum Trade RR", Group = "15 · Advanced Control", DefaultValue = 2.00, MinValue = 0.5, MaxValue = 20)]
+        public double MinimumTradeRR { get; set; }
+
+        [Parameter("Use RR Filter", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseRRFilter { get; set; }
+
+        [Parameter("Avoid Late Entry", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AvoidLateEntry { get; set; }
+
+        [Parameter("Use Precision Execution Model", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UsePrecisionExecutionModel { get; set; }
+
+        [Parameter("Stop Buffer ATR", Group = "15 · Advanced Control", DefaultValue = 0.10, MinValue = 0.01, MaxValue = 1.0)]
+        public double StopBufferAtr { get; set; }
+
+        [Parameter("Require HTF Targets", Group = "15 · Advanced Control", DefaultValue = false)]
+        public bool RequireHtfTargets { get; set; }
+
+        [Parameter("Maximum Structural Stop ATR", Group = "15 · Advanced Control", DefaultValue = 2.25, MinValue = 0.5, MaxValue = 10)]
+        public double MaximumStructuralStopAtr { get; set; }
+
+        [Parameter("Allow Direct Displacement Override", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowDirectDisplacementOverride { get; set; }
+
+        [Parameter("Direct Displacement Override Score", Group = "15 · Advanced Control", DefaultValue = 6, MinValue = 3, MaxValue = 6)]
+        public int DirectDisplacementOverrideScore { get; set; }
+
+        [Parameter("Maximum Setup Age Bars", Group = "15 · Advanced Control", DefaultValue = 8, MinValue = 1, MaxValue = 50)]
+        public int MaximumSetupAgeBars { get; set; }
+
+        [Parameter("Allow Synthetic Target Fallback", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowSyntheticTargetFallback { get; set; }
+
+        [Parameter("HTF Stop Buffer ATR", Group = "15 · Advanced Control", DefaultValue = 0.15, MinValue = 0.01, MaxValue = 1.0)]
+        public double HtfStopBufferAtr { get; set; }
+
+        [Parameter("Block New Signal While Active", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool BlockNewSignalWhileActive { get; set; }
+
+        [Parameter("Cooldown Bars", Group = "15 · Advanced Control", DefaultValue = 3, MinValue = 0, MaxValue = 50)]
+        public int CooldownBars { get; set; }
+
+        [Parameter("Use News Event Guard", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseNewsEventGuard { get; set; }
+
+        [Parameter("Use Volatility Event Guard", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseVolatilityEventGuard { get; set; }
+
+        [Parameter("Event Guard Cooldown Bars", Group = "15 · Advanced Control", DefaultValue = 3, MinValue = 0, MaxValue = 50)]
+        public int EventGuardCooldownBars { get; set; }
+
+        [Parameter("Use Regime No-Trade Guard", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseRegimeNoTradeGuard { get; set; }
+
+        [Parameter("Show Reaction Arrow", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool ShowReactionArrow { get; set; }
+
+        [Parameter("Show Historical Arrows", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool ShowHistoricalArrows { get; set; }
+
+        [Parameter("Enable Dynamic Structural Stop Alias", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool EnableDynamicSlTrail { get; set; }
+
+        [Parameter("Structural Stop Breathing ATR", Group = "15 · Advanced Control", DefaultValue = 0.85, MinValue = 0.20, MaxValue = 5)]
+        public double TrailDistanceAtr { get; set; }
+
+        [Parameter("Structural Stop Step ATR", Group = "15 · Advanced Control", DefaultValue = 0.08, MinValue = 0.01, MaxValue = 1)]
+        public double TrailStepAtr { get; set; }
+
+        [Parameter("Target Update Step ATR", Group = "15 · Advanced Control", DefaultValue = 0.20, MinValue = 0.02, MaxValue = 2)]
+        public double TargetUpdateStepAtr { get; set; }
+
+        [Parameter("Use Swing Structure In Structural Stop", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseSwingStructureInTrail { get; set; }
+
+        [Parameter("Smart Minimum Independent Evidence", Group = "15 · Advanced Control", DefaultValue = 4, MinValue = 2, MaxValue = 8)]
+        public int SmartMinimumIndependentEvidence { get; set; }
+
+        [Parameter("Smart Stop Zone Bonus", Group = "15 · Advanced Control", DefaultValue = 10, MinValue = 0, MaxValue = 30)]
+        public int SmartStopZoneBonus { get; set; }
+
+        [Parameter("Smart Liquidity Pool Bonus", Group = "15 · Advanced Control", DefaultValue = 12, MinValue = 0, MaxValue = 30)]
+        public int SmartLiquidityPoolBonus { get; set; }
+
+        [Parameter("Smart Trail Minimum RR", Group = "15 · Advanced Control", DefaultValue = 1.00, MinValue = 0.5, MaxValue = 10)]
+        public double SmartTrailMinimumRR { get; set; }
+
+        [Parameter("Smart Use Closed-Bar Decision", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool SmartUseClosedBarDecision { get; set; }
+
+        [Parameter("Smart Target Nearest Bias", Group = "15 · Advanced Control", DefaultValue = 0.65, MinValue = 0.20, MaxValue = 1.0, Step = 0.05)]
+        public double SmartTargetNearestBias { get; set; }
+
+        [Parameter("Require Smart Consensus", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool RequireSmartConsensus { get; set; }
+
+        [Parameter("Smart Strong Setup Quality", Group = "15 · Advanced Control", DefaultValue = 82, MinValue = 60, MaxValue = 99)]
+        public int SmartStrongSetupQuality { get; set; }
+
+        [Parameter("Smart Strong Setup Edge", Group = "15 · Advanced Control", DefaultValue = 10, MinValue = 4, MaxValue = 30)]
+        public int SmartStrongSetupEdge { get; set; }
+
+        [Parameter("Smart Flip Confirmation Bars", Group = "15 · Advanced Control", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
+        public int SmartFlipConfirmationBars { get; set; }
+
+        [Parameter("Allow Smart Soft Gate", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowSmartSoftGate { get; set; }
+
+        [Parameter("Fast Reversal Minimum Quality", Group = "15 · Advanced Control", DefaultValue = 74, MinValue = 50, MaxValue = 95)]
+        public int FastReversalMinimumQuality { get; set; }
+
+        [Parameter("Fast Reversal Lookback Bars", Group = "15 · Advanced Control", DefaultValue = 6, MinValue = 3, MaxValue = 15)]
+        public int FastReversalLookbackBars { get; set; }
+
+        [Parameter("Fast Reversal Minimum Zone Quality", Group = "15 · Advanced Control", DefaultValue = 60, MinValue = 40, MaxValue = 90)]
+        public int FastReversalMinimumZoneQuality { get; set; }
+
+        [Parameter("Allow Fast M5 Reversal Before M15", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool AllowFastM5ReversalBeforeM15 { get; set; }
+
+        [Parameter("Retest Lookback Bars", Group = "15 · Advanced Control", DefaultValue = 8, MinValue = 3, MaxValue = 30)]
+        public int RetestLookbackBars { get; set; }
+
+        [Parameter("Retest Max Bars After Displacement", Group = "15 · Advanced Control", DefaultValue = 6, MinValue = 1, MaxValue = 20)]
+        public int RetestMaxBarsAfterDisplacement { get; set; }
+
+        [Parameter("Retest Zone Tolerance ATR", Group = "15 · Advanced Control", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 1)]
+        public double RetestZoneToleranceAtr { get; set; }
+
+        [Parameter("Retest Rejection Body ATR", Group = "15 · Advanced Control", DefaultValue = 0.12, MinValue = 0.02, MaxValue = 1)]
+        public double RetestRejectionBodyAtr { get; set; }
+
+        [Parameter("Require Retest Close Confirmation", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool RequireRetestCloseConfirmation { get; set; }
+
+        [Parameter("Use Extended Liquidity Map", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseExtendedLiquidityMap { get; set; }
+
+        [Parameter("Use Session Liquidity Targets", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool UseSessionLiquidityTargets { get; set; }
+
+        [Parameter("Liquidity Target Minimum Score", Group = "15 · Advanced Control", DefaultValue = 72, MinValue = 40, MaxValue = 100)]
+        public int LiquidityTargetMinimumScore { get; set; }
+
+        [Parameter("Target Obstacle Buffer ATR", Group = "15 · Advanced Control", DefaultValue = 0.10, MinValue = 0.01, MaxValue = 1)]
+        public double TargetObstacleBufferAtr { get; set; }
+
+        [Parameter("Require Obstacle Free TP1", Group = "15 · Advanced Control", DefaultValue = true)]
+        public bool RequireObstacleFreeTp1 { get; set; }
+
         // ============================================================
         // RUNTIME MODELS
         // ============================================================
@@ -1087,6 +1267,13 @@ namespace cAlgo
         private readonly Dictionary<int, int> _directionWins =
             new Dictionary<int, int>();
 
+        private DateTime _lastBrokerModifyUtc = DateTime.MinValue;
+        private int _lastEventGuardM5 = -1;
+        private int _lastRestrictionM5 = -1;
+        private int _lastSmartDecisionAlertM5 = -1;
+        private int _lastHighConfidenceM5 = -1;
+        private int _lastHistoricalHostBar = -1;
+
         // ============================================================
         // LIFECYCLE
         // ============================================================
@@ -1117,8 +1304,11 @@ namespace cAlgo
 
         public override void Calculate(int index)
         {
-            if (!IsLastBar || Bars == null)
+            if (!IsLastBar ||
+                Bars == null)
                 return;
+
+            RemoveExpiredPopup();
 
             if (!HasEnoughData())
             {
@@ -1127,134 +1317,290 @@ namespace cAlgo
                 return;
             }
 
-            RemoveExpiredPopup();
+            int closedM5 =
+                Math.Max(
+                    1,
+                    _m5Bars.Count - 2);
 
-            int closedM5 = _m5Bars.Count - 2;
             if (closedM5 < 30)
             {
-                _status = "WAITING FOR CLOSED M5";
+                _status =
+                    "WAITING FOR CLOSED M5";
                 RenderPanel();
                 return;
             }
 
-            DateTime reference = _m5Bars.OpenTimes[_m5Bars.Count - 1];
+            DateTime reference =
+                _m5Bars.OpenTimes[
+                    _m5Bars.Count - 1];
 
-            int m1Index =
-                ClosedIndex(
-                    _m1Bars,
-                    reference);
+            bool newClosedBar =
+                closedM5 !=
+                _lastEvaluatedM5;
 
-            _m1Frame =
-                m1Index >= 30
-                    ? AnalyzeFrame(
-                        _m1Bars,
-                        m1Index)
-                    : null;
-
-            int m15Index = ClosedIndex(_m15Bars, reference);
-            int m30Index = ClosedIndex(_m30Bars, reference);
-            int h1Index = ClosedIndex(_h1Bars, reference);
-            int h4Index = ClosedIndex(_h4Bars, reference);
-            int d1Index = ClosedIndex(_d1Bars, reference);
-            int w1Index = ClosedIndex(_w1Bars, reference);
-
-            if (m15Index < 30 || m30Index < 30 || h1Index < 30 || h4Index < 30)
+            // Expensive MTF/structure calculation runs exactly once per newly
+            // closed M5 bar. Live price management remains tick responsive.
+            if (newClosedBar)
             {
-                _status = "WAITING FOR MTF DATA";
-                RenderPanel();
-                return;
-            }
+                int m1Index =
+                    ClosedIndex(
+                        _m1Bars,
+                        reference);
 
-            int m1Index = ClosedIndex(_m1Bars, reference);
+                int m15Index =
+                    ClosedIndex(
+                        _m15Bars,
+                        reference);
 
-            _m1Frame =
-                m1Index >= 30
-                    ? AnalyzeFrame(_m1Bars, m1Index)
-                    : null;
+                int m30Index =
+                    ClosedIndex(
+                        _m30Bars,
+                        reference);
 
-            _m5Frame = AnalyzeFrame(_m5Bars, closedM5);
-            _m15Frame = AnalyzeFrame(_m15Bars, m15Index);
-            _m30Frame = AnalyzeFrame(_m30Bars, m30Index);
-            _h1Frame = AnalyzeFrame(_h1Bars, h1Index);
-            _h4Frame = AnalyzeFrame(_h4Bars, h4Index);
-            _d1Frame = d1Index >= 10 ? AnalyzeFrame(_d1Bars, d1Index) : null;
-            _w1Frame = w1Index >= 10 ? AnalyzeFrame(_w1Bars, w1Index) : null;
+                int h1Index =
+                    ClosedIndex(
+                        _h1Bars,
+                        reference);
 
-            EvaluateActivePlan(closedM5);
+                int h4Index =
+                    ClosedIndex(
+                        _h4Bars,
+                        reference);
 
-            _decision =
-                BuildDecision(
-                    index,
-                    closedM5,
-                    reference);
+                int d1Index =
+                    ClosedIndex(
+                        _d1Bars,
+                        reference);
 
-            _prediction =
-                BuildEarlyPrediction(
+                int w1Index =
+                    ClosedIndex(
+                        _w1Bars,
+                        reference);
+
+                if (m15Index < 30 ||
+                    m30Index < 30 ||
+                    h1Index < 30 ||
+                    h4Index < 30)
+                {
+                    _status =
+                        "WAITING FOR MTF DATA";
+                    RenderPanel();
+                    return;
+                }
+
+                _m1Frame =
+                    m1Index >= 30
+                        ? AnalyzeFrame(
+                            _m1Bars,
+                            m1Index)
+                        : null;
+
+                _m5Frame =
+                    AnalyzeFrame(
+                        _m5Bars,
+                        closedM5);
+
+                _m15Frame =
+                    AnalyzeFrame(
+                        _m15Bars,
+                        m15Index);
+
+                _m30Frame =
+                    AnalyzeFrame(
+                        _m30Bars,
+                        m30Index);
+
+                _h1Frame =
+                    AnalyzeFrame(
+                        _h1Bars,
+                        h1Index);
+
+                _h4Frame =
+                    AnalyzeFrame(
+                        _h4Bars,
+                        h4Index);
+
+                _d1Frame =
+                    d1Index >= 10
+                        ? AnalyzeFrame(
+                            _d1Bars,
+                            d1Index)
+                        : null;
+
+                _w1Frame =
+                    w1Index >= 10
+                        ? AnalyzeFrame(
+                            _w1Bars,
+                            w1Index)
+                        : null;
+
+                _decision =
+                    SmartUseClosedBarDecision
+                        ? BuildDecision(
+                            index,
+                            closedM5,
+                            reference)
+                        : BuildDecision(
+                            index,
+                            Math.Max(
+                                1,
+                                _m5Bars.Count - 1),
+                            reference);
+
+                _prediction =
+                    BuildEarlyPrediction(
+                        closedM5);
+
+                RenderPredictionObjects(
+                    _prediction,
                     closedM5);
 
+                EmitContextAlerts(
+                    closedM5);
+
+                if (_decision != null)
+                {
+                    if (AlertOnHighConfidenceEntry &&
+                        _decision.Confidence >=
+                        HighConfidenceThreshold &&
+                        _lastHighConfidenceM5 !=
+                        closedM5)
+                    {
+                        SendUnifiedAlert(
+                            "HIGH|" +
+                            closedM5,
+                            "CFIP CLEAN30 HIGH CONFIDENCE | " +
+                            (_decision.Direction == 1
+                                ? "BUY"
+                                : "SELL") +
+                            " | CONF " +
+                            _decision.Confidence,
+                            _decision.Direction,
+                            true);
+
+                        _lastHighConfidenceM5 =
+                            closedM5;
+                    }
+
+                    if (!_decision.EntryAllowed &&
+                        AlertOnEntryRestriction &&
+                        _lastRestrictionM5 !=
+                        closedM5 &&
+                        !string.IsNullOrWhiteSpace(
+                            _decision.BlockReason))
+                    {
+                        SendUnifiedAlert(
+                            "RESTRICT|" +
+                            closedM5 +
+                            "|" +
+                            _decision.BlockReason,
+                            "CFIP CLEAN30 ENTRY BLOCKED | " +
+                            _decision.BlockReason,
+                            _decision.Direction,
+                            false);
+
+                        _lastRestrictionM5 =
+                            closedM5;
+                    }
+
+                    if (AlertOnSmartDecision &&
+                        _decision.EntryAllowed &&
+                        _decision.SmartQuality >=
+                        SmartStrongSetupQuality &&
+                        _decision.Edge >=
+                        SmartStrongSetupEdge &&
+                        _lastSmartDecisionAlertM5 !=
+                        closedM5)
+                    {
+                        SendUnifiedAlert(
+                            "SMART|" +
+                            closedM5,
+                            "CFIP CLEAN30 SMART DECISION | " +
+                            (_decision.Direction == 1
+                                ? "BUY"
+                                : "SELL") +
+                            " | Q " +
+                            _decision.SmartQuality +
+                            " | CONF " +
+                            _decision.Confidence,
+                            _decision.Direction,
+                            true);
+
+                        _lastSmartDecisionAlertM5 =
+                            closedM5;
+                    }
+                }
+
+                if (_plan == null &&
+                    _decision != null &&
+                    _decision.EntryAllowed &&
+                    ShouldCreatePlan(
+                        closedM5))
+                {
+                    Plan plan =
+                        BuildPlan(
+                            closedM5,
+                            _decision.Direction);
+
+                    if (plan != null)
+                        ActivatePlan(plan);
+                }
+
+                _lastEvaluatedM5 =
+                    closedM5;
+
+                if (ShowHistoricalSignals)
+                {
+                    int hostBar =
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                Bars.Count - 1,
+                                index));
+
+                    if (_lastHistoricalHostBar !=
+                        hostBar)
+                    {
+                        RenderHistoricalSignals();
+                        _lastHistoricalHostBar =
+                            hostBar;
+                    }
+                }
+                else
+                {
+                    RemoveHistoricalObjects();
+                    _lastHistoricalHostBar =
+                        -1;
+                }
+            }
+
+            // Tick-level path: reaction and active plan management remain live.
             _reaction =
                 BuildReaction();
 
-            RenderPredictionObjects(
-                _prediction,
+            EvaluateActivePlan(
                 closedM5);
-
-            EmitContextAlerts(
-                closedM5);
-
-            if (AlertOnHighConfidenceEntry &&
-                _decision != null &&
-                _decision.Confidence >=
-                HighConfidenceThreshold &&
-                _lastHighConfidenceM5 !=
-                closedM5)
-            {
-                SendUnifiedAlert(
-                    "HIGH|" +
-                    closedM5,
-                    "CFIP CLEAN30 HIGH CONFIDENCE | " +
-                    (_decision.Direction == 1
-                        ? "BUY"
-                        : "SELL") +
-                    " | CONF " +
-                    _decision.Confidence,
-                    _decision.Direction,
-                    true);
-
-                _lastHighConfidenceM5 =
-                    closedM5;
-            }
-
-            if (_plan == null &&
-                _decision != null &&
-                _decision.EntryAllowed &&
-                ShouldCreatePlan(closedM5))
-            {
-                Plan plan = BuildPlan(closedM5, _decision.Direction);
-                if (plan != null)
-                    ActivatePlan(plan);
-            }
 
             if (_plan != null)
-            {
                 RenderPlan();
-            }
             else
-            {
-                RenderWatchAndReaction(index, closedM5);
-            }
+                RenderWatchAndReaction(
+                    index,
+                    closedM5);
 
-            TryAutoTrade(closedM5);
+            TryAutoTrade(
+                closedM5);
+
             TryAggressiveAutoTrade(
                 closedM5);
+
             ProtectBrokerPositions(
                 closedM5);
-            RenderPanel();
 
-            if (ShowHistoricalSignals)
-                RenderHistoricalSignals();
-            else
-                RemoveHistoricalObjects();
+            MonitorOutcome(
+                closedM5);
+
+            RenderPanel();
         }
 
         private bool HasEnoughData()
@@ -1810,6 +2156,28 @@ namespace cAlgo
                 else if (pd == -1)
                     sell += 6;
 
+                if (_m1Frame != null)
+                {
+                    if (_m1Frame.Direction == 1)
+                        buy += 3;
+
+                    if (_m1Frame.Direction == -1)
+                        sell += 3;
+                }
+            }
+
+            if (EnableSmartDecisionEngine)
+            {
+                int pd =
+                    PremiumDiscountBias(
+                        _m5Bars,
+                        closedM5);
+
+                if (pd == 1)
+                    buy += 6;
+                else if (pd == -1)
+                    sell += 6;
+
                 if (UseM1Trigger &&
                     _m1Frame != null)
                 {
@@ -1840,15 +2208,40 @@ namespace cAlgo
                     sell += 3;
             }
 
-            double total =
+            double temperature =
                 Math.Max(
-                    1,
-                    buy + sell);
+                    1.0,
+                    SmartScoreTemperature);
+
+            double centered =
+                (buy - sell) /
+                temperature;
+
+            double expBuy =
+                Math.Exp(
+                    Clamp(
+                        centered,
+                        -12,
+                        12));
+
+            double expSell =
+                Math.Exp(
+                    Clamp(
+                        -centered,
+                        -12,
+                        12));
+
+            double softTotal =
+                Math.Max(
+                    1e-9,
+                    expBuy + expSell);
 
             int buyShare =
                 ClampInt(
                     (int)Math.Round(
-                        100.0 * buy / total),
+                        100.0 *
+                        expBuy /
+                        softTotal),
                     0,
                     100);
 
@@ -1913,6 +2306,31 @@ namespace cAlgo
                 CalibratedConfidence(
                     d.Confidence,
                     d.Direction);
+
+            if (HigherTfPenalty > 0)
+            {
+                bool h1Against =
+                    _h1Frame != null &&
+                    _h1Frame.Direction != 0 &&
+                    _h1Frame.Direction !=
+                    d.Direction;
+
+                bool h4Against =
+                    _h4Frame != null &&
+                    _h4Frame.Direction != 0 &&
+                    _h4Frame.Direction !=
+                    d.Direction;
+
+                if (h1Against || h4Against)
+                {
+                    d.Confidence =
+                        ClampInt(
+                            d.Confidence -
+                            HigherTfPenalty,
+                            0,
+                            100);
+                }
+            }
 
             d.RetestQuality =
                 RetestQuality(
@@ -2108,9 +2526,16 @@ namespace cAlgo
 
             if (RequireCoreAgreement)
             {
+                bool m15Neutral =
+                    _m15Frame != null &&
+                    _m15Frame.Direction == 0;
+
                 if (d.Direction == 1 &&
                     (_m5Frame.Direction != 1 ||
-                     _m15Frame.Direction != 1))
+                     (!m15Neutral &&
+                      _m15Frame.Direction != 1) ||
+                     (m15Neutral &&
+                      !AllowM15NeutralPullback)))
                 {
                     reason = "CORE ALIGNMENT";
                     return false;
@@ -2118,11 +2543,43 @@ namespace cAlgo
 
                 if (d.Direction == -1 &&
                     (_m5Frame.Direction != -1 ||
-                     _m15Frame.Direction != -1))
+                     (!m15Neutral &&
+                      _m15Frame.Direction != -1) ||
+                     (m15Neutral &&
+                      !AllowM15NeutralPullback)))
                 {
                     reason = "CORE ALIGNMENT";
                     return false;
                 }
+            }
+
+            if (UseM5Confirmation &&
+                ((d.Direction == 1 &&
+                  _m5Frame.Direction != 1) ||
+                 (d.Direction == -1 &&
+                  _m5Frame.Direction != -1)))
+            {
+                reason = "M5 CONFIRMATION";
+                return false;
+            }
+
+            if (M5OnlyConfirmedTrigger &&
+                !EntryTriggerReady(
+                    _m5Bars,
+                    closedM5,
+                    d.Direction))
+            {
+                reason = "M5 TRIGGER";
+                return false;
+            }
+
+            if (UseM1Trigger &&
+                _m1Frame != null &&
+                _m1Frame.Direction != 0 &&
+                _m1Frame.Direction != d.Direction)
+            {
+                reason = "M1 MISALIGNMENT";
+                return false;
             }
             
             if (UseM5Confirmation &&
@@ -2146,7 +2603,11 @@ namespace cAlgo
 
             if (UseSmartEntryQualityFilter &&
                 d.SmartQuality <
-                SmartQualityThreshold)
+                Math.Max(
+                    SmartQualityThreshold,
+                    EnableSmartDecisionEngine
+                        ? SmartMinimumConsensusFloor()
+                        : 0))
             {
                 reason = "SMART QUALITY";
                 return false;
@@ -2171,7 +2632,8 @@ namespace cAlgo
                 return false;
             }
 
-            if (RequireEntryLocationConfluence &&
+            if (UseZoneConfluence &&
+                RequireEntryLocationConfluence &&
                 EntryLocationQuality(
                     _m5Bars,
                     closedM5,
@@ -2194,7 +2656,8 @@ namespace cAlgo
                 return false;
             }
 
-            if (NoTradeRegimeBlocked(
+            if (UseRegimeNoTradeGuard &&
+                NoTradeRegimeBlocked(
                     d.Regime,
                     d.SmartQuality))
             {
@@ -2293,7 +2756,8 @@ namespace cAlgo
                 return false;
             }
 
-            if (NewsBlocked(
+            if (UseNewsEventGuard &&
+                NewsBlocked(
                     DateTime.UtcNow,
                     out reason))
                 return false;
@@ -2674,8 +3138,19 @@ namespace cAlgo
 
             int trigger =
                 direction == 1
-                    ? BullTriggerScore(bars, index)
-                    : BearTriggerScore(bars, index);
+                    ? BullTriggerScore(
+                        bars,
+                        index)
+                    : BearTriggerScore(
+                        bars,
+                        index);
+
+            int requiredTrigger =
+                UsePrecisionExecutionModel
+                    ? Math.Max(
+                        LiveTriggerScore,
+                        PrecisionTriggerScore)
+                    : LiveTriggerScore;
 
             bool breakReady =
                 direction == 1
@@ -2855,6 +3330,26 @@ namespace cAlgo
                         ? Symbol.Ask
                         : Symbol.Bid);
 
+            if (AvoidLateEntry)
+            {
+                double referenceClose =
+                    _m5Bars.ClosePrices[
+                        closedM5];
+
+                double executionAtr =
+                    Atr(
+                        _m5Bars,
+                        closedM5);
+
+                if (executionAtr > 0 &&
+                    Math.Abs(
+                        entry -
+                        referenceClose) >
+                    executionAtr *
+                    MaximumEntryExtensionAtr)
+                    return null;
+            }
+
             double atr =
                 Atr(
                     _m5Bars,
@@ -2899,8 +3394,14 @@ namespace cAlgo
                     entry -
                     stop);
 
-            if (risk < atr * MinimumSlAtr ||
-                risk > atr * MaximumSlAtr)
+            if (risk <
+                    atr *
+                    MinimumSlAtr ||
+                risk >
+                    atr *
+                    Math.Min(
+                        MaximumSlAtr,
+                        MaximumStructuralStopAtr))
                 return null;
 
             List<Level> candidates =
@@ -2958,6 +3459,21 @@ namespace cAlgo
                     direction,
                     entry,
                     tp1))
+                return null;
+
+            if (UseRRFilter &&
+                Math.Abs(
+                    tp1 -
+                    entry) /
+                Math.Max(
+                    Symbol.PipSize,
+                    risk) <
+                MinimumTradeRR)
+                return null;
+
+            if (RequireHtfTargets &&
+                !HasAnyHtfTargetLevel(
+                    candidates))
                 return null;
 
             if (RejectTargetObstacle &&
@@ -3210,7 +3726,20 @@ namespace cAlgo
                 atr *
                 Math.Max(
                     0.02,
-                    TargetClearanceAtr);
+                    StopBufferAtr);
+
+            if (source.IndexOf(
+                    "HTF",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                buffer =
+                    Math.Max(
+                        buffer,
+                        atr *
+                        Math.Max(
+                            0.02,
+                            HtfStopBufferAtr));
+            }
 
             best =
                 direction == 1
@@ -3871,6 +4400,25 @@ namespace cAlgo
                             Symbol.PipSize,
                             risk);
 
+                    if (candidate.Age >
+                        MaximumSetupAgeBars)
+                        continue;
+
+                    if ((candidate.Timeframe == "H1" ||
+                         candidate.Timeframe == "H4" ||
+                         candidate.Timeframe == "D1" ||
+                         candidate.Timeframe == "W1"))
+                    {
+                        if (!UseHigherTfLiquidityTargets)
+                            continue;
+
+                        if (rr <
+                            Math.Max(
+                                requiredRR[stage],
+                                MinimumHtfTargetRR))
+                            continue;
+                    }
+
                     if (rr < requiredRR[stage])
                         continue;
 
@@ -3901,8 +4449,37 @@ namespace cAlgo
                             atr))
                         continue;
 
+                    double distance =
+                        Math.Abs(
+                            candidate.Price -
+                            entry);
+
+                    double selectionScore =
+                        candidate.Score *
+                        (1.0 +
+                         SmartTargetNearestBias /
+                         (1.0 +
+                          distance /
+                          Math.Max(
+                              Symbol.PipSize,
+                              atr)));
+
+                    double bestScore =
+                        best == null
+                            ? double.MinValue
+                            : best.Score *
+                              (1.0 +
+                               SmartTargetNearestBias /
+                               (1.0 +
+                                Math.Abs(
+                                    best.Price -
+                                    entry) /
+                                Math.Max(
+                                    Symbol.PipSize,
+                                    atr)));
+
                     if (best == null ||
-                        candidate.Score > best.Score)
+                        selectionScore > bestScore)
                         best = candidate;
                 }
 
@@ -3926,6 +4503,9 @@ namespace cAlgo
             if (selected != null &&
                 position < selected.Count)
                 return selected[position].Price;
+
+            if (!AllowSyntheticTargetFallback)
+                return 0;
 
             return NormalizePrice(
                 direction == 1
@@ -4156,7 +4736,8 @@ namespace cAlgo
                 _slHit = true;
                 _losses++;
 
-                if (AlertOnLevelHit)
+                if (EnableLevelHitAlerts &&
+                    AlertOnSl)
                 {
                     SendUnifiedAlert(
                         "SL|" +
@@ -4177,7 +4758,8 @@ namespace cAlgo
             {
                 _tp1Hit = 1;
 
-                if (AlertOnLevelHit)
+                if (EnableLevelHitAlerts &&
+                    AlertOnTp1)
                 {
                     SendUnifiedAlert(
                         "TP1|" +
@@ -4194,7 +4776,8 @@ namespace cAlgo
             {
                 _tp2Hit = 1;
 
-                if (AlertOnLevelHit)
+                if (EnableLevelHitAlerts &&
+                    AlertOnTp2)
                 {
                     SendUnifiedAlert(
                         "TP2|" +
@@ -4211,7 +4794,8 @@ namespace cAlgo
             {
                 _tp3Hit = 1;
 
-                if (AlertOnLevelHit)
+                if (EnableLevelHitAlerts &&
+                    AlertOnTp3)
                 {
                     SendUnifiedAlert(
                         "TP3|" +
@@ -4229,7 +4813,8 @@ namespace cAlgo
                 _tp4Hit = 1;
                 _wins++;
 
-                if (AlertOnLevelHit)
+                if (EnableLevelHitAlerts &&
+                    AlertOnTp4)
                 {
                     SendUnifiedAlert(
                         "TP4|" +
@@ -4345,8 +4930,12 @@ namespace cAlgo
                             be);
             }
 
-            if (EnableStructuralSlRepricing &&
-                peakRR >= SlRepriceStartRR)
+            if ((EnableStructuralSlRepricing ||
+                 EnableDynamicSlTrail) &&
+                peakRR >=
+                Math.Max(
+                    SlRepriceStartRR,
+                    SmartTrailMinimumRR))
             {
                 double atr =
                     Atr(
@@ -4370,7 +4959,9 @@ namespace cAlgo
                         atr *
                         Math.Max(
                             0.10,
-                            SlRepriceBreathingAtr);
+                            Math.Max(
+                                SlRepriceBreathingAtr,
+                                TrailDistanceAtr));
 
                     if (_plan.Direction == 1 &&
                         structural <=
@@ -4425,7 +5016,9 @@ namespace cAlgo
                     closedM5) *
                 Math.Max(
                     0.01,
-                    SlRepriceStepAtr);
+                    Math.Max(
+                        SlRepriceStepAtr,
+                        TrailStepAtr));
 
             if (!BetterStop(
                     _plan.Direction,
@@ -4476,7 +5069,10 @@ namespace cAlgo
                     if (_tp1Hit == 0 &&
                         level.Price >
                         _plan.Tp1 +
-                        atr * 0.25)
+                        atr *
+                        Math.Max(
+                            0.05,
+                            TargetUpdateStepAtr))
                     {
                         _plan.Tp1 =
                             level.Price;
@@ -5013,7 +5609,9 @@ namespace cAlgo
 
                 double tolerance =
                     atr *
-                    ZoneProximityAtr;
+                    (UseRetestQualityGate
+                        ? RetestZoneToleranceAtr
+                        : ZoneProximityAtr);
 
                 if (price <
                     best.Low -
@@ -5642,7 +6240,9 @@ namespace cAlgo
 
             if (body >=
                 atr *
-                MinimumTriggerBodyAtr)
+                (UseRetestQualityGate
+                    ? RetestRejectionBodyAtr
+                    : MinimumTriggerBodyAtr))
                 q += 10;
 
             if ((direction == 1 &&
@@ -6027,14 +6627,57 @@ namespace cAlgo
         private bool ShouldCreatePlan(
             int closedM5)
         {
-            if (_plan != null ||
-                _decision == null ||
+            if (BlockNewSignalWhileActive &&
+                _plan != null)
+                return false;
+
+            if (_decision == null ||
                 !_decision.EntryAllowed)
+                return false;
+
+            if (_lastSignalM5 >= 0 &&
+                closedM5 -
+                _lastSignalM5 <
+                Math.Max(
+                    CooldownBars,
+                    Math.Max(
+                        CooldownM5Bars,
+                        ExitReentryCooldownM5)))
                 return false;
 
             return
                 _lastSignalM5 !=
                 closedM5;
+        }
+
+        private bool HasAnyHtfTargetLevel(
+            List<Level> candidates)
+        {
+            if (candidates == null)
+                return false;
+
+            for (int i = 0;
+                 i < candidates.Count;
+                 i++)
+            {
+                string tf =
+                    candidates[i].Timeframe;
+
+                if (tf == "H1" ||
+                    tf == "H4" ||
+                    tf == "D1" ||
+                    tf == "W1")
+                    return true;
+            }
+
+            return false;
+        }
+
+        private int SmartMinimumConsensusFloor()
+        {
+            return Math.Max(
+                40,
+                SmartConsensusThreshold - 12);
         }
 
         // ============================================================
@@ -6097,7 +6740,8 @@ namespace cAlgo
                     ShowTP4);
             }
 
-            if (ShowLevelPriceLabels)
+            if (ShowLevelPriceLabels ||
+                ShowSignalLabels)
                 RenderPlanLabels();
             else
                 RemovePlanLabels();
@@ -6152,7 +6796,8 @@ namespace cAlgo
         private void RenderPlanLabels()
         {
             if (_plan == null ||
-                !ShowLevelPriceLabels ||
+                (!ShowLevelPriceLabels &&
+                 !ShowSignalLabels) ||
                 Bars == null ||
                 Bars.Count < 2)
                 return;
@@ -6502,10 +7147,17 @@ namespace cAlgo
 
             double offset =
                 Math.Max(
-                    Symbol.PipSize * 2,
-                    atr * 0.15);
+                    Symbol.PipSize *
+                    Math.Max(
+                        0.5,
+                        MinimumArrowOffsetPips),
+                    atr *
+                    Math.Max(
+                        0.02,
+                        ArrowOffsetAtr));
 
-            if (ShowSignalArrow)
+            if (ShowSignalArrow &&
+                ShowEarlyArrow)
             {
                 DrawIcon(
                     P + "WATCH_ARROW",
@@ -6523,7 +7175,8 @@ namespace cAlgo
                         : SellArrowColor);
             }
 
-            if (_reaction != null &&
+            if (ShowReactionArrow &&
+                _reaction != null &&
                 _reaction.EntryAllowed)
             {
                 DrawIcon(
@@ -6550,6 +7203,7 @@ namespace cAlgo
                         : SellArrowColor);
 
                 if (AlertOnReaction &&
+                    AlertOnLiveReaction &&
                     (_lastReactionAlertBar() !=
                      _m5Bars.Count - 1))
                 {
@@ -6643,6 +7297,15 @@ namespace cAlgo
 
             Chart.RemoveObject(
                 P + "REACTION_ARROW");
+
+            Chart.RemoveObject(
+                P + "BOS_MARKER");
+
+            Chart.RemoveObject(
+                P + "MSS_MARKER");
+
+            Chart.RemoveObject(
+                P + "SWEEP_MARKER");
         }
 
         private void ClearPlanObjects()
@@ -7054,9 +7717,12 @@ namespace cAlgo
                 " | " +
                 Bars.TimeFrame);
 
-            lines.Add(
-                "STATUS  " +
-                _status);
+            if (ShowEngineStatus)
+            {
+                lines.Add(
+                    "STATUS  " +
+                    _status);
+            }
 
             if (_decision != null)
             {
@@ -7246,11 +7912,16 @@ namespace cAlgo
                 "H4  " +
                 FrameText(_h4Frame));
 
-            lines.Add(
-                "OUTCOME  W" +
-                _wins +
-                " | L" +
-                _losses);
+            if (ShowOutcomeDiagnostics)
+            {
+                lines.Add(
+                    "OUTCOME  W" +
+                    _wins +
+                    " | L" +
+                    _losses +
+                    " | CAL " +
+                    CalibrationText());
+            }
 
             if (ShowOutcomeDiagnostics)
             {
@@ -8005,51 +8676,7 @@ namespace cAlgo
             }
         }
 
-        private int PremiumDiscountBias(
-            Bars bars,
-            int index)
-        {
-            if (!UsePremiumDiscount ||
-                bars == null ||
-                index < 10)
-                return 0;
-
-            double high =
-                Highest(
-                    bars,
-                    Math.Max(
-                        0,
-                        index -
-                        StructureLookback),
-                    index);
-
-            double low =
-                Lowest(
-                    bars,
-                    Math.Max(
-                        0,
-                        index -
-                        StructureLookback),
-                    index);
-
-            if (high <= low)
-                return 0;
-
-            double midpoint =
-                (high + low) * 0.5;
-
-            if (bars.ClosePrices[index] <
-                midpoint)
-                return 1;
-
-            if (bars.ClosePrices[index] >
-                midpoint)
-                return -1;
-
-            return 0;
-        }
-
-        private int FreshTriggerEvidence(
+                private int FreshTriggerEvidence(
             Bars bars,
             int index,
             int direction)
@@ -8647,6 +9274,29 @@ namespace cAlgo
                 (_m5Frame.StructureBull ||
                  _m5Frame.StructureBear))
             {
+                if (ShowContextEventMarker)
+                {
+                    int bar =
+                        MapM5ToChart(
+                            closedM5,
+                            Bars.Count - 1);
+
+                    DrawIcon(
+                        P + "BOS_MARKER",
+                        _m5Frame.StructureBull
+                            ? ChartIconType.UpArrow
+                            : ChartIconType.DownArrow,
+                        bar,
+                        _m5Frame.StructureBull
+                            ? Bars.LowPrices[bar]
+                            : Bars.HighPrices[bar],
+                        _m5Frame.StructureBull
+                            ? BuyArrowColor
+                            : SellArrowColor);
+                }
+
+                int direction =
+            {
                 int direction =
                     _m5Frame.StructureBull
                         ? 1
@@ -8888,6 +9538,13 @@ namespace cAlgo
                 closedM5)
                 return;
 
+            if ((DateTime.UtcNow -
+                 _lastBrokerModifyUtc).TotalMilliseconds <
+                Math.Max(
+                    100,
+                    BrokerModifyCooldownMs))
+                return;
+
             string label =
                 string.IsNullOrWhiteSpace(
                     ManagedPositionLabel)
@@ -8953,6 +9610,9 @@ namespace cAlgo
 
                     _lastBrokerModifyM5 =
                         closedM5;
+
+                    _lastBrokerModifyUtc =
+                        DateTime.UtcNow;
 
                     break;
                 }
@@ -9136,6 +9796,38 @@ namespace cAlgo
             }
         }
 
+        private void MonitorOutcome(
+            int closedM5)
+        {
+            if (!EnableOutcomeTelemetry ||
+                _plan == null ||
+                OutcomeMaximumM5Bars <= 0)
+                return;
+
+            if (closedM5 -
+                _plan.CreatedM5 <
+                OutcomeMaximumM5Bars)
+                return;
+
+            bool win =
+                _tp1Hit > 0 ||
+                _tp2Hit > 0 ||
+                _tp3Hit > 0 ||
+                _tp4Hit > 0;
+
+            RegisterOutcome(
+                _plan.Direction,
+                win);
+
+            if (win)
+                _wins++;
+            else
+                _losses++;
+
+            _plan = null;
+            RemovePlanObjects();
+        }
+
         // ============================================================
         // HISTORICAL
         // ============================================================
@@ -9193,6 +9885,8 @@ namespace cAlgo
                         Symbol.PipSize * 2,
                         atr * 0.18);
 
+                if (ShowHistoricalArrows)
+                {
                 Chart.DrawIcon(
                     name,
                     frame.Direction == 1
@@ -9207,6 +9901,8 @@ namespace cAlgo
                     frame.Direction == 1
                         ? BuyArrowColor
                         : SellArrowColor);
+
+                }
 
                 _historicalDrawn.Add(name);
                 drawn++;
