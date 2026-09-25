@@ -425,7 +425,7 @@ namespace cAlgo
         [Parameter("Adaptive Structural RR", Group = "Risk", DefaultValue = true)]
         public bool AdaptiveStructuralRR { get; set; }
 
-        [Parameter("Allow Synthetic Target Fallback", Group = "Risk", DefaultValue = false)]
+        [Parameter("Allow Synthetic Target Fallback", Group = "Risk", DefaultValue = true)]
         public bool AllowSyntheticTargetFallback { get; set; }
 
         [Parameter("Maximum Target Extension ATR", Group = "Risk", DefaultValue = 8.00, MinValue = 2.0, MaxValue = 30.0)]
@@ -4212,18 +4212,11 @@ namespace cAlgo
             if (entry <= 0)
                 return false;
 
-            bool planBuilt = EnableSmartDecisionEngine
-                ? TryBuildSmartRiskPlan(
-                    riskBars,
-                    closedIndex,
-                    direction,
-                    entry,
-                    out sl,
-                    out tp1,
-                    out tp2,
-                    out tp3,
-                    out tp4)
-                : TryBuildFallbackRiskPlan(
+            bool planBuilt;
+
+            if (EnableSmartDecisionEngine)
+            {
+                planBuilt = TryBuildSmartRiskPlan(
                     riskBars,
                     closedIndex,
                     direction,
@@ -4233,6 +4226,38 @@ namespace cAlgo
                     out tp2,
                     out tp3,
                     out tp4);
+
+                // Smart structural planning is always first. If a transient/sparse
+                // market produces no usable structural stop/target, do not silently
+                // discard an otherwise valid confirmed signal: use the deterministic
+                // execution-frame risk model as a safety net.
+                if (!planBuilt && AllowExecutionFrameStopFallback)
+                {
+                    planBuilt = TryBuildFallbackRiskPlan(
+                        riskBars,
+                        closedIndex,
+                        direction,
+                        entry,
+                        out sl,
+                        out tp1,
+                        out tp2,
+                        out tp3,
+                        out tp4);
+                }
+            }
+            else
+            {
+                planBuilt = TryBuildFallbackRiskPlan(
+                    riskBars,
+                    closedIndex,
+                    direction,
+                    entry,
+                    out sl,
+                    out tp1,
+                    out tp2,
+                    out tp3,
+                    out tp4);
+            }
 
             if (!planBuilt)
                 return false;
@@ -9019,7 +9044,7 @@ private void UpdateBrokerPositionProtection()
                 0.50,
                 Math.Min(MaximumStructuralStopAtr, Math.Max(0.50, MaximumSlAtr)));
 
-            if (risk <= minimumRisk || risk > maximumRisk)
+            if (risk < minimumRisk || risk > maximumRisk)
                 return false;
 
             List<SmartLevel> targets =
@@ -10778,7 +10803,20 @@ private void UpdateBrokerPositionProtection()
                     distance >= targetDistance - clearance)
                     continue;
 
-                if (level.Score >= SmartTargetQuality + 8)
+                // Raw structural swings are target candidates, not automatic
+                // obstacles. Only opposing zones/liquidity magnets can veto a TP.
+                bool structuralObstacle =
+                    level.Kind == "OPPOSING_FVG" ||
+                    level.Kind == "OPPOSING_OB" ||
+                    level.Kind == "LIQUIDITY_FORECAST" ||
+                    level.Kind == "LIQUIDITY_POOL" ||
+                    level.Kind == "PREVIOUS_DAY_HIGH" ||
+                    level.Kind == "PREVIOUS_DAY_LOW" ||
+                    level.Kind == "PREVIOUS_WEEK_HIGH" ||
+                    level.Kind == "PREVIOUS_WEEK_LOW";
+
+                if (structuralObstacle &&
+                    level.Score >= SmartTargetQuality + 8)
                     return true;
             }
 
