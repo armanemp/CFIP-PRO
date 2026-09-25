@@ -1990,19 +1990,6 @@ namespace cAlgo
                 bearConfidenceOk = bearConfidenceOk ||
                                    (_smartDirection == -1 && _smartQuality >= Math.Min(95, MinimumSmartQuality + 8) && _smartSellShare >= MinimumSmartDirectionShare + 3);
             }
-            bool bullEdgeOk = edge >= engineSmartEdge ||
-                              (bullStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
-                              bullSmartStrong;
-            bool bearEdgeOk = edge >= engineSmartEdge ||
-                              (bearStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
-                              bearSmartStrong;
-            bool bullBiasReady = IsDirectionalBiasReady(1, m5, m15) ||
-                                 (bullStrongOverride &&
-                                  (m5.MssBull || m5.ChochBull || m5.DisplacementBull || m5.LiquidityBull));
-            bool bearBiasReady = IsDirectionalBiasReady(-1, m5, m15) ||
-                                 (bearStrongOverride &&
-                                  (m5.MssBear || m5.ChochBear || m5.DisplacementBear || m5.LiquidityBear));
-
             GetAdaptiveSmartThresholds(
                 _smartRegime,
                 out int engineSmartQuality,
@@ -2024,6 +2011,19 @@ namespace cAlgo
                 _smartQuality >= Math.Max(SmartStrongSetupQuality, engineSmartQuality + 8) &&
                 _smartSellShare >= engineSmartShare &&
                 GetSmartEdge() >= Math.Max(SmartStrongSetupEdge, engineSmartEdge);
+
+            bool bullEdgeOk = edge >= engineSmartEdge ||
+                              (bullStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
+                              bullSmartStrong;
+            bool bearEdgeOk = edge >= engineSmartEdge ||
+                              (bearStrongOverride && edge >= Math.Max(5, engineSmartEdge - 5)) ||
+                              bearSmartStrong;
+            bool bullBiasReady = IsDirectionalBiasReady(1, m5, m15) ||
+                                 (bullStrongOverride &&
+                                  (m5.MssBull || m5.ChochBull || m5.DisplacementBull || m5.LiquidityBull));
+            bool bearBiasReady = IsDirectionalBiasReady(-1, m5, m15) ||
+                                 (bearStrongOverride &&
+                                  (m5.MssBear || m5.ChochBear || m5.DisplacementBear || m5.LiquidityBear));
 
             bool smartBullGate = !EnableSmartDecisionEngine ||
                 (_smartDecision != null &&
