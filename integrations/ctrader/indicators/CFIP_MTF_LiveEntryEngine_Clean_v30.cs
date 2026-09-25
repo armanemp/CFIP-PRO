@@ -889,10 +889,10 @@ namespace cAlgo
         [Parameter("Minimum Smart Direction Share", Group = "22 · Complete Intelligence", DefaultValue = 57, MinValue = 50, MaxValue = 95)]
         public int MinimumSmartDirectionShare { get; set; }
 
-[Parameter("Adaptive Smart Thresholds", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        [Parameter("Adaptive Smart Thresholds", Group = "22 · Complete Intelligence", DefaultValue = true)]
         public bool AdaptiveSmartThresholds { get; set; }
 
-[Parameter("Smart Regime Buffer", Group = "22 · Complete Intelligence", DefaultValue = 6, MinValue = 0, MaxValue = 15)]
+        [Parameter("Smart Regime Buffer", Group = "22 · Complete Intelligence", DefaultValue = 6, MinValue = 0, MaxValue = 15)]
         public int SmartRegimeBuffer { get; set; }
 
         [Parameter("Smart Score Temperature", Group = "22 · Complete Intelligence", DefaultValue = 12.0, MinValue = 1.0, MaxValue = 50.0, Step = 0.5)]
@@ -1089,328 +1089,328 @@ namespace cAlgo
             public int Quality;
         }
 
-[Parameter("Enable Early Prediction", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Enable Early Prediction", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool EnableEarlyPrediction { get; set; }
 
-[Parameter("Minimum Early Confidence", Group = "15 · Early Intelligence", DefaultValue = 56, MinValue = 40, MaxValue = 95)]
+        [Parameter("Minimum Early Confidence", Group = "15 · Early Intelligence", DefaultValue = 56, MinValue = 40, MaxValue = 95)]
         public int MinimumEarlyConfidence { get; set; }
 
-[Parameter("Prediction Lookahead Bars", Group = "15 · Early Intelligence", DefaultValue = 10, MinValue = 2, MaxValue = 30)]
+        [Parameter("Prediction Lookahead Bars", Group = "15 · Early Intelligence", DefaultValue = 10, MinValue = 2, MaxValue = 30)]
         public int PredictionLookaheadBars { get; set; }
 
-[Parameter("Show Prediction Zone", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Show Prediction Zone", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool ShowPredictionZone { get; set; }
 
-[Parameter("Show Prediction Targets", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Show Prediction Targets", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool ShowPredictionTargets { get; set; }
 
-[Parameter("Use Liquidity Forecast", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Use Liquidity Forecast", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool UseLiquidityForecast { get; set; }
 
-[Parameter("Alert On Early Setup", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Alert On Early Setup", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool AlertOnEarlySetup { get; set; }
 
-[Parameter("Alert On BOS", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Alert On BOS", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool AlertOnBos { get; set; }
 
-[Parameter("Alert On MSS / CHOCH", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Alert On MSS / CHOCH", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool AlertOnMssChoch { get; set; }
 
-[Parameter("Alert On Liquidity Sweep", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Alert On Liquidity Sweep", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool AlertOnLiquiditySweep { get; set; }
 
-[Parameter("Enable Outcome Telemetry", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Enable Outcome Telemetry", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool EnableOutcomeTelemetry { get; set; }
 
         [Parameter("Outcome Maximum M5 Bars", Group = "15 · Early Intelligence", DefaultValue = 72, MinValue = 10, MaxValue = 500)]
         public int OutcomeMaximumM5Bars { get; set; }
 
-[Parameter("Enable Confidence Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Enable Confidence Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool EnableConfidenceCalibration { get; set; }
 
-[Parameter("Use Empirical Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Use Empirical Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool UseEmpiricalCalibration { get; set; }
 
-[Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
+        [Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
         public int CalibrationDirectionalMinimumSamples { get; set; }
 
         [Parameter("Calibration Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 5, MinValue = 1, MaxValue = 100)]
         public int CalibrationMinimumSamples { get; set; }
 
-[Parameter("Calibration Max Confidence Adjustment", Group = "15 · Early Intelligence", DefaultValue = 8, MinValue = 0, MaxValue = 20)]
+        [Parameter("Calibration Max Confidence Adjustment", Group = "15 · Early Intelligence", DefaultValue = 8, MinValue = 0, MaxValue = 20)]
         public int CalibrationMaxConfidenceAdjustment { get; set; }
 
-[Parameter("Show Outcome Diagnostics", Group = "15 · Early Intelligence", DefaultValue = true)]
+        [Parameter("Show Outcome Diagnostics", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool ShowOutcomeDiagnostics { get; set; }
 
-[Parameter("Use Smart Entry Quality Filter", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Use Smart Entry Quality Filter", Group = "16 · Accuracy", DefaultValue = true)]
         public bool UseSmartEntryQualityFilter { get; set; }
 
-[Parameter("Smart Quality Threshold", Group = "16 · Accuracy", DefaultValue = 70, MinValue = 40, MaxValue = 95)]
+        [Parameter("Smart Quality Threshold", Group = "16 · Accuracy", DefaultValue = 70, MinValue = 40, MaxValue = 95)]
         public int SmartQualityThreshold { get; set; }
 
-[Parameter("Require Fresh M5 Trigger", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Require Fresh M5 Trigger", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireFreshM5Trigger { get; set; }
 
-[Parameter("Minimum Fresh Trigger Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 8)]
+        [Parameter("Minimum Fresh Trigger Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 8)]
         public int MinimumFreshTriggerEvidence { get; set; }
 
-[Parameter("Use False Signal Guard", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Use False Signal Guard", Group = "16 · Accuracy", DefaultValue = true)]
         public bool UseFalseSignalGuard { get; set; }
 
-[Parameter("False Signal Adverse R", Group = "16 · Accuracy", DefaultValue = 1.10, MinValue = 0.25, MaxValue = 5)]
+        [Parameter("False Signal Adverse R", Group = "16 · Accuracy", DefaultValue = 1.10, MinValue = 0.25, MaxValue = 5)]
         public double FalseSignalAdverseR { get; set; }
 
         [Parameter("False Signal Watch Bars", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 12)]
         public int FalseSignalWatchBars { get; set; }
 
-[Parameter("Invalidate On False Signal", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Invalidate On False Signal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool InvalidateOnFalseSignal { get; set; }
 
-[Parameter("Enable Setup Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Enable Setup Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableSetupInvalidation { get; set; }
 
-[Parameter("Invalidation Structure ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.50)]
+        [Parameter("Invalidation Structure ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.50)]
         public double InvalidationStructureAtr { get; set; }
 
-[Parameter("Invalidation Zone Close ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.75)]
+        [Parameter("Invalidation Zone Close ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.75)]
         public double InvalidationZoneCloseAtr { get; set; }
 
-[Parameter("Invalidation Max Adverse R", Group = "16 · Accuracy", DefaultValue = 0.75, MinValue = 0.30, MaxValue = 2.00, Step = 0.05)]
+        [Parameter("Invalidation Max Adverse R", Group = "16 · Accuracy", DefaultValue = 0.75, MinValue = 0.30, MaxValue = 2.00, Step = 0.05)]
         public double InvalidationMaxAdverseR { get; set; }
 
-[Parameter("Require MTF Flip For Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Require MTF Flip For Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireMtfFlipForInvalidation { get; set; }
 
-[Parameter("Allow Reversal Against Stale HTF", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Allow Reversal Against Stale HTF", Group = "16 · Accuracy", DefaultValue = true)]
         public bool AllowReversalAgainstStaleHtf { get; set; }
 
-[Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableLiveStructuralReversal { get; set; }
 
         [Parameter("Live Reversal Minimum Confidence", Group = "16 · Accuracy", DefaultValue = 68, MinValue = 50, MaxValue = 95)]
         public int LiveReversalMinimumConfidence { get; set; }
 
-[Parameter("Live Reversal Minimum Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 8)]
+        [Parameter("Live Reversal Minimum Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 8)]
         public int LiveReversalMinimumEvidence { get; set; }
 
-[Parameter("Live Reversal Structural Score", Group = "16 · Accuracy", DefaultValue = 72, MinValue = 50, MaxValue = 100)]
+        [Parameter("Live Reversal Structural Score", Group = "16 · Accuracy", DefaultValue = 72, MinValue = 50, MaxValue = 100)]
         public int LiveReversalStructuralScore { get; set; }
 
-[Parameter("Require Reversal Force", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Require Reversal Force", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireReversalForce { get; set; }
 
-[Parameter("Opposite Signal Cooldown M5", Group = "16 · Accuracy", DefaultValue = 5, MinValue = 0, MaxValue = 50)]
+        [Parameter("Opposite Signal Cooldown M5", Group = "16 · Accuracy", DefaultValue = 5, MinValue = 0, MaxValue = 50)]
         public int OppositeSignalCooldownM5 { get; set; }
 
-[Parameter("Prevent Rapid Direction Flip", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Prevent Rapid Direction Flip", Group = "16 · Accuracy", DefaultValue = true)]
         public bool PreventRapidDirectionFlip { get; set; }
 
-[Parameter("Require M15 Reversal For Opposite", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Require M15 Reversal For Opposite", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireM15ReversalForOpposite { get; set; }
 
-[Parameter("Allow Opposite While Active", Group = "16 · Accuracy", DefaultValue = false)]
+        [Parameter("Allow Opposite While Active", Group = "16 · Accuracy", DefaultValue = false)]
         public bool AllowOppositeWhileActive { get; set; }
 
-[Parameter("Minimum Opposite M5 Structure", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 6)]
+        [Parameter("Minimum Opposite M5 Structure", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 6)]
         public int MinimumOppositeM5Structure { get; set; }
 
-[Parameter("Exit Reentry Cooldown M5", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 0, MaxValue = 50)]
+        [Parameter("Exit Reentry Cooldown M5", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 0, MaxValue = 50)]
         public int ExitReentryCooldownM5 { get; set; }
 
-[Parameter("Use Structural Sequence Gate", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Use Structural Sequence Gate", Group = "16 · Accuracy", DefaultValue = true)]
         public bool UseStructuralSequenceGate { get; set; }
 
-[Parameter("Minimum Structural Sequence", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
+        [Parameter("Minimum Structural Sequence", Group = "16 · Accuracy", DefaultValue = 2, MinValue = 1, MaxValue = 5)]
         public int MinimumStructuralSequence { get; set; }
 
-[Parameter("Require Entry Location Confluence", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Require Entry Location Confluence", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireEntryLocationConfluence { get; set; }
 
-[Parameter("Minimum Entry Location Quality", Group = "16 · Accuracy", DefaultValue = 64, MinValue = 40, MaxValue = 95)]
+        [Parameter("Minimum Entry Location Quality", Group = "16 · Accuracy", DefaultValue = 64, MinValue = 40, MaxValue = 95)]
         public int MinimumEntryLocationQuality { get; set; }
 
-[Parameter("Use Proxy Expected Value Gate", Group = "16 · Accuracy", DefaultValue = true)]
+        [Parameter("Use Proxy Expected Value Gate", Group = "16 · Accuracy", DefaultValue = true)]
         public bool UseProxyExpectedValueGate { get; set; }
 
-[Parameter("Minimum Proxy Expected Value", Group = "16 · Accuracy", DefaultValue = 0.20, MinValue = -1, MaxValue = 2, Step = 0.05)]
+        [Parameter("Minimum Proxy Expected Value", Group = "16 · Accuracy", DefaultValue = 0.20, MinValue = -1, MaxValue = 2, Step = 0.05)]
         public double MinimumProxyExpectedValue { get; set; }
 
-[Parameter("Enable Smart Decision Engine", Group = "17 · Smart Engine", DefaultValue = true)]
+        [Parameter("Enable Smart Decision Engine", Group = "17 · Smart Engine", DefaultValue = true)]
         public bool EnableSmartDecisionEngine { get; set; }
 
-[Parameter("Smart Minimum Timeframe Agreement", Group = "17 · Smart Engine", DefaultValue = 72, MinValue = 50, MaxValue = 95)]
+        [Parameter("Smart Minimum Timeframe Agreement", Group = "17 · Smart Engine", DefaultValue = 72, MinValue = 50, MaxValue = 95)]
         public int SmartMinimumTimeframeAgreement { get; set; }
 
-[Parameter("Smart Target Minimum RR", Group = "17 · Smart Engine", DefaultValue = 1.50, MinValue = 0.5, MaxValue = 8, Step = 0.05)]
+        [Parameter("Smart Target Minimum RR", Group = "17 · Smart Engine", DefaultValue = 1.50, MinValue = 0.5, MaxValue = 8, Step = 0.05)]
         public double SmartTargetMinimumRR { get; set; }
 
-[Parameter("Smart Target Max Candidates", Group = "17 · Smart Engine", DefaultValue = 32, MinValue = 8, MaxValue = 64)]
+        [Parameter("Smart Target Max Candidates", Group = "17 · Smart Engine", DefaultValue = 32, MinValue = 8, MaxValue = 64)]
         public int SmartTargetMaxCandidates { get; set; }
 
-[Parameter("Smart Regime Quality Floor", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
+        [Parameter("Smart Regime Quality Floor", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
         public int SmartRegimeQualityFloor { get; set; }
 
-[Parameter("No Trade Minimum Smart Quality", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
+        [Parameter("No Trade Minimum Smart Quality", Group = "17 · Smart Engine", DefaultValue = 55, MinValue = 30, MaxValue = 90)]
         public int NoTradeMinimumSmartQuality { get; set; }
 
-[Parameter("Block Compression Regime", Group = "17 · Smart Engine", DefaultValue = true)]
+        [Parameter("Block Compression Regime", Group = "17 · Smart Engine", DefaultValue = true)]
         public bool BlockCompressionRegime { get; set; }
 
-[Parameter("Block Weak Range Transition", Group = "17 · Smart Engine", DefaultValue = true)]
+        [Parameter("Block Weak Range Transition", Group = "17 · Smart Engine", DefaultValue = true)]
         public bool BlockWeakRangeTransition { get; set; }
 
-[Parameter("Alert On Live Reaction", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On Live Reaction", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnLiveReaction { get; set; }
 
-[Parameter("Alert On Smart Decision", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On Smart Decision", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnSmartDecision { get; set; }
 
-[Parameter("Enable Level Hit Alerts", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Enable Level Hit Alerts", Group = "18 · Alerts", DefaultValue = true)]
         public bool EnableLevelHitAlerts { get; set; }
 
-[Parameter("Alert On TP1", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On TP1", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnTp1 { get; set; }
 
-[Parameter("Alert On TP2", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On TP2", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnTp2 { get; set; }
 
-[Parameter("Alert On TP3", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On TP3", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnTp3 { get; set; }
 
-[Parameter("Alert On TP4", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On TP4", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnTp4 { get; set; }
 
-[Parameter("Alert On SL", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On SL", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnSl { get; set; }
 
-[Parameter("Alert On False Signal Risk", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On False Signal Risk", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnFalseSignalRisk { get; set; }
 
-[Parameter("Alert On Entry Restriction", Group = "18 · Alerts", DefaultValue = false)]
+        [Parameter("Alert On Entry Restriction", Group = "18 · Alerts", DefaultValue = false)]
         public bool AlertOnEntryRestriction { get; set; }
 
-[Parameter("Alert On High Confidence Entry", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On High Confidence Entry", Group = "18 · Alerts", DefaultValue = true)]
         public bool AlertOnHighConfidenceEntry { get; set; }
 
-[Parameter("High Confidence Threshold", Group = "18 · Alerts", DefaultValue = 82, MinValue = 70, MaxValue = 99)]
+        [Parameter("High Confidence Threshold", Group = "18 · Alerts", DefaultValue = 82, MinValue = 70, MaxValue = 99)]
         public int HighConfidenceThreshold { get; set; }
 
-[Parameter("Alert Sound Type", Group = "18 · Alerts", DefaultValue = SoundType.PositiveNotification)]
+        [Parameter("Alert Sound Type", Group = "18 · Alerts", DefaultValue = SoundType.PositiveNotification)]
         public cAlgo.API.SoundType AlertSoundType { get; set; }
 
-[Parameter("Sound File Path", Group = "18 · Alerts", DefaultValue = "")]
+        [Parameter("Sound File Path", Group = "18 · Alerts", DefaultValue = "")]
         public string SoundFilePath { get; set; }
 
-[Parameter("Popup Position", Group = "18 · Alerts", DefaultValue = CFIPClean30PanelCorner.TopRight)]
+        [Parameter("Popup Position", Group = "18 · Alerts", DefaultValue = CFIPClean30PanelCorner.TopRight)]
         public CFIPClean30PanelCorner PopupPosition { get; set; }
 
-[Parameter("Popup Width", Group = "18 · Alerts", DefaultValue = 430, MinValue = 220, MaxValue = 700)]
+        [Parameter("Popup Width", Group = "18 · Alerts", DefaultValue = 430, MinValue = 220, MaxValue = 700)]
         public int PopupWidth { get; set; }
 
-[Parameter("Keep Popup Until Next Alert", Group = "18 · Alerts", DefaultValue = false)]
+        [Parameter("Keep Popup Until Next Alert", Group = "18 · Alerts", DefaultValue = false)]
         public bool KeepPopupUntilNextAlert { get; set; }
 
-[Parameter("Show Popup Close Button", Group = "18 · Alerts", DefaultValue = true)]
+        [Parameter("Show Popup Close Button", Group = "18 · Alerts", DefaultValue = true)]
         public bool ShowPopupCloseButton { get; set; }
 
-[Parameter("Popup Background", Group = "18 · Alerts", DefaultValue = "Black")]
+        [Parameter("Popup Background", Group = "18 · Alerts", DefaultValue = "Black")]
         public Color PopupBackgroundColor { get; set; }
 
-[Parameter("Popup Background Alpha", Group = "18 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        [Parameter("Popup Background Alpha", Group = "18 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
         public int PopupBackgroundAlpha { get; set; }
 
-[Parameter("Popup Border", Group = "18 · Alerts", DefaultValue = "#3A4656")]
+        [Parameter("Popup Border", Group = "18 · Alerts", DefaultValue = "#3A4656")]
         public Color PopupBorderColor { get; set; }
 
-[Parameter("Popup Border Thickness", Group = "18 · Alerts", DefaultValue = 1, MinValue = 0, MaxValue = 4)]
+        [Parameter("Popup Border Thickness", Group = "18 · Alerts", DefaultValue = 1, MinValue = 0, MaxValue = 4)]
         public int PopupBorderThickness { get; set; }
 
-[Parameter("Popup Corner Radius", Group = "18 · Alerts", DefaultValue = 5, MinValue = 0, MaxValue = 20)]
+        [Parameter("Popup Corner Radius", Group = "18 · Alerts", DefaultValue = 5, MinValue = 0, MaxValue = 20)]
         public int PopupCornerRadius { get; set; }
 
-[Parameter("Popup Padding", Group = "18 · Alerts", DefaultValue = 8, MinValue = 0, MaxValue = 30)]
+        [Parameter("Popup Padding", Group = "18 · Alerts", DefaultValue = 8, MinValue = 0, MaxValue = 30)]
         public int PopupPadding { get; set; }
 
-[Parameter("Popup Text Color", Group = "18 · Alerts", DefaultValue = "White")]
+        [Parameter("Popup Text Color", Group = "18 · Alerts", DefaultValue = "White")]
         public Color PopupTextColor { get; set; }
 
-[Parameter("Line Length Bars", Group = "19 · Display Advanced", DefaultValue = 40, MinValue = 5, MaxValue = 300)]
+        [Parameter("Line Length Bars", Group = "19 · Display Advanced", DefaultValue = 40, MinValue = 5, MaxValue = 300)]
         public int LineLengthBars { get; set; }
 
-[Parameter("Line Forward Bars", Group = "19 · Display Advanced", DefaultValue = 10, MinValue = 1, MaxValue = 100)]
+        [Parameter("Line Forward Bars", Group = "19 · Display Advanced", DefaultValue = 10, MinValue = 1, MaxValue = 100)]
         public int LineForwardBars { get; set; }
 
-[Parameter("Show Signal Labels", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Signal Labels", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowSignalLabels { get; set; }
 
-[Parameter("Show Level Price Labels", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Level Price Labels", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowLevelPriceLabels { get; set; }
 
-[Parameter("Show Context Event Marker", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Context Event Marker", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowContextEventMarker { get; set; }
 
-[Parameter("Show Prediction Objects", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Prediction Objects", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowPredictionObjects { get; set; }
 
-[Parameter("Arrow Offset ATR", Group = "19 · Display Advanced", DefaultValue = 0.18, MinValue = 0.02, MaxValue = 1)]
+        [Parameter("Arrow Offset ATR", Group = "19 · Display Advanced", DefaultValue = 0.18, MinValue = 0.02, MaxValue = 1)]
         public double ArrowOffsetAtr { get; set; }
 
-[Parameter("Minimum Arrow Offset Pips", Group = "19 · Display Advanced", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 20)]
+        [Parameter("Minimum Arrow Offset Pips", Group = "19 · Display Advanced", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 20)]
         public double MinimumArrowOffsetPips { get; set; }
 
-[Parameter("Show Early Arrow", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Early Arrow", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowEarlyArrow { get; set; }
 
-[Parameter("Show Panel Toggle Button", Group = "19 · Display Advanced", DefaultValue = true)]
+        [Parameter("Show Panel Toggle Button", Group = "19 · Display Advanced", DefaultValue = true)]
         public bool ShowPanelToggleButton { get; set; }
 
-[Parameter("Panel Toggle Width", Group = "19 · Display Advanced", DefaultValue = 110, MinValue = 80, MaxValue = 220)]
+        [Parameter("Panel Toggle Width", Group = "19 · Display Advanced", DefaultValue = 110, MinValue = 80, MaxValue = 220)]
         public int PanelToggleWidth { get; set; }
 
-[Parameter("Panel Toggle Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
+        [Parameter("Panel Toggle Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
         public int PanelToggleHeight { get; set; }
 
-[Parameter("Action Button Width", Group = "19 · Display Advanced", DefaultValue = 150, MinValue = 100, MaxValue = 240)]
+        [Parameter("Action Button Width", Group = "19 · Display Advanced", DefaultValue = 150, MinValue = 100, MaxValue = 240)]
         public int ActionButtonWidth { get; set; }
 
-[Parameter("Action Button Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
+        [Parameter("Action Button Height", Group = "19 · Display Advanced", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
         public int ActionButtonHeight { get; set; }
 
-[Parameter("Auto Protect Broker Positions", Group = "20 · Broker Protection", DefaultValue = false)]
+        [Parameter("Auto Protect Broker Positions", Group = "20 · Broker Protection", DefaultValue = false)]
         public bool AutoProtectBrokerPositions { get; set; }
 
-[Parameter("Managed Position Label", Group = "20 · Broker Protection", DefaultValue = "")]
+        [Parameter("Managed Position Label", Group = "20 · Broker Protection", DefaultValue = "")]
         public string ManagedPositionLabel { get; set; }
 
-[Parameter("Sync Broker Take Profit", Group = "20 · Broker Protection", DefaultValue = false)]
+        [Parameter("Sync Broker Take Profit", Group = "20 · Broker Protection", DefaultValue = false)]
         public bool SyncBrokerTakeProfit { get; set; }
 
-[Parameter("Prevent Broker TP Backward Move", Group = "20 · Broker Protection", DefaultValue = true)]
+        [Parameter("Prevent Broker TP Backward Move", Group = "20 · Broker Protection", DefaultValue = true)]
         public bool PreventBrokerTpBackwardMove { get; set; }
 
-[Parameter("Broker Modify Cooldown ms", Group = "20 · Broker Protection", DefaultValue = 750, MinValue = 100, MaxValue = 5000, Step = 50)]
+        [Parameter("Broker Modify Cooldown ms", Group = "20 · Broker Protection", DefaultValue = 750, MinValue = 100, MaxValue = 5000, Step = 50)]
         public int BrokerModifyCooldownMs { get; set; }
 
-[Parameter("Enable Aggressive Auto Entry", Group = "21 · Auto Intelligence", DefaultValue = false)]
+        [Parameter("Enable Aggressive Auto Entry", Group = "21 · Auto Intelligence", DefaultValue = false)]
         public bool EnableAggressiveAutoEntry { get; set; }
 
-[Parameter("Aggressive Minimum Confidence", Group = "21 · Auto Intelligence", DefaultValue = 88, MinValue = 50, MaxValue = 99)]
+        [Parameter("Aggressive Minimum Confidence", Group = "21 · Auto Intelligence", DefaultValue = 88, MinValue = 50, MaxValue = 99)]
         public int AggressiveMinimumConfidence { get; set; }
 
-[Parameter("Aggressive Minimum Evidence", Group = "21 · Auto Intelligence", DefaultValue = 4, MinValue = 1, MaxValue = 8)]
+        [Parameter("Aggressive Minimum Evidence", Group = "21 · Auto Intelligence", DefaultValue = 4, MinValue = 1, MaxValue = 8)]
         public int AggressiveMinimumEvidence { get; set; }
 
-[Parameter("Aggressive Minimum Smart Quality", Group = "21 · Auto Intelligence", DefaultValue = 78, MinValue = 50, MaxValue = 95)]
+        [Parameter("Aggressive Minimum Smart Quality", Group = "21 · Auto Intelligence", DefaultValue = 78, MinValue = 50, MaxValue = 95)]
         public int AggressiveMinimumSmartQuality { get; set; }
 
-[Parameter("Aggressive Risk % Equity", Group = "21 · Auto Intelligence", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 5)]
+        [Parameter("Aggressive Risk % Equity", Group = "21 · Auto Intelligence", DefaultValue = 0.25, MinValue = 0.05, MaxValue = 5)]
         public double AggressiveRiskPercentEquity { get; set; }
 
-[Parameter("Aggressive TP Stage", Group = "21 · Auto Intelligence", DefaultValue = CFIPClean30TargetStage.TP1)]
+        [Parameter("Aggressive TP Stage", Group = "21 · Auto Intelligence", DefaultValue = CFIPClean30TargetStage.TP1)]
         public CFIPClean30TargetStage AggressiveTpStage { get; set; }
 
-[Parameter("Aggressive Require Smart Agreement", Group = "21 · Auto Intelligence", DefaultValue = true)]
+        [Parameter("Aggressive Require Smart Agreement", Group = "21 · Auto Intelligence", DefaultValue = true)]
         public bool AggressiveRequireSmartAgreement { get; set; }
 
         private sealed class Prediction
@@ -1513,7 +1513,7 @@ namespace cAlgo
 
         private readonly List<Native> _native = new List<Native>();
         private readonly HashSet<string> _historicalDrawn = new HashSet<string>();
-        private readonly HashSet<string> _outcomeDrawn = new HashSet<string>();
+        private int _outcomeSequence;
 
         private Plan _plan;
         private Decision _decision;
@@ -1736,18 +1736,22 @@ namespace cAlgo
                             w1Index)
                         : null;
 
-                _decision =
+                int decisionChartIndex =
                     SmartUseClosedBarDecision
-                        ? BuildDecision(
-                            index,
+                        ? MapM5ToChart(
                             closedM5,
-                            reference)
-                        : BuildDecision(
-                            index,
-                            Math.Max(
+                            index)
+                        : index;
+
+                _decision =
+                    BuildDecision(
+                        decisionChartIndex,
+                        SmartUseClosedBarDecision
+                            ? closedM5
+                            : Math.Max(
                                 1,
                                 _m5Bars.Count - 1),
-                            reference);
+                        reference);
 
                 _prediction =
                     BuildEarlyPrediction(
@@ -2134,7 +2138,7 @@ namespace cAlgo
         // FRAME ANALYSIS
         // ============================================================
 
-                private Frame AnalyzeFrame(
+        private Frame AnalyzeFrame(
             Bars bars,
             int index)
         {
@@ -2774,7 +2778,7 @@ namespace cAlgo
         // DECISION
         // ============================================================
 
-                private Decision BuildDecision(
+        private Decision BuildDecision(
             int chartIndex,
             int closedM5,
             DateTime reference)
@@ -3133,7 +3137,7 @@ namespace cAlgo
                         100);
         }
 
-                private int IndependentEvidence(
+        private int IndependentEvidence(
             int direction)
         {
             if (_m5Frame == null ||
@@ -3172,7 +3176,7 @@ namespace cAlgo
             return count;
         }
 
-                private int StructuralConfirmations(
+        private int StructuralConfirmations(
             int direction)
         {
             if (_m5Frame == null ||
@@ -3328,7 +3332,7 @@ namespace cAlgo
                     MinimumOppositeM5Structure);
         }
 
-                private bool PassesDecisionFilters(
+        private bool PassesDecisionFilters(
             int chartIndex,
             int closedM5,
             DateTime reference,
@@ -4721,7 +4725,7 @@ namespace cAlgo
             return Tp1MinimumRR;
         }
 
-                private double BuildStructuralStop(
+        private double BuildStructuralStop(
             int closedM5,
             int direction,
             double entry,
@@ -4908,7 +4912,7 @@ namespace cAlgo
             return best;
         }
 
-                private List<Level> BuildTargetLevels(
+        private List<Level> BuildTargetLevels(
             int closedM5,
             int direction,
             double entry,
@@ -5027,7 +5031,7 @@ namespace cAlgo
                     atr);
         }
 
-                private void AddSupplyDemandAndLiquidityLevels(
+        private void AddSupplyDemandAndLiquidityLevels(
             List<Level> levels,
             int closedM5,
             int direction,
@@ -5297,7 +5301,7 @@ namespace cAlgo
             return best;
         }
 
-                private void AddSmartExtraTargetLevels(
+        private void AddSmartExtraTargetLevels(
             List<Level> levels,
             int closedM5,
             int direction,
@@ -5464,7 +5468,7 @@ namespace cAlgo
             }
         }
 
-                private void AddLevel(
+        private void AddLevel(
             List<Level> levels,
             double price,
             string kind,
@@ -5525,9 +5529,9 @@ namespace cAlgo
                 level);
         }
 
-        
 
-                private List<Level> MergeLevels(
+
+        private List<Level> MergeLevels(
             List<Level> input,
             double atr)
         {
@@ -5629,7 +5633,7 @@ namespace cAlgo
                 .ToList();
         }
 
-                private List<Level> SelectTargets(
+        private List<Level> SelectTargets(
             List<Level> levels,
             double entry,
             double risk,
@@ -5905,7 +5909,7 @@ namespace cAlgo
         // ACTIVE PLAN
         // ============================================================
 
-                private void ActivatePlan(
+        private void ActivatePlan(
             Plan plan)
         {
             _plan = plan;
@@ -5961,7 +5965,7 @@ namespace cAlgo
             }
         }
 
-                private void EvaluateActivePlan(
+        private void EvaluateActivePlan(
             int closedM5)
         {
             if (_plan == null)
@@ -6683,7 +6687,7 @@ namespace cAlgo
             return "HOLD";
         }
 
-                private double CalculateProtectedStop(
+        private double CalculateProtectedStop(
             double market,
             double peakRR,
             int closedM5)
@@ -6870,7 +6874,7 @@ namespace cAlgo
             return candidate;
         }
 
-                private void UpdateUnhitTargetsLive(
+        private void UpdateUnhitTargetsLive(
             int closedM5,
             double market)
         {
@@ -8293,7 +8297,7 @@ namespace cAlgo
                    MaximumSpreadAtr;
         }
 
-                private bool VolatilityBlocked(
+        private bool VolatilityBlocked(
             Bars bars,
             int index)
         {
@@ -8497,7 +8501,7 @@ namespace cAlgo
                   stop > entry;
         }
 
-                private bool HasTargetObstacle(
+        private bool HasTargetObstacle(
             Bars bars,
             int index,
             int direction,
@@ -9838,7 +9842,7 @@ namespace cAlgo
                     PanelCornerRadius);
         }
 
-                private string GetStablePanelState(
+        private string GetStablePanelState(
             string candidate)
         {
             if (string.IsNullOrWhiteSpace(
@@ -11058,7 +11062,7 @@ namespace cAlgo
             }
         }
 
-                private int FreshTriggerEvidence(
+        private int FreshTriggerEvidence(
             Bars bars,
             int index,
             int direction)
@@ -11363,7 +11367,7 @@ namespace cAlgo
                       "%";
         }
 
-                private Prediction BuildEarlyPrediction(
+        private Prediction BuildEarlyPrediction(
             int closedM5)
         {
             Prediction p =
@@ -11570,7 +11574,7 @@ namespace cAlgo
             return p;
         }
 
-                private void RenderPredictionObjects(
+        private void RenderPredictionObjects(
             Prediction prediction,
             int closedM5)
         {
@@ -12482,7 +12486,7 @@ namespace cAlgo
                     "_" +
                     Bars.Count +
                     "_" +
-                    _outcomeDrawn.Count;
+                    _outcomeSequence++;
 
                 ChartText marker =
                     Chart.DrawText(
@@ -12503,7 +12507,10 @@ namespace cAlgo
                 marker.IsBold = true;
                 marker.IsInteractive = false;
 
-                _outcomeDrawn.Add(name);
+                _outcomeSequence =
+                    Math.Max(
+                        0,
+                        _outcomeSequence);
             }
             catch
             {
@@ -12827,15 +12834,12 @@ namespace cAlgo
             return value;
         }
 
-                private void RemoveAllChartObjects()
+        private void RemoveAllChartObjects()
         {
             RemovePlanObjects();
             RemoveHistoricalObjects();
 
-            foreach (string name in _outcomeDrawn)
-                Chart.RemoveObject(name);
-
-            _outcomeDrawn.Clear();
+            _outcomeSequence = 0;
         }
 
         // ============================================================
