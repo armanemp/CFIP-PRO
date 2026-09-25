@@ -766,9 +766,6 @@ namespace cAlgo
         [Parameter("Show Early Arrow", Group = "Display", DefaultValue = true)]
         public bool ShowEarlyArrow { get; set; }
 
-        [Parameter("Show Level Lines", Group = "Display", DefaultValue = true)]
-        public bool ShowLevelLines { get; set; }
-
         [Parameter("Enable Level Hit Alerts", Group = "Alerts", DefaultValue = true)]
         public bool EnableLevelHitAlerts { get; set; }
 
