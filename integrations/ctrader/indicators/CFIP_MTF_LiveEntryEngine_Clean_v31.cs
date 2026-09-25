@@ -4578,7 +4578,9 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    FallbackTp1RR);
+                    Math.Max(
+                        FallbackTp1RR,
+                        MinimumRequiredRR()));
 
             double tp2 =
                 SelectTarget(
@@ -4587,7 +4589,9 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    FallbackTp2RR);
+                    Math.Max(
+                        FallbackTp2RR,
+                        Tp2MinimumRR));
 
             double tp3 =
                 SelectTarget(
@@ -4596,7 +4600,9 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    FallbackTp3RR);
+                    Math.Max(
+                        FallbackTp3RR,
+                        Tp3MinimumRR));
 
             double tp4 =
                 SelectTarget(
@@ -4605,7 +4611,9 @@ namespace cAlgo
                     entry,
                     risk,
                     direction,
-                    FallbackTp4RR);
+                    Math.Max(
+                        FallbackTp4RR,
+                        Tp4MinimumRR));
 
             if (!IsValidTarget(
                     direction,
@@ -4745,7 +4753,8 @@ namespace cAlgo
                     p,
                     direction,
                     entry,
-                    atr))
+                    atr,
+                    true))
                 return null;
 
             return p;
@@ -4755,7 +4764,8 @@ namespace cAlgo
             Plan plan,
             int direction,
             double referenceEntry,
-            double atr)
+            double atr,
+            bool checkSpread)
         {
             if (plan == null ||
                 (direction != 1 &&
@@ -4788,7 +4798,8 @@ namespace cAlgo
                     MaximumEntryExtensionAtr))
                 return false;
 
-            if (UseSpreadFilter)
+            if (checkSpread &&
+                UseSpreadFilter)
             {
                 double spread =
                     Math.Max(
@@ -6258,7 +6269,8 @@ namespace cAlgo
                         Symbol.PipSize,
                         Atr(
                             _m5Bars,
-                            closedM5))))
+                            closedM5)),
+                    false))
             {
                 SendUnifiedAlert(
                     "INVALIDPLAN|" +
@@ -7085,6 +7097,12 @@ namespace cAlgo
                     0.05,
                     TargetUpdateStepAtr);
 
+            double spacing =
+                atr *
+                Math.Max(
+                    0.05,
+                    MinimumTpSpacingAtr);
+
             for (int stage = 0;
                  stage < 4;
                  stage++)
@@ -7113,8 +7131,33 @@ namespace cAlgo
                 if (current <= 0)
                     continue;
 
+                double previousTarget =
+                    stage == 0
+                        ? _plan.Entry
+                        : stage == 1
+                            ? _plan.Tp1
+                            : stage == 2
+                                ? _plan.Tp2
+                                : _plan.Tp3;
+
+                double nextTarget =
+                    stage == 0
+                        ? _plan.Tp2
+                        : stage == 1
+                            ? _plan.Tp3
+                            : stage == 2
+                                ? _plan.Tp4
+                                : 0;
+
+                if (!IsFinitePositive(previousTarget))
+                    previousTarget =
+                        _plan.Entry;
+
                 double best =
                     current;
+
+                double bestSelectionScore =
+                    double.MinValue;
 
                 for (int i = 0;
                      i < levels.Count;
@@ -7137,6 +7180,31 @@ namespace cAlgo
                     if (!improves)
                         continue;
 
+                    bool preservesPreviousSpacing =
+                        _plan.Direction == 1
+                            ? level.Price >
+                              previousTarget +
+                              spacing
+                            : level.Price <
+                              previousTarget -
+                              spacing;
+
+                    if (!preservesPreviousSpacing)
+                        continue;
+
+                    bool preservesNextSpacing =
+                        nextTarget <= 0 ||
+                        (_plan.Direction == 1
+                            ? level.Price <
+                              nextTarget -
+                              spacing
+                            : level.Price >
+                              nextTarget +
+                              spacing);
+
+                    if (!preservesNextSpacing)
+                        continue;
+
                     if (RejectTargetObstacle &&
                         HasTargetObstacle(
                             _m5Bars,
@@ -7147,11 +7215,45 @@ namespace cAlgo
                             atr))
                         continue;
 
-                    best =
-                        level.Price;
+                    double distance =
+                        Math.Abs(
+                            level.Price -
+                            market);
+
+                    double normalizedDistance =
+                        distance /
+                        Math.Max(
+                            Symbol.PipSize,
+                            atr);
+
+                    double selectionScore =
+                        level.Score *
+                        (1.0 +
+                         SmartTargetNearestBias /
+                         (1.0 +
+                          normalizedDistance)) +
+                        Math.Min(
+                            20,
+                            Math.Max(
+                                1,
+                                level.Hits) *
+                            2);
+
+                    if (selectionScore >
+                        bestSelectionScore)
+                    {
+                        bestSelectionScore =
+                            selectionScore;
+
+                        best =
+                            level.Price;
+                    }
                 }
 
-                if (best == current)
+                if (Math.Abs(
+                        best -
+                        current) <
+                    Symbol.PipSize)
                     continue;
 
                 if (stage == 0)
