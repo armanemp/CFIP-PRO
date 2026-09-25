@@ -523,6 +523,9 @@ namespace cAlgo
         [Parameter("Line Length Bars", Group = "Display", DefaultValue = 14, MinValue = 2, MaxValue = 30)]
         public int LineLengthBars { get; set; }
 
+        [Parameter("Full Width Level Lines", Group = "Display", DefaultValue = true)]
+        public bool FullWidthLevelLines { get; set; }
+
         [Parameter("Line Forward Bars", Group = "Display", DefaultValue = 10, MinValue = 1, MaxValue = 50)]
         public int LineStartBars { get; set; }
 
@@ -1249,6 +1252,9 @@ namespace cAlgo
         private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
         private string _lastAlertSignature = "";
         private DateTime _lastAlertUtc = DateTime.MinValue;
+        private string _lastAlertEventKey = "";
+        private int _lastAlertEventDirection;
+        private int _lastAlertEventBar = -1;
         private string _lastAlertEventKey = "";
         private int _lastAlertEventDirection;
         private int _lastAlertEventBar = -1;
@@ -3603,7 +3609,8 @@ namespace cAlgo
                     endIndex,
                     p.ZoneHigh,
                     color,
-                    IsFinitePositive(p.ZoneHigh));
+                    IsFinitePositive(p.ZoneHigh),
+                    PredictionZoneLineStyle);
 
                 DrawAuthoritativeLevelLine(
                     EarlyPrefix + "ZONE_BOTTOM",
@@ -3611,7 +3618,8 @@ namespace cAlgo
                     endIndex,
                     p.ZoneLow,
                     color,
-                    IsFinitePositive(p.ZoneLow));
+                    IsFinitePositive(p.ZoneLow),
+                    PredictionZoneLineStyle);
             }
             else
             {
@@ -3625,7 +3633,8 @@ namespace cAlgo
                 endIndex,
                 p.Trigger,
                 color,
-                IsFinitePositive(p.Trigger));
+                IsFinitePositive(p.Trigger),
+                PredictionTriggerLineStyle);
 
             if (ShowPredictionTargets && ShowLevelLines)
             {
@@ -4862,11 +4871,14 @@ namespace cAlgo
             int endIndex,
             double price,
             Color color,
-            bool visible)
+            bool visible,
+            LineStyle? styleOverride = null,
+            bool? fullWidthOverride = null)
         {
-            // Native horizontal lines are independent of host-chart timeframe
-            // and bar-index mapping. One stable object name owns each level.
-            if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 1)
+            if (!visible ||
+                !IsFinitePositive(price) ||
+                Bars == null ||
+                Bars.Count < 1)
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
@@ -4883,29 +4895,87 @@ namespace cAlgo
                 return;
             }
 
+            LineStyle lineStyle =
+                styleOverride ?? PlanLineStyle;
+
+            bool fullWidth =
+                fullWidthOverride ?? FullWidthLevelLines;
+
             try
             {
-                ChartHorizontalLine line =
-                    Chart.FindObject(name) as ChartHorizontalLine;
-
-                if (line == null)
+                if (fullWidth)
                 {
-                    Chart.RemoveObject(name);
-                    line = Chart.DrawHorizontalLine(
-                        name,
-                        normalizedPrice,
-                        color,
-                        Math.Max(1, LevelLineThickness),
-                        PlanLineStyle);
+                    ChartHorizontalLine line =
+                        Chart.FindObject(name) as ChartHorizontalLine;
+
+                    if (line == null)
+                    {
+                        Chart.RemoveObject(name);
+                        line = Chart.DrawHorizontalLine(
+                            name,
+                            normalizedPrice,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            lineStyle);
+                    }
+
+                    if (line != null)
+                    {
+                        line.Y = normalizedPrice;
+                        line.Color = color;
+                        line.Thickness =
+                            Math.Max(1, LevelLineThickness);
+                        line.LineStyle = lineStyle;
+                        line.IsInteractive = false;
+                    }
                 }
-
-                if (line != null)
+                else
                 {
-                    line.Y = normalizedPrice;
-                    line.Color = color;
-                    line.Thickness = Math.Max(1, LevelLineThickness);
-                    line.LineStyle = PlanLineStyle;
-                    line.IsInteractive = false;
+                    int safeStart =
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                startIndex,
+                                Bars.Count - 2));
+
+                    int safeEnd =
+                        Math.Max(
+                            safeStart + 1,
+                            Math.Min(
+                                endIndex,
+                                Bars.Count - 1));
+
+                    ChartTrendLine line =
+                        Chart.FindObject(name) as ChartTrendLine;
+
+                    if (line == null)
+                    {
+                        Chart.RemoveObject(name);
+
+                        line = Chart.DrawTrendLine(
+                            name,
+                            Bars.OpenTimes[safeStart],
+                            normalizedPrice,
+                            Bars.OpenTimes[safeEnd],
+                            normalizedPrice,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            lineStyle);
+                    }
+
+                    if (line != null)
+                    {
+                        line.Time1 = Bars.OpenTimes[safeStart];
+                        line.Y1 = normalizedPrice;
+                        line.Time2 = Bars.OpenTimes[safeEnd];
+                        line.Y2 = normalizedPrice;
+                        line.Color = color;
+                        line.Thickness =
+                            Math.Max(1, LevelLineThickness);
+                        line.LineStyle = lineStyle;
+                        line.ExtendToInfinity = false;
+                        line.IsInteractive = false;
+                    }
                 }
 
                 Chart.RemoveObject(name + "_SEG");
@@ -4916,16 +4986,53 @@ namespace cAlgo
                 try
                 {
                     Chart.RemoveObject(name);
-                    ChartHorizontalLine retry =
-                        Chart.DrawHorizontalLine(
-                            name,
-                            normalizedPrice,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            PlanLineStyle);
 
-                    if (retry != null)
-                        retry.IsInteractive = false;
+                    if (fullWidth)
+                    {
+                        ChartHorizontalLine retry =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                lineStyle);
+
+                        if (retry != null)
+                            retry.IsInteractive = false;
+                    }
+                    else
+                    {
+                        int safeStart =
+                            Math.Max(
+                                0,
+                                Math.Min(
+                                    startIndex,
+                                    Bars.Count - 2));
+
+                        int safeEnd =
+                            Math.Max(
+                                safeStart + 1,
+                                Math.Min(
+                                    endIndex,
+                                    Bars.Count - 1));
+
+                        ChartTrendLine retry =
+                            Chart.DrawTrendLine(
+                                name,
+                                Bars.OpenTimes[safeStart],
+                                normalizedPrice,
+                                Bars.OpenTimes[safeEnd],
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                lineStyle);
+
+                        if (retry != null)
+                        {
+                            retry.ExtendToInfinity = false;
+                            retry.IsInteractive = false;
+                        }
+                    }
 
                     Chart.RemoveObject(name + "_SEG");
                     Chart.RemoveObject(name + "_FALLBACK");
@@ -5161,87 +5268,97 @@ namespace cAlgo
 
         private void FlushCoordinatedDecisionAlerts()
         {
-            // Exactly one queued alert is emitted per Calculate() pass, with
-            // priority: exit -> restriction -> confirmed entry -> reaction ->
-            // smart -> early -> context. The queue is always cleared, including
-            // after an early return, so stale alerts cannot replay.
-            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage))
+            // At most two distinct events may be emitted from one Calculate()
+            // pass. Semantic dedupe prevents repeated copies of the same event
+            // even when its diagnostic message changes intrabar.
+            int emitted = 0;
+            const int maxPerPass = 2;
+
+            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage) &&
+                emitted < maxPerPass)
             {
                 SendGenericAlert(
                     _pendingExitAlertMessage,
                     _pendingExitAlertDirection,
                     _pendingExitAlertBar,
                     "EXIT");
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage) &&
+                emitted < maxPerPass)
             {
                 SendRestrictionAlert(
                     _pendingRestrictionAlertMessage,
                     _pendingRestrictionAlertBar);
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage) &&
+                emitted < maxPerPass)
             {
                 if (_pendingHighConfidenceSignalAlert)
+                {
                     SendHighConfidenceAlert(
                         _pendingSignalAlertMessage,
                         _pendingSignalAlertDirection,
                         _pendingSignalAlertBar);
+                }
                 else
+                {
                     SendGenericAlert(
                         _pendingSignalAlertMessage,
                         _pendingSignalAlertDirection,
                         _pendingSignalAlertBar,
                         "SIGNAL");
+                }
 
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage) &&
+                emitted < maxPerPass)
             {
                 SendGenericAlert(
                     _pendingReactionAlertMessage,
                     _pendingReactionAlertDirection,
                     _pendingReactionAlertBar,
                     "REACTION");
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage) &&
+                emitted < maxPerPass)
             {
                 SendGenericAlert(
                     _pendingSmartAlertMessage,
                     _pendingSmartAlertDirection,
                     _pendingSmartAlertBar,
                     "SMART");
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage) &&
+                emitted < maxPerPass)
             {
                 SendGenericAlert(
                     _pendingEarlyAlertMessage,
                     _pendingEarlyAlertDirection,
                     _pendingEarlyAlertBar,
                     "EARLY");
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage) &&
+                emitted < maxPerPass)
+            {
                 SendGenericAlert(
                     _pendingContextAlertMessage,
                     _pendingContextAlertDirection,
                     _pendingContextAlertBar,
                     "CONTEXT");
+                emitted++;
+            }
 
             ClearPendingDecisionAlerts();
         }
@@ -6112,11 +6229,8 @@ namespace cAlgo
                     ? (subject ?? "ALERT")
                     : semanticEventKey;
 
-            // The message contains live values (price, RR, score, etc.), so using
-            // the full message as the only duplicate signature is insufficient.
-            // A semantic event may fire once per M5 event bar, independent of the
-            // changing diagnostic text.
-            if (eventBar >= 0 &&
+            if (SuppressDuplicateAlerts &&
+                eventBar >= 0 &&
                 string.Equals(
                     eventKey,
                     _lastAlertEventKey,
@@ -6148,7 +6262,8 @@ namespace cAlgo
                 _lastAlertUtc = now;
             }
 
-            if (eventBar >= 0)
+            if (SuppressDuplicateAlerts &&
+                eventBar >= 0)
             {
                 _lastAlertEventKey = eventKey;
                 _lastAlertEventDirection = direction;
@@ -6156,6 +6271,54 @@ namespace cAlgo
             }
 
             return true;
+        }
+
+        private string ResolveAlertSemanticKey(
+            string message,
+            string fallback)
+        {
+            string m =
+                (message ?? string.Empty).ToUpperInvariant();
+
+            if (m.Contains("SL HIT"))
+                return "SL_HIT";
+
+            if (m.Contains("TP1 HIT"))
+                return "TP1_HIT";
+
+            if (m.Contains("TP2 HIT"))
+                return "TP2_HIT";
+
+            if (m.Contains("TP3 HIT"))
+                return "TP3_HIT";
+
+            if (m.Contains("TP4 HIT"))
+                return "TP4_HIT";
+
+            if (m.Contains("SETUP EXPIRED"))
+                return "TIMEOUT";
+
+            if (m.Contains("REVERSAL"))
+                return "REVERSAL";
+
+            if (m.Contains("SETUP INVALIDATED"))
+                return "INVALIDATED";
+
+            if (m.Contains("FALSE-SIGNAL"))
+                return "FALSE_SIGNAL";
+
+            if (m.Contains("STRUCTURAL EXIT PLAN UPDATED"))
+                return "EXIT_PLAN";
+
+            if (m.Contains("EXIT RISK"))
+                return "EXIT_RISK";
+
+            if (m.Contains("EXIT WATCH"))
+                return "EXIT_WATCH";
+
+            return string.IsNullOrWhiteSpace(fallback)
+                ? "ALERT"
+                : fallback;
         }
 
         private void ShowInternalAlertPopup(string title, string message, PopupNotificationState state)
@@ -6362,7 +6525,9 @@ namespace cAlgo
                 message,
                 0,
                 eventBar,
-                newsGuard ? "NEWS_GUARD" : "RESTRICTION"))
+                newsGuard
+                    ? "NEWS_GUARD"
+                    : "RESTRICTION"))
                 return;
 
             if (EnableSoundAlerts &&
@@ -6509,7 +6674,9 @@ namespace cAlgo
                 direction,
                 "CFIP MTF Alert",
                 eventBar,
-                semanticEventKey);
+                ResolveAlertSemanticKey(
+                    message,
+                    semanticEventKey));
         }
 
         private void SendNotificationBundle(
