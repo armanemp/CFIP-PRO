@@ -2968,12 +2968,12 @@ namespace cAlgo
         private void ClearLiveReactionDrawingOnly()
         {
             Chart.RemoveObject(ReactionPrefix + "ARROW");
-            Chart.RemoveObject(ReactionPrefix + "ENTRY");
-            Chart.RemoveObject(ReactionPrefix + "SL");
-            Chart.RemoveObject(ReactionPrefix + "TP1");
-            Chart.RemoveObject(ReactionPrefix + "TP2");
-            Chart.RemoveObject(ReactionPrefix + "TP3");
-            Chart.RemoveObject(ReactionPrefix + "TP4");
+            RemoveLevelDrawing(ReactionPrefix + "ENTRY");
+            RemoveLevelDrawing(ReactionPrefix + "SL");
+            RemoveLevelDrawing(ReactionPrefix + "TP1");
+            RemoveLevelDrawing(ReactionPrefix + "TP2");
+            RemoveLevelDrawing(ReactionPrefix + "TP3");
+            RemoveLevelDrawing(ReactionPrefix + "TP4");
         }
 
         private void ClearLiveReactionObjects(bool redrawPanel = true)
