@@ -1249,6 +1249,9 @@ namespace cAlgo
         private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
         private string _lastAlertSignature = "";
         private DateTime _lastAlertUtc = DateTime.MinValue;
+        private string _lastAlertEventKey = "";
+        private int _lastAlertEventDirection;
+        private int _lastAlertEventBar = -1;
 
         // Live exit state
         private double _signalInitialRisk;
@@ -5164,14 +5167,20 @@ namespace cAlgo
             // after an early return, so stale alerts cannot replay.
             if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage))
             {
-                SendGenericAlert(_pendingExitAlertMessage, _pendingExitAlertDirection);
+                SendGenericAlert(
+                    _pendingExitAlertMessage,
+                    _pendingExitAlertDirection,
+                    _pendingExitAlertBar,
+                    "EXIT");
                 ClearPendingDecisionAlerts();
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage))
             {
-                SendRestrictionAlert(_pendingRestrictionAlertMessage);
+                SendRestrictionAlert(
+                    _pendingRestrictionAlertMessage,
+                    _pendingRestrictionAlertBar);
                 ClearPendingDecisionAlerts();
                 return;
             }
@@ -5179,9 +5188,16 @@ namespace cAlgo
             if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage))
             {
                 if (_pendingHighConfidenceSignalAlert)
-                    SendHighConfidenceAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
+                    SendHighConfidenceAlert(
+                        _pendingSignalAlertMessage,
+                        _pendingSignalAlertDirection,
+                        _pendingSignalAlertBar);
                 else
-                    SendGenericAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
+                    SendGenericAlert(
+                        _pendingSignalAlertMessage,
+                        _pendingSignalAlertDirection,
+                        _pendingSignalAlertBar,
+                        "SIGNAL");
 
                 ClearPendingDecisionAlerts();
                 return;
@@ -5189,27 +5205,43 @@ namespace cAlgo
 
             if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage))
             {
-                SendGenericAlert(_pendingReactionAlertMessage, _pendingReactionAlertDirection);
+                SendGenericAlert(
+                    _pendingReactionAlertMessage,
+                    _pendingReactionAlertDirection,
+                    _pendingReactionAlertBar,
+                    "REACTION");
                 ClearPendingDecisionAlerts();
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage))
             {
-                SendGenericAlert(_pendingSmartAlertMessage, _pendingSmartAlertDirection);
+                SendGenericAlert(
+                    _pendingSmartAlertMessage,
+                    _pendingSmartAlertDirection,
+                    _pendingSmartAlertBar,
+                    "SMART");
                 ClearPendingDecisionAlerts();
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage))
             {
-                SendGenericAlert(_pendingEarlyAlertMessage, _pendingEarlyAlertDirection);
+                SendGenericAlert(
+                    _pendingEarlyAlertMessage,
+                    _pendingEarlyAlertDirection,
+                    _pendingEarlyAlertBar,
+                    "EARLY");
                 ClearPendingDecisionAlerts();
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
-                SendGenericAlert(_pendingContextAlertMessage, _pendingContextAlertDirection);
+                SendGenericAlert(
+                    _pendingContextAlertMessage,
+                    _pendingContextAlertDirection,
+                    _pendingContextAlertBar,
+                    "CONTEXT");
 
             ClearPendingDecisionAlerts();
         }
@@ -6065,18 +6097,64 @@ namespace cAlgo
         // ALERT
         // ============================================================
 
-        private bool TryAcceptAlert(string subject, string message, int direction)
+        private bool TryAcceptAlert(
+            string subject,
+            string message,
+            int direction,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
             if (string.IsNullOrWhiteSpace(message))
                 return false;
-            if (!SuppressDuplicateAlerts || AlertCooldownSeconds <= 0)
-                return true;
-            string signature = (subject ?? "") + "|" + direction + "|" + message.Trim();
-            DateTime now = DateTime.UtcNow;
-            if (signature == _lastAlertSignature && (now - _lastAlertUtc).TotalSeconds < AlertCooldownSeconds)
+
+            string eventKey =
+                string.IsNullOrWhiteSpace(semanticEventKey)
+                    ? (subject ?? "ALERT")
+                    : semanticEventKey;
+
+            // The message contains live values (price, RR, score, etc.), so using
+            // the full message as the only duplicate signature is insufficient.
+            // A semantic event may fire once per M5 event bar, independent of the
+            // changing diagnostic text.
+            if (eventBar >= 0 &&
+                string.Equals(
+                    eventKey,
+                    _lastAlertEventKey,
+                    StringComparison.Ordinal) &&
+                direction == _lastAlertEventDirection &&
+                eventBar == _lastAlertEventBar)
+            {
                 return false;
-            _lastAlertSignature = signature;
-            _lastAlertUtc = now;
+            }
+
+            if (SuppressDuplicateAlerts &&
+                AlertCooldownSeconds > 0)
+            {
+                string signature =
+                    (subject ?? "") +
+                    "|" + direction +
+                    "|" + message.Trim();
+
+                DateTime now = DateTime.UtcNow;
+
+                if (signature == _lastAlertSignature &&
+                    (now - _lastAlertUtc).TotalSeconds <
+                    AlertCooldownSeconds)
+                {
+                    return false;
+                }
+
+                _lastAlertSignature = signature;
+                _lastAlertUtc = now;
+            }
+
+            if (eventBar >= 0)
+            {
+                _lastAlertEventKey = eventKey;
+                _lastAlertEventDirection = direction;
+                _lastAlertEventBar = eventBar;
+            }
+
             return true;
         }
 
@@ -6263,7 +6341,7 @@ namespace cAlgo
             _alertPopupExpiresUtc = DateTime.MinValue;
         }
 
-        private void SendRestrictionAlert(string message)
+        private void SendRestrictionAlert(string message, int eventBar = -1)
         {
             if (string.IsNullOrWhiteSpace(message))
                 return;
@@ -6282,7 +6360,9 @@ namespace cAlgo
             if (!TryAcceptAlert(
                 newsGuard ? "NEWS_GUARD" : "RESTRICTION",
                 message,
-                0))
+                0,
+                eventBar,
+                newsGuard ? "NEWS_GUARD" : "RESTRICTION"))
                 return;
 
             if (EnableSoundAlerts &&
@@ -6341,9 +6421,14 @@ namespace cAlgo
             }
         }
 
-        private void SendHighConfidenceAlert(string message, int direction)
+        private void SendHighConfidenceAlert(string message, int direction, int eventBar = -1)
         {
-            if (!TryAcceptAlert("HIGH_CONFIDENCE", message, direction))
+            if (!TryAcceptAlert(
+                    "HIGH_CONFIDENCE",
+                    message,
+                    direction,
+                    eventBar,
+                    "SIGNAL_HIGH"))
                 return;
 
             if (EnableSoundAlerts)
@@ -6413,14 +6498,33 @@ namespace cAlgo
                    s.Contains("NEWS / EVENT GUARD");
         }
 
-        private void SendGenericAlert(string message, int direction = 0)
+        private void SendGenericAlert(
+            string message,
+            int direction = 0,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
-            SendNotificationBundle(message, direction, "CFIP MTF Alert");
+            SendNotificationBundle(
+                message,
+                direction,
+                "CFIP MTF Alert",
+                eventBar,
+                semanticEventKey);
         }
 
-        private void SendNotificationBundle(string message, int direction, string subject)
+        private void SendNotificationBundle(
+            string message,
+            int direction,
+            string subject,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
-            if (!TryAcceptAlert(subject, message, direction))
+            if (!TryAcceptAlert(
+                    subject,
+                    message,
+                    direction,
+                    eventBar,
+                    semanticEventKey))
                 return;
 
             if (EnableSoundAlerts)
