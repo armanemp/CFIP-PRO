@@ -7385,6 +7385,7 @@ private void UpdateBrokerPositionProtection()
                         quality - 10);
 
             int provisionalDirection = direction;
+            int independentEvidence = 0;
             int consensusQuality =
                 provisionalDirection != 0
                     ? CalculateSmartConsensusQuality(
@@ -7401,7 +7402,7 @@ private void UpdateBrokerPositionProtection()
                         provisionalDirection == 1
                             ? bullEntryQuality
                             : bearEntryQuality,
-                        out int independentEvidence)
+                        out independentEvidence)
                     : 0;
 
             _smartConsensusQuality = consensusQuality;
