@@ -538,7 +538,7 @@ namespace cAlgo
         [Parameter("Line Length Bars", Group = "17 · Display & Panel", DefaultValue = 14, MinValue = 2, MaxValue = 30)]
         public int LineLengthBars { get; set; }
 
-        [Parameter("Full Width Level Lines", Group = "17 · Display & Panel", DefaultValue = false)]
+        [Parameter("Full Width Level Lines", Group = "17 · Display & Panel", DefaultValue = true)]
         public bool FullWidthLevelLines { get; set; }
 
         [Parameter("Line Forward Bars", Group = "17 · Display & Panel", DefaultValue = 10, MinValue = 1, MaxValue = 50)]
@@ -5992,49 +5992,124 @@ namespace cAlgo
             double price,
             Color color,
             LineStyle lineStyle,
-            bool extendToInfinity)
+            bool primaryWasFullWidth)
         {
             if (Bars == null ||
-                Bars.Count == 0 ||
+                Bars.Count < 2 ||
                 !IsFinitePositive(price))
                 return false;
 
-            // The fallback intentionally uses a different native chart type.
-            // A horizontal line is guaranteed to remain horizontal and avoids
-            // repeating a failed TrendLine creation path.
-            string horizontalName =
+            string alternateName =
                 (fallbackName ?? string.Empty) + "_FALLBACK";
 
             try
             {
-                ChartHorizontalLine line =
-                    Chart.FindObject(horizontalName) as ChartHorizontalLine;
-
-                if (line == null)
+                if (primaryWasFullWidth)
                 {
-                    if (Chart.FindObject(horizontalName) != null)
-                        Chart.RemoveObject(horizontalName);
+                    ChartTrendLine line =
+                        Chart.FindObject(alternateName) as ChartTrendLine;
 
-                    line = Chart.DrawHorizontalLine(
-                        horizontalName,
-                        price,
-                        color,
-                        Math.Max(1, LevelLineThickness),
-                        lineStyle);
+                    if (line == null)
+                    {
+                        if (Chart.FindObject(alternateName) != null)
+                            Chart.RemoveObject(alternateName);
+
+                        int safeStart =
+                            Math.Max(
+                                0,
+                                Math.Min(
+                                    startIndex,
+                                    Bars.Count - 2));
+
+                        int safeEnd =
+                            Math.Max(
+                                safeStart + 1,
+                                Math.Min(
+                                    endIndex,
+                                    Bars.Count - 1));
+
+                        line =
+                            Chart.DrawTrendLine(
+                                alternateName,
+                                safeStart,
+                                price,
+                                safeEnd,
+                                price,
+                                color,
+                                Math.Max(
+                                    1,
+                                    LevelLineThickness),
+                                lineStyle);
+                    }
+
+                    if (line == null)
+                        return false;
+
+                    int safeTrendStart =
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                startIndex,
+                                Bars.Count - 2));
+
+                    int safeTrendEnd =
+                        Math.Max(
+                            safeTrendStart + 1,
+                            Math.Min(
+                                endIndex,
+                                Bars.Count - 1));
+
+                    line.Time1 =
+                        Bars.OpenTimes[safeTrendStart];
+                    line.Y1 =
+                        NormalizePrice(price);
+                    line.Time2 =
+                        Bars.OpenTimes[safeTrendEnd];
+                    line.Y2 =
+                        NormalizePrice(price);
+                    line.Color = color;
+                    line.Thickness =
+                        Math.Max(
+                            1,
+                            LevelLineThickness);
+                    line.LineStyle = lineStyle;
+                    line.ExtendToInfinity = true;
+                    line.IsInteractive = false;
+
+                    return true;
                 }
 
-                if (line == null)
+                ChartHorizontalLine horizontal =
+                    Chart.FindObject(alternateName) as ChartHorizontalLine;
+
+                if (horizontal == null)
+                {
+                    if (Chart.FindObject(alternateName) != null)
+                        Chart.RemoveObject(alternateName);
+
+                    horizontal =
+                        Chart.DrawHorizontalLine(
+                            alternateName,
+                            price,
+                            color,
+                            Math.Max(
+                                1,
+                                LevelLineThickness),
+                            lineStyle);
+                }
+
+                if (horizontal == null)
                     return false;
 
-                line.Y = NormalizePrice(price);
-                line.Color = color;
-                line.Thickness =
-                    Math.Max(1, LevelLineThickness);
-                line.LineStyle = lineStyle;
+                horizontal.Y =
+                    NormalizePrice(price);
+                horizontal.Color = color;
+                horizontal.Thickness =
+                    Math.Max(
+                        1,
+                        LevelLineThickness);
+                horizontal.LineStyle = lineStyle;
 
-                // Native horizontal fallback is necessarily full-width. The
-                // primary TrendLine remains responsible for finite/full-width
-                // presentation according to the user's setting.
                 return true;
             }
             catch
@@ -6062,61 +6137,135 @@ namespace cAlgo
                 return;
             }
 
-            int safeStart = Math.Max(
-                0,
-                Math.Min(startIndex, Bars.Count - 2));
+            int safeStart =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        startIndex,
+                        Bars.Count - 2));
 
-            int safeEnd = Math.Max(
-                safeStart + 1,
-                Math.Min(endIndex, Bars.Count - 1));
+            int safeEnd =
+                Math.Max(
+                    safeStart + 1,
+                    Math.Min(
+                        endIndex,
+                        Bars.Count - 1));
 
-            double normalizedPrice = NormalizePrice(price);
+            double normalizedPrice =
+                NormalizePrice(price);
+
             if (!IsFinitePositive(normalizedPrice))
             {
                 RemoveLevelDrawing(name);
                 return;
             }
 
-            // ENTRY/SL/TP/REACTION/WATCH share one stable renderer.
-            // A horizontal TrendLine is used for both finite and extended modes.
-            // This avoids HorizontalLine/TrendLine type collisions with legacy objects.
-            LineStyle style = styleOverride ?? PlanLineStyle;
-            bool fullWidth = fullWidthOverride ?? FullWidthLevelLines;
+            LineStyle style =
+                styleOverride ??
+                PlanLineStyle;
+
+            bool fullWidth =
+                fullWidthOverride ??
+                FullWidthLevelLines;
 
             try
             {
-                ChartTrendLine line =
-                    Chart.FindObject(name) as ChartTrendLine;
-
-                if (line == null)
+                if (fullWidth)
                 {
-                    if (Chart.FindObject(name) != null)
-                        Chart.RemoveObject(name);
+                    ChartHorizontalLine line =
+                        Chart.FindObject(name) as ChartHorizontalLine;
 
-                    line = Chart.DrawTrendLine(
-                        name,
-                        safeStart,
-                        normalizedPrice,
-                        safeEnd,
-                        normalizedPrice,
-                        color,
-                        Math.Max(1, LevelLineThickness),
-                        style);
+                    if (line == null)
+                    {
+                        ChartObject existing =
+                            Chart.FindObject(name);
+
+                        if (existing != null)
+                            Chart.RemoveObject(name);
+
+                        line =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(
+                                    1,
+                                    LevelLineThickness),
+                                style);
+                    }
+
+                    if (line == null)
+                        throw new InvalidOperationException(
+                            "Chart.DrawHorizontalLine returned null.");
+
+                    line.Y =
+                        normalizedPrice;
+                    line.Color =
+                        color;
+                    line.Thickness =
+                        Math.Max(
+                            1,
+                            LevelLineThickness);
+                    line.LineStyle =
+                        style;
+
+                    // A primary horizontal line and any alternate/fallback
+                    // object must never coexist for the same semantic level.
+                    Chart.RemoveObject(name + "_SEG");
+                    Chart.RemoveObject(name + "_FALLBACK");
+                    Chart.RemoveObject(name + "_H");
+                    Chart.RemoveObject(name + "_TEXT");
+                    Chart.RemoveObject(name + "_LABEL");
+                    return;
                 }
 
-                if (line == null)
+                ChartTrendLine trend =
+                    Chart.FindObject(name) as ChartTrendLine;
+
+                if (trend == null)
+                {
+                    ChartObject existing =
+                        Chart.FindObject(name);
+
+                    if (existing != null)
+                        Chart.RemoveObject(name);
+
+                    trend =
+                        Chart.DrawTrendLine(
+                            name,
+                            safeStart,
+                            normalizedPrice,
+                            safeEnd,
+                            normalizedPrice,
+                            color,
+                            Math.Max(
+                                1,
+                                LevelLineThickness),
+                            style);
+                }
+
+                if (trend == null)
                     throw new InvalidOperationException(
                         "Chart.DrawTrendLine returned null.");
 
-                line.Time1 = Bars.OpenTimes[safeStart];
-                line.Y1 = normalizedPrice;
-                line.Time2 = Bars.OpenTimes[safeEnd];
-                line.Y2 = normalizedPrice;
-                line.Color = color;
-                line.Thickness = Math.Max(1, LevelLineThickness);
-                line.LineStyle = style;
-                line.ExtendToInfinity = fullWidth;
-                line.IsInteractive = false;
+                trend.Time1 =
+                    Bars.OpenTimes[safeStart];
+                trend.Y1 =
+                    normalizedPrice;
+                trend.Time2 =
+                    Bars.OpenTimes[safeEnd];
+                trend.Y2 =
+                    normalizedPrice;
+                trend.Color =
+                    color;
+                trend.Thickness =
+                    Math.Max(
+                        1,
+                        LevelLineThickness);
+                trend.LineStyle =
+                    style;
+                trend.ExtendToInfinity = false;
+                trend.IsInteractive = false;
 
                 Chart.RemoveObject(name + "_SEG");
                 Chart.RemoveObject(name + "_FALLBACK");
@@ -6144,6 +6293,7 @@ namespace cAlgo
                 }
             }
         }
+
         private void DrawSignal(
             int index,
             double rr)
