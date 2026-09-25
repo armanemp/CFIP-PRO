@@ -10510,41 +10510,6 @@ namespace cAlgo
             return _panelStableHeader;
         }
 
-        private void SetPanelAlignment()
-        {
-            VerticalAlignment vertical;
-            HorizontalAlignment horizontal;
-
-            switch (PanelPosition)
-            {
-                case CFIPClean30PanelCorner.TopLeft:
-                    vertical = VerticalAlignment.Top;
-                    horizontal = HorizontalAlignment.Left;
-                    break;
-
-                case CFIPClean30PanelCorner.TopRight:
-                    vertical = VerticalAlignment.Top;
-                    horizontal = HorizontalAlignment.Right;
-                    break;
-
-                case CFIPClean30PanelCorner.BottomRight:
-                    vertical = VerticalAlignment.Bottom;
-                    horizontal = HorizontalAlignment.Right;
-                    break;
-
-                default:
-                    vertical = VerticalAlignment.Bottom;
-                    horizontal = HorizontalAlignment.Left;
-                    break;
-            }
-
-            _panel.VerticalAlignment =
-                vertical;
-
-            _panel.HorizontalAlignment =
-                horizontal;
-        }
-
         private string ConfluenceText(
             Frame frame)
         {
