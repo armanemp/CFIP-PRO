@@ -6223,7 +6223,22 @@ namespace cAlgo
                 ? 100.0 * _outcomeHighConfidenceWins / highTotal
                 : 0;
 
-            return "CAL " + rate.ToString("F0") + "% | HC " + highRate.ToString("F0") + "% | N " + total;
+            string baseText =
+                "CAL " + rate.ToString("F0") +
+                "% | HC " + highRate.ToString("F0") +
+                "% | N " + total;
+
+            if (!ShowOutcomeDiagnostics)
+                return baseText;
+
+            string activeTelemetry =
+                _signalActive
+                    ? " | MFE " + _signalMfeR.ToString("F2") + "R/" + _signalMfeBars +
+                      " | MAE " + _signalMaeR.ToString("F2") + "R/" + _signalMaeBars +
+                      " | RETEST " + _smartRetestQuality
+                    : "";
+
+            return baseText + activeTelemetry;
         }
 
         private void MonitorActiveLevels()
@@ -6253,6 +6268,13 @@ namespace cAlgo
             int liveM5Bar = Math.Max(1, _m5 != null ? _m5.Count - 1 : _signalCreatedM5Bar);
             int barsSinceEntry = _signalCreatedM5Bar >= 0
                 ? Math.Max(0, liveM5Bar - _signalCreatedM5Bar)
+                : 0;
+
+            int closedIndex = GetLastClosedIndexBefore(
+                _m5,
+                _m5.OpenTimes[Math.Max(1, _m5.Count - 1)]);
+            double monitorAtr = closedIndex >= 30
+                ? GetAtr(_m5, closedIndex, AtrPeriod)
                 : 0;
 
             if (UseFalseSignalGuard &&
@@ -6299,6 +6321,7 @@ namespace cAlgo
             if (hitSl && !_slAlerted)
             {
                 _slAlerted = true;
+                _signalSlBars = barsSinceEntry;
                 _signalActive = false;
                 _signalOutcome = "SL HIT";
                 _lastExitM5Bar = Math.Max(1, _m5 != null ? _m5.Count - 1 : _lastExitM5Bar);
@@ -6313,6 +6336,7 @@ namespace cAlgo
             if (hitTp1 && !_tp1Alerted)
             {
                 _tp1Alerted = true;
+                _signalTp1Bars = barsSinceEntry;
                 _signalOutcome = "TP1 HIT";
                 if (EnableLevelHitAlerts && AlertOnTp1)
                     QueueExitDecisionAlert("TP1 HIT | " + SymbolName + " | " + FormatPrice(_signalTp1), 1, Math.Max(1, _m5 != null ? _m5.Count - 1 : _lastExitM5Bar));
@@ -6321,6 +6345,7 @@ namespace cAlgo
             if (hitTp2 && !_tp2Alerted)
             {
                 _tp2Alerted = true;
+                _signalTp2Bars = barsSinceEntry;
                 _signalOutcome = "TP2 HIT";
                 if (EnableLevelHitAlerts && AlertOnTp2)
                     QueueExitDecisionAlert("TP2 HIT | " + SymbolName + " | " + FormatPrice(_signalTp2), 1, Math.Max(1, _m5 != null ? _m5.Count - 1 : _lastExitM5Bar));
@@ -6329,6 +6354,7 @@ namespace cAlgo
             if (hitTp3 && !_tp3Alerted)
             {
                 _tp3Alerted = true;
+                _signalTp3Bars = barsSinceEntry;
                 _signalOutcome = "TP3 HIT";
                 if (EnableLevelHitAlerts && AlertOnTp3)
                     QueueExitDecisionAlert("TP3 HIT | " + SymbolName + " | " + FormatPrice(_signalTp3), 1, Math.Max(1, _m5 != null ? _m5.Count - 1 : _lastExitM5Bar));
@@ -6337,6 +6363,7 @@ namespace cAlgo
             if (hitTp4 && !_tp4Alerted)
             {
                 _tp4Alerted = true;
+                _signalTp4Bars = barsSinceEntry;
                 _signalActive = false;
                 _signalOutcome = "TP4 HIT";
                 _lastExitM5Bar = Math.Max(1, _m5 != null ? _m5.Count - 1 : _lastExitM5Bar);
@@ -12304,6 +12331,41 @@ for (int j = impulse + 1; j <= index; j++)
             _lastContextAlertDirection = direction;
             _lastContextAlertDirectionBar = m5BarIndex;
             _contextStatusText = "CONTEXT  " + label;
+            if (_signalActive &&
+                OutcomeMaximumBars > 0 &&
+                barsSinceEntry >= OutcomeMaximumBars)
+            {
+                _signalActive = false;
+                _signalOutcome = "TIMEOUT";
+                _lastExitM5Bar = liveM5Bar;
+                RecordSignalOutcome(false);
+                QueueExitDecisionAlert(
+                    (_signalDirection == 1 ? "BUY" : "SELL") +
+                    " SETUP EXPIRED | " + SymbolName +
+                    " | BARS " + barsSinceEntry,
+                    0,
+                    liveM5Bar);
+                DrawOutcomeMarker("TIMEOUT", market, false);
+            }
+
+            if (_signalActive &&
+                EnableSetupInvalidation &&
+                monitorAtr > 0 &&
+                EvaluateActiveSignalInvalidation(closedIndex, market, monitorAtr))
+            {
+                _signalActive = false;
+                _signalOutcome = "STRUCTURE INVALIDATED";
+                _lastExitM5Bar = liveM5Bar;
+                RecordSignalOutcome(false);
+                QueueExitDecisionAlert(
+                    (_signalDirection == 1 ? "BUY" : "SELL") +
+                    " SETUP INVALIDATED | " + SymbolName +
+                    " | SCORE " + _smartInvalidationScore,
+                    0,
+                    liveM5Bar);
+                DrawOutcomeMarker("INVALIDATED", market, false);
+            }
+
             if (!_suppressIntermediatePanelRender)
                 DrawUnifiedPanel();
         }
