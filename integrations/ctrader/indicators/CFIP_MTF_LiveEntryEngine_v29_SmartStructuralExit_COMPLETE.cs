@@ -1191,11 +1191,6 @@ namespace cAlgo
         private double _signalMaeR;
         private int _smartRetestQuality;
         private int _smartInvalidationScore;
-        private int _rejectionRetest;
-        private int _rejectionLocation;
-        private int _rejectionRisk;
-        private int _rejectionObstacle;
-        private int _rejectionCalibration;
         private class OutcomeRecord
         {
             public int Direction { get; set; }
@@ -1235,8 +1230,6 @@ namespace cAlgo
         private double _reactionTp4;
 
         private Border _tradePlanPanelBorder;
-        private TextBlock _tradePlanPanelText;
-        private StackPanel _tradePlanPanelStack;
         private Grid _tradePlanPanelGrid;
         private TextBlock[] _tradePlanPanelRows;
         private StackPanel _tradePlanActionStack;
@@ -1252,12 +1245,9 @@ namespace cAlgo
         private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
         private string _lastAlertSignature = "";
         private DateTime _lastAlertUtc = DateTime.MinValue;
-        private string _lastAlertEventKey = "";
-        private int _lastAlertEventDirection;
-        private int _lastAlertEventBar = -1;
-        private string _lastAlertEventKey = "";
-        private int _lastAlertEventDirection;
-        private int _lastAlertEventBar = -1;
+        private int _alertEventLedgerBar = -1;
+        private readonly HashSet<string> _alertEventLedger =
+            new HashSet<string>();
 
         // Live exit state
         private double _signalInitialRisk;
@@ -1339,6 +1329,7 @@ namespace cAlgo
         private int _smartEntryLocationQuality;
         private double _smartProxyExpectedValue;
         private string _smartEntryGateReason = "";
+        private int _smartDecisionM5Bar = -1;
         private int _smartLastStableDirection;
         private int _smartOppositeBars;
         private int _fastReversalDirection;
@@ -1351,7 +1342,6 @@ namespace cAlgo
         private string _lastSmartDecisionAlertAction = "";
         private int _lastEventShockBar = -1;
         private int _lastRestrictionAlertBar = -1;
-        private bool _lastNewsGuardState;
         private string _lastRestrictionSignature = "";
         private int _lastRestrictionAlertM5Bar = -1;
 
@@ -1386,6 +1376,10 @@ namespace cAlgo
         private int _cachedH1Index = -1;
         private Analysis _cachedH4Analysis;
         private int _cachedH4Index = -1;
+
+        private int _cachedRetestM5Index = -1;
+        private int _cachedBullRetestQuality;
+        private int _cachedBearRetestQuality;
 
         private const string Prefix = "CFIP_LIVE_";
         private const string EarlyPrefix = "CFIP_EARLY_";
@@ -1485,7 +1479,13 @@ namespace cAlgo
             _lastSmartExitAlertUtc = DateTime.MinValue;
             _lastAlertSignature = "";
             _lastAlertUtc = DateTime.MinValue;
+            _alertEventLedgerBar = -1;
+            _alertEventLedger.Clear();
             _alertPopupExpiresUtc = DateTime.MinValue;
+            _smartDecisionM5Bar = -1;
+            _cachedRetestM5Index = -1;
+            _cachedBullRetestQuality = 0;
+            _cachedBearRetestQuality = 0;
             _liveReversalDirection = 0;
             _liveReversalScore = 0;
             _lastLiveReversalBar = -1;
@@ -2159,9 +2159,33 @@ namespace cAlgo
                 (m5.MssBear || m5.ChochBear || m5.DisplacementBear || m5.LiquidityBear) &&
                 m15.Direction <= 0;
 
-            int bullRetestQuality = CalculateRetestQuality(_m5, m5Index, 1);
-            int bearRetestQuality = CalculateRetestQuality(_m5, m5Index, -1);
-            _smartRetestQuality = Math.Max(bullRetestQuality, bearRetestQuality);
+            if (_cachedRetestM5Index != m5Index)
+            {
+                _cachedBullRetestQuality =
+                    CalculateRetestQuality(
+                        _m5,
+                        m5Index,
+                        1);
+
+                _cachedBearRetestQuality =
+                    CalculateRetestQuality(
+                        _m5,
+                        m5Index,
+                        -1);
+
+                _cachedRetestM5Index = m5Index;
+            }
+
+            int bullRetestQuality =
+                _cachedBullRetestQuality;
+
+            int bearRetestQuality =
+                _cachedBearRetestQuality;
+
+            _smartRetestQuality =
+                Math.Max(
+                    bullRetestQuality,
+                    bearRetestQuality);
 
             bool bullRetestGate = !UseRetestQualityGate || bullRetestQuality >= MinimumRetestQuality || bullStrongOverride;
             bool bearRetestGate = !UseRetestQualityGate || bearRetestQuality >= MinimumRetestQuality || bearStrongOverride;
@@ -5893,9 +5917,6 @@ namespace cAlgo
                 _tradePlanPanelGrid == null ||
                 _tradePlanPanelRows == null)
             {
-                _tradePlanPanelText = null;
-                _tradePlanPanelStack = null;
-
                 _tradePlanPanelGrid =
                     new Grid(
                         TradePlanPanelTotalRows,
@@ -6199,8 +6220,6 @@ namespace cAlgo
             }
 
             _tradePlanPanelBorder = null;
-            _tradePlanPanelText = null;
-            _tradePlanPanelStack = null;
             _tradePlanPanelGrid = null;
             _tradePlanPanelRows = null;
             _tradePlanActionStack = null;
@@ -6230,15 +6249,19 @@ namespace cAlgo
                     : semanticEventKey;
 
             if (SuppressDuplicateAlerts &&
-                eventBar >= 0 &&
-                string.Equals(
-                    eventKey,
-                    _lastAlertEventKey,
-                    StringComparison.Ordinal) &&
-                direction == _lastAlertEventDirection &&
-                eventBar == _lastAlertEventBar)
+                eventBar >= 0)
             {
-                return false;
+                if (_alertEventLedgerBar != eventBar)
+                {
+                    _alertEventLedger.Clear();
+                    _alertEventLedgerBar = eventBar;
+                }
+
+                string eventSignature =
+                    eventKey + "|" + direction;
+
+                if (!_alertEventLedger.Add(eventSignature))
+                    return false;
             }
 
             if (SuppressDuplicateAlerts &&
@@ -6260,14 +6283,6 @@ namespace cAlgo
 
                 _lastAlertSignature = signature;
                 _lastAlertUtc = now;
-            }
-
-            if (SuppressDuplicateAlerts &&
-                eventBar >= 0)
-            {
-                _lastAlertEventKey = eventKey;
-                _lastAlertEventDirection = direction;
-                _lastAlertEventBar = eventBar;
             }
 
             return true;
@@ -8450,6 +8465,40 @@ private void UpdateBrokerPositionProtection()
 
         private void EvaluateSmartDecision(int chartIndex)
         {
+            if (!EnableSmartDecisionEngine ||
+                _m5 == null ||
+                _m15 == null ||
+                _m5.Count < 70 ||
+                _m15.Count < 70)
+            {
+                _smartDecision = null;
+                _smartDirection = 0;
+                _smartBuyShare = 50;
+                _smartSellShare = 50;
+                _smartQuality = 0;
+                _smartEntryQuality = 0;
+                _smartRegime = "UNKNOWN";
+                _smartAction = "WAIT";
+                _smartReason = "";
+                _smartConsensusQuality = 0;
+                _smartIndependentEvidence = 0;
+                _smartDecisionM5Bar = -1;
+                return;
+            }
+
+            int liveIndex = _m5.Count - 1;
+            DateTime reference =
+                _m5.OpenTimes[liveIndex];
+            int m5Index =
+                GetLastClosedIndexBefore(_m5, reference);
+
+            if (SmartUseClosedBarDecision &&
+                _smartDecision != null &&
+                _smartDecisionM5Bar == m5Index)
+            {
+                return;
+            }
+
             _smartDecision = null;
             _smartDirection = 0;
             _smartBuyShare = 50;
@@ -8461,19 +8510,6 @@ private void UpdateBrokerPositionProtection()
             _smartReason = "";
             _smartConsensusQuality = 0;
             _smartIndependentEvidence = 0;
-
-            if (!EnableSmartDecisionEngine ||
-                _m5 == null ||
-                _m15 == null ||
-                _m5.Count < 70 ||
-                _m15.Count < 70)
-                return;
-
-            int liveIndex = _m5.Count - 1;
-            DateTime reference =
-                _m5.OpenTimes[liveIndex];
-            int m5Index =
-                GetLastClosedIndexBefore(_m5, reference);
 
             int m15Index =
                 GetLastClosedIndexBefore(
@@ -9006,6 +9042,7 @@ private void UpdateBrokerPositionProtection()
                     LiveSell = liveBear
                 };
 
+            _smartDecisionM5Bar = m5Index;
             _smartDirection = direction;
             _smartBuyShare = buyShare;
             _smartSellShare = sellShare;
