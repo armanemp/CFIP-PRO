@@ -1732,6 +1732,9 @@ namespace cAlgo
             if (AlertOnEntryRestriction && restrictions.Count == 0 && anyRestriction)
                 restrictions.Add("ENTRY RESTRICTION ACTIVE");
 
+            if (!AlertOnEntryRestriction && !ShowEntryRestrictionPopup)
+                restrictions.Clear();
+
             string restrictionSignature =
                 (newsBlocked ? "NEWS:" + newsRestrictionReason + "|" : "") +
                 string.Join("|", restrictions);
@@ -5079,6 +5082,15 @@ namespace cAlgo
             }
             if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
                 SendGenericAlert(_pendingContextAlertMessage, _pendingContextAlertDirection);
+
+            _pendingExitAlertMessage = "";
+            _pendingRestrictionAlertMessage = "";
+            _pendingSignalAlertMessage = "";
+            _pendingReactionAlertMessage = "";
+            _pendingSmartAlertMessage = "";
+            _pendingEarlyAlertMessage = "";
+            _pendingContextAlertMessage = "";
+            _pendingHighConfidenceSignalAlert = false;
         }
 
         private void RenderSynchronizedPresentation(int chartIndex)
@@ -5131,6 +5143,8 @@ namespace cAlgo
 
         private void ClearActivePlanDrawingOnly()
         {
+            RemoveLegacyLiveLevelObjects();
+
             Chart.RemoveObject(Prefix + "ARROW");
             Chart.RemoveObject(Prefix + "ENTRY");
             Chart.RemoveObject(Prefix + "SL");
@@ -5424,6 +5438,17 @@ namespace cAlgo
                     " | CONS " + _smartConsensusQuality +
                     " | EVID " + _smartIndependentEvidence);
 
+                if (_fastReversalDirection != 0 &&
+                    _fastReversalQuality > 0)
+                {
+                    lines.Add(
+                        "REVERSAL " +
+                        (_fastReversalDirection == 1 ? "BUY" : "SELL") +
+                        " | Q" + _fastReversalQuality +
+                        " | E" + _fastReversalEvidence +
+                        " | M5 FAST");
+                }
+
                 if (!string.IsNullOrWhiteSpace(_smartReason))
                     lines.Add("WHY  " + _smartReason);
             }
@@ -5520,10 +5545,8 @@ namespace cAlgo
                 return;
             }
 
-            Color panelColor =
-                showPlan
-                    ? TradePlanTextColor
-                    : StatusColor;
+            // One authoritative text color for every intelligence-panel state.
+            Color panelColor = UnifiedPanelTextColor;
 
             if (_tradePlanPanelBorder == null)
             {
@@ -5931,10 +5954,28 @@ namespace cAlgo
 
         private void SendRestrictionAlert(string message)
         {
-            if (!TryAcceptAlert("RESTRICTION", message, 0))
+            if (string.IsNullOrWhiteSpace(message))
                 return;
 
-            if (EnableSoundAlerts)
+            bool newsGuard =
+                message.StartsWith("NEWS / EVENT GUARD", StringComparison.OrdinalIgnoreCase);
+
+            bool allowRestrictionAlert =
+                newsGuard
+                    ? AlertOnNewsEventGuard
+                    : AlertOnEntryRestriction || ShowEntryRestrictionPopup;
+
+            if (!allowRestrictionAlert)
+                return;
+
+            if (!TryAcceptAlert(
+                newsGuard ? "NEWS_GUARD" : "RESTRICTION",
+                message,
+                0))
+                return;
+
+            if (EnableSoundAlerts &&
+                (newsGuard || AlertOnEntryRestriction))
             {
                 try
                 {
@@ -5949,12 +5990,15 @@ namespace cAlgo
                 }
             }
 
-            if (ShowPopupAlert && ShowEntryRestrictionPopup)
+            if (ShowPopupAlert &&
+                (newsGuard || ShowEntryRestrictionPopup))
             {
                 try
                 {
                     ShowInternalAlertPopup(
-                        "CFIP MTF ENTRY BLOCKED",
+                        newsGuard
+                            ? "CFIP MTF NEWS / EVENT GUARD"
+                            : "CFIP MTF ENTRY BLOCKED",
                         message,
                         PopupNotificationState.Information);
                 }
@@ -5964,11 +6008,20 @@ namespace cAlgo
                 }
             }
 
-            if (EnableEmailAlerts && !string.IsNullOrWhiteSpace(SenderEmail) && !string.IsNullOrWhiteSpace(ReceiverEmail))
+            if (EnableEmailAlerts &&
+                (newsGuard || AlertOnEntryRestriction) &&
+                !string.IsNullOrWhiteSpace(SenderEmail) &&
+                !string.IsNullOrWhiteSpace(ReceiverEmail))
             {
                 try
                 {
-                    Notifications.SendEmail(SenderEmail, ReceiverEmail, "CFIP MTF Restriction / No-Trade Alert", message);
+                    Notifications.SendEmail(
+                        SenderEmail,
+                        ReceiverEmail,
+                        newsGuard
+                            ? "CFIP MTF News / Event Guard"
+                            : "CFIP MTF Restriction / No-Trade Alert",
+                        message);
                 }
                 catch (Exception ex)
                 {
@@ -6025,6 +6078,30 @@ namespace cAlgo
             }
         }
 
+        private bool IsCriticalPopupAlert(string subject, string message)
+        {
+            if (!PopupOnlyCriticalAlerts)
+                return true;
+
+            string s =
+                ((subject ?? "") + " " + (message ?? "")).ToUpperInvariant();
+
+            return s.Contains("CONFIRMED BUY") ||
+                   s.Contains("CONFIRMED SELL") ||
+                   s.Contains("HIGH-CONFIDENCE ENTRY") ||
+                   s.Contains("TP1 HIT") ||
+                   s.Contains("TP2 HIT") ||
+                   s.Contains("TP3 HIT") ||
+                   s.Contains("TP4 HIT") ||
+                   s.Contains("SL HIT") ||
+                   s.Contains("INVALIDATED") ||
+                   s.Contains("REVERSAL") ||
+                   s.Contains("TIMEOUT") ||
+                   s.Contains("EXIT RISK") ||
+                   s.Contains("EXIT DECISION") ||
+                   s.Contains("NEWS / EVENT GUARD");
+        }
+
         private void SendGenericAlert(string message, int direction = 0)
         {
             SendNotificationBundle(message, direction, "CFIP MTF Alert");
@@ -6050,7 +6127,8 @@ namespace cAlgo
                 }
             }
 
-            if (ShowPopupAlert)
+            if (ShowPopupAlert &&
+                IsCriticalPopupAlert(subject, message))
             {
                 try
                 {
@@ -8373,6 +8451,16 @@ private void UpdateBrokerPositionProtection()
                         direction == 1
                             ? liveBull
                             : liveBear);
+
+                if (_fastReversalDirection == direction &&
+                    _fastReversalQuality > 0)
+                {
+                    _smartReason +=
+                        " | FAST REVERSAL Q" +
+                        _fastReversalQuality +
+                        " E" +
+                        _fastReversalEvidence;
+                }
             }
             else
             {
@@ -13722,8 +13810,24 @@ for (int j = impulse + 1; j <= index; j++)
         // CLEAR OBJECTS
         // ============================================================
 
+        private void RemoveLegacyLiveLevelObjects()
+        {
+            string[] suffixes =
+            {
+                "ENTRY_SEG", "SL_SEG", "TP1_SEG", "TP2_SEG", "TP3_SEG", "TP4_SEG",
+                "ENTRY_TEXT", "SL_TEXT", "TP1_TEXT", "TP2_TEXT", "TP3_TEXT", "TP4_TEXT",
+                "ENTRY_H", "SL_H", "TP1_H", "TP2_H", "TP3_H", "TP4_H",
+                "LBL_ENTRY", "LBL_SL", "LBL_TP1", "LBL_TP2", "LBL_TP3", "LBL_TP4"
+            };
+
+            foreach (string suffix in suffixes)
+                Chart.RemoveObject(Prefix + suffix);
+        }
+
         private void ClearLiveSignalObjects()
         {
+            RemoveLegacyLiveLevelObjects();
+
             Chart.RemoveObject(
                 Prefix + "ARROW");
 
