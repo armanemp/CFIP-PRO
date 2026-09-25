@@ -3550,6 +3550,7 @@ if (UseM1Trigger &&
                 return null;
 
             if (RejectTargetObstacle &&
+                RequireObstacleFreeTp1 &&
                 HasTargetObstacle(
                     _m5Bars,
                     closedM5,
@@ -3825,6 +3826,55 @@ if (UseM1Trigger &&
                     ? best - buffer
                     : best + buffer;
 
+            if (source.IndexOf(
+                    "ZONE",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                source.IndexOf(
+                    "FVG",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                source.IndexOf(
+                    "ORDER_BLOCK",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                quality =
+                    ClampInt(
+                        quality +
+                        Math.Max(
+                            0,
+                            SmartStopZoneBonus),
+                        0,
+                        100);
+            }
+
+            double liquidityLevel =
+                direction == 1
+                    ? FindEqualLow(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr)
+                    : FindEqualHigh(
+                        _m5Bars,
+                        closedM5,
+                        entry,
+                        atr);
+
+            if (liquidityLevel > 0 &&
+                Math.Abs(
+                    best -
+                    liquidityLevel) <=
+                atr * 0.20)
+            {
+                quality =
+                    ClampInt(
+                        quality +
+                        Math.Max(
+                            0,
+                            SmartLiquidityPoolBonus),
+                        0,
+                        100);
+            }
+
             best = NormalizePrice(best);
 
             if (!IsValidStop(
@@ -4028,39 +4078,62 @@ if (UseM1Trigger &&
                     _d1Bars,
                     _m5Bars.OpenTimes[closedM5]);
 
-            if (d1 > 0)
+            if (UseExtendedLiquidityMap &&
+                d1 > 1)
             {
-                AddLevel(
+                AddLiquidityLevel(
                     levels,
                     direction == 1
-                        ? _d1Bars.HighPrices[d1 - 1]
-                        : _d1Bars.LowPrices[d1 - 1],
+                        ? _d1Bars.HighPrices[d1 - 2]
+                        : _d1Bars.LowPrices[d1 - 2],
                     "LIQUIDITY_POOL",
                     "D1",
-                    1,
+                    2,
                     LiquidityPoolWeight);
             }
 
-            double sessionHigh;
-            double sessionLow;
+            int w1 =
+                ClosedIndex(
+                    _w1Bars,
+                    _m5Bars.OpenTimes[closedM5]);
 
-            GetSessionRange(
-                _m5Bars,
-                closedM5,
-                SessionStartUtc,
-                SessionEndUtc,
-                out sessionHigh,
-                out sessionLow);
+            if (UseExtendedLiquidityMap &&
+                w1 > 1)
+            {
+                AddLiquidityLevel(
+                    levels,
+                    direction == 1
+                        ? _w1Bars.HighPrices[w1 - 2]
+                        : _w1Bars.LowPrices[w1 - 2],
+                    "LIQUIDITY_POOL",
+                    "W1",
+                    2,
+                    PreviousWeekWeight);
+            }
 
-            AddLevel(
-                levels,
-                direction == 1
-                    ? sessionHigh
-                    : sessionLow,
-                "SESSION",
-                "M5",
-                0,
-                SessionWeight);
+            if (UseSessionLiquidityTargets)
+            {
+                double sessionHigh;
+                double sessionLow;
+
+                GetSessionRange(
+                    _m5Bars,
+                    closedM5,
+                    SessionStartUtc,
+                    SessionEndUtc,
+                    out sessionHigh,
+                    out sessionLow);
+
+                AddLiquidityLevel(
+                    levels,
+                    direction == 1
+                        ? sessionHigh
+                        : sessionLow,
+                    "SESSION",
+                    "M5",
+                    0,
+                    SessionWeight);
+            }
         }
 
         private void GetSessionRange(
@@ -4288,6 +4361,29 @@ if (UseM1Trigger &&
                     1,
                     PreviousWeekWeight);
             }
+        }
+
+        private void AddLiquidityLevel(
+            List<Level> levels,
+            double price,
+            string kind,
+            string timeframe,
+            int age,
+            double baseScore)
+        {
+            if (baseScore <
+                Math.Max(
+                    0,
+                    LiquidityTargetMinimumScore))
+                return;
+
+            AddLevel(
+                levels,
+                price,
+                kind,
+                timeframe,
+                age,
+                baseScore);
         }
 
         private void AddLevel(
@@ -6793,7 +6889,9 @@ if (UseM1Trigger &&
                     bars.HighPrices[i] <
                     target -
                     atr *
-                    TargetClearanceAtr)
+                    Math.Max(
+                        TargetClearanceAtr,
+                        TargetObstacleBufferAtr))
                     return true;
 
                 if (direction == -1 &&
@@ -6802,7 +6900,9 @@ if (UseM1Trigger &&
                     bars.LowPrices[i] >
                     target +
                     atr *
-                    TargetClearanceAtr)
+                    Math.Max(
+                        TargetClearanceAtr,
+                        TargetObstacleBufferAtr))
                     return true;
             }
 
