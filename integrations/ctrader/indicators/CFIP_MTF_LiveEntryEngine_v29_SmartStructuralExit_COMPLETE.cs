@@ -7407,6 +7407,18 @@ private void UpdateBrokerPositionProtection()
             _smartConsensusQuality = consensusQuality;
             _smartIndependentEvidence = independentEvidence;
 
+            // Feed independent consensus back into quality. This keeps the
+            // displayed quality aligned with the actual gate instead of allowing
+            // a high softmax share to remain high when cross-timeframe evidence
+            // is structurally weak.
+            quality =
+                (int)Math.Round(
+                    Clamp(
+                        quality * 0.88 +
+                        consensusQuality * 0.12,
+                        0,
+                        100));
+
             if (direction != 0)
             {
                 bool weakRegime =
