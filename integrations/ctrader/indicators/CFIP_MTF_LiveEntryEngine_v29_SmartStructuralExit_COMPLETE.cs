@@ -523,6 +523,9 @@ namespace cAlgo
         [Parameter("Line Length Bars", Group = "Display", DefaultValue = 14, MinValue = 2, MaxValue = 30)]
         public int LineLengthBars { get; set; }
 
+        [Parameter("Full Width Level Lines", Group = "Display", DefaultValue = true)]
+        public bool FullWidthLevelLines { get; set; }
+
         [Parameter("Line Forward Bars", Group = "Display", DefaultValue = 10, MinValue = 1, MaxValue = 50)]
         public int LineStartBars { get; set; }
 
@@ -1234,6 +1237,8 @@ namespace cAlgo
         private Border _tradePlanPanelBorder;
         private TextBlock _tradePlanPanelText;
         private StackPanel _tradePlanPanelStack;
+        private Grid _tradePlanPanelGrid;
+        private TextBlock[] _tradePlanPanelRows;
         private StackPanel _tradePlanActionStack;
         private Button _closeAllPositionsButton;
         private Button _cancelAllOrdersButton;
@@ -1247,6 +1252,12 @@ namespace cAlgo
         private DateTime _alertPopupExpiresUtc = DateTime.MinValue;
         private string _lastAlertSignature = "";
         private DateTime _lastAlertUtc = DateTime.MinValue;
+        private string _lastAlertEventKey = "";
+        private int _lastAlertEventDirection;
+        private int _lastAlertEventBar = -1;
+        private string _lastAlertEventKey = "";
+        private int _lastAlertEventDirection;
+        private int _lastAlertEventBar = -1;
 
         // Live exit state
         private double _signalInitialRisk;
@@ -1381,6 +1392,12 @@ namespace cAlgo
         private const string HistoricalPrefix = "CFIP_HIST_";
         private const string ReactionPrefix = "CFIP_REACT_";
         private const string TradePlanName = "CFIP_TRADE_PLAN";
+
+        // Rendering invariants: one owner per visible level, fixed panel rows,
+        // and in-place icon updates so repeated Calculate() calls do not flicker.
+        private const int TradePlanPanelFixedRows = 36;
+        private const int TradePlanPanelActionRow = TradePlanPanelFixedRows;
+        private const int TradePlanPanelTotalRows = TradePlanPanelFixedRows + 1;
 
         // ============================================================
         // INITIALIZE
@@ -2853,7 +2870,7 @@ namespace cAlgo
 
             if (ShowReactionArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     ReactionPrefix + "ARROW",
                     direction == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
@@ -3551,9 +3568,11 @@ namespace cAlgo
             int index,
             Prediction p)
         {
-            ClearEarlyObjects();
             if (Bars == null || Bars.Count == 0 || p.Direction == 0)
+            {
+                ClearEarlyObjects();
                 return;
+            }
 
             int anchorIndex = Math.Max(0, Math.Min(index, Bars.Count - 1));
             GetFinitePredictionRange(anchorIndex, out int startIndex, out int endIndex);
@@ -3570,7 +3589,7 @@ namespace cAlgo
 
             if (ShowEarlyArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     EarlyPrefix + "ARROW",
                     p.Direction == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
@@ -3584,18 +3603,38 @@ namespace cAlgo
 
             if (ShowPredictionZone)
             {
-                ChartTrendLine top = Chart.DrawTrendLine(EarlyPrefix + "ZONE_TOP", startIndex, p.ZoneHigh, endIndex, p.ZoneHigh, color, 1, PredictionZoneLineStyle);
-                top.ExtendToInfinity = false;
-                top.IsInteractive = false;
+                DrawAuthoritativeLevelLine(
+                    EarlyPrefix + "ZONE_TOP",
+                    startIndex,
+                    endIndex,
+                    p.ZoneHigh,
+                    color,
+                    IsFinitePositive(p.ZoneHigh),
+                    PredictionZoneLineStyle);
 
-                ChartTrendLine bottom = Chart.DrawTrendLine(EarlyPrefix + "ZONE_BOTTOM", startIndex, p.ZoneLow, endIndex, p.ZoneLow, color, 1, PredictionZoneLineStyle);
-                bottom.ExtendToInfinity = false;
-                bottom.IsInteractive = false;
+                DrawAuthoritativeLevelLine(
+                    EarlyPrefix + "ZONE_BOTTOM",
+                    startIndex,
+                    endIndex,
+                    p.ZoneLow,
+                    color,
+                    IsFinitePositive(p.ZoneLow),
+                    PredictionZoneLineStyle);
+            }
+            else
+            {
+                Chart.RemoveObject(EarlyPrefix + "ZONE_TOP");
+                Chart.RemoveObject(EarlyPrefix + "ZONE_BOTTOM");
             }
 
-            ChartTrendLine trigger = Chart.DrawTrendLine(EarlyPrefix + "TRIGGER", startIndex, p.Trigger, endIndex, p.Trigger, color, 1, PredictionTriggerLineStyle);
-            trigger.ExtendToInfinity = false;
-            trigger.IsInteractive = false;
+            DrawAuthoritativeLevelLine(
+                EarlyPrefix + "TRIGGER",
+                startIndex,
+                endIndex,
+                p.Trigger,
+                color,
+                IsFinitePositive(p.Trigger),
+                PredictionTriggerLineStyle);
 
             if (ShowPredictionTargets && ShowLevelLines)
             {
@@ -3637,42 +3676,14 @@ namespace cAlgo
             double price,
             Color color)
         {
-            if (Bars == null || Bars.Count < 2 || !IsFinitePositive(price))
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
-            endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
-            if (endIndex <= startIndex)
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            double normalizedPrice = NormalizePrice(price);
-            if (!IsFinitePositive(normalizedPrice))
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            try
-            {
-                ChartTrendLine line = Chart.DrawTrendLine(
-                    lineName, startIndex, normalizedPrice, endIndex, normalizedPrice,
-                    color, Math.Max(1, LevelLineThickness), PlanLineStyle);
-                line.ExtendToInfinity = false;
-                line.IsInteractive = false;
-            }
-            catch (Exception ex)
-            {
-                Chart.RemoveObject(lineName);
-                Print("CFIP early level draw failed [{0}]: {1}", lineName, ex.Message);
-            }
+            DrawAuthoritativeLevelLine(
+                lineName,
+                startIndex,
+                endIndex,
+                price,
+                color,
+                true);
         }
-
 
 
         // ============================================================
@@ -4562,7 +4573,8 @@ namespace cAlgo
                     ref tp4))
                 return;
 
-            _signalBar = Math.Max(0, Math.Min(chartIndex, Bars.Count - 1));
+            // Anchor the visible signal to the actual closed M5 decision bar.
+            _signalBar = MapM5BarToChartIndex(m5ClosedIndex, chartIndex);
             _signalDirection = direction;
             _signalEntry = entry;
             _signalSl = NormalizePrice(sl);
@@ -4721,6 +4733,50 @@ namespace cAlgo
         // DRAW SIGNAL
         // ============================================================
 
+        private void DrawStableIcon(
+            string name,
+            ChartIconType iconType,
+            int barIndex,
+            double y,
+            Color color)
+        {
+            if (Bars == null || Bars.Count == 0 || !IsFinitePositive(y))
+            {
+                Chart.RemoveObject(name);
+                return;
+            }
+
+            int safeIndex = Math.Max(0, Math.Min(barIndex, Bars.Count - 1));
+
+            try
+            {
+                ChartIcon icon = Chart.FindObject(name) as ChartIcon;
+
+                if (icon == null)
+                {
+                    Chart.RemoveObject(name);
+                    icon = Chart.DrawIcon(
+                        name,
+                        iconType,
+                        Bars.OpenTimes[safeIndex],
+                        y,
+                        color);
+                }
+
+                if (icon != null)
+                {
+                    icon.IconType = iconType;
+                    icon.Time = Bars.OpenTimes[safeIndex];
+                    icon.Y = y;
+                    icon.Color = color;
+                }
+            }
+            catch (Exception ex)
+            {
+                Print("CFIP icon render failed [{0}]: {1}", name, ex.Message);
+            }
+        }
+
         private Color GetSignalArrowColor(int direction, int confidence)
         {
             // Arrow color encodes signal state, not merely direction:
@@ -4758,7 +4814,15 @@ namespace cAlgo
                 return;
 
             if (!_signalActive || _signalDirection == 0 || !ShowLevelLines)
+            {
+                Chart.RemoveObject(Prefix + "ENTRY");
+                Chart.RemoveObject(Prefix + "SL");
+                Chart.RemoveObject(Prefix + "TP1");
+                Chart.RemoveObject(Prefix + "TP2");
+                Chart.RemoveObject(Prefix + "TP3");
+                Chart.RemoveObject(Prefix + "TP4");
                 return;
+            }
 
             int anchor = _signalBar >= 0
                 ? Math.Max(0, Math.Min(_signalBar, Bars.Count - 1))
@@ -4807,15 +4871,18 @@ namespace cAlgo
             int endIndex,
             double price,
             Color color,
-            bool visible)
+            bool visible,
+            LineStyle? styleOverride = null,
+            bool? fullWidthOverride = null)
         {
-            string fallbackName = name + "_FALLBACK";
-
-            if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 2)
+            if (!visible ||
+                !IsFinitePositive(price) ||
+                Bars == null ||
+                Bars.Count < 1)
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(fallbackName);
+                Chart.RemoveObject(name + "_FALLBACK");
                 return;
             }
 
@@ -4824,68 +4891,163 @@ namespace cAlgo
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(fallbackName);
+                Chart.RemoveObject(name + "_FALLBACK");
                 return;
             }
 
-            startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
-            endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
+            LineStyle lineStyle =
+                styleOverride ?? PlanLineStyle;
+
+            bool fullWidth =
+                fullWidthOverride ?? FullWidthLevelLines;
 
             try
             {
-                // Draw a finite, thin, horizontal segment as the primary object.
-                // Use the documented DateTime overload so the segment is
-                // anchored to real chart times and cannot drift with bar-index mapping.
-                ChartTrendLine segment = Chart.DrawTrendLine(
-                    name,
-                    Bars.OpenTimes[startIndex],
-                    normalizedPrice,
-                    Bars.OpenTimes[endIndex],
-                    normalizedPrice,
-                    color,
-                    Math.Max(1, LevelLineThickness),
-                    PlanLineStyle);
-
-                if (segment != null)
+                if (fullWidth)
                 {
-                    segment.ExtendToInfinity = false;
-                    segment.IsInteractive = false;
-                    Chart.RemoveObject(fallbackName);
-                    return;
+                    ChartHorizontalLine line =
+                        Chart.FindObject(name) as ChartHorizontalLine;
+
+                    if (line == null)
+                    {
+                        Chart.RemoveObject(name);
+                        line = Chart.DrawHorizontalLine(
+                            name,
+                            normalizedPrice,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            lineStyle);
+                    }
+
+                    if (line != null)
+                    {
+                        line.Y = normalizedPrice;
+                        line.Color = color;
+                        line.Thickness =
+                            Math.Max(1, LevelLineThickness);
+                        line.LineStyle = lineStyle;
+                        line.IsInteractive = false;
+                    }
+                }
+                else
+                {
+                    int safeStart =
+                        Math.Max(
+                            0,
+                            Math.Min(
+                                startIndex,
+                                Bars.Count - 2));
+
+                    int safeEnd =
+                        Math.Max(
+                            safeStart + 1,
+                            Math.Min(
+                                endIndex,
+                                Bars.Count - 1));
+
+                    ChartTrendLine line =
+                        Chart.FindObject(name) as ChartTrendLine;
+
+                    if (line == null)
+                    {
+                        Chart.RemoveObject(name);
+
+                        line = Chart.DrawTrendLine(
+                            name,
+                            Bars.OpenTimes[safeStart],
+                            normalizedPrice,
+                            Bars.OpenTimes[safeEnd],
+                            normalizedPrice,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            lineStyle);
+                    }
+
+                    if (line != null)
+                    {
+                        line.Time1 = Bars.OpenTimes[safeStart];
+                        line.Y1 = normalizedPrice;
+                        line.Time2 = Bars.OpenTimes[safeEnd];
+                        line.Y2 = normalizedPrice;
+                        line.Color = color;
+                        line.Thickness =
+                            Math.Max(1, LevelLineThickness);
+                        line.LineStyle = lineStyle;
+                        line.ExtendToInfinity = false;
+                        line.IsInteractive = false;
+                    }
                 }
 
-                // Native horizontal fallback guarantees visibility on cTrader
-                // builds where an index-based TrendLine fails to paint.
-                ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
-                    fallbackName,
-                    normalizedPrice,
-                    color,
-                    Math.Max(1, LevelLineThickness),
-                    PlanLineStyle);
-
-                if (fallback != null)
-                    fallback.IsInteractive = false;
+                Chart.RemoveObject(name + "_SEG");
+                Chart.RemoveObject(name + "_FALLBACK");
             }
             catch (Exception ex)
             {
                 try
                 {
-                    ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
-                        fallbackName,
-                        normalizedPrice,
-                        color,
-                        Math.Max(1, LevelLineThickness),
-                        PlanLineStyle);
+                    Chart.RemoveObject(name);
 
-                    if (fallback != null)
-                        fallback.IsInteractive = false;
+                    if (fullWidth)
+                    {
+                        ChartHorizontalLine retry =
+                            Chart.DrawHorizontalLine(
+                                name,
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                lineStyle);
+
+                        if (retry != null)
+                            retry.IsInteractive = false;
+                    }
+                    else
+                    {
+                        int safeStart =
+                            Math.Max(
+                                0,
+                                Math.Min(
+                                    startIndex,
+                                    Bars.Count - 2));
+
+                        int safeEnd =
+                            Math.Max(
+                                safeStart + 1,
+                                Math.Min(
+                                    endIndex,
+                                    Bars.Count - 1));
+
+                        ChartTrendLine retry =
+                            Chart.DrawTrendLine(
+                                name,
+                                Bars.OpenTimes[safeStart],
+                                normalizedPrice,
+                                Bars.OpenTimes[safeEnd],
+                                normalizedPrice,
+                                color,
+                                Math.Max(1, LevelLineThickness),
+                                lineStyle);
+
+                        if (retry != null)
+                        {
+                            retry.ExtendToInfinity = false;
+                            retry.IsInteractive = false;
+                        }
+                    }
+
+                    Chart.RemoveObject(name + "_SEG");
+                    Chart.RemoveObject(name + "_FALLBACK");
                 }
-                catch (Exception fallbackEx)
+                catch (Exception retryEx)
                 {
-                    Print("CFIP level render failed [{0}]: {1} / fallback: {2}", name, ex.Message, fallbackEx.Message);
+                    Print(
+                        "CFIP level render failed [{0}]: {1} / retry: {2}",
+                        name,
+                        ex.Message,
+                        retryEx.Message);
                 }
             }
         }
+
 
         private void DrawSignal(
             int index,
@@ -4894,7 +5056,6 @@ namespace cAlgo
             if (Bars == null || Bars.Count == 0 || _signalDirection == 0)
                 return;
 
-            ClearLiveSignalObjects();
 
             int anchorIndex = Math.Max(0, Math.Min(index, Bars.Count - 1));
             GetFinitePlanRange(anchorIndex, out int startIndex, out int endIndex);
@@ -4912,7 +5073,7 @@ namespace cAlgo
 
             if (ShowSignalArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     Prefix + "ARROW",
                     _signalDirection == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
@@ -5107,58 +5268,97 @@ namespace cAlgo
 
         private void FlushCoordinatedDecisionAlerts()
         {
-            // Exactly one queued alert is emitted per Calculate() pass, with
-            // priority: exit -> restriction -> confirmed entry -> reaction ->
-            // smart -> early -> context. The queue is always cleared, including
-            // after an early return, so stale alerts cannot replay.
-            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage))
+            // At most two distinct events may be emitted from one Calculate()
+            // pass. Semantic dedupe prevents repeated copies of the same event
+            // even when its diagnostic message changes intrabar.
+            int emitted = 0;
+            const int maxPerPass = 2;
+
+            if (!string.IsNullOrWhiteSpace(_pendingExitAlertMessage) &&
+                emitted < maxPerPass)
             {
-                SendGenericAlert(_pendingExitAlertMessage, _pendingExitAlertDirection);
-                ClearPendingDecisionAlerts();
-                return;
+                SendGenericAlert(
+                    _pendingExitAlertMessage,
+                    _pendingExitAlertDirection,
+                    _pendingExitAlertBar,
+                    "EXIT");
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingRestrictionAlertMessage) &&
+                emitted < maxPerPass)
             {
-                SendRestrictionAlert(_pendingRestrictionAlertMessage);
-                ClearPendingDecisionAlerts();
-                return;
+                SendRestrictionAlert(
+                    _pendingRestrictionAlertMessage,
+                    _pendingRestrictionAlertBar);
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingSignalAlertMessage) &&
+                emitted < maxPerPass)
             {
                 if (_pendingHighConfidenceSignalAlert)
-                    SendHighConfidenceAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
+                {
+                    SendHighConfidenceAlert(
+                        _pendingSignalAlertMessage,
+                        _pendingSignalAlertDirection,
+                        _pendingSignalAlertBar);
+                }
                 else
-                    SendGenericAlert(_pendingSignalAlertMessage, _pendingSignalAlertDirection);
+                {
+                    SendGenericAlert(
+                        _pendingSignalAlertMessage,
+                        _pendingSignalAlertDirection,
+                        _pendingSignalAlertBar,
+                        "SIGNAL");
+                }
 
-                ClearPendingDecisionAlerts();
-                return;
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingReactionAlertMessage) &&
+                emitted < maxPerPass)
             {
-                SendGenericAlert(_pendingReactionAlertMessage, _pendingReactionAlertDirection);
-                ClearPendingDecisionAlerts();
-                return;
+                SendGenericAlert(
+                    _pendingReactionAlertMessage,
+                    _pendingReactionAlertDirection,
+                    _pendingReactionAlertBar,
+                    "REACTION");
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingSmartAlertMessage) &&
+                emitted < maxPerPass)
             {
-                SendGenericAlert(_pendingSmartAlertMessage, _pendingSmartAlertDirection);
-                ClearPendingDecisionAlerts();
-                return;
+                SendGenericAlert(
+                    _pendingSmartAlertMessage,
+                    _pendingSmartAlertDirection,
+                    _pendingSmartAlertBar,
+                    "SMART");
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage))
+            if (!string.IsNullOrWhiteSpace(_pendingEarlyAlertMessage) &&
+                emitted < maxPerPass)
             {
-                SendGenericAlert(_pendingEarlyAlertMessage, _pendingEarlyAlertDirection);
-                ClearPendingDecisionAlerts();
-                return;
+                SendGenericAlert(
+                    _pendingEarlyAlertMessage,
+                    _pendingEarlyAlertDirection,
+                    _pendingEarlyAlertBar,
+                    "EARLY");
+                emitted++;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage))
-                SendGenericAlert(_pendingContextAlertMessage, _pendingContextAlertDirection);
+            if (!string.IsNullOrWhiteSpace(_pendingContextAlertMessage) &&
+                emitted < maxPerPass)
+            {
+                SendGenericAlert(
+                    _pendingContextAlertMessage,
+                    _pendingContextAlertDirection,
+                    _pendingContextAlertBar,
+                    "CONTEXT");
+                emitted++;
+            }
 
             ClearPendingDecisionAlerts();
         }
@@ -5373,7 +5573,7 @@ namespace cAlgo
                 ShowContextEventMarker &&
                 !string.IsNullOrWhiteSpace(_contextStatusText);
 
-            bool showButtons = ShowTradeActionButtons;
+            bool showButtons = ShowTradePlanPanel && ShowTradeActionButtons;
 
             if (!showStatus &&
                 !showPlan &&
@@ -5681,25 +5881,66 @@ namespace cAlgo
                 ? TradePlanTextColor
                 : (showStatus ? StatusColor : UnifiedPanelTextColor);
 
-            if (_tradePlanPanelBorder == null)
-            {
-                _tradePlanPanelText = new TextBlock();
-                _tradePlanPanelText.IsHitTestVisible = false;
+            // The border/grid has fixed physical rows. Only the text in each
+            // row changes. This prevents bottom-left panels from jumping vertically
+            // when optional content appears/disappears or becomes longer/shorter.
+            int rowHeight =
+                Math.Max(13, TradePlanFontSize + 1);
+            int actionRowHeight =
+                Math.Max(28, ActionButtonHeight + ActionButtonMargin * 2 + 4);
 
-                _tradePlanPanelStack =
-                    new StackPanel
+            if (_tradePlanPanelBorder == null ||
+                _tradePlanPanelGrid == null ||
+                _tradePlanPanelRows == null)
+            {
+                _tradePlanPanelText = null;
+                _tradePlanPanelStack = null;
+
+                _tradePlanPanelGrid =
+                    new Grid(
+                        TradePlanPanelTotalRows,
+                        1)
                     {
-                        Orientation = Orientation.Vertical
+                        ShowGridLines = false,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Top
                     };
 
-                _tradePlanPanelStack.AddChild(
-                    _tradePlanPanelText);
+                _tradePlanPanelRows =
+                    new TextBlock[TradePlanPanelFixedRows];
+
+                for (int i = 0;
+                     i < TradePlanPanelFixedRows;
+                     i++)
+                {
+                    _tradePlanPanelGrid.Rows[i]
+                        .SetHeightInPixels(rowHeight);
+
+                    _tradePlanPanelRows[i] =
+                        new TextBlock
+                        {
+                            IsHitTestVisible = false,
+                            Text = "",
+                            TextWrapping = TextWrapping.NoWrap,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            TextAlignment = TextAlignment.Left,
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            LineHeight = rowHeight
+                        };
+
+                    _tradePlanPanelGrid.AddChild(
+                        _tradePlanPanelRows[i],
+                        i,
+                        0);
+                }
 
                 _tradePlanActionStack =
                     new StackPanel
                     {
                         Orientation = Orientation.Horizontal,
-                        HorizontalAlignment = HorizontalAlignment.Left
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center
                     };
 
                 _closeAllPositionsButton = new Button();
@@ -5716,30 +5957,126 @@ namespace cAlgo
                 _tradePlanActionStack.AddChild(
                     _cancelAllOrdersButton);
 
-                _tradePlanPanelStack.AddChild(
-                    _tradePlanActionStack);
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelActionRow]
+                    .SetHeightInPixels(actionRowHeight);
+
+                _tradePlanPanelGrid.AddChild(
+                    _tradePlanActionStack,
+                    TradePlanPanelActionRow,
+                    0);
 
                 _tradePlanPanelBorder =
                     new Border
                     {
-                        Child = _tradePlanPanelStack,
+                        Child = _tradePlanPanelGrid,
                         IsHitTestVisible = true
                     };
 
-                Chart.AddControl(_tradePlanPanelBorder);
+                Chart.AddControl(
+                    _tradePlanPanelBorder);
+            }
+            else
+            {
+                for (int i = 0;
+                     i < TradePlanPanelFixedRows;
+                     i++)
+                {
+                    _tradePlanPanelGrid.Rows[i]
+                        .SetHeightInPixels(rowHeight);
+                }
+
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelActionRow]
+                    .SetHeightInPixels(actionRowHeight);
             }
 
-            _tradePlanPanelBorder.HorizontalAlignment = horizontal;
-            _tradePlanPanelBorder.VerticalAlignment = vertical;
+            int visibleRows =
+                Math.Min(
+                    lines.Count,
+                    TradePlanPanelFixedRows);
+
+            for (int i = 0;
+                 i < TradePlanPanelFixedRows;
+                 i++)
+            {
+                bool visible = i < visibleRows;
+                TextBlock row = _tradePlanPanelRows[i];
+
+                row.Text =
+                    visible
+                        ? lines[i]
+                        : "";
+
+                row.IsVisible = visible;
+                row.ForegroundColor = panelColor;
+                row.FontSize =
+                    showPlan
+                        ? Math.Max(8, TradePlanFontSize)
+                        : Math.Max(8, TextFontSize);
+
+                row.FontWeight =
+                    TradePlanBold
+                        ? FontWeight.Bold
+                        : FontWeight.Normal;
+
+                row.FontFamily =
+                    string.IsNullOrWhiteSpace(
+                        TradePlanFontFamily)
+                        ? "Arial"
+                        : TradePlanFontFamily;
+
+                row.LineHeight = rowHeight;
+                row.TextWrapping = TextWrapping.NoWrap;
+                row.TextTrimming = TextTrimming.CharacterEllipsis;
+            }
+
+            if (lines.Count > TradePlanPanelFixedRows)
+            {
+                TextBlock overflowRow =
+                    _tradePlanPanelRows[
+                        TradePlanPanelFixedRows - 1];
+
+                overflowRow.Text =
+                    "… +" +
+                    (lines.Count -
+                     TradePlanPanelFixedRows +
+                     1) +
+                    " more";
+
+                overflowRow.IsVisible = true;
+            }
+
+            _tradePlanPanelGrid.Width =
+                Math.Max(180, TradePlanWidth);
+
+            _tradePlanPanelGrid.Height =
+                TradePlanPanelFixedRows *
+                rowHeight +
+                actionRowHeight;
+
+            _tradePlanPanelBorder.HorizontalAlignment =
+                horizontal;
+
+            _tradePlanPanelBorder.VerticalAlignment =
+                vertical;
+
             _tradePlanPanelBorder.Margin = 10;
             _tradePlanPanelBorder.Width =
                 Math.Max(180, TradePlanWidth);
             _tradePlanPanelBorder.Padding =
                 Math.Max(0, TradePlanPadding);
+
             _tradePlanPanelBorder.BorderThickness =
-                Math.Max(0, TradePlanBorderThickness);
+                Math.Max(
+                    0,
+                    TradePlanBorderThickness);
+
             _tradePlanPanelBorder.CornerRadius =
-                Math.Max(0, TradePlanCornerRadius);
+                Math.Max(
+                    0,
+                    TradePlanCornerRadius);
+
             _tradePlanPanelBorder.BorderColor =
                 Color.FromArgb(
                     Math.Max(
@@ -5760,36 +6097,6 @@ namespace cAlgo
                         : 0,
                     TradePlanBackgroundColor);
 
-            _tradePlanPanelText.Text =
-                string.Join("\n", lines);
-
-            _tradePlanPanelText.ForegroundColor =
-                panelColor;
-
-            _tradePlanPanelText.FontSize =
-                showPlan
-                    ? Math.Max(8, TradePlanFontSize)
-                    : Math.Max(8, TextFontSize);
-
-            _tradePlanPanelText.FontWeight =
-                TradePlanBold
-                    ? FontWeight.Bold
-                    : FontWeight.Normal;
-
-            _tradePlanPanelText.FontFamily =
-                string.IsNullOrWhiteSpace(TradePlanFontFamily)
-                    ? "Arial"
-                    : TradePlanFontFamily;
-
-            _tradePlanPanelText.TextAlignment =
-                TextAlignment.Left;
-
-            _tradePlanPanelText.TextWrapping =
-                TextWrapping.Wrap;
-
-            _tradePlanPanelText.HorizontalAlignment =
-                HorizontalAlignment.Left;
-
             _tradePlanActionStack.IsVisible =
                 showButtons;
 
@@ -5803,10 +6110,12 @@ namespace cAlgo
                 showButtons;
 
             _closeAllPositionsButton.IsEnabled =
-                showButtons && !_bulkActionInProgress;
+                showButtons &&
+                !_bulkActionInProgress;
 
             _cancelAllOrdersButton.IsEnabled =
-                showButtons && !_bulkActionInProgress;
+                showButtons &&
+                !_bulkActionInProgress;
 
             _closeAllPositionsButton.Text =
                 _bulkActionInProgress
@@ -5837,10 +6146,18 @@ namespace cAlgo
                 Math.Max(0, ActionButtonMargin);
 
             _closeAllPositionsButton.BackgroundColor =
-                Color.FromArgb(225, 135, 25, 25);
+                Color.FromArgb(
+                    225,
+                    135,
+                    25,
+                    25);
 
             _cancelAllOrdersButton.BackgroundColor =
-                Color.FromArgb(225, 70, 70, 70);
+                Color.FromArgb(
+                    225,
+                    70,
+                    70,
+                    70);
 
             _closeAllPositionsButton.ForegroundColor =
                 Color.White;
@@ -5849,10 +6166,18 @@ namespace cAlgo
                 Color.White;
 
             _closeAllPositionsButton.BorderColor =
-                Color.FromArgb(230, 235, 60, 60);
+                Color.FromArgb(
+                    230,
+                    235,
+                    60,
+                    60);
 
             _cancelAllOrdersButton.BorderColor =
-                Color.FromArgb(230, 150, 150, 150);
+                Color.FromArgb(
+                    230,
+                    150,
+                    150,
+                    150);
 
             _closeAllPositionsButton.BorderThickness = 1;
             _cancelAllOrdersButton.BorderThickness = 1;
@@ -5876,6 +6201,8 @@ namespace cAlgo
             _tradePlanPanelBorder = null;
             _tradePlanPanelText = null;
             _tradePlanPanelStack = null;
+            _tradePlanPanelGrid = null;
+            _tradePlanPanelRows = null;
             _tradePlanActionStack = null;
             _closeAllPositionsButton = null;
             _cancelAllOrdersButton = null;
@@ -5887,19 +6214,111 @@ namespace cAlgo
         // ALERT
         // ============================================================
 
-        private bool TryAcceptAlert(string subject, string message, int direction)
+        private bool TryAcceptAlert(
+            string subject,
+            string message,
+            int direction,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
             if (string.IsNullOrWhiteSpace(message))
                 return false;
-            if (!SuppressDuplicateAlerts || AlertCooldownSeconds <= 0)
-                return true;
-            string signature = (subject ?? "") + "|" + direction + "|" + message.Trim();
-            DateTime now = DateTime.UtcNow;
-            if (signature == _lastAlertSignature && (now - _lastAlertUtc).TotalSeconds < AlertCooldownSeconds)
+
+            string eventKey =
+                string.IsNullOrWhiteSpace(semanticEventKey)
+                    ? (subject ?? "ALERT")
+                    : semanticEventKey;
+
+            if (SuppressDuplicateAlerts &&
+                eventBar >= 0 &&
+                string.Equals(
+                    eventKey,
+                    _lastAlertEventKey,
+                    StringComparison.Ordinal) &&
+                direction == _lastAlertEventDirection &&
+                eventBar == _lastAlertEventBar)
+            {
                 return false;
-            _lastAlertSignature = signature;
-            _lastAlertUtc = now;
+            }
+
+            if (SuppressDuplicateAlerts &&
+                AlertCooldownSeconds > 0)
+            {
+                string signature =
+                    (subject ?? "") +
+                    "|" + direction +
+                    "|" + message.Trim();
+
+                DateTime now = DateTime.UtcNow;
+
+                if (signature == _lastAlertSignature &&
+                    (now - _lastAlertUtc).TotalSeconds <
+                    AlertCooldownSeconds)
+                {
+                    return false;
+                }
+
+                _lastAlertSignature = signature;
+                _lastAlertUtc = now;
+            }
+
+            if (SuppressDuplicateAlerts &&
+                eventBar >= 0)
+            {
+                _lastAlertEventKey = eventKey;
+                _lastAlertEventDirection = direction;
+                _lastAlertEventBar = eventBar;
+            }
+
             return true;
+        }
+
+        private string ResolveAlertSemanticKey(
+            string message,
+            string fallback)
+        {
+            string m =
+                (message ?? string.Empty).ToUpperInvariant();
+
+            if (m.Contains("SL HIT"))
+                return "SL_HIT";
+
+            if (m.Contains("TP1 HIT"))
+                return "TP1_HIT";
+
+            if (m.Contains("TP2 HIT"))
+                return "TP2_HIT";
+
+            if (m.Contains("TP3 HIT"))
+                return "TP3_HIT";
+
+            if (m.Contains("TP4 HIT"))
+                return "TP4_HIT";
+
+            if (m.Contains("SETUP EXPIRED"))
+                return "TIMEOUT";
+
+            if (m.Contains("REVERSAL"))
+                return "REVERSAL";
+
+            if (m.Contains("SETUP INVALIDATED"))
+                return "INVALIDATED";
+
+            if (m.Contains("FALSE-SIGNAL"))
+                return "FALSE_SIGNAL";
+
+            if (m.Contains("STRUCTURAL EXIT PLAN UPDATED"))
+                return "EXIT_PLAN";
+
+            if (m.Contains("EXIT RISK"))
+                return "EXIT_RISK";
+
+            if (m.Contains("EXIT WATCH"))
+                return "EXIT_WATCH";
+
+            return string.IsNullOrWhiteSpace(fallback)
+                ? "ALERT"
+                : fallback;
         }
 
         private void ShowInternalAlertPopup(string title, string message, PopupNotificationState state)
@@ -6085,7 +6504,7 @@ namespace cAlgo
             _alertPopupExpiresUtc = DateTime.MinValue;
         }
 
-        private void SendRestrictionAlert(string message)
+        private void SendRestrictionAlert(string message, int eventBar = -1)
         {
             if (string.IsNullOrWhiteSpace(message))
                 return;
@@ -6104,7 +6523,11 @@ namespace cAlgo
             if (!TryAcceptAlert(
                 newsGuard ? "NEWS_GUARD" : "RESTRICTION",
                 message,
-                0))
+                0,
+                eventBar,
+                newsGuard
+                    ? "NEWS_GUARD"
+                    : "RESTRICTION"))
                 return;
 
             if (EnableSoundAlerts &&
@@ -6163,9 +6586,14 @@ namespace cAlgo
             }
         }
 
-        private void SendHighConfidenceAlert(string message, int direction)
+        private void SendHighConfidenceAlert(string message, int direction, int eventBar = -1)
         {
-            if (!TryAcceptAlert("HIGH_CONFIDENCE", message, direction))
+            if (!TryAcceptAlert(
+                    "HIGH_CONFIDENCE",
+                    message,
+                    direction,
+                    eventBar,
+                    "SIGNAL_HIGH"))
                 return;
 
             if (EnableSoundAlerts)
@@ -6235,14 +6663,35 @@ namespace cAlgo
                    s.Contains("NEWS / EVENT GUARD");
         }
 
-        private void SendGenericAlert(string message, int direction = 0)
+        private void SendGenericAlert(
+            string message,
+            int direction = 0,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
-            SendNotificationBundle(message, direction, "CFIP MTF Alert");
+            SendNotificationBundle(
+                message,
+                direction,
+                "CFIP MTF Alert",
+                eventBar,
+                ResolveAlertSemanticKey(
+                    message,
+                    semanticEventKey));
         }
 
-        private void SendNotificationBundle(string message, int direction, string subject)
+        private void SendNotificationBundle(
+            string message,
+            int direction,
+            string subject,
+            int eventBar = -1,
+            string semanticEventKey = "")
         {
-            if (!TryAcceptAlert(subject, message, direction))
+            if (!TryAcceptAlert(
+                    subject,
+                    message,
+                    direction,
+                    eventBar,
+                    semanticEventKey))
                 return;
 
             if (EnableSoundAlerts)
