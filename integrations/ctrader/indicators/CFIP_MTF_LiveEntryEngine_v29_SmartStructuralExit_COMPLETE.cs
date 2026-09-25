@@ -2497,8 +2497,7 @@ namespace cAlgo
                 return;
 
             int anchorIndex = MapM5BarToChartIndex(_liveReactionBar, chartIndex);
-            double atr = GetAtr(Bars, Math.Max(1, anchorIndex), AtrPeriod);
-            double offset = atr > 0
+            double atr = GetAtr(Bars, Math.Max(1, anchorIndex), AtrPeriod);            double offset = atr > 0
                 ? Math.Max(atr * Math.Max(0.05, ArrowOffsetAtr), Symbol.PipSize * Math.Max(1.0, MinimumArrowOffsetPips))
                 : Symbol.PipSize * Math.Max(1.0, MinimumArrowOffsetPips);
 
@@ -4372,12 +4371,39 @@ namespace cAlgo
 
             GetFinitePlanRange(anchor, out int startIndex, out int endIndex);
 
-            DrawAuthoritativeLevelLine(Prefix + "ENTRY", startIndex, endIndex, _signalEntry, EntryColor, ShowEntry);
-            DrawAuthoritativeLevelLine(Prefix + "SL", startIndex, endIndex, _signalSl, SlColor, ShowSL);
-            DrawAuthoritativeLevelLine(Prefix + "TP1", startIndex, endIndex, _signalTp1, TpColor, ShowTP1);
-            DrawAuthoritativeLevelLine(Prefix + "TP2", startIndex, endIndex, _signalTp2, TpColor, ShowTP2);
-            DrawAuthoritativeLevelLine(Prefix + "TP3", startIndex, endIndex, _signalTp3, TpColor, ShowTP3 && _signalTp3 > 0);
-            DrawAuthoritativeLevelLine(Prefix + "TP4", startIndex, endIndex, _signalTp4, TpColor, ShowTP4 && _signalTp4 > 0);
+            double validationEntry = _signalEntry;
+            double validationSl = _signalSl;
+            double validationTp1 = _signalTp1;
+            double validationTp2 = _signalTp2;
+            double validationTp3 = _signalTp3;
+            double validationTp4 = _signalTp4;
+
+            // Rendering is the final safety boundary: a corrupted/stale state must
+            // never put a SELL TP above entry or a BUY SL above entry on the chart.
+            if (!NormalizeAndValidatePlanLevels(
+                    _signalDirection,
+                    ref validationEntry,
+                    ref validationSl,
+                    ref validationTp1,
+                    ref validationTp2,
+                    ref validationTp3,
+                    ref validationTp4))
+            {
+                Chart.RemoveObject(Prefix + "ENTRY");
+                Chart.RemoveObject(Prefix + "SL");
+                Chart.RemoveObject(Prefix + "TP1");
+                Chart.RemoveObject(Prefix + "TP2");
+                Chart.RemoveObject(Prefix + "TP3");
+                Chart.RemoveObject(Prefix + "TP4");
+                return;
+            }
+
+            DrawAuthoritativeLevelLine(Prefix + "ENTRY", startIndex, endIndex, validationEntry, EntryColor, ShowEntry);
+            DrawAuthoritativeLevelLine(Prefix + "SL", startIndex, endIndex, validationSl, SlColor, ShowSL);
+            DrawAuthoritativeLevelLine(Prefix + "TP1", startIndex, endIndex, validationTp1, TpColor, ShowTP1);
+            DrawAuthoritativeLevelLine(Prefix + "TP2", startIndex, endIndex, validationTp2, TpColor, ShowTP2);
+            DrawAuthoritativeLevelLine(Prefix + "TP3", startIndex, endIndex, validationTp3, TpColor, ShowTP3 && validationTp3 > 0);
+            DrawAuthoritativeLevelLine(Prefix + "TP4", startIndex, endIndex, validationTp4, TpColor, ShowTP4 && validationTp4 > 0);
         }
 
         private void DrawAuthoritativeLevelLine(
@@ -4997,8 +5023,7 @@ namespace cAlgo
                     _signalInitialRisk > 0)
                 {
                     double livePrice =
-                        _signalDirection == 1
-                            ? Symbol.Bid
+                        _signalDirection == 1                            ? Symbol.Bid
                             : Symbol.Ask;
 
                     double liveRR =
@@ -7497,7 +7522,6 @@ private void UpdateBrokerPositionProtection()
 
             selected = CompleteSmartTargetLadder(
                 targets, selected, entry, risk, direction, atr);
-
             if (selected.Count < 2)
                 return false;
 
@@ -9997,8 +10021,7 @@ private void UpdateBrokerPositionProtection()
             int h1 =
                 FindPreviousSwingHigh(
                     bars,
-                    index,
-                    SwingStrength,
+                    index,                    SwingStrength,
                     1);
 
             int h2 =
