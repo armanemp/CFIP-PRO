@@ -10114,12 +10114,8 @@ namespace cAlgo
                 true,
                 contentWidth);
 
-            int authoritativeDirection =
-                GetAuthoritativeDirection();
-
             string candidateState =
-                GetAuthoritativeState(
-                    authoritativeDirection);
+                _authoritativeState;
 
             string state =
                 GetStablePanelState(
