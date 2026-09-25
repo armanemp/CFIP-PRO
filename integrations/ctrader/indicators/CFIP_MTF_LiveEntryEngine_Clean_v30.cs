@@ -5145,7 +5145,8 @@ namespace cAlgo
             if (bars == null || index < 5)
                 return;
 
-            DateTime anchor = bars.OpenTimes[index];
+            DateTime anchor =
+                bars.OpenTimes[index];
 
             DateTime dayStart =
                 new DateTime(
@@ -5156,13 +5157,38 @@ namespace cAlgo
                     0,
                     0);
 
-            DateTime from =
-                dayStart.AddHours(startHour);
+            bool overnight =
+                startHour > endHour;
 
-            DateTime to =
-                startHour < endHour
-                    ? dayStart.AddHours(endHour)
-                    : dayStart.AddDays(1).AddHours(endHour);
+            DateTime from;
+            DateTime to;
+
+            if (!overnight)
+            {
+                from =
+                    dayStart.AddHours(startHour);
+
+                to =
+                    dayStart.AddHours(endHour);
+            }
+            else if (anchor.Hour < endHour)
+            {
+                from =
+                    dayStart.AddDays(-1)
+                        .AddHours(startHour);
+
+                to =
+                    dayStart.AddHours(endHour);
+            }
+            else
+            {
+                from =
+                    dayStart.AddHours(startHour);
+
+                to =
+                    dayStart.AddDays(1)
+                        .AddHours(endHour);
+            }
 
             int first = -1;
             int last = -1;
@@ -5176,7 +5202,7 @@ namespace cAlgo
                 if (t < from)
                     break;
 
-                if (t <= to)
+                if (t < to)
                 {
                     first = i;
                     if (last < 0)
@@ -6307,7 +6333,9 @@ namespace cAlgo
                 Math.Abs(
                     currentMove) >=
                 _plan.Risk *
-                1.10 &&
+                Math.Max(
+                    0.25,
+                    FalseSignalAdverseR) &&
                 AlertOnInvalidated &&
                 _lastInvalidationAlertM5 !=
                 closedM5)
