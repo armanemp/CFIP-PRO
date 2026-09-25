@@ -294,7 +294,7 @@ namespace cAlgo
         [Parameter("Maximum SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.80, MinValue = 0.5, MaxValue = 10)]
         public double MaximumSlAtr { get; set; }
 
-        [Parameter("alternate SL ATR", Group = "09 · Risk & Targets", DefaultValue = 1.00, MinValue = 0.1, MaxValue = 5)]
+        [Parameter("Fallback SL ATR Multiplier", Group = "09 · Risk & Targets", DefaultValue = 1.00, MinValue = 0.1, MaxValue = 5)]
         public double FallbackSlAtr { get; set; }
 
         [Parameter("TP1 Minimum RR", Group = "09 · Risk & Targets", DefaultValue = 2.00, MinValue = 0.5, MaxValue = 10)]
@@ -420,25 +420,25 @@ namespace cAlgo
         [Parameter("Popup Duration Seconds", Group = "12 · Alerts", DefaultValue = 6, MinValue = 1, MaxValue = 60)]
         public int PopupDurationSeconds { get; set; }
 
-[Parameter("Popup Font Size", Group = "12 · Alerts", DefaultValue = 11, MinValue = 8, MaxValue = 22)]
+        [Parameter("Popup Font Size", Group = "12 · Alerts", DefaultValue = 11, MinValue = 8, MaxValue = 22)]
         public int PopupFontSize { get; set; }
 
-[Parameter("Show Entry Restriction Popup", Group = "12 · Alerts", DefaultValue = true)]
+        [Parameter("Show Entry Restriction Popup", Group = "12 · Alerts", DefaultValue = true)]
         public bool ShowEntryRestrictionPopup { get; set; }
 
-[Parameter("Alert On News / Event Guard", Group = "12 · Alerts", DefaultValue = true)]
+        [Parameter("Alert On News / Event Guard", Group = "12 · Alerts", DefaultValue = true)]
         public bool AlertOnNewsEventGuard { get; set; }
 
-[Parameter("Popup Margin", Group = "12 · Alerts", DefaultValue = 10, MinValue = 0, MaxValue = 50)]
+        [Parameter("Popup Margin", Group = "12 · Alerts", DefaultValue = 10, MinValue = 0, MaxValue = 50)]
         public int PopupMargin { get; set; }
 
-[Parameter("Popup Border Alpha", Group = "12 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        [Parameter("Popup Border Alpha", Group = "12 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
         public int PopupBorderAlpha { get; set; }
 
-[Parameter("Popup Bold", Group = "12 · Alerts", DefaultValue = false)]
+        [Parameter("Popup Bold", Group = "12 · Alerts", DefaultValue = false)]
         public bool PopupBold { get; set; }
 
-[Parameter("Popup Font Family", Group = "12 · Alerts", DefaultValue = "Arial")]
+        [Parameter("Popup Font Family", Group = "12 · Alerts", DefaultValue = "Arial")]
         public string PopupFontFamily { get; set; }
 
         [Parameter("Alert On Confirmed Signal", Group = "12 · Alerts", DefaultValue = true)]
@@ -571,6 +571,9 @@ namespace cAlgo
 
         [Parameter("Show Unified Panel", Group = "14 · Display", DefaultValue = true)]
         public bool ShowUnifiedPanel { get; set; }
+
+        [Parameter("Show Panel Background", Group = "14 · Display", DefaultValue = true)]
+        public bool ShowPanelBackground { get; set; }
 
         [Parameter("Panel Position", Group = "14 · Display", DefaultValue = CFIPClean30PanelCorner.BottomLeft)]
         public CFIPClean30PanelCorner PanelPosition { get; set; }
@@ -767,7 +770,7 @@ namespace cAlgo
         [Parameter("Allow Smart Soft Gate", Group = "15 · Advanced Control", DefaultValue = true)]
         public bool AllowSmartSoftGate { get; set; }
 
-[Parameter("Enable Fast Reversal Intelligence", Group = "15 · Advanced Control", DefaultValue = true)]
+        [Parameter("Enable Fast Reversal Intelligence", Group = "15 · Advanced Control", DefaultValue = true)]
         public bool EnableFastReversalIntelligence { get; set; }
 
         [Parameter("Fast Reversal Minimum Quality", Group = "15 · Advanced Control", DefaultValue = 74, MinValue = 50, MaxValue = 95)]
@@ -952,7 +955,7 @@ namespace cAlgo
         [Parameter("Show Engine Status", Group = "22 · Complete Intelligence", DefaultValue = true)]
         public bool ShowEngineStatus { get; set; }
 
-[Parameter("Panel State Hold Seconds", Group = "22 · Complete Intelligence", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
+        [Parameter("Panel State Hold Seconds", Group = "22 · Complete Intelligence", DefaultValue = 2, MinValue = 0, MaxValue = 10)]
         public int PanelStateHoldSeconds { get; set; }
 
         [Parameter("Show Level Prices In Unified Panel", Group = "22 · Complete Intelligence", DefaultValue = true)]
@@ -1116,7 +1119,7 @@ namespace cAlgo
 [Parameter("Enable Outcome Telemetry", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool EnableOutcomeTelemetry { get; set; }
 
-[Parameter("Outcome Maximum M5 Bars", Group = "15 · Early Intelligence", DefaultValue = 72, MinValue = 10, MaxValue = 500)]
+        [Parameter("Outcome Maximum M5 Bars", Group = "15 · Early Intelligence", DefaultValue = 72, MinValue = 10, MaxValue = 500)]
         public int OutcomeMaximumM5Bars { get; set; }
 
 [Parameter("Enable Confidence Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
@@ -1128,7 +1131,7 @@ namespace cAlgo
 [Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
         public int CalibrationDirectionalMinimumSamples { get; set; }
 
-[Parameter("Calibration Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 5, MinValue = 1, MaxValue = 100)]
+        [Parameter("Calibration Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 5, MinValue = 1, MaxValue = 100)]
         public int CalibrationMinimumSamples { get; set; }
 
 [Parameter("Calibration Max Confidence Adjustment", Group = "15 · Early Intelligence", DefaultValue = 8, MinValue = 0, MaxValue = 20)]
@@ -1155,7 +1158,7 @@ namespace cAlgo
 [Parameter("False Signal Adverse R", Group = "16 · Accuracy", DefaultValue = 1.10, MinValue = 0.25, MaxValue = 5)]
         public double FalseSignalAdverseR { get; set; }
 
-[Parameter("False Signal Watch Bars", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 12)]
+        [Parameter("False Signal Watch Bars", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 1, MaxValue = 12)]
         public int FalseSignalWatchBars { get; set; }
 
 [Parameter("Invalidate On False Signal", Group = "16 · Accuracy", DefaultValue = true)]
@@ -1182,7 +1185,7 @@ namespace cAlgo
 [Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableLiveStructuralReversal { get; set; }
 
-[Parameter("Live Reversal Minimum Confidence", Group = "16 · Accuracy", DefaultValue = 68, MinValue = 50, MaxValue = 95)]
+        [Parameter("Live Reversal Minimum Confidence", Group = "16 · Accuracy", DefaultValue = 68, MinValue = 50, MaxValue = 95)]
         public int LiveReversalMinimumConfidence { get; set; }
 
 [Parameter("Live Reversal Minimum Evidence", Group = "16 · Accuracy", DefaultValue = 3, MinValue = 2, MaxValue = 8)]
@@ -7984,7 +7987,7 @@ namespace cAlgo
         // RETEST / REGIME / FILTERS
         // ============================================================
 
-                private int RetestQuality(
+        private int RetestQuality(
             Bars bars,
             int index,
             int direction)
@@ -9181,8 +9184,8 @@ namespace cAlgo
 
                 if (AlertOnReaction &&
                     AlertOnLiveReaction &&
-                    (_lastReactionAlertBar() !=
-                     _m5Bars.Count - 1))
+                    _lastReactionAlertBar !=
+                    _m5Bars.Count - 1))
                 {
                     SendUnifiedAlert(
                         "REACTION|" +
@@ -9191,24 +9194,13 @@ namespace cAlgo
                         _reaction.Direction,
                         false);
 
-                    SetLastReactionAlertBar(
-                        _m5Bars.Count - 1);
+                    _lastReactionAlertBar =
+                        _m5Bars.Count - 1;
                 }
             }
         }
 
-        private int _reactionAlertBar = -1;
-
-        private int _lastReactionAlertBar()
-        {
-            return _reactionAlertBar;
-        }
-
-        private void SetLastReactionAlertBar(
-            int value)
-        {
-            _reactionAlertBar = value;
-        }
+        private int _lastReactionAlertBar = -1;
 
         private Color SignalArrowColorFor(
             int direction,
@@ -9485,13 +9477,15 @@ namespace cAlgo
                         : FontWeight.Normal;
 
                 _panelToggleButton.BackgroundColor =
-                    Color.FromArgb(
-                        Math.Max(
+                Color.FromArgb(
+                    ShowPanelBackground
+                        ? Math.Max(
                             0,
                             Math.Min(
                                 255,
-                                PanelBackgroundAlpha)),
-                        PanelBackground);
+                                PanelBackgroundAlpha))
+                        : 0,
+                    PanelBackground);
 
                 _panelToggleButton.BorderColor =
                     Color.FromArgb(
@@ -9651,11 +9645,13 @@ namespace cAlgo
 
             _panel.BackgroundColor =
                 Color.FromArgb(
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            255,
-                            PanelBackgroundAlpha)),
+                    ShowPanelBackground
+                        ? Math.Max(
+                            0,
+                            Math.Min(
+                                255,
+                                PanelBackgroundAlpha))
+                        : 0,
                     PanelBackground);
 
             _panel.BorderColor =
@@ -9746,20 +9742,24 @@ namespace cAlgo
 
             _closeButton.BackgroundColor =
                 Color.FromArgb(
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            255,
-                            PanelBackgroundAlpha)),
+                    ShowPanelBackground
+                        ? Math.Max(
+                            0,
+                            Math.Min(
+                                255,
+                                PanelBackgroundAlpha))
+                        : 0,
                     PanelBackground);
 
             _cancelButton.BackgroundColor =
                 Color.FromArgb(
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            255,
-                            PanelBackgroundAlpha)),
+                    ShowPanelBackground
+                        ? Math.Max(
+                            0,
+                            Math.Min(
+                                255,
+                                PanelBackgroundAlpha))
+                        : 0,
                     PanelBackground);
 
             _closeButton.BorderColor =
@@ -10267,6 +10267,7 @@ namespace cAlgo
             _buttonStack = null;
             _closeButton = null;
             _cancelButton = null;
+            _lastReactionAlertBar = -1;
             _panelStableHeader = "";
             _panelStableHeaderSinceUtc =
                 DateTime.MinValue;
