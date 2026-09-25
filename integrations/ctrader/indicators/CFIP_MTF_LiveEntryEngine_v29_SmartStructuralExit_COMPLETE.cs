@@ -5424,7 +5424,7 @@ namespace cAlgo
                 ShowContextEventMarker &&
                 !string.IsNullOrWhiteSpace(_contextStatusText);
 
-            bool showButtons = ShowTradeActionButtons;
+            bool showButtons = ShowTradePlanPanel && ShowTradeActionButtons;
 
             if (!showStatus &&
                 !showPlan &&
@@ -5732,25 +5732,66 @@ namespace cAlgo
                 ? TradePlanTextColor
                 : (showStatus ? StatusColor : UnifiedPanelTextColor);
 
-            if (_tradePlanPanelBorder == null)
-            {
-                _tradePlanPanelText = new TextBlock();
-                _tradePlanPanelText.IsHitTestVisible = false;
+            // The border/grid has fixed physical rows. Only the text in each
+            // row changes. This prevents bottom-left panels from jumping vertically
+            // when optional content appears/disappears or becomes longer/shorter.
+            int rowHeight =
+                Math.Max(13, TradePlanFontSize + 1);
+            int actionRowHeight =
+                Math.Max(28, ActionButtonHeight + ActionButtonMargin * 2 + 4);
 
-                _tradePlanPanelStack =
-                    new StackPanel
+            if (_tradePlanPanelBorder == null ||
+                _tradePlanPanelGrid == null ||
+                _tradePlanPanelRows == null)
+            {
+                _tradePlanPanelText = null;
+                _tradePlanPanelStack = null;
+
+                _tradePlanPanelGrid =
+                    new Grid(
+                        TradePlanPanelTotalRows,
+                        1)
                     {
-                        Orientation = Orientation.Vertical
+                        ShowGridLines = false,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Top
                     };
 
-                _tradePlanPanelStack.AddChild(
-                    _tradePlanPanelText);
+                _tradePlanPanelRows =
+                    new TextBlock[TradePlanPanelFixedRows];
+
+                for (int i = 0;
+                     i < TradePlanPanelFixedRows;
+                     i++)
+                {
+                    _tradePlanPanelGrid.Rows[i]
+                        .SetHeightInPixels(rowHeight);
+
+                    _tradePlanPanelRows[i] =
+                        new TextBlock
+                        {
+                            IsHitTestVisible = false,
+                            Text = "",
+                            TextWrapping = TextWrapping.NoWrap,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            TextAlignment = TextAlignment.Left,
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            LineHeight = rowHeight
+                        };
+
+                    _tradePlanPanelGrid.AddChild(
+                        _tradePlanPanelRows[i],
+                        i,
+                        0);
+                }
 
                 _tradePlanActionStack =
                     new StackPanel
                     {
                         Orientation = Orientation.Horizontal,
-                        HorizontalAlignment = HorizontalAlignment.Left
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center
                     };
 
                 _closeAllPositionsButton = new Button();
@@ -5767,30 +5808,126 @@ namespace cAlgo
                 _tradePlanActionStack.AddChild(
                     _cancelAllOrdersButton);
 
-                _tradePlanPanelStack.AddChild(
-                    _tradePlanActionStack);
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelActionRow]
+                    .SetHeightInPixels(actionRowHeight);
+
+                _tradePlanPanelGrid.AddChild(
+                    _tradePlanActionStack,
+                    TradePlanPanelActionRow,
+                    0);
 
                 _tradePlanPanelBorder =
                     new Border
                     {
-                        Child = _tradePlanPanelStack,
+                        Child = _tradePlanPanelGrid,
                         IsHitTestVisible = true
                     };
 
-                Chart.AddControl(_tradePlanPanelBorder);
+                Chart.AddControl(
+                    _tradePlanPanelBorder);
+            }
+            else
+            {
+                for (int i = 0;
+                     i < TradePlanPanelFixedRows;
+                     i++)
+                {
+                    _tradePlanPanelGrid.Rows[i]
+                        .SetHeightInPixels(rowHeight);
+                }
+
+                _tradePlanPanelGrid.Rows[
+                        TradePlanPanelActionRow]
+                    .SetHeightInPixels(actionRowHeight);
             }
 
-            _tradePlanPanelBorder.HorizontalAlignment = horizontal;
-            _tradePlanPanelBorder.VerticalAlignment = vertical;
+            int visibleRows =
+                Math.Min(
+                    lines.Count,
+                    TradePlanPanelFixedRows);
+
+            for (int i = 0;
+                 i < TradePlanPanelFixedRows;
+                 i++)
+            {
+                bool visible = i < visibleRows;
+                TextBlock row = _tradePlanPanelRows[i];
+
+                row.Text =
+                    visible
+                        ? lines[i]
+                        : "";
+
+                row.IsVisible = visible;
+                row.ForegroundColor = panelColor;
+                row.FontSize =
+                    showPlan
+                        ? Math.Max(8, TradePlanFontSize)
+                        : Math.Max(8, TextFontSize);
+
+                row.FontWeight =
+                    TradePlanBold
+                        ? FontWeight.Bold
+                        : FontWeight.Normal;
+
+                row.FontFamily =
+                    string.IsNullOrWhiteSpace(
+                        TradePlanFontFamily)
+                        ? "Arial"
+                        : TradePlanFontFamily;
+
+                row.LineHeight = rowHeight;
+                row.TextWrapping = TextWrapping.NoWrap;
+                row.TextTrimming = TextTrimming.CharacterEllipsis;
+            }
+
+            if (lines.Count > TradePlanPanelFixedRows)
+            {
+                TextBlock overflowRow =
+                    _tradePlanPanelRows[
+                        TradePlanPanelFixedRows - 1];
+
+                overflowRow.Text =
+                    "… +" +
+                    (lines.Count -
+                     TradePlanPanelFixedRows +
+                     1) +
+                    " more";
+
+                overflowRow.IsVisible = true;
+            }
+
+            _tradePlanPanelGrid.Width =
+                Math.Max(180, TradePlanWidth);
+
+            _tradePlanPanelGrid.Height =
+                TradePlanPanelFixedRows *
+                rowHeight +
+                actionRowHeight;
+
+            _tradePlanPanelBorder.HorizontalAlignment =
+                horizontal;
+
+            _tradePlanPanelBorder.VerticalAlignment =
+                vertical;
+
             _tradePlanPanelBorder.Margin = 10;
             _tradePlanPanelBorder.Width =
                 Math.Max(180, TradePlanWidth);
             _tradePlanPanelBorder.Padding =
                 Math.Max(0, TradePlanPadding);
+
             _tradePlanPanelBorder.BorderThickness =
-                Math.Max(0, TradePlanBorderThickness);
+                Math.Max(
+                    0,
+                    TradePlanBorderThickness);
+
             _tradePlanPanelBorder.CornerRadius =
-                Math.Max(0, TradePlanCornerRadius);
+                Math.Max(
+                    0,
+                    TradePlanCornerRadius);
+
             _tradePlanPanelBorder.BorderColor =
                 Color.FromArgb(
                     Math.Max(
@@ -5811,36 +5948,6 @@ namespace cAlgo
                         : 0,
                     TradePlanBackgroundColor);
 
-            _tradePlanPanelText.Text =
-                string.Join("\n", lines);
-
-            _tradePlanPanelText.ForegroundColor =
-                panelColor;
-
-            _tradePlanPanelText.FontSize =
-                showPlan
-                    ? Math.Max(8, TradePlanFontSize)
-                    : Math.Max(8, TextFontSize);
-
-            _tradePlanPanelText.FontWeight =
-                TradePlanBold
-                    ? FontWeight.Bold
-                    : FontWeight.Normal;
-
-            _tradePlanPanelText.FontFamily =
-                string.IsNullOrWhiteSpace(TradePlanFontFamily)
-                    ? "Arial"
-                    : TradePlanFontFamily;
-
-            _tradePlanPanelText.TextAlignment =
-                TextAlignment.Left;
-
-            _tradePlanPanelText.TextWrapping =
-                TextWrapping.Wrap;
-
-            _tradePlanPanelText.HorizontalAlignment =
-                HorizontalAlignment.Left;
-
             _tradePlanActionStack.IsVisible =
                 showButtons;
 
@@ -5854,10 +5961,12 @@ namespace cAlgo
                 showButtons;
 
             _closeAllPositionsButton.IsEnabled =
-                showButtons && !_bulkActionInProgress;
+                showButtons &&
+                !_bulkActionInProgress;
 
             _cancelAllOrdersButton.IsEnabled =
-                showButtons && !_bulkActionInProgress;
+                showButtons &&
+                !_bulkActionInProgress;
 
             _closeAllPositionsButton.Text =
                 _bulkActionInProgress
@@ -5888,10 +5997,18 @@ namespace cAlgo
                 Math.Max(0, ActionButtonMargin);
 
             _closeAllPositionsButton.BackgroundColor =
-                Color.FromArgb(225, 135, 25, 25);
+                Color.FromArgb(
+                    225,
+                    135,
+                    25,
+                    25);
 
             _cancelAllOrdersButton.BackgroundColor =
-                Color.FromArgb(225, 70, 70, 70);
+                Color.FromArgb(
+                    225,
+                    70,
+                    70,
+                    70);
 
             _closeAllPositionsButton.ForegroundColor =
                 Color.White;
@@ -5900,10 +6017,18 @@ namespace cAlgo
                 Color.White;
 
             _closeAllPositionsButton.BorderColor =
-                Color.FromArgb(230, 235, 60, 60);
+                Color.FromArgb(
+                    230,
+                    235,
+                    60,
+                    60);
 
             _cancelAllOrdersButton.BorderColor =
-                Color.FromArgb(230, 150, 150, 150);
+                Color.FromArgb(
+                    230,
+                    150,
+                    150,
+                    150);
 
             _closeAllPositionsButton.BorderThickness = 1;
             _cancelAllOrdersButton.BorderThickness = 1;
@@ -5927,6 +6052,8 @@ namespace cAlgo
             _tradePlanPanelBorder = null;
             _tradePlanPanelText = null;
             _tradePlanPanelStack = null;
+            _tradePlanPanelGrid = null;
+            _tradePlanPanelRows = null;
             _tradePlanActionStack = null;
             _closeAllPositionsButton = null;
             _cancelAllOrdersButton = null;
