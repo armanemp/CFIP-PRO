@@ -631,10 +631,10 @@ namespace cAlgo
         [Parameter("TP Color", Group = "Display", DefaultValue = "Lime")]
         public Color TpColor { get; set; }
 
-        [Parameter("Status Color", Group = "Display", DefaultValue = "White")]
+        [Parameter("Status Color", Group = "Display", DefaultValue = "Lime")]
         public Color StatusColor { get; set; }
 
-        [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "White")]
+        [Parameter("Trade Plan Text Color", Group = "Display", DefaultValue = "Lime")]
         public Color TradePlanTextColor { get; set; }
 
         [Parameter("Unified Panel Text Color", Group = "Display", DefaultValue = "Lime")]
@@ -5674,9 +5674,12 @@ namespace cAlgo
                 return;
             }
 
-            // One authoritative text color for every intelligence-panel state.
-            // Default is fluorescent green and never changes with BUY/SELL/WAIT state.
-            Color panelColor = UnifiedPanelTextColor;
+            // One stable color policy: plan/watch/reaction content uses the
+            // Trade Plan color; status-only content uses Status Color. Defaults
+            // are fluorescent green, so state changes never recolor the box.
+            Color panelColor = (showPlan || showReaction || showEarly)
+                ? TradePlanTextColor
+                : (showStatus ? StatusColor : UnifiedPanelTextColor);
 
             if (_tradePlanPanelBorder == null)
             {
