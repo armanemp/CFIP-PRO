@@ -1120,7 +1120,7 @@ namespace cAlgo
         [Parameter("Show Spread Diagnostics", Group = "23 · Safety & Precision", DefaultValue = true)]
         public bool ShowSpreadDiagnostics { get; set; }
 
-        // ============================================================
+        #endregion
 
         #region Runtime Models
         // ============================================================
