@@ -540,7 +540,7 @@ namespace cAlgo
         [Parameter("Trade Plan Font Size", Group = "Display", DefaultValue = 11, MinValue = 8, MaxValue = 20)]
         public int TradePlanFontSize { get; set; }
 
-        [Parameter("Trade Plan Bold", Group = "Display", DefaultValue = true)]
+        [Parameter("Trade Plan Bold", Group = "Display", DefaultValue = false)]
         public bool TradePlanBold { get; set; }
 
         [Parameter("Show Trade Plan Background", Group = "Display", DefaultValue = true)]
