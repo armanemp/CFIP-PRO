@@ -11122,10 +11122,6 @@ if (UseM1Trigger &&
         // REQUIRED PRESENTATION / STATE HELPERS
         // ============================================================
 
-        private void ClearPlanVisualState()
-        {
-            RemovePlanObjects();
-        }
     }
 }
 }
