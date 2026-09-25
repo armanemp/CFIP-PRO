@@ -420,6 +420,18 @@ namespace cAlgo
         [Parameter("Popup Duration Seconds", Group = "12 · Alerts", DefaultValue = 6, MinValue = 1, MaxValue = 60)]
         public int PopupDurationSeconds { get; set; }
 
+[Parameter("Popup Margin", Group = "12 · Alerts", DefaultValue = 10, MinValue = 0, MaxValue = 50)]
+        public int PopupMargin { get; set; }
+
+[Parameter("Popup Border Alpha", Group = "12 · Alerts", DefaultValue = 235, MinValue = 0, MaxValue = 255)]
+        public int PopupBorderAlpha { get; set; }
+
+[Parameter("Popup Bold", Group = "12 · Alerts", DefaultValue = false)]
+        public bool PopupBold { get; set; }
+
+[Parameter("Popup Font Family", Group = "12 · Alerts", DefaultValue = "Arial")]
+        public string PopupFontFamily { get; set; }
+
         [Parameter("Alert On Confirmed Signal", Group = "12 · Alerts", DefaultValue = true)]
         public bool AlertOnConfirmedSignal { get; set; }
 
@@ -859,6 +871,12 @@ namespace cAlgo
         [Parameter("Minimum Smart Direction Share", Group = "22 · Complete Intelligence", DefaultValue = 57, MinValue = 50, MaxValue = 95)]
         public int MinimumSmartDirectionShare { get; set; }
 
+[Parameter("Adaptive Smart Thresholds", Group = "22 · Complete Intelligence", DefaultValue = true)]
+        public bool AdaptiveSmartThresholds { get; set; }
+
+[Parameter("Smart Regime Buffer", Group = "22 · Complete Intelligence", DefaultValue = 6, MinValue = 0, MaxValue = 15)]
+        public int SmartRegimeBuffer { get; set; }
+
         [Parameter("Smart Score Temperature", Group = "22 · Complete Intelligence", DefaultValue = 12.0, MinValue = 1.0, MaxValue = 50.0, Step = 0.5)]
         public double SmartScoreTemperature { get; set; }
 
@@ -1088,6 +1106,9 @@ namespace cAlgo
 [Parameter("Enable Confidence Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
         public bool EnableConfidenceCalibration { get; set; }
 
+[Parameter("Use Empirical Calibration", Group = "15 · Early Intelligence", DefaultValue = true)]
+        public bool UseEmpiricalCalibration { get; set; }
+
 [Parameter("Calibration Directional Minimum Samples", Group = "15 · Early Intelligence", DefaultValue = 6, MinValue = 2, MaxValue = 250)]
         public int CalibrationDirectionalMinimumSamples { get; set; }
 
@@ -1120,6 +1141,21 @@ namespace cAlgo
 
 [Parameter("Enable Setup Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableSetupInvalidation { get; set; }
+
+[Parameter("Invalidation Structure ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.50)]
+        public double InvalidationStructureAtr { get; set; }
+
+[Parameter("Invalidation Zone Close ATR", Group = "16 · Accuracy", DefaultValue = 0.10, MinValue = 0.02, MaxValue = 0.75)]
+        public double InvalidationZoneCloseAtr { get; set; }
+
+[Parameter("Invalidation Max Adverse R", Group = "16 · Accuracy", DefaultValue = 0.75, MinValue = 0.30, MaxValue = 2.00, Step = 0.05)]
+        public double InvalidationMaxAdverseR { get; set; }
+
+[Parameter("Require MTF Flip For Invalidation", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool RequireMtfFlipForInvalidation { get; set; }
+
+[Parameter("Allow Reversal Against Stale HTF", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool AllowReversalAgainstStaleHtf { get; set; }
 
 [Parameter("Enable Live Structural Reversal", Group = "16 · Accuracy", DefaultValue = true)]
         public bool EnableLiveStructuralReversal { get; set; }
@@ -3273,19 +3309,29 @@ namespace cAlgo
                 return false;
             }
 
+            int adaptiveQualityThreshold;
+            int adaptiveShareThreshold;
+            int adaptiveEdgeThreshold;
+
+            GetAdaptiveSmartThresholds(
+                d.Regime,
+                out adaptiveQualityThreshold,
+                out adaptiveShareThreshold,
+                out adaptiveEdgeThreshold);
+
             if (d.Confidence < MinimumConfidence)
             {
                 reason = "CONFIDENCE";
                 return false;
             }
 
-            if (d.Edge < MinimumEdge)
+            if (d.Edge < adaptiveEdgeThreshold)
             {
                 reason = "EDGE";
                 return false;
             }
 
-            if (d.SmartQuality < MinimumSmartQuality)
+            if (d.SmartQuality < adaptiveQualityThreshold)
             {
                 reason = "SMART QUALITY";
                 return false;
@@ -3399,7 +3445,9 @@ namespace cAlgo
 
                 if (RequireSmartConsensus &&
                     strongest <
-                    SmartConsensusThreshold)
+                    Math.Max(
+                        SmartConsensusThreshold,
+                        adaptiveShareThreshold))
                 {
                     bool soft =
                         AllowSmartSoftGate &&
@@ -3429,9 +3477,11 @@ namespace cAlgo
                 d.SmartQuality <
                 Math.Max(
                     SmartQualityThreshold,
-                    EnableSmartDecisionEngine
-                        ? SmartMinimumConsensusFloor()
-                        : 0))
+                    Math.Max(
+                        adaptiveQualityThreshold,
+                        EnableSmartDecisionEngine
+                            ? SmartMinimumConsensusFloor()
+                            : 0)))
             {
                 reason = "SMART QUALITY";
                 return false;
@@ -6147,6 +6197,11 @@ namespace cAlgo
                     closedM5))
                 return;
 
+            if (CheckStructuralSetupInvalidation(
+                    closedM5,
+                    market))
+                return;
+
             if (UseFalseSignalGuard &&
                 EnableSetupInvalidation &&
                 currentMove < 0 &&
@@ -6228,6 +6283,195 @@ namespace cAlgo
                 _lastInvalidationAlertM5 =
                     closedM5;
             }
+        }
+
+        private bool CheckStructuralSetupInvalidation(
+            int closedM5,
+            double market)
+        {
+            if (!EnableSetupInvalidation ||
+                _plan == null ||
+                _m5Bars == null ||
+                closedM5 < 30 ||
+                !IsFinitePositive(market))
+                return false;
+
+            double atr =
+                Atr(
+                    _m5Bars,
+                    closedM5);
+
+            if (!IsFinitePositive(atr))
+                return false;
+
+            int swingLookback =
+                Math.Max(
+                    10,
+                    Math.Min(
+                        StructureLookback,
+                        closedM5 - 1));
+
+            double swingHigh =
+                HighestHigh(
+                    _m5Bars,
+                    Math.Max(
+                        10,
+                        closedM5 -
+                        swingLookback),
+                    closedM5 - 1);
+
+            double swingLow =
+                LowestLow(
+                    _m5Bars,
+                    Math.Max(
+                        10,
+                        closedM5 -
+                        swingLookback),
+                    closedM5 - 1);
+
+            double structureBuffer =
+                atr *
+                Math.Max(
+                    0.02,
+                    InvalidationStructureAtr);
+
+            bool structureFailure =
+                _plan.Direction == 1
+                    ? swingLow > 0 &&
+                      market <
+                      swingLow -
+                      structureBuffer
+                    : swingHigh > 0 &&
+                      market >
+                      swingHigh +
+                      structureBuffer;
+
+            double risk =
+                Math.Max(
+                    Symbol.PipSize,
+                    _plan.Risk);
+
+            double adverseR =
+                _plan.Direction == 1
+                    ? (_plan.Entry - market) /
+                      risk
+                    : (market - _plan.Entry) /
+                      risk;
+
+            double maxAdverseR =
+                Math.Max(
+                    0.30,
+                    InvalidationMaxAdverseR);
+
+            if (adverseR >= maxAdverseR)
+                structureFailure = true;
+
+            bool mtfFlip = false;
+
+            if (_m5Frame != null)
+            {
+                mtfFlip =
+                    _plan.Direction == 1
+                        ? _m5Frame.Direction == -1 &&
+                          (_m5Frame.MssBear ||
+                           _m5Frame.ChochBear)
+                        : _m5Frame.Direction == 1 &&
+                          (_m5Frame.MssBull ||
+                           _m5Frame.ChochBull);
+            }
+
+            double zoneTolerance =
+                atr *
+                Math.Max(
+                    0.02,
+                    InvalidationZoneCloseAtr);
+
+            bool zoneFailure;
+
+            if (_plan.Direction == 1)
+            {
+                zoneFailure =
+                    market <
+                    _plan.Stop -
+                    zoneTolerance &&
+                    (_m5Frame == null ||
+                     _m5Frame.StructureBear ||
+                     _m5Frame.MssBear ||
+                     _m5Frame.ChochBear);
+            }
+            else
+            {
+                zoneFailure =
+                    market >
+                    _plan.Stop +
+                    zoneTolerance &&
+                    (_m5Frame == null ||
+                     _m5Frame.StructureBull ||
+                     _m5Frame.MssBull ||
+                     _m5Frame.ChochBull);
+            }
+
+            bool invalid =
+                (structureFailure ||
+                 zoneFailure) &&
+                (!RequireMtfFlipForInvalidation ||
+                 mtfFlip ||
+                 adverseR >= maxAdverseR);
+
+            if (!invalid)
+                return false;
+
+            int score =
+                (structureFailure ? 40 : 0) +
+                (zoneFailure ? 30 : 0) +
+                (mtfFlip ? 30 : 0);
+
+            if (AlertOnInvalidated &&
+                _lastInvalidationAlertM5 !=
+                closedM5)
+            {
+                SendUnifiedAlert(
+                    "STRUCT-INVALID|" +
+                    closedM5,
+                    "CFIP CLEAN30 STRUCTURAL INVALIDATION | " +
+                    (_plan.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " | SCORE " +
+                    ClampInt(
+                        score,
+                        0,
+                        100),
+                    0,
+                    true);
+
+                _lastInvalidationAlertM5 =
+                    closedM5;
+            }
+
+            if (EnableOutcomeTelemetry &&
+                !_outcomeRegistered)
+            {
+                RegisterOutcome(
+                    _plan.Direction,
+                    false);
+
+                _outcomeRegistered =
+                    true;
+            }
+
+            _losses++;
+            _lastExitM5 =
+                closedM5;
+
+            DrawOutcomeMarker(
+                "STRUCT INVALID",
+                market,
+                false);
+
+            _plan = null;
+            RemovePlanObjects();
+            return true;
         }
 
         private int CalculateSmartExitPressure(
@@ -8269,6 +8513,91 @@ namespace cAlgo
             return false;
         }
 
+        private void GetAdaptiveSmartThresholds(
+            string regime,
+            out int qualityThreshold,
+            out int shareThreshold,
+            out int edgeThreshold)
+        {
+            qualityThreshold =
+                Math.Max(
+                    40,
+                    Math.Min(
+                        95,
+                        MinimumSmartQuality));
+
+            shareThreshold =
+                Math.Max(
+                    50,
+                    Math.Min(
+                        90,
+                        MinimumSmartDirectionShare));
+
+            edgeThreshold =
+                Math.Max(
+                    4,
+                    Math.Min(
+                        30,
+                        MinimumEdge));
+
+            if (!AdaptiveSmartThresholds)
+                return;
+
+            int b =
+                Math.Max(
+                    0,
+                    SmartRegimeBuffer);
+
+            switch (
+                regime ??
+                "UNKNOWN")
+            {
+                case "TREND":
+                case "EXPANSION":
+                    qualityThreshold -= b;
+                    shareThreshold -= Math.Max(1, b / 3);
+                    edgeThreshold -= Math.Max(1, b / 3);
+                    break;
+
+                case "REVERSAL":
+                    qualityThreshold -= Math.Max(1, b / 2);
+                    break;
+
+                case "RANGE":
+                    qualityThreshold += Math.Max(1, b / 2);
+                    shareThreshold += Math.Max(1, b / 3);
+                    edgeThreshold += Math.Max(1, b / 3);
+                    break;
+
+                case "COMPRESSION":
+                    qualityThreshold += b;
+                    shareThreshold += Math.Max(1, b / 2);
+                    edgeThreshold += Math.Max(1, b / 2);
+                    break;
+            }
+
+            qualityThreshold =
+                Math.Max(
+                    40,
+                    Math.Min(
+                        95,
+                        qualityThreshold));
+
+            shareThreshold =
+                Math.Max(
+                    50,
+                    Math.Min(
+                        90,
+                        shareThreshold));
+
+            edgeThreshold =
+                Math.Max(
+                    4,
+                    Math.Min(
+                        30,
+                        edgeThreshold));
+        }
+
         private int SmartMinimumConsensusFloor()
         {
             return Math.Max(
@@ -9914,10 +10243,23 @@ namespace cAlgo
 
             _popupText.FontSize =
                 Math.Max(
-                    9,
+                    8,
                     Math.Min(
-                        18,
-                        PanelFontSize));
+                        22,
+                        Math.Max(
+                            8,
+                            PanelFontSize)));
+
+            _popupText.FontWeight =
+                PopupBold
+                    ? FontWeight.Bold
+                    : FontWeight.Normal;
+
+            _popupText.FontFamily =
+                string.IsNullOrWhiteSpace(
+                    PopupFontFamily)
+                    ? "Arial"
+                    : PopupFontFamily;
 
             _popupText.ForegroundColor =
                 PopupTextColor;
@@ -9932,7 +10274,10 @@ namespace cAlgo
                     0,
                     PopupPadding);
 
-            _popup.Margin = 8;
+            _popup.Margin =
+                Math.Max(
+                    0,
+                    PopupMargin);
 
             _popup.BackgroundColor =
                 Color.FromArgb(
@@ -9944,7 +10289,13 @@ namespace cAlgo
                     PopupBackgroundColor);
 
             _popup.BorderColor =
-                PopupBorderColor;
+                Color.FromArgb(
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            255,
+                            PopupBorderAlpha)),
+                    PopupBorderColor);
 
             _popup.BorderThickness =
                 Math.Max(
@@ -10766,7 +11117,8 @@ namespace cAlgo
             int baseConfidence,
             int direction)
         {
-            if (!EnableConfidenceCalibration ||
+            if (!UseEmpiricalCalibration ||
+                !EnableConfidenceCalibration ||
                 !EnableOutcomeTelemetry ||
                 !_directionSamples.ContainsKey(
                     direction))
@@ -11489,6 +11841,12 @@ namespace cAlgo
 
             if (RequireReversalForce &&
                 !force)
+                return false;
+
+            if (!AllowReversalAgainstStaleHtf &&
+                _m15Frame != null &&
+                _m15Frame.Direction ==
+                _plan.Direction)
                 return false;
 
             if (RequireM15ReversalForOpposite &&
