@@ -385,6 +385,45 @@ namespace cAlgo
         [Parameter("Maximum Structural Stop ATR", Group = "Risk", DefaultValue = 3.00, MinValue = 0.5, MaxValue = 10.0)]
         public double MaximumStructuralStopAtr { get; set; }
 
+        [Parameter("Use Structural Sequence Gate", Group = "Precision Entry", DefaultValue = true)]
+        public bool UseStructuralSequenceGate { get; set; }
+
+        [Parameter("Minimum Structural Sequence", Group = "Precision Entry", DefaultValue = 72, MinValue = 40, MaxValue = 100)]
+        public int MinimumStructuralSequence { get; set; }
+
+        [Parameter("Allow Direct Displacement Override", Group = "Precision Entry", DefaultValue = true)]
+        public bool AllowDirectDisplacementOverride { get; set; }
+
+        [Parameter("Direct Displacement Override Score", Group = "Precision Entry", DefaultValue = 90, MinValue = 75, MaxValue = 100)]
+        public int DirectDisplacementOverrideScore { get; set; }
+
+        [Parameter("Require Entry Location Confluence", Group = "Precision Entry", DefaultValue = true)]
+        public bool RequireEntryLocationConfluence { get; set; }
+
+        [Parameter("Minimum Entry Location Quality", Group = "Precision Entry", DefaultValue = 68, MinValue = 40, MaxValue = 100)]
+        public int MinimumEntryLocationQuality { get; set; }
+
+        [Parameter("Entry Zone Proximity ATR", Group = "Precision Entry", DefaultValue = 0.30, MinValue = 0.05, MaxValue = 1.00)]
+        public double EntryZoneProximityAtr { get; set; }
+
+        [Parameter("Maximum Setup Age Bars", Group = "Precision Entry", DefaultValue = 8, MinValue = 1, MaxValue = 30)]
+        public int MaximumSetupAgeBars { get; set; }
+
+        [Parameter("Use Proxy Expected Value Gate", Group = "Precision Entry", DefaultValue = true)]
+        public bool UseProxyExpectedValueGate { get; set; }
+
+        [Parameter("Minimum Proxy Expected Value", Group = "Precision Entry", DefaultValue = 0.20, MinValue = -0.50, MaxValue = 5.00, Step = 0.05)]
+        public double MinimumProxyExpectedValue { get; set; }
+
+        [Parameter("Adaptive Structural RR", Group = "Risk", DefaultValue = true)]
+        public bool AdaptiveStructuralRR { get; set; }
+
+        [Parameter("Allow Synthetic Target Fallback", Group = "Risk", DefaultValue = false)]
+        public bool AllowSyntheticTargetFallback { get; set; }
+
+        [Parameter("Maximum Target Extension ATR", Group = "Risk", DefaultValue = 8.00, MinValue = 2.0, MaxValue = 30.0)]
+        public double MaximumTargetExtensionAtr { get; set; }
+
         [Parameter("HTF Stop Buffer ATR", Group = "Risk", DefaultValue = 0.05, MinValue = 0.01, MaxValue = 0.50)]
         public double HtfStopBufferAtr { get; set; }
 
@@ -1146,6 +1185,10 @@ namespace cAlgo
         private int _smartConsensusQuality;
         private int _smartIndependentEvidence;
         private int _smartTimeframeAgreement;
+        private int _smartStructuralSequence;
+        private int _smartEntryLocationQuality;
+        private double _smartProxyExpectedValue;
+        private string _smartEntryGateReason = "";
         private int _smartLastStableDirection;
         private int _smartOppositeBars;
         private DateTime _lastSmartDecisionAlertUtc = DateTime.MinValue;
@@ -4032,11 +4075,23 @@ namespace cAlgo
             }
 
             double minimumRR = EnableSmartDecisionEngine
-                ? Math.Max(SmartTargetMinimumRR, UseRRFilter ? MinimumTradeRR : 0.0)
+                ? CalculateAdaptiveMinimumRR()
                 : (UseRRFilter ? MinimumTradeRR : 0.0);
 
             if (rr < minimumRR)
                 return false;
+
+            if (EnableSmartDecisionEngine && UseProxyExpectedValueGate)
+            {
+                int planQuality = (int)Clamp(
+                    (_smartEntryQuality > 0 ? _smartEntryQuality : 70) * 0.55 +
+                    _smartStructuralSequence * 0.25 +
+                    _smartEntryLocationQuality * 0.20,
+                    0, 100);
+                _smartProxyExpectedValue = CalculateProxyExpectedValue(planQuality, rr);
+                if (_smartProxyExpectedValue < MinimumProxyExpectedValue)
+                    return false;
+            }
 
             sl = NormalizePrice(sl);
             tp1 = NormalizePrice(tp1);
@@ -4289,6 +4344,7 @@ namespace cAlgo
                 : confidence;
             _signalConfidence = (int)Clamp(Math.Round(blendedConfidence), 0.0, 100.0);
             _signalRR = rr;
+            _smartProxyExpectedValue = CalculateProxyExpectedValue((int)Clamp((_smartEntryQuality > 0 ? _smartEntryQuality : 70) * 0.55 + _smartStructuralSequence * 0.25 + _smartEntryLocationQuality * 0.20, 0, 100), rr);
             _signalInitialRisk = Math.Abs(_signalEntry - _signalSl);
             RefreshSignalLevelMetadata(
                 _m5,
@@ -8145,8 +8201,11 @@ private void UpdateBrokerPositionProtection()
                     atr,
                     false);
 
-            selected = CompleteSmartTargetLadder(
-                targets, selected, entry, risk, direction, atr);
+            if (AllowSyntheticTargetFallback)
+            {
+                selected = CompleteSmartTargetLadder(
+                    targets, selected, entry, risk, direction, atr);
+            }
             if (selected.Count < 2)
                 return false;
 
@@ -8159,11 +8218,23 @@ private void UpdateBrokerPositionProtection()
                 ? (tp1 - entry) / risk
                 : (entry - tp1) / risk;
 
-            double minimumRR = Math.Max(
-                SmartTargetMinimumRR,
-                UseRRFilter ? MinimumTradeRR : 0.0);
-
+            double minimumRR = CalculateAdaptiveMinimumRR();
             if (rr < minimumRR)
+                return false;
+
+            int planQuality = (int)Clamp(
+                (_smartEntryQuality > 0 ? _smartEntryQuality : 70) * 0.55 +
+                _smartStructuralSequence * 0.25 +
+                _smartEntryLocationQuality * 0.20,
+                0, 100);
+            double proxyEv = CalculateProxyExpectedValue(planQuality, rr);
+            _smartProxyExpectedValue = proxyEv;
+            if (UseProxyExpectedValueGate && proxyEv < MinimumProxyExpectedValue)
+                return false;
+
+            double maximumTargetDistance = atr * Math.Max(2.0, MaximumTargetExtensionAtr);
+            double tp1Distance = Math.Abs(tp1 - entry);
+            if (tp1Distance > maximumTargetDistance)
                 return false;
 
             if (RejectTargetObstacle &&
@@ -10158,6 +10229,209 @@ private void UpdateBrokerPositionProtection()
             return Clamp(pressure, 0, 100);
         }
 
+        private int CalculateStructuralSequenceQuality(Bars bars, int index, int direction)
+        {
+            if (bars == null || direction == 0 || index < 30 || index >= bars.Count)
+                return 0;
+
+            int sweepIndex = -1;
+            int structureIndex = -1;
+            int displacementIndex = -1;
+            int lookback = Math.Max(3, MaximumSetupAgeBars);
+
+            for (int i = index; i >= Math.Max(5, index - lookback); i--)
+            {
+                bool sweep = direction == 1
+                    ? HasBullLiquiditySweep(bars, i)
+                    : HasBearLiquiditySweep(bars, i);
+                bool structure = direction == 1
+                    ? (HasBullMss(bars, i) || HasBullChoch(bars, i))
+                    : (HasBearMss(bars, i) || HasBearChoch(bars, i));
+                bool displacement = direction == 1
+                    ? HasBullDisplacement(bars, i)
+                    : HasBearDisplacement(bars, i);
+
+                if (displacement && displacementIndex < 0)
+                    displacementIndex = i;
+                if (structure && structureIndex < 0)
+                    structureIndex = i;
+                if (sweep && sweepIndex < 0)
+                    sweepIndex = i;
+            }
+
+            int score = 0;
+            if (sweepIndex >= 0) score += 25;
+            if (structureIndex >= 0) score += 25;
+            if (displacementIndex >= 0) score += 25;
+
+            // The sequence must be chronological: liquidity event -> structural
+            // confirmation -> displacement. Same-bar confluence is allowed.
+            if (sweepIndex >= 0 && structureIndex >= 0 && structureIndex <= sweepIndex)
+                score += 8;
+            if (structureIndex >= 0 && displacementIndex >= 0 && displacementIndex <= structureIndex)
+                score += 8;
+
+            // Freshness matters. A setup that required too many bars to confirm is
+            // materially less actionable than a fresh one.
+            int newest = Math.Max(sweepIndex, Math.Max(structureIndex, displacementIndex));
+            if (newest >= 0)
+            {
+                int age = index - newest;
+                if (age <= 1) score += 9;
+                else if (age <= 3) score += 6;
+                else if (age <= MaximumSetupAgeBars) score += 2;
+            }
+
+            bool zone = direction == 1
+                ? HasBullFvg(bars, index) || HasBullOb(bars, index)
+                : HasBearFvg(bars, index) || HasBearOb(bars, index);
+            if (zone) score += 10;
+
+            bool retest = direction == 1
+                ? IsPriceNearRecentBullishZone(bars, index, atrOverride: 0)
+                : IsPriceNearRecentBearishZone(bars, index, atrOverride: 0);
+            if (retest) score += 10;
+
+            return (int)Clamp(score, 0, 100);
+        }
+
+        private bool IsPriceNearRecentBullishZone(Bars bars, int index, double atrOverride)
+        {
+            if (bars == null || index < 10 || index >= bars.Count) return false;
+            double atr = atrOverride > 0 ? atrOverride : GetAtr(bars, index, AtrPeriod);
+            if (atr <= 0) return false;
+            int start = Math.Max(2, index - Math.Max(FvgLookback, ObLookback));
+            double price = Symbol.Ask > 0 ? Symbol.Ask : bars.ClosePrices[index];
+            double tolerance = atr * Math.Max(0.05, EntryZoneProximityAtr);
+            for (int i = index - 1; i >= start; i--)
+            {
+                if (UseFvg && i >= 2)
+                {
+                    double gap = bars.LowPrices[i] - bars.HighPrices[i - 2];
+                    if (gap >= atr * MinimumFvgAtr)
+                    {
+                        double low = bars.HighPrices[i - 2], high = bars.LowPrices[i];
+                        bool invalid = false;
+                        for (int j = i + 1; j <= index; j++)
+                            if (bars.ClosePrices[j] < low) { invalid = true; break; }
+                        if (!invalid && price >= low - tolerance && price <= high + tolerance) return true;
+                    }
+                }
+                if (UseOrderBlock && i + 1 <= index)
+                {
+                    bool source = bars.ClosePrices[i] < bars.OpenPrices[i];
+                    bool displaced = bars.ClosePrices[i + 1] > bars.HighPrices[i];
+                    double body = Math.Abs(bars.ClosePrices[i + 1] - bars.OpenPrices[i + 1]);
+                    if (source && displaced && (!RequireObDisplacement || body >= atr * ObDisplacementAtr))
+                    {
+                        double low = bars.LowPrices[i], high = bars.HighPrices[i];
+                        bool invalid = false;
+                        for (int j = i + 1; j <= index; j++)
+                            if (bars.ClosePrices[j] < low) { invalid = true; break; }
+                        if (!invalid && price >= low - tolerance && price <= high + tolerance) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private bool IsPriceNearRecentBearishZone(Bars bars, int index, double atrOverride)
+        {
+            if (bars == null || index < 10 || index >= bars.Count) return false;
+            double atr = atrOverride > 0 ? atrOverride : GetAtr(bars, index, AtrPeriod);
+            if (atr <= 0) return false;
+            int start = Math.Max(2, index - Math.Max(FvgLookback, ObLookback));
+            double price = Symbol.Bid > 0 ? Symbol.Bid : bars.ClosePrices[index];
+            double tolerance = atr * Math.Max(0.05, EntryZoneProximityAtr);
+            for (int i = index - 1; i >= start; i--)
+            {
+                if (UseFvg && i >= 2)
+                {
+                    double gap = bars.LowPrices[i - 2] - bars.HighPrices[i];
+                    if (gap >= atr * MinimumFvgAtr)
+                    {
+                        double low = bars.HighPrices[i], high = bars.LowPrices[i - 2];
+                        bool invalid = false;
+                        for (int j = i + 1; j <= index; j++)
+                            if (bars.ClosePrices[j] > high) { invalid = true; break; }
+                        if (!invalid && price >= low - tolerance && price <= high + tolerance) return true;
+                    }
+                }
+                if (UseOrderBlock && i + 1 <= index)
+                {
+                    bool source = bars.ClosePrices[i] > bars.OpenPrices[i];
+                    bool displaced = bars.ClosePrices[i + 1] < bars.LowPrices[i];
+                    double body = Math.Abs(bars.ClosePrices[i + 1] - bars.OpenPrices[i + 1]);
+                    if (source && displaced && (!RequireObDisplacement || body >= atr * ObDisplacementAtr))
+                    {
+                        double low = bars.LowPrices[i], high = bars.HighPrices[i];
+                        bool invalid = false;
+                        for (int j = i + 1; j <= index; j++)
+                            if (bars.ClosePrices[j] > high) { invalid = true; break; }
+                        if (!invalid && price >= low - tolerance && price <= high + tolerance) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private int CalculateEntryLocationQuality(Bars bars, int index, int direction)
+        {
+            if (bars == null || direction == 0 || index < 25 || index >= bars.Count) return 0;
+            double atr = GetAtr(bars, index, AtrPeriod);
+            if (atr <= 0) return 0;
+            double price = direction == 1 ? Symbol.Ask : Symbol.Bid;
+            if (price <= 0) price = bars.ClosePrices[index];
+            int score = 0;
+            bool zone = direction == 1
+                ? IsPriceNearRecentBullishZone(bars, index, atr)
+                : IsPriceNearRecentBearishZone(bars, index, atr);
+            if (zone) score += 45;
+
+            double high = HighestHigh(bars, Math.Max(0, index - StructureLookback), index);
+            double low = LowestLow(bars, Math.Max(0, index - StructureLookback), index);
+            double range = high - low;
+            if (range > atr)
+            {
+                double position = (price - low) / range;
+                bool locationAligned = direction == 1
+                    ? position <= 0.50
+                    : position >= 0.50;
+                if (UsePremiumDiscount && locationAligned) score += 25;
+                else if (!UsePremiumDiscount) score += 15;
+            }
+
+            double extension = Math.Abs(price - bars.ClosePrices[index]) / Math.Max(atr, Symbol.PipSize);
+            if (extension <= MaximumEntryExtensionAtr * 0.50) score += 20;
+            else if (extension <= MaximumEntryExtensionAtr) score += 10;
+
+            bool microBreak = direction == 1
+                ? price > bars.HighPrices[Math.Max(0, index - 1)]
+                : price < bars.LowPrices[Math.Max(0, index - 1)];
+            if (microBreak) score += 10;
+            return (int)Clamp(score, 0, 100);
+        }
+
+        private double CalculateProxyExpectedValue(int quality, double rr)
+        {
+            if (quality <= 0 || rr <= 0) return -1.0;
+            // This is deliberately a calibration proxy, not a claimed historical
+            // win probability. Real probability must come from outcome data.
+            double probability = 0.42 + Clamp(quality, 0, 100) * 0.0042;
+            probability = Clamp(probability, 0.42, 0.84);
+            return probability * rr - (1.0 - probability);
+        }
+
+        private double CalculateAdaptiveMinimumRR()
+        {
+            double baseRR = Math.Max(SmartTargetMinimumRR, UseRRFilter ? MinimumTradeRR : 0.0);
+            if (!AdaptiveStructuralRR) return baseRR;
+            if (_smartRegimeQuality >= 82) return baseRR;
+            if (_smartRegimeQuality >= 70) return baseRR + 0.15;
+            if (_smartRegimeQuality >= 60) return baseRR + 0.30;
+            return baseRR + 0.50;
+        }
+
         private bool HasSmartEntryQuality(int index, int direction)
         {
             return HasSmartEntryQuality(Bars, index, direction);
@@ -10183,8 +10457,36 @@ private void UpdateBrokerPositionProtection()
                     index,
                     direction);
 
+            _smartStructuralSequence = CalculateStructuralSequenceQuality(bars, index, direction);
+            _smartEntryLocationQuality = CalculateEntryLocationQuality(bars, index, direction);
+            _smartEntryGateReason = "";
+
             if (quality < SmartQualityThreshold)
+            {
+                _smartEntryGateReason = "EXECUTION_QUALITY";
                 return false;
+            }
+
+            bool strongDirectOverride = AllowDirectDisplacementOverride &&
+                _smartStructuralSequence >= DirectDisplacementOverrideScore &&
+                quality >= Math.Max(85, SmartQualityThreshold + 10) &&
+                (direction == 1 ? HasBullDisplacement(bars, index) : HasBearDisplacement(bars, index));
+
+            if (UseStructuralSequenceGate &&
+                _smartStructuralSequence < MinimumStructuralSequence &&
+                !strongDirectOverride)
+            {
+                _smartEntryGateReason = "STRUCTURAL_SEQUENCE";
+                return false;
+            }
+
+            if (RequireEntryLocationConfluence &&
+                _smartEntryLocationQuality < MinimumEntryLocationQuality &&
+                !strongDirectOverride)
+            {
+                _smartEntryGateReason = "ENTRY_LOCATION";
+                return false;
+            }
 
             if (AvoidRsiExhaustion)
             {
