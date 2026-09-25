@@ -4678,6 +4678,7 @@ namespace cAlgo
             List<Level> selected =
                 SelectTargets(
                     candidates,
+                    closedM5,
                     entry,
                     risk,
                     direction,
