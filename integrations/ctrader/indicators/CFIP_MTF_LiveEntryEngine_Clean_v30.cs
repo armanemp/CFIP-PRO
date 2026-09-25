@@ -647,6 +647,9 @@ namespace cAlgo
         [Parameter("Maximum Structural Stop ATR", Group = "15 · Advanced Control", DefaultValue = 2.25, MinValue = 0.5, MaxValue = 10)]
         public double MaximumStructuralStopAtr { get; set; }
 
+        [Parameter("Target Obstacle Lookback Bars", Group = "15 · Advanced Control", DefaultValue = 8, MinValue = 3, MaxValue = 50)]
+        public int TargetObstacleLookbackBars { get; set; }
+
         [Parameter("Allow Direct Displacement Override", Group = "15 · Advanced Control", DefaultValue = true)]
         public bool AllowDirectDisplacementOverride { get; set; }
 
@@ -5758,7 +5761,10 @@ if (UseM1Trigger &&
                     if (_tp1Hit == 0 &&
                         level.Price <
                         _plan.Tp1 -
-                        atr * 0.25)
+                        atr *
+                        Math.Max(
+                            0.05,
+                            TargetUpdateStepAtr))
                     {
                         _plan.Tp1 =
                             level.Price;
@@ -7303,7 +7309,10 @@ if (UseM1Trigger &&
             int start =
                 Math.Max(
                     2,
-                    index - 8);
+                    index -
+                    Math.Max(
+                        3,
+                        TargetObstacleLookbackBars));
 
             for (int i = start;
                  i < index;
@@ -10563,6 +10572,11 @@ if (UseM1Trigger &&
                 _reaction == null ||
                 !_reaction.EntryAllowed ||
                 _reaction.Direction == 0)
+                return;
+
+            if (OneOrderPerSignal &&
+                _lastAutoM5 ==
+                closedM5)
                 return;
 
             if (_reaction.Confidence <
