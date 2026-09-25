@@ -10266,9 +10266,9 @@ private void UpdateBrokerPositionProtection()
 
             // The sequence must be chronological: liquidity event -> structural
             // confirmation -> displacement. Same-bar confluence is allowed.
-            if (sweepIndex >= 0 && structureIndex >= 0 && structureIndex <= sweepIndex)
+            if (sweepIndex >= 0 && structureIndex >= 0 && sweepIndex <= structureIndex)
                 score += 8;
-            if (structureIndex >= 0 && displacementIndex >= 0 && displacementIndex <= structureIndex)
+            if (structureIndex >= 0 && displacementIndex >= 0 && structureIndex <= displacementIndex)
                 score += 8;
 
             // Freshness matters. A setup that required too many bars to confirm is
