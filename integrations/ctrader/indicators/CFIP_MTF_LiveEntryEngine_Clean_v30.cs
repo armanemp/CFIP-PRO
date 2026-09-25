@@ -924,6 +924,9 @@ namespace cAlgo
 [Parameter("Opposite Signal Cooldown M5", Group = "16 · Accuracy", DefaultValue = 5, MinValue = 0, MaxValue = 50)]
         public int OppositeSignalCooldownM5 { get; set; }
 
+[Parameter("Prevent Rapid Direction Flip", Group = "16 · Accuracy", DefaultValue = true)]
+        public bool PreventRapidDirectionFlip { get; set; }
+
 [Parameter("Require M15 Reversal For Opposite", Group = "16 · Accuracy", DefaultValue = true)]
         public bool RequireM15ReversalForOpposite { get; set; }
 
@@ -3232,9 +3235,49 @@ if (UseM1Trigger &&
                     index,
                     direction) <
                 MinimumFreshTriggerEvidence)
-                return false;
+            {
+                bool directOverride =
+                    AllowDirectDisplacementOverride &&
+                    UseDisplacement &&
+                    trigger >=
+                    ClampInt(
+                        DirectDisplacementOverrideScore,
+                        1,
+                        6) &&
+                    (direction == 1
+                        ? BullDisplacement(
+                            bars,
+                            index,
+                            atr)
+                        : BearDisplacement(
+                            bars,
+                            index,
+                            atr));
 
-            if (trigger >= 5 &&
+                if (!directOverride)
+                    return false;
+            }
+
+            bool strongM5Override =
+                AllowStrongM5TriggerOverride &&
+                UseDisplacement &&
+                trigger >=
+                ClampInt(
+                    DirectDisplacementOverrideScore,
+                    1,
+                    6) &&
+                (direction == 1
+                    ? BullDisplacement(
+                        bars,
+                        index,
+                        atr)
+                    : BearDisplacement(
+                        bars,
+                        index,
+                        atr));
+
+            if ((trigger >= 5 ||
+                 strongM5Override) &&
                 breakReady &&
                 bufferPassed)
                 return true;
@@ -3626,15 +3669,21 @@ if (UseM1Trigger &&
                 _decision == null)
                 return Tp1MinimumRR;
 
+            double step =
+                Math.Max(
+                    0.05,
+                    StructuralTpRrStep);
+
             if (_decision.Regime == "EXPANSION")
                 return Math.Max(
                     2.10,
-                    Tp1MinimumRR);
+                    Tp1MinimumRR + step);
 
             if (_decision.Regime == "RANGE")
                 return Math.Max(
                     1.75,
-                    Tp1MinimumRR - 0.15);
+                    Tp1MinimumRR -
+                    step * 0.50);
 
             return Tp1MinimumRR;
         }
@@ -4989,44 +5038,72 @@ if (UseM1Trigger &&
                         _m5Bars,
                         closedM5);
 
-                double structural =
-                    _plan.Direction == 1
-                        ? FindSwingLowBelow(
-                            _m5Bars,
-                            closedM5,
-                            market)
-                        : FindSwingHighAbove(
-                            _m5Bars,
-                            closedM5,
-                            market);
-
-                if (IsFinitePositive(structural))
+                if (atr > 0)
                 {
-                    double room =
-                        atr *
-                        Math.Max(
-                            0.10,
-                            Math.Max(
-                                SlRepriceBreathingAtr,
-                                TrailDistanceAtr));
+                    double structural = 0;
 
-                    if (_plan.Direction == 1 &&
-                        structural <=
-                        market - room)
+                    if (UseSwingStructureInTrail)
                     {
-                        candidate =
-                            Math.Max(
-                                candidate,
-                                structural);
+                        structural =
+                            _plan.Direction == 1
+                                ? FindSwingLowBelow(
+                                    _m5Bars,
+                                    closedM5,
+                                    market)
+                                : FindSwingHighAbove(
+                                    _m5Bars,
+                                    closedM5,
+                                    market);
                     }
-                    else if (_plan.Direction == -1 &&
-                             structural >=
-                             market + room)
+
+                    if (!IsFinitePositive(
+                            structural))
                     {
-                        candidate =
-                            Math.Min(
-                                candidate,
-                                structural);
+                        Zone trailZone =
+                            FindNearestOpposingZone(
+                                _m5Bars,
+                                closedM5,
+                                _plan.Direction,
+                                atr);
+
+                        if (trailZone != null)
+                        {
+                            structural =
+                                _plan.Direction == 1
+                                    ? trailZone.Low
+                                    : trailZone.High;
+                        }
+                    }
+
+                    if (IsFinitePositive(
+                            structural))
+                    {
+                        double room =
+                            atr *
+                            Math.Max(
+                                0.10,
+                                Math.Max(
+                                    SlRepriceBreathingAtr,
+                                    TrailDistanceAtr));
+
+                        if (_plan.Direction == 1 &&
+                            structural <=
+                            market - room)
+                        {
+                            candidate =
+                                Math.Max(
+                                    candidate,
+                                    structural);
+                        }
+                        else if (_plan.Direction == -1 &&
+                                 structural >=
+                                 market + room)
+                        {
+                            candidate =
+                                Math.Min(
+                                    candidate,
+                                    structural);
+                        }
                     }
                 }
             }
@@ -5068,9 +5145,9 @@ if (UseM1Trigger &&
                         TrailStepAtr));
 
             if (!BetterStop(
-                    _plan.Direction,
-                    candidate,
-                    _plan.Stop) ||
+                _plan.Direction,
+                candidate,
+                _plan.Stop) ||
                 Math.Abs(
                     candidate -
                     _plan.Stop) <
@@ -6259,14 +6336,16 @@ if (UseM1Trigger &&
                     direction,
                     atr);
 
+            double price =
+                bars.ClosePrices[index];
+
             if (zone != null)
             {
-                double price =
-                    bars.ClosePrices[index];
-
                 double tolerance =
                     atr *
-                    ZoneProximityAtr;
+                    Math.Max(
+                        0.05,
+                        RetestZoneToleranceAtr);
 
                 if (price >=
                         zone.Low -
@@ -6292,13 +6371,72 @@ if (UseM1Trigger &&
                     : MinimumTriggerBodyAtr))
                 q += 10;
 
-            if ((direction == 1 &&
-                 bars.ClosePrices[index] >
-                 bars.OpenPrices[index]) ||
-                (direction == -1 &&
-                 bars.ClosePrices[index] <
-                 bars.OpenPrices[index]))
+            bool directionalClose =
+                direction == 1
+                    ? bars.ClosePrices[index] >
+                      bars.OpenPrices[index]
+                    : bars.ClosePrices[index] <
+                      bars.OpenPrices[index];
+
+            if (directionalClose)
                 q += 5;
+
+            int displacementAge = -1;
+            int first =
+                Math.Max(
+                    5,
+                    index -
+                    Math.Max(
+                        1,
+                        RetestLookbackBars));
+
+            for (int i = index;
+                 i >= first;
+                 i--)
+            {
+                bool displacement =
+                    direction == 1
+                        ? BullDisplacement(
+                            bars,
+                            i,
+                            atr)
+                        : BearDisplacement(
+                            bars,
+                            i,
+                            atr);
+
+                if (displacement)
+                {
+                    displacementAge =
+                        index - i;
+                    break;
+                }
+            }
+
+            if (displacementAge >= 0)
+            {
+                if (displacementAge <=
+                    Math.Max(
+                        1,
+                        RetestMaxBarsAfterDisplacement))
+                    q += 10;
+                else
+                    q = Math.Max(
+                        0,
+                        q - 10);
+            }
+
+            if (RequireRetestCloseConfirmation &&
+                zone != null &&
+                !directionalClose)
+                return 0;
+
+            if (zone != null &&
+                (price < zone.Low - atr * RetestZoneToleranceAtr ||
+                 price > zone.High + atr * RetestZoneToleranceAtr))
+                q = Math.Max(
+                    0,
+                    q - 20);
 
             return ClampInt(
                 q,
