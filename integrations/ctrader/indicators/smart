@@ -1594,6 +1594,13 @@ namespace cAlgo
             EvaluateEngine(index);
             EvaluateLiveReaction(index);
 
+            if (!_signalActive &&
+                EnableAutoTrading &&
+                EnableAggressiveAutoEntry)
+            {
+                TryExecuteAggressiveAutoTrade();
+            }
+
             if (_signalActive && EnableLiveExitManagement)
                 UpdateLiveExitPlan();
 
@@ -4721,6 +4728,660 @@ namespace cAlgo
                 m5LiveIndex);
         }
 
+        private string NormalizeAutoTradeLabel()
+        {
+            string label =
+                string.IsNullOrWhiteSpace(AutoTradeLabel)
+                    ? "CFIP-SMART"
+                    : AutoTradeLabel.Trim();
+
+            if (label.Length > 32)
+                label = label.Substring(0, 32);
+
+            return label;
+        }
+
+        private bool IsCurrentSignalAggressive()
+        {
+            return string.Equals(
+                _signalOrigin,
+                "AGGRESSIVE",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private int CountAutoManagedPositions()
+        {
+            string label =
+                NormalizeAutoTradeLabel();
+
+            int count = 0;
+
+            foreach (Position position in Positions)
+            {
+                if (position == null ||
+                    position.SymbolName != SymbolName)
+                    continue;
+
+                if (string.Equals(
+                        position.Label,
+                        label,
+                        StringComparison.Ordinal))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private double SelectAutoTradeTarget(
+            int direction,
+            CFIPAutoTradeTpStage preferredStage,
+            double tp1,
+            double tp2,
+            double tp3,
+            double tp4,
+            double entry)
+        {
+            double[] targets =
+            {
+                tp1,
+                tp2,
+                tp3,
+                tp4
+            };
+
+            int preferred =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        3,
+                        (int)preferredStage));
+
+            // Prefer the requested target, then gracefully fall back to the
+            // nearest available earlier structural target.
+            for (int i = preferred; i >= 0; i--)
+            {
+                double target =
+                    NormalizePrice(targets[i]);
+
+                if (IsValidDirectionalTarget(
+                        direction,
+                        entry,
+                        target))
+                    return target;
+            }
+
+            // If the preferred stage is unavailable, use the highest valid
+            // structural target rather than fabricating a synthetic TP.
+            for (int i = 3; i >= 0; i--)
+            {
+                double target =
+                    NormalizePrice(targets[i]);
+
+                if (IsValidDirectionalTarget(
+                        direction,
+                        entry,
+                        target))
+                    return target;
+            }
+
+            return 0;
+        }
+
+        private double CalculateAutoTradeVolume(
+            double entry,
+            double stopLoss,
+            double riskPercent,
+            CFIPAutoTradeSizingMode sizingMode)
+        {
+            if (!IsFinitePositive(entry) ||
+                !IsFinitePositive(stopLoss) ||
+                riskPercent <= 0)
+                return 0;
+
+            double stopLossPips =
+                Math.Abs(entry - stopLoss) /
+                Math.Max(
+                    Symbol.PipSize,
+                    Symbol.TickSize);
+
+            if (stopLossPips <= 0)
+                return 0;
+
+            try
+            {
+                double volume;
+
+                if (sizingMode ==
+                    CFIPAutoTradeSizingMode.FixedLots)
+                {
+                    volume =
+                        Symbol.QuantityToVolumeInUnits(
+                            Math.Max(
+                                0.0,
+                                AutoTradeFixedLots));
+                }
+                else
+                {
+                    double riskAmount =
+                        Math.Max(
+                            0.0,
+                            Account.Equity) *
+                        Math.Max(
+                            0.0,
+                            riskPercent) /
+                        100.0;
+
+                    if (riskAmount <= 0)
+                        return 0;
+
+                    volume =
+                        Symbol.VolumeForFixedRisk(
+                            riskAmount,
+                            stopLossPips,
+                            RoundingMode.Down);
+                }
+
+                if (double.IsNaN(volume) ||
+                    double.IsInfinity(volume) ||
+                    volume <= 0)
+                    return 0;
+
+                volume =
+                    Symbol.NormalizeVolumeInUnits(
+                        volume,
+                        RoundingMode.Down);
+
+                if (volume <
+                    Symbol.VolumeInUnitsMin)
+                    return 0;
+
+                if (volume >
+                    Symbol.VolumeInUnitsMax)
+                {
+                    volume =
+                        Symbol.NormalizeVolumeInUnits(
+                            Symbol.VolumeInUnitsMax,
+                            RoundingMode.Down);
+                }
+
+                return volume;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP auto volume calculation failed: {0}",
+                    ex.Message);
+                return 0;
+            }
+        }
+
+        private bool IsAutoTradePlanValid(
+            int direction,
+            double entry,
+            double stopLoss,
+            double takeProfit)
+        {
+            return
+                (direction == 1 ||
+                 direction == -1) &&
+                IsFinitePositive(entry) &&
+                IsValidDirectionalStop(
+                    direction,
+                    entry,
+                    stopLoss) &&
+                IsValidDirectionalTarget(
+                    direction,
+                    entry,
+                    takeProfit);
+        }
+
+        private bool ExecuteAutoManagedOrder(
+            int direction,
+            double entry,
+            double stopLoss,
+            double takeProfit,
+            double riskPercent,
+            CFIPAutoTradeSizingMode sizingMode,
+            bool aggressive,
+            int m5Bar)
+        {
+            if (!EnableAutoTrading ||
+                !IsAutoTradePlanValid(
+                    direction,
+                    entry,
+                    stopLoss,
+                    takeProfit))
+                return false;
+
+            string label =
+                NormalizeAutoTradeLabel();
+
+            if (CountAutoManagedPositions() >=
+                Math.Max(
+                    1,
+                    AutoTradeMaxPositions))
+            {
+                _autoTradeStatusText =
+                    aggressive
+                        ? "AGGRESSIVE | BLOCKED | MAX POSITIONS"
+                        : "CONFIRMED | BLOCKED | MAX POSITIONS";
+                return false;
+            }
+
+            if (aggressive)
+            {
+                if (_lastAggressiveAutoTradeM5Bar ==
+                    m5Bar)
+                    return false;
+            }
+            else if (AutoTradeOnePerSignal &&
+                     _lastAutoTradeConfirmedM5Bar ==
+                     m5Bar)
+            {
+                return false;
+            }
+
+            double stopLossPips =
+                Math.Abs(entry - stopLoss) /
+                Math.Max(
+                    Symbol.PipSize,
+                    Symbol.TickSize);
+
+            double takeProfitPips =
+                Math.Abs(takeProfit - entry) /
+                Math.Max(
+                    Symbol.PipSize,
+                    Symbol.TickSize);
+
+            if (stopLossPips <= 0 ||
+                takeProfitPips <= 0)
+            {
+                _autoTradeStatusText =
+                    aggressive
+                        ? "AGGRESSIVE | BLOCKED | INVALID DISTANCE"
+                        : "CONFIRMED | BLOCKED | INVALID DISTANCE";
+                return false;
+            }
+
+            double volume =
+                CalculateAutoTradeVolume(
+                    entry,
+                    stopLoss,
+                    riskPercent,
+                    sizingMode);
+
+            if (volume <
+                Symbol.VolumeInUnitsMin)
+            {
+                _autoTradeStatusText =
+                    aggressive
+                        ? "AGGRESSIVE | BLOCKED | VOLUME BELOW MIN"
+                        : "CONFIRMED | BLOCKED | VOLUME BELOW MIN";
+                return false;
+            }
+
+            try
+            {
+                TradeType tradeType =
+                    direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell;
+
+                TradeResult result =
+                    ExecuteMarketOrder(
+                        tradeType,
+                        SymbolName,
+                        volume,
+                        label,
+                        stopLossPips,
+                        takeProfitPips);
+
+                if (result == null ||
+                    !result.IsSuccessful ||
+                    result.Position == null)
+                {
+                    _autoTradeStatusText =
+                        (aggressive
+                            ? "AGGRESSIVE"
+                            : "CONFIRMED") +
+                        " | ORDER FAILED" +
+                        (result != null &&
+                         result.Error.HasValue
+                            ? " | " +
+                              result.Error.Value
+                            : "");
+
+                    return false;
+                }
+
+                Position position =
+                    result.Position;
+
+                // Immediate broker protection was supplied with the order.
+                // Tighten it to the exact structural levels using the actual fill.
+                try
+                {
+                    if (IsValidDirectionalStop(
+                            direction,
+                            position.EntryPrice,
+                            stopLoss))
+                    {
+                        position.ModifyStopLossPrice(
+                            NormalizePrice(stopLoss));
+                    }
+
+                    if (IsValidDirectionalTarget(
+                            direction,
+                            position.EntryPrice,
+                            takeProfit))
+                    {
+                        position.ModifyTakeProfitPrice(
+                            NormalizePrice(takeProfit));
+                    }
+                }
+                catch (Exception protectionEx)
+                {
+                    Print(
+                        "CFIP exact auto protection warning: {0}",
+                        protectionEx.Message);
+                }
+
+                if (aggressive)
+                    _lastAggressiveAutoTradeM5Bar = m5Bar;
+                else
+                    _lastAutoTradeConfirmedM5Bar = m5Bar;
+
+                _autoTradeLastPositionId =
+                    position.Id;
+
+                _autoTradeStatusText =
+                    (aggressive
+                        ? "AGGRESSIVE"
+                        : "CONFIRMED") +
+                    " | EXECUTED #" +
+                    position.Id +
+                    " | VOL " +
+                    position.VolumeInUnits.ToString("F0") +
+                    " | SL " +
+                    FormatPrice(stopLoss) +
+                    " | TP " +
+                    FormatPrice(takeProfit);
+
+                QueueSmartDecisionAlert(
+                    "AUTO " +
+                    (aggressive ? "AGGRESSIVE " : "") +
+                    (direction == 1 ? "BUY" : "SELL") +
+                    " EXECUTED | #" +
+                    position.Id +
+                    " | SL " +
+                    FormatPrice(stopLoss) +
+                    " | TP " +
+                    FormatPrice(takeProfit),
+                    direction,
+                    m5Bar);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _autoTradeStatusText =
+                    (aggressive
+                        ? "AGGRESSIVE"
+                        : "CONFIRMED") +
+                    " | ORDER ERROR";
+
+                Print(
+                    "CFIP auto market order failed: {0}",
+                    ex.Message);
+
+                return false;
+            }
+        }
+
+        private void TryExecuteConfirmedAutoTrade()
+        {
+            if (!EnableAutoTrading ||
+                !AutoTradeConfirmedSignalsOnly ||
+                !_signalActive ||
+                IsCurrentSignalAggressive() ||
+                _signalDirection == 0)
+                return;
+
+            double target =
+                SelectAutoTradeTarget(
+                    _signalDirection,
+                    AutoTradeTpStage,
+                    _signalTp1,
+                    _signalTp2,
+                    _signalTp3,
+                    _signalTp4,
+                    _signalEntry);
+
+            if (!IsAutoTradePlanValid(
+                    _signalDirection,
+                    _signalEntry,
+                    _signalSl,
+                    target))
+            {
+                _autoTradeStatusText =
+                    "CONFIRMED | BLOCKED | INVALID PLAN";
+                return;
+            }
+
+            ExecuteAutoManagedOrder(
+                _signalDirection,
+                _signalEntry,
+                _signalSl,
+                target,
+                AutoTradeRiskPercentEquity,
+                AutoTradeSizing,
+                false,
+                _signalCreatedM5Bar);
+        }
+
+        private void TryExecuteAggressiveAutoTrade()
+        {
+            if (!EnableAutoTrading ||
+                !EnableAggressiveAutoEntry ||
+                _signalActive ||
+                _liveReactionDirection == 0 ||
+                _m5 == null ||
+                _m5.Count < 40)
+                return;
+
+            int direction =
+                _liveReactionDirection;
+
+            int m5Bar =
+                _liveReactionBar >= 0
+                    ? _liveReactionBar
+                    : Math.Max(
+                        1,
+                        _m5.Count - 1);
+
+            if (_lastAggressiveAutoTradeM5Bar ==
+                m5Bar)
+                return;
+
+            if (_liveReactionConfidence <
+                Math.Max(
+                    50,
+                    AggressiveMinConfidence) ||
+                _liveReactionEvidence <
+                Math.Max(
+                    1,
+                    AggressiveMinEvidence))
+                return;
+
+            if (AggressiveRequireSmartAgreement &&
+                (_smartDirection != direction ||
+                 _smartQuality <
+                 Math.Max(
+                    50,
+                    AggressiveSmartMinimumQuality)))
+                return;
+
+            DateTime reference =
+                _m5.OpenTimes[
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            _m5.Count - 1,
+                            m5Bar))];
+
+            int closedIndex =
+                GetLastClosedIndexBefore(
+                    _m5,
+                    reference);
+
+            if (closedIndex < 30)
+                return;
+
+            double entry =
+                NormalizePrice(
+                    direction == 1
+                        ? Symbol.Ask
+                        : Symbol.Bid);
+
+            double stopLoss =
+                NormalizePrice(
+                    _reactionSl);
+
+            double takeProfit =
+                SelectAutoTradeTarget(
+                    direction,
+                    AggressiveTpStage,
+                    _reactionTp1,
+                    _reactionTp2,
+                    _reactionTp3,
+                    _reactionTp4,
+                    entry);
+
+            if (!IsAutoTradePlanValid(
+                    direction,
+                    entry,
+                    stopLoss,
+                    takeProfit))
+            {
+                _autoTradeStatusText =
+                    "AGGRESSIVE | BLOCKED | INVALID REACTION PLAN";
+                return;
+            }
+
+            bool executed =
+                ExecuteAutoManagedOrder(
+                    direction,
+                    entry,
+                    stopLoss,
+                    takeProfit,
+                    AggressiveRiskPercentEquity,
+                    CFIPAutoTradeSizingMode.RiskPercentEquity,
+                    true,
+                    m5Bar);
+
+            if (!executed)
+                return;
+
+            Position autoPosition = null;
+
+            foreach (Position position in Positions)
+            {
+                if (position != null &&
+                    position.Id ==
+                    _autoTradeLastPositionId)
+                {
+                    autoPosition = position;
+                    break;
+                }
+            }
+
+            double actualEntry =
+                autoPosition != null
+                    ? NormalizePrice(
+                        autoPosition.EntryPrice)
+                    : entry;
+
+            _signalBar =
+                MapM5BarToChartIndex(
+                    closedIndex,
+                    Math.Max(
+                        0,
+                        Bars.Count - 1));
+
+            _signalOrigin = "AGGRESSIVE";
+            _signalDirection = direction;
+            _signalEntry = actualEntry;
+            _signalSl = stopLoss;
+            _signalTp1 = _reactionTp1;
+            _signalTp2 = _reactionTp2;
+            _signalTp3 =
+                _reactionTp3 > 0
+                    ? _reactionTp3
+                    : 0;
+            _signalTp4 =
+                _reactionTp4 > 0
+                    ? _reactionTp4
+                    : 0;
+
+            _signalInitialRisk =
+                Math.Abs(
+                    _signalEntry -
+                    _signalSl);
+
+            _signalRR =
+                _signalInitialRisk > 0 &&
+                _signalTp1 > 0
+                    ? Math.Abs(
+                        _signalTp1 -
+                        _signalEntry) /
+                      _signalInitialRisk
+                    : 0;
+
+            _signalConfidence =
+                Math.Max(
+                    0,
+                    _liveReactionConfidence);
+
+            _signalActive = true;
+            _signalOutcome = "ACTIVE";
+            _signalCreatedM5Bar = m5Bar;
+            _lastExitM5Bar = m5Bar;
+
+            _signalMfe = 0;
+            _signalMae = 0;
+            _signalMfeR = 0;
+            _signalMaeR = 0;
+            _signalMfeBars = 0;
+            _signalMaeBars = 0;
+            _signalTp1Bars = -1;
+            _signalTp2Bars = -1;
+            _signalTp3Bars = -1;
+            _signalTp4Bars = -1;
+            _signalSlBars = -1;
+            _signalOutcomeBar = -1;
+
+            _smartInvalidationScore = 0;
+            _falseSignalAlerted = false;
+            _outcomeRecorded = false;
+            _tp1Alerted = false;
+            _tp2Alerted = false;
+            _tp3Alerted = false;
+            _tp4Alerted = false;
+            _slAlerted = false;
+
+            _maxFavorablePrice =
+                _signalEntry;
+            _lastLiveExitSl =
+                _signalSl;
+
+            RefreshSignalLevelMetadata(
+                _m5,
+                closedIndex);
+
+            ClearEarlyObjects();
+            ClearLiveReactionObjects(false);
+        }
+
         private double FindNearestSwingAbove(Bars bars, int index, double price)
         {
             if (bars == null || bars.Count < 20)
@@ -5036,77 +5697,6 @@ namespace cAlgo
         }
 
 
-        private bool TryDrawLevelFallback(
-            string fallbackName,
-            int startIndex,
-            int endIndex,
-            double price,
-            Color color,
-            LineStyle lineStyle,
-            bool extendToInfinity)
-        {
-            if (Bars == null || Bars.Count < 2)
-                return false;
-
-            int safeStart =
-                Math.Max(
-                    0,
-                    Math.Min(
-                        startIndex,
-                        Bars.Count - 2));
-
-            int safeEnd =
-                Math.Max(
-                    safeStart + 1,
-                    Math.Min(
-                        endIndex,
-                        Bars.Count - 1));
-
-            try
-            {
-                ChartTrendLine fallback =
-                    Chart.FindObject(fallbackName) as ChartTrendLine;
-
-                if (fallback == null)
-                {
-                    Chart.RemoveObject(fallbackName);
-
-                    fallback =
-                        Chart.DrawTrendLine(
-                            fallbackName,
-                            Bars.OpenTimes[safeStart],
-                            price,
-                            Bars.OpenTimes[safeEnd],
-                            price,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            lineStyle);
-                }
-
-                if (fallback == null)
-                    return false;
-
-                fallback.Time1 =
-                    Bars.OpenTimes[safeStart];
-                fallback.Y1 = price;
-                fallback.Time2 =
-                    Bars.OpenTimes[safeEnd];
-                fallback.Y2 = price;
-                fallback.Color = color;
-                fallback.Thickness =
-                    Math.Max(1, LevelLineThickness);
-                fallback.LineStyle = lineStyle;
-                fallback.ExtendToInfinity =
-                    extendToInfinity;
-                fallback.IsInteractive = false;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         private void RemoveLevelDrawing(string name)
         {
             Chart.RemoveObject(name);
@@ -5142,7 +5732,7 @@ namespace cAlgo
                 return;
             }
 
-            LineStyle lineStyle =
+            LineStyle style =
                 styleOverride ?? PlanLineStyle;
 
             bool fullWidth =
@@ -5150,54 +5740,38 @@ namespace cAlgo
 
             try
             {
+                // Always use the public cTrader draw API as the authoritative
+                // source. Same-name drawing replaces the previous object,
+                // avoiding stale type/cast state that can suppress rendering.
                 if (fullWidth)
                 {
                     ChartHorizontalLine line =
-                        Chart.FindObject(name) as ChartHorizontalLine;
-
-                    if (line == null)
-                    {
-                        Chart.RemoveObject(name);
-
-                        line =
-                            Chart.DrawHorizontalLine(
-                                name,
-                                normalizedPrice,
-                                color,
-                                Math.Max(1, LevelLineThickness),
-                                lineStyle);
-                    }
-
-                    if (line != null)
-                    {
-                        line.Y =
-                            normalizedPrice;
-                        line.Color = color;
-                        line.Thickness =
-                            Math.Max(1, LevelLineThickness);
-                        line.LineStyle = lineStyle;
-                        line.IsInteractive = false;
-
-                        Chart.RemoveObject(
-                            name + "_FALLBACK");
-                        Chart.RemoveObject(
-                            name + "_SEG");
-                        return;
-                    }
-
-                    if (TryDrawLevelFallback(
-                            name + "_FALLBACK",
-                            startIndex,
-                            endIndex,
+                        Chart.DrawHorizontalLine(
+                            name,
                             normalizedPrice,
                             color,
-                            lineStyle,
-                            true))
-                        return;
+                            Math.Max(
+                                1,
+                                LevelLineThickness),
+                            style);
 
-                    Print(
-                        "CFIP level render failed [{0}]: horizontal line unavailable",
-                        name);
+                    if (line == null)
+                        throw new InvalidOperationException(
+                            "Chart.DrawHorizontalLine returned null.");
+
+                    line.Y =
+                        normalizedPrice;
+                    line.Color =
+                        color;
+                    line.Thickness =
+                        Math.Max(
+                            1,
+                            LevelLineThickness);
+                    line.LineStyle =
+                        style;
+                    line.IsInteractive = false;
+                    line.IsLocked = true;
+                    line.IsHidden = false;
                     return;
                 }
 
@@ -5216,80 +5790,51 @@ namespace cAlgo
                             Bars.Count - 1));
 
                 ChartTrendLine trend =
-                    Chart.FindObject(name) as ChartTrendLine;
-
-                if (trend == null)
-                {
-                    Chart.RemoveObject(name);
-
-                    trend =
-                        Chart.DrawTrendLine(
-                            name,
-                            Bars.OpenTimes[safeStart],
-                            normalizedPrice,
-                            Bars.OpenTimes[safeEnd],
-                            normalizedPrice,
-                            color,
-                            Math.Max(1, LevelLineThickness),
-                            lineStyle);
-                }
-
-                if (trend != null)
-                {
-                    trend.Time1 =
-                        Bars.OpenTimes[safeStart];
-                    trend.Y1 =
-                        normalizedPrice;
-                    trend.Time2 =
-                        Bars.OpenTimes[safeEnd];
-                    trend.Y2 =
-                        normalizedPrice;
-                    trend.Color = color;
-                    trend.Thickness =
-                        Math.Max(1, LevelLineThickness);
-                    trend.LineStyle = lineStyle;
-                    trend.ExtendToInfinity = false;
-                    trend.IsInteractive = false;
-
-                    Chart.RemoveObject(
-                        name + "_FALLBACK");
-                    Chart.RemoveObject(
-                        name + "_SEG");
-                    return;
-                }
-
-                if (TryDrawLevelFallback(
-                        name + "_FALLBACK",
-                        safeStart,
-                        safeEnd,
+                    Chart.DrawTrendLine(
+                        name,
+                        Bars.OpenTimes[safeStart],
+                        normalizedPrice,
+                        Bars.OpenTimes[safeEnd],
                         normalizedPrice,
                         color,
-                        lineStyle,
-                        false))
-                    return;
+                        Math.Max(
+                            1,
+                            LevelLineThickness),
+                        style);
 
-                Print(
-                    "CFIP level render failed [{0}]: trend line unavailable",
-                    name);
+                if (trend == null)
+                    throw new InvalidOperationException(
+                        "Chart.DrawTrendLine returned null.");
+
+                trend.Time1 =
+                    Bars.OpenTimes[safeStart];
+                trend.Y1 =
+                    normalizedPrice;
+                trend.Time2 =
+                    Bars.OpenTimes[safeEnd];
+                trend.Y2 =
+                    normalizedPrice;
+                trend.Color =
+                    color;
+                trend.Thickness =
+                    Math.Max(
+                        1,
+                        LevelLineThickness);
+                trend.LineStyle =
+                    style;
+                trend.ExtendToInfinity = false;
+                trend.IsInteractive = false;
+                trend.IsLocked = true;
+                trend.IsHidden = false;
             }
             catch (Exception ex)
             {
-                Chart.RemoveObject(name);
+                RemoveLevelDrawing(name);
 
-                if (!TryDrawLevelFallback(
-                        name + "_FALLBACK",
-                        startIndex,
-                        endIndex,
-                        normalizedPrice,
-                        color,
-                        lineStyle,
-                        fullWidth))
-                {
-                    Print(
-                        "CFIP level render failed [{0}]: {1}",
-                        name,
-                        ex.Message);
-                }
+                Print(
+                    "CFIP level draw failed [{0}] {1}",
+                    name,
+                    ex.Message);
             }
         }
 
@@ -8190,7 +8735,14 @@ namespace cAlgo
 
 private void UpdateBrokerPositionProtection()
         {
-            if (!_signalActive || !AutoProtectBrokerPositions || _signalDirection == 0)
+            bool autoManagedProtection =
+                EnableAutoTrading &&
+                AutoTradeBrokerProtection;
+
+            if (!_signalActive ||
+                (!AutoProtectBrokerPositions &&
+                 !autoManagedProtection) ||
+                _signalDirection == 0)
                 return;
             if ((DateTime.UtcNow - _lastBrokerModifyUtc).TotalMilliseconds < Math.Max(100, BrokerModifyCooldownMs))
                 return;
@@ -8206,8 +8758,22 @@ private void UpdateBrokerPositionProtection()
                 if ((_signalDirection == 1 && position.TradeType != TradeType.Buy) ||
                     (_signalDirection == -1 && position.TradeType != TradeType.Sell))
                     continue;
-                if (!string.IsNullOrWhiteSpace(ManagedPositionLabel) && position.Label != ManagedPositionLabel)
+                if (autoManagedProtection)
+                {
+                    string label =
+                        NormalizeAutoTradeLabel();
+
+                    if (!string.Equals(
+                            position.Label,
+                            label,
+                            StringComparison.Ordinal))
+                        continue;
+                }
+                else if (!string.IsNullOrWhiteSpace(ManagedPositionLabel) &&
+                         position.Label != ManagedPositionLabel)
+                {
                     continue;
+                }
 
                 bool improveSl = !position.StopLoss.HasValue ||
                     (_signalDirection == 1 ? brokerSl > position.StopLoss.Value : brokerSl < position.StopLoss.Value);
