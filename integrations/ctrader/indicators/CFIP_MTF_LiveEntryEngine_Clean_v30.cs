@@ -1516,6 +1516,7 @@ namespace cAlgo
 
         private readonly List<Native> _native = new List<Native>();
         private readonly HashSet<string> _historicalDrawn = new HashSet<string>();
+        private readonly HashSet<string> _outcomeDrawn = new HashSet<string>();
         private int _outcomeSequence;
 
         private Plan _plan;
