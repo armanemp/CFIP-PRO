@@ -1234,6 +1234,8 @@ namespace cAlgo
         private Border _tradePlanPanelBorder;
         private TextBlock _tradePlanPanelText;
         private StackPanel _tradePlanPanelStack;
+        private Grid _tradePlanPanelGrid;
+        private TextBlock[] _tradePlanPanelRows;
         private StackPanel _tradePlanActionStack;
         private Button _closeAllPositionsButton;
         private Button _cancelAllOrdersButton;
@@ -1381,6 +1383,12 @@ namespace cAlgo
         private const string HistoricalPrefix = "CFIP_HIST_";
         private const string ReactionPrefix = "CFIP_REACT_";
         private const string TradePlanName = "CFIP_TRADE_PLAN";
+
+        // Rendering invariants: one owner per visible level, fixed panel rows,
+        // and in-place icon updates so repeated Calculate() calls do not flicker.
+        private const int TradePlanPanelFixedRows = 36;
+        private const int TradePlanPanelActionRow = TradePlanPanelFixedRows;
+        private const int TradePlanPanelTotalRows = TradePlanPanelFixedRows + 1;
 
         // ============================================================
         // INITIALIZE
@@ -2853,7 +2861,7 @@ namespace cAlgo
 
             if (ShowReactionArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     ReactionPrefix + "ARROW",
                     direction == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
@@ -3551,9 +3559,11 @@ namespace cAlgo
             int index,
             Prediction p)
         {
-            ClearEarlyObjects();
             if (Bars == null || Bars.Count == 0 || p.Direction == 0)
+            {
+                ClearEarlyObjects();
                 return;
+            }
 
             int anchorIndex = Math.Max(0, Math.Min(index, Bars.Count - 1));
             GetFinitePredictionRange(anchorIndex, out int startIndex, out int endIndex);
@@ -3570,7 +3580,7 @@ namespace cAlgo
 
             if (ShowEarlyArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     EarlyPrefix + "ARROW",
                     p.Direction == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
@@ -3584,18 +3594,35 @@ namespace cAlgo
 
             if (ShowPredictionZone)
             {
-                ChartTrendLine top = Chart.DrawTrendLine(EarlyPrefix + "ZONE_TOP", startIndex, p.ZoneHigh, endIndex, p.ZoneHigh, color, 1, PredictionZoneLineStyle);
-                top.ExtendToInfinity = false;
-                top.IsInteractive = false;
+                DrawAuthoritativeLevelLine(
+                    EarlyPrefix + "ZONE_TOP",
+                    startIndex,
+                    endIndex,
+                    p.ZoneHigh,
+                    color,
+                    IsFinitePositive(p.ZoneHigh));
 
-                ChartTrendLine bottom = Chart.DrawTrendLine(EarlyPrefix + "ZONE_BOTTOM", startIndex, p.ZoneLow, endIndex, p.ZoneLow, color, 1, PredictionZoneLineStyle);
-                bottom.ExtendToInfinity = false;
-                bottom.IsInteractive = false;
+                DrawAuthoritativeLevelLine(
+                    EarlyPrefix + "ZONE_BOTTOM",
+                    startIndex,
+                    endIndex,
+                    p.ZoneLow,
+                    color,
+                    IsFinitePositive(p.ZoneLow));
+            }
+            else
+            {
+                Chart.RemoveObject(EarlyPrefix + "ZONE_TOP");
+                Chart.RemoveObject(EarlyPrefix + "ZONE_BOTTOM");
             }
 
-            ChartTrendLine trigger = Chart.DrawTrendLine(EarlyPrefix + "TRIGGER", startIndex, p.Trigger, endIndex, p.Trigger, color, 1, PredictionTriggerLineStyle);
-            trigger.ExtendToInfinity = false;
-            trigger.IsInteractive = false;
+            DrawAuthoritativeLevelLine(
+                EarlyPrefix + "TRIGGER",
+                startIndex,
+                endIndex,
+                p.Trigger,
+                color,
+                IsFinitePositive(p.Trigger));
 
             if (ShowPredictionTargets && ShowLevelLines)
             {
@@ -3637,42 +3664,14 @@ namespace cAlgo
             double price,
             Color color)
         {
-            if (Bars == null || Bars.Count < 2 || !IsFinitePositive(price))
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
-            endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
-            if (endIndex <= startIndex)
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            double normalizedPrice = NormalizePrice(price);
-            if (!IsFinitePositive(normalizedPrice))
-            {
-                Chart.RemoveObject(lineName);
-                return;
-            }
-
-            try
-            {
-                ChartTrendLine line = Chart.DrawTrendLine(
-                    lineName, startIndex, normalizedPrice, endIndex, normalizedPrice,
-                    color, Math.Max(1, LevelLineThickness), PlanLineStyle);
-                line.ExtendToInfinity = false;
-                line.IsInteractive = false;
-            }
-            catch (Exception ex)
-            {
-                Chart.RemoveObject(lineName);
-                Print("CFIP early level draw failed [{0}]: {1}", lineName, ex.Message);
-            }
+            DrawAuthoritativeLevelLine(
+                lineName,
+                startIndex,
+                endIndex,
+                price,
+                color,
+                true);
         }
-
 
 
         // ============================================================
@@ -4562,7 +4561,8 @@ namespace cAlgo
                     ref tp4))
                 return;
 
-            _signalBar = Math.Max(0, Math.Min(chartIndex, Bars.Count - 1));
+            // Anchor the visible signal to the actual closed M5 decision bar.
+            _signalBar = MapM5BarToChartIndex(m5ClosedIndex, chartIndex);
             _signalDirection = direction;
             _signalEntry = entry;
             _signalSl = NormalizePrice(sl);
@@ -4721,6 +4721,50 @@ namespace cAlgo
         // DRAW SIGNAL
         // ============================================================
 
+        private void DrawStableIcon(
+            string name,
+            ChartIconType iconType,
+            int barIndex,
+            double y,
+            Color color)
+        {
+            if (Bars == null || Bars.Count == 0 || !IsFinitePositive(y))
+            {
+                Chart.RemoveObject(name);
+                return;
+            }
+
+            int safeIndex = Math.Max(0, Math.Min(barIndex, Bars.Count - 1));
+
+            try
+            {
+                ChartIcon icon = Chart.FindObject(name) as ChartIcon;
+
+                if (icon == null)
+                {
+                    Chart.RemoveObject(name);
+                    icon = Chart.DrawIcon(
+                        name,
+                        iconType,
+                        Bars.OpenTimes[safeIndex],
+                        y,
+                        color);
+                }
+
+                if (icon != null)
+                {
+                    icon.IconType = iconType;
+                    icon.Time = Bars.OpenTimes[safeIndex];
+                    icon.Y = y;
+                    icon.Color = color;
+                }
+            }
+            catch (Exception ex)
+            {
+                Print("CFIP icon render failed [{0}]: {1}", name, ex.Message);
+            }
+        }
+
         private Color GetSignalArrowColor(int direction, int confidence)
         {
             // Arrow color encodes signal state, not merely direction:
@@ -4758,7 +4802,15 @@ namespace cAlgo
                 return;
 
             if (!_signalActive || _signalDirection == 0 || !ShowLevelLines)
+            {
+                Chart.RemoveObject(Prefix + "ENTRY");
+                Chart.RemoveObject(Prefix + "SL");
+                Chart.RemoveObject(Prefix + "TP1");
+                Chart.RemoveObject(Prefix + "TP2");
+                Chart.RemoveObject(Prefix + "TP3");
+                Chart.RemoveObject(Prefix + "TP4");
                 return;
+            }
 
             int anchor = _signalBar >= 0
                 ? Math.Max(0, Math.Min(_signalBar, Bars.Count - 1))
@@ -4809,13 +4861,13 @@ namespace cAlgo
             Color color,
             bool visible)
         {
-            string fallbackName = name + "_FALLBACK";
-
-            if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 2)
+            // Native horizontal lines are independent of host-chart timeframe
+            // and bar-index mapping. One stable object name owns each level.
+            if (!visible || !IsFinitePositive(price) || Bars == null || Bars.Count < 1)
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(fallbackName);
+                Chart.RemoveObject(name + "_FALLBACK");
                 return;
             }
 
@@ -4824,68 +4876,68 @@ namespace cAlgo
             {
                 Chart.RemoveObject(name);
                 Chart.RemoveObject(name + "_SEG");
-                Chart.RemoveObject(fallbackName);
+                Chart.RemoveObject(name + "_FALLBACK");
                 return;
             }
 
-            startIndex = Math.Max(0, Math.Min(startIndex, Bars.Count - 2));
-            endIndex = Math.Max(startIndex + 1, Math.Min(endIndex, Bars.Count - 1));
-
             try
             {
-                // Draw a finite, thin, horizontal segment as the primary object.
-                // Use the documented DateTime overload so the segment is
-                // anchored to real chart times and cannot drift with bar-index mapping.
-                ChartTrendLine segment = Chart.DrawTrendLine(
-                    name,
-                    Bars.OpenTimes[startIndex],
-                    normalizedPrice,
-                    Bars.OpenTimes[endIndex],
-                    normalizedPrice,
-                    color,
-                    Math.Max(1, LevelLineThickness),
-                    PlanLineStyle);
+                ChartHorizontalLine line =
+                    Chart.FindObject(name) as ChartHorizontalLine;
 
-                if (segment != null)
+                if (line == null)
                 {
-                    segment.ExtendToInfinity = false;
-                    segment.IsInteractive = false;
-                    Chart.RemoveObject(fallbackName);
-                    return;
+                    Chart.RemoveObject(name);
+                    line = Chart.DrawHorizontalLine(
+                        name,
+                        normalizedPrice,
+                        color,
+                        Math.Max(1, LevelLineThickness),
+                        PlanLineStyle);
                 }
 
-                // Native horizontal fallback guarantees visibility on cTrader
-                // builds where an index-based TrendLine fails to paint.
-                ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
-                    fallbackName,
-                    normalizedPrice,
-                    color,
-                    Math.Max(1, LevelLineThickness),
-                    PlanLineStyle);
+                if (line != null)
+                {
+                    line.Y = normalizedPrice;
+                    line.Color = color;
+                    line.Thickness = Math.Max(1, LevelLineThickness);
+                    line.LineStyle = PlanLineStyle;
+                    line.IsInteractive = false;
+                }
 
-                if (fallback != null)
-                    fallback.IsInteractive = false;
+                Chart.RemoveObject(name + "_SEG");
+                Chart.RemoveObject(name + "_FALLBACK");
             }
             catch (Exception ex)
             {
                 try
                 {
-                    ChartHorizontalLine fallback = Chart.DrawHorizontalLine(
-                        fallbackName,
-                        normalizedPrice,
-                        color,
-                        Math.Max(1, LevelLineThickness),
-                        PlanLineStyle);
+                    Chart.RemoveObject(name);
+                    ChartHorizontalLine retry =
+                        Chart.DrawHorizontalLine(
+                            name,
+                            normalizedPrice,
+                            color,
+                            Math.Max(1, LevelLineThickness),
+                            PlanLineStyle);
 
-                    if (fallback != null)
-                        fallback.IsInteractive = false;
+                    if (retry != null)
+                        retry.IsInteractive = false;
+
+                    Chart.RemoveObject(name + "_SEG");
+                    Chart.RemoveObject(name + "_FALLBACK");
                 }
-                catch (Exception fallbackEx)
+                catch (Exception retryEx)
                 {
-                    Print("CFIP level render failed [{0}]: {1} / fallback: {2}", name, ex.Message, fallbackEx.Message);
+                    Print(
+                        "CFIP level render failed [{0}]: {1} / retry: {2}",
+                        name,
+                        ex.Message,
+                        retryEx.Message);
                 }
             }
         }
+
 
         private void DrawSignal(
             int index,
@@ -4894,7 +4946,6 @@ namespace cAlgo
             if (Bars == null || Bars.Count == 0 || _signalDirection == 0)
                 return;
 
-            ClearLiveSignalObjects();
 
             int anchorIndex = Math.Max(0, Math.Min(index, Bars.Count - 1));
             GetFinitePlanRange(anchorIndex, out int startIndex, out int endIndex);
@@ -4912,7 +4963,7 @@ namespace cAlgo
 
             if (ShowSignalArrow)
             {
-                Chart.DrawIcon(
+                DrawStableIcon(
                     Prefix + "ARROW",
                     _signalDirection == 1 ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                     anchorIndex,
