@@ -5995,71 +5995,46 @@ namespace cAlgo
             bool extendToInfinity)
         {
             if (Bars == null ||
-                Bars.Count < 2 ||
+                Bars.Count == 0 ||
                 !IsFinitePositive(price))
                 return false;
 
-            int safeStart =
-                Math.Max(
-                    0,
-                    Math.Min(
-                        startIndex,
-                        Bars.Count - 2));
-
-            int safeEnd =
-                Math.Max(
-                    safeStart + 1,
-                    Math.Min(
-                        endIndex,
-                        Bars.Count - 1));
+            // The fallback intentionally uses a different native chart type.
+            // A horizontal line is guaranteed to remain horizontal and avoids
+            // repeating a failed TrendLine creation path.
+            string horizontalName =
+                (fallbackName ?? string.Empty) + "_FALLBACK";
 
             try
             {
-                ChartTrendLine line =
-                    Chart.FindObject(fallbackName) as ChartTrendLine;
+                ChartHorizontalLine line =
+                    Chart.FindObject(horizontalName) as ChartHorizontalLine;
 
                 if (line == null)
                 {
-                    Chart.RemoveObject(fallbackName);
+                    if (Chart.FindObject(horizontalName) != null)
+                        Chart.RemoveObject(horizontalName);
 
-                    line =
-                        Chart.DrawTrendLine(
-                            fallbackName,
-                            safeStart,
-                            price,
-                            safeEnd,
-                            price,
-                            color,
-                            Math.Max(
-                                1,
-                                LevelLineThickness),
-                            lineStyle);
+                    line = Chart.DrawHorizontalLine(
+                        horizontalName,
+                        price,
+                        color,
+                        Math.Max(1, LevelLineThickness),
+                        lineStyle);
                 }
 
                 if (line == null)
                     return false;
 
-                line.Time1 =
-                    Bars.OpenTimes[safeStart];
-                line.Y1 =
-                    price;
-                line.Time2 =
-                    Bars.OpenTimes[safeEnd];
-                line.Y2 =
-                    price;
-                line.Color =
-                    color;
+                line.Y = NormalizePrice(price);
+                line.Color = color;
                 line.Thickness =
-                    Math.Max(
-                        1,
-                        LevelLineThickness);
-                line.LineStyle =
-                    lineStyle;
-                line.ExtendToInfinity =
-                    extendToInfinity;
-                line.IsInteractive =
-                    false;
+                    Math.Max(1, LevelLineThickness);
+                line.LineStyle = lineStyle;
 
+                // Native horizontal fallback is necessarily full-width. The
+                // primary TrendLine remains responsible for finite/full-width
+                // presentation according to the user's setting.
                 return true;
             }
             catch
@@ -6240,19 +6215,112 @@ namespace cAlgo
 
         private void GetFinitePlanRange(int anchorIndex, out int startIndex, out int endIndex)
         {
-            int safeAnchor = Bars == null || Bars.Count < 2
-                ? 0
-                : Math.Max(0, Math.Min(anchorIndex, Bars.Count - 1));
+            if (Bars == null || Bars.Count < 2)
+            {
+                startIndex = 0;
+                endIndex = 0;
+                return;
+            }
 
-            int before = Math.Max(1, LineLengthBars);
-            int after = Math.Max(1, LineStartBars);
-            startIndex = Math.Max(0, safeAnchor - before);
-            endIndex = Math.Min(Bars.Count - 1, safeAnchor + after);
+            int safeAnchor =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        anchorIndex,
+                        Bars.Count - 1));
+
+            int before =
+                Math.Max(
+                    1,
+                    LineLengthBars);
+
+            int after =
+                Math.Max(
+                    1,
+                    LineStartBars);
+
+            startIndex =
+                Math.Max(
+                    0,
+                    safeAnchor - before);
+
+            endIndex =
+                Math.Min(
+                    Bars.Count - 1,
+                    safeAnchor + after);
 
             if (endIndex <= startIndex)
             {
-                startIndex = Math.Max(0, safeAnchor - 1);
-                endIndex = Math.Min(Bars.Count - 1, safeAnchor + 1);
+                startIndex =
+                    Math.Max(
+                        0,
+                        safeAnchor - 1);
+
+                endIndex =
+                    Math.Min(
+                        Bars.Count - 1,
+                        safeAnchor + 1);
+            }
+
+            // Keep an active level reachable in the current viewport. This is
+            // especially important when an M5 signal is mapped onto H1/H4 and
+            // the exact M5 open-time does not exist on the host chart timeframe.
+            try
+            {
+                int firstVisible =
+                    Chart.FirstVisibleBarIndex;
+
+                int lastVisible =
+                    Chart.LastVisibleBarIndex;
+
+                if (firstVisible >= 0 &&
+                    lastVisible >= firstVisible)
+                {
+                    if (endIndex < firstVisible)
+                    {
+                        startIndex =
+                            Math.Max(
+                                0,
+                                firstVisible - before);
+
+                        endIndex =
+                            Math.Min(
+                                Bars.Count - 1,
+                                firstVisible + after);
+                    }
+                    else if (startIndex > lastVisible)
+                    {
+                        startIndex =
+                            Math.Max(
+                                0,
+                                lastVisible - before);
+
+                        endIndex =
+                            Math.Min(
+                                Bars.Count - 1,
+                                lastVisible + after);
+                    }
+                }
+            }
+            catch
+            {
+                // Viewport metadata is advisory only; the already-safe bar
+                // range above remains the authoritative fallback.
+            }
+
+            if (endIndex <= startIndex)
+            {
+                startIndex =
+                    Math.Max(
+                        0,
+                        Math.Min(
+                            startIndex,
+                            Bars.Count - 2));
+
+                endIndex =
+                    Math.Min(
+                        Bars.Count - 1,
+                        startIndex + 1);
             }
         }
 
@@ -7379,7 +7447,7 @@ namespace cAlgo
                      i++)
                 {
                     _tradePlanPanelGrid.Rows[
-                            TradePlanPanelFirstContentRow + i]
+                            TradePlanPanelLastContentRow - i]
                         .SetHeightInPixels(0);
                 }
 
@@ -7432,7 +7500,7 @@ namespace cAlgo
                     TextTrimming.CharacterEllipsis;
 
                 _tradePlanPanelGrid.Rows[
-                        TradePlanPanelFirstContentRow + i]
+                        TradePlanPanelLastContentRow - i]
                     .SetHeightInPixels(0);
             }
 
