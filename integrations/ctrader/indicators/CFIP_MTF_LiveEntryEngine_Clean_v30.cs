@@ -2580,17 +2580,7 @@ namespace cAlgo
                 return false;
             }
             
-            if (UseM5Confirmation &&
-                ((d.Direction == 1 &&
-                  _m5Frame.Direction != 1) ||
-                 (d.Direction == -1 &&
-                  _m5Frame.Direction != -1)))
-            {
-                reason = "M5 CONFIRMATION";
-                return false;
-            }
-
-            if (UseM1Trigger &&
+if (UseM1Trigger &&
                 _m1Frame != null &&
                 _m1Frame.Direction != 0 &&
                 _m1Frame.Direction != d.Direction)
@@ -2599,15 +2589,59 @@ namespace cAlgo
                 return false;
             }
 
-            if (UseSmartEntryQualityFilter &&
-                d.SmartQuality <
-                Math.Max(
-                    SmartQualityThreshold,
-                    EnableSmartDecisionEngine
-                        ? SmartMinimumConsensusFloor()
-                        : 0))
+            if (UseSmartEntryQualityFilter)
             {
-                reason = "SMART QUALITY";
+                int smartFloor =
+                    Math.Max(
+                        40,
+                        SmartQualityThreshold);
+
+                if (EnableSmartDecisionEngine &&
+                    RequireSmartConsensus)
+                {
+                    smartFloor =
+                        Math.Max(
+                            smartFloor,
+                            SmartConsensusThreshold);
+                }
+                else if (EnableSmartDecisionEngine &&
+                         AllowSmartSoftGate)
+                {
+                    smartFloor =
+                        Math.Max(
+                            smartFloor,
+                            SmartMinimumConsensusFloor());
+                }
+
+                if (d.SmartQuality <
+                    smartFloor)
+                {
+                    reason =
+                        "SMART QUALITY";
+                    return false;
+                }
+            }
+
+            if (EnableSmartDecisionEngine &&
+                d.IndependentEvidence <
+                Math.Max(
+                    MinimumIndependentEvidence,
+                    SmartMinimumIndependentEvidence))
+            {
+                reason =
+                    "SMART EVIDENCE";
+                return false;
+            }
+
+            if (EnableSmartDecisionEngine &&
+                RequireSmartConsensus &&
+                d.Edge <
+                Math.Max(
+                    MinimumEdge,
+                    SmartStrongSetupEdge))
+            {
+                reason =
+                    "SMART CONSENSUS";
                 return false;
             }
 
@@ -2663,15 +2697,7 @@ namespace cAlgo
                 return false;
             }
             
-            if (UseM5Confirmation &&
-                ((d.Direction == 1 && _m5Frame.Direction != 1) ||
-                 (d.Direction == -1 && _m5Frame.Direction != -1)))
-            {
-                reason = "M5 CONFIRMATION";
-                return false;
-            }
-
-            if (UseM1Trigger &&
+if (UseM1Trigger &&
                 _m1Frame != null &&
                 _m1Frame.Direction != 0 &&
                 _m1Frame.Direction != d.Direction)
@@ -2712,6 +2738,7 @@ namespace cAlgo
                 d.RetestQuality < MinimumRetestQuality)
             {
                 if (!(AllowStrongTriggerOverride &&
+                      AllowStrongM5TriggerOverride &&
                       d.Confidence >= 85 &&
                       d.Edge >= 20 &&
                       d.IndependentEvidence >= MinimumIndependentEvidence + 1))
@@ -2751,6 +2778,31 @@ namespace cAlgo
                     closedM5))
             {
                 reason = "VOLATILITY GUARD";
+                return false;
+            }
+
+            if (UseVolatilityEventGuard &&
+                VolatilityBlocked(
+                    _m5Bars,
+                    closedM5))
+            {
+                _lastEventGuardM5 =
+                    closedM5;
+
+                reason =
+                    "VOLATILITY EVENT";
+                return false;
+            }
+
+            if (UseVolatilityEventGuard &&
+                EventGuardCooldownBars > 0 &&
+                _lastEventGuardM5 >= 0 &&
+                closedM5 -
+                _lastEventGuardM5 <
+                EventGuardCooldownBars)
+            {
+                reason =
+                    "EVENT COOLDOWN";
                 return false;
             }
 
