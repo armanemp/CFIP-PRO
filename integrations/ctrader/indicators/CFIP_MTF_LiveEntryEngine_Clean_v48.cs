@@ -555,7 +555,7 @@ namespace cAlgo
         [Parameter("Max Auto Margin Usage %", Group = "13 · AUTO TRADING", DefaultValue = 80, MinValue = 10, MaxValue = 100)]
         public double MaxAutoMarginUsagePercent { get; set; }
 
-        [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN47")]
+        [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN48")]
         public string AutoTradeLabel { get; set; }
 
         [Parameter("Auto Broker Protection", Group = "13 · AUTO TRADING", DefaultValue = true)]
@@ -1542,13 +1542,13 @@ namespace cAlgo
         [Parameter("Show Early Arrow", Group = "14 · DISPLAY — ADVANCED", DefaultValue = true)]
         public bool ShowEarlyArrow { get; set; }
 
-        [Parameter("Show Panel Toggle Button", Group = "14 · DISPLAY — ADVANCED", DefaultValue = true)]
+        [Parameter("Show Panel Toggle Button", Group = "14 · DISPLAY — PANEL", DefaultValue = true)]
         public bool ShowPanelToggleButton { get; set; }
 
-        [Parameter("Panel Toggle Width", Group = "14 · DISPLAY — ADVANCED", DefaultValue = 110, MinValue = 80, MaxValue = 220)]
+        [Parameter("Panel Toggle Width", Group = "14 · DISPLAY — PANEL", DefaultValue = 26, MinValue = 22, MaxValue = 40)]
         public int PanelToggleWidth { get; set; }
 
-        [Parameter("Panel Toggle Height", Group = "14 · DISPLAY — ADVANCED", DefaultValue = 25, MinValue = 20, MaxValue = 50)]
+        [Parameter("Panel Toggle Height", Group = "14 · DISPLAY — PANEL", DefaultValue = 26, MinValue = 22, MaxValue = 40)]
         public int PanelToggleHeight { get; set; }
 
         [Parameter("Action Button Width", Group = "13 · AUTO TRADING", DefaultValue = 150, MinValue = 100, MaxValue = 240)]
@@ -12782,12 +12782,20 @@ namespace cAlgo
                         Text = "−",
                         Width =
                             Math.Max(
-                                20,
-                                PanelToggleWidth),
+                                22,
+                                Math.Min(
+                                    40,
+                                    Math.Min(
+                                        PanelToggleWidth,
+                                        PanelToggleHeight))),
                         Height =
                             Math.Max(
-                                20,
-                                PanelToggleHeight),
+                                22,
+                                Math.Min(
+                                    40,
+                                    Math.Min(
+                                        PanelToggleWidth,
+                                        PanelToggleHeight))),
                         HorizontalAlignment =
                             HorizontalAlignment.Left,
                         VerticalAlignment =
@@ -12806,8 +12814,8 @@ namespace cAlgo
                             FontWeight.Bold,
                         BackgroundColor =
                             Color.FromArgb(
-                                45,
-                                PanelBackground),
+                                100,
+                                Color.Black),
                         BorderColor =
                             Color.FromArgb(
                                 Math.Max(
@@ -12867,7 +12875,7 @@ namespace cAlgo
                         HorizontalContentAlignment =
                             HorizontalAlignment.Center,
                         VerticalContentAlignment =
-                            cAlgo.API.VerticalAlignment.Center,
+                            VerticalAlignment.Center,
                         ForegroundColor =
                             PanelTextColor,
                         FontSize =
@@ -13108,8 +13116,12 @@ namespace cAlgo
             int toggleWidth =
                 _panelToggleButton != null
                     ? Math.Max(
-                        20,
-                        PanelToggleWidth)
+                        22,
+                        Math.Min(
+                            40,
+                            Math.Min(
+                                PanelToggleWidth,
+                                PanelToggleHeight)))
                     : 0;
 
             _panelHeaderTitle.Width =
@@ -13135,13 +13147,7 @@ namespace cAlgo
 
             _panelHeaderTitle.Text =
                 "CFIP SMART  •  " +
-                (EnableAutoTrading
-                    ? "AUTO ON"
-                    : "AUTO OFF") +
-                "  •  " +
-                (EnableAutoTrading
-                    ? _autoTradingState
-                    : "DISABLED");
+                AutoTradingPanelLine();
 
             _panelHeaderTitle.LineHeight =
                 Math.Max(
@@ -13382,15 +13388,20 @@ namespace cAlgo
                 _panelToggleButton.IsVisible =
                     ShowPanelToggleButton;
 
-                _panelToggleButton.Width =
+                int toggleSide =
                     Math.Max(
-                        20,
-                        PanelToggleWidth);
+                        22,
+                        Math.Min(
+                            40,
+                            Math.Min(
+                                PanelToggleWidth,
+                                PanelToggleHeight)));
+
+                _panelToggleButton.Width =
+                    toggleSide;
 
                 _panelToggleButton.Height =
-                    Math.Max(
-                        20,
-                        PanelToggleHeight);
+                    toggleSide;
 
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
@@ -13798,7 +13809,7 @@ namespace cAlgo
 
             AddPanelRow(
                 ref slot,
-                "CFIP SMART CLEAN47  •  " +
+                "CFIP SMART CLEAN48  •  " +
                 stableState,
                 PanelDirectionColor(
                     stateDirection),
@@ -15249,7 +15260,7 @@ namespace cAlgo
                     Notifications.SendEmail(
                         SenderEmail,
                         ReceiverEmail,
-                        "CFIP SMART CLEAN47 " +
+                        "CFIP SMART CLEAN48 " +
                         SymbolName,
                         message);
                 }
@@ -15977,7 +15988,7 @@ namespace cAlgo
             return
                 string.IsNullOrWhiteSpace(
                     AutoTradeLabel)
-                    ? "CFIP-SMART-CLEAN47"
+                    ? "CFIP-SMART-CLEAN48"
                     : AutoTradeLabel.Trim();
         }
 
