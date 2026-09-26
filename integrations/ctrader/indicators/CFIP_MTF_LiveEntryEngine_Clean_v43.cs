@@ -2088,11 +2088,15 @@ namespace cAlgo
                     }
                 }
 
+                bool allowUnconfirmedAutoPlan =
+                    EnableAutoTrading &&
+                    !ConfirmedSignalsOnly;
+
                 if (_plan == null &&
                     _decision != null &&
-                    _decision.EntryAllowed &&
                     ShouldCreatePlan(
-                        closedM5))
+                        closedM5,
+                        allowUnconfirmedAutoPlan))
                 {
                     Plan plan =
                         BuildPlan(
@@ -11318,15 +11322,22 @@ namespace cAlgo
             return false;
         }
 
-        private bool ShouldCreatePlan(
-            int closedM5)
+                private bool ShouldCreatePlan(
+            int closedM5,
+            bool allowUnconfirmedAutoPlan)
         {
             if (BlockNewSignalWhileActive &&
                 _plan != null)
                 return false;
 
             if (_decision == null ||
-                !_decision.EntryAllowed)
+                _decision.Direction == 0)
+                return false;
+
+            if (!_decision.EntryAllowed &&
+                !(allowUnconfirmedAutoPlan &&
+                  _decision.Confidence >= MinimumAutoConfidence &&
+                  _decision.SmartQuality >= MinimumAutoSmartQuality))
                 return false;
 
             if (BlockSameBarReentryAfterExit &&
@@ -11334,8 +11345,7 @@ namespace cAlgo
                 return false;
 
             if (_lastSignalM5 >= 0 &&
-                closedM5 -
-                _lastSignalM5 <
+                closedM5 - _lastSignalM5 <
                 Math.Max(
                     CooldownBars,
                     Math.Max(
@@ -11343,9 +11353,7 @@ namespace cAlgo
                         ExitReentryCooldownM5)))
                 return false;
 
-            return
-                _lastSignalM5 !=
-                closedM5;
+            return _lastSignalM5 != closedM5;
         }
 
         private bool HasAnyHtfTargetLevel(
@@ -14656,21 +14664,33 @@ namespace cAlgo
                 : SoundType.Announcement;
         }
 
-        private bool PassesAutoTradeSafetyGuards(
+                private bool PassesAutoTradeSafetyGuards(
             TradeType tradeType,
-            double volume)
+            double volume,
+            out string reason)
         {
+            reason = "";
+
             if (!IsFinitePositive(volume))
+            {
+                reason = "INVALID VOLUME";
                 return false;
+            }
 
             if (UseMarketHoursGuard)
             {
                 if (!Symbol.IsTradingEnabled)
+                {
+                    reason = "SYMBOL TRADING DISABLED";
                     return false;
+                }
 
                 if (Symbol.MarketHours == null ||
                     !Symbol.MarketHours.IsOpened())
+                {
+                    reason = "MARKET CLOSED";
                     return false;
+                }
             }
 
             if (UseAutoMarginGuard)
@@ -14678,18 +14698,22 @@ namespace cAlgo
                 double freeMargin =
                     Account.FreeMargin;
 
-                if (!IsFinitePositive(
-                        freeMargin))
+                if (!IsFinitePositive(freeMargin))
+                {
+                    reason = "NO FREE MARGIN";
                     return false;
+                }
 
                 double estimatedMargin =
                     Symbol.GetEstimatedMargin(
                         tradeType,
                         volume);
 
-                if (!IsFinitePositive(
-                        estimatedMargin))
+                if (!IsFinitePositive(estimatedMargin))
+                {
+                    reason = "MARGIN ESTIMATE FAILED";
                     return false;
+                }
 
                 double maximumUsage =
                     Math.Max(
@@ -14698,38 +14722,203 @@ namespace cAlgo
                             100,
                             MaxAutoMarginUsagePercent));
 
-                if (estimatedMargin >
+                double allowedMargin =
                     freeMargin *
                     maximumUsage /
-                    100.0)
+                    100.0;
+
+                if (estimatedMargin >
+                    allowedMargin)
+                {
+                    reason =
+                        "MARGIN " +
+                        estimatedMargin.ToString("F0") +
+                        " > " +
+                        allowedMargin.ToString("F0");
                     return false;
+                }
             }
 
             return true;
         }
 
+                private void SetAutoTradingState(
+            string state,
+            string reason)
+        {
+            _autoTradingState =
+                string.IsNullOrWhiteSpace(state)
+                    ? "WAIT"
+                    : state.Trim();
+
+            _autoTradingReason =
+                string.IsNullOrWhiteSpace(reason)
+                    ? ""
+                    : reason.Trim();
+        }
+
+        private string AutoTradingPanelLine()
+        {
+            if (!EnableAutoTrading)
+                return "AUTO TRADING  •  OFF  •  DISABLED";
+
+            return
+                "AUTO TRADING  •  ON  •  " +
+                _autoTradingState +
+                (string.IsNullOrWhiteSpace(_autoTradingReason)
+                    ? ""
+                    : "  •  " +
+                      CompactText(
+                          _autoTradingReason,
+                          90));
+        }
+
+        private Color AutoTradingPanelColor()
+        {
+            if (!EnableAutoTrading)
+                return PanelMutedTextColor;
+
+            if (string.Equals(
+                    _autoTradingState,
+                    "EXECUTED",
+                    StringComparison.OrdinalIgnoreCase))
+                return TpLineColor;
+
+            if (string.Equals(
+                    _autoTradingState,
+                    "BLOCKED",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    _autoTradingState,
+                    "ERROR",
+                    StringComparison.OrdinalIgnoreCase))
+                return PanelWarningColor;
+
+            return PanelAccentColor;
+        }
+
+        private double SelectStructuralAutoTarget(
+            int closedM5,
+            int direction,
+            double entry,
+            double stop,
+            double atr,
+            CFIPClean43TargetStage stage)
+        {
+            if (atr <= 0 ||
+                !IsFinitePositive(entry) ||
+                !IsFinitePositive(stop))
+                return 0;
+
+            double risk =
+                Math.Abs(entry - stop);
+
+            if (risk <= 0)
+                return 0;
+
+            List<Level> levels =
+                BuildTargetLevels(
+                    closedM5,
+                    direction,
+                    entry,
+                    atr);
+
+            List<Level> selected =
+                SelectTargets(
+                    levels,
+                    closedM5,
+                    entry,
+                    risk,
+                    direction,
+                    atr);
+
+            int stageIndex =
+                ClampInt(
+                    (int)stage,
+                    0,
+                    3);
+
+            if (stageIndex >= selected.Count)
+                return 0;
+
+            return NormalizePrice(
+                selected[stageIndex].Price);
+        }
+
         private void TryAutoTrade(
             int closedM5)
         {
-            if (!EnableAutoTrading ||
-                !ConfirmedSignalsOnly ||
-                _plan == null ||
-                _decision == null ||
-                _decision.Direction == 0)
+            if (!EnableAutoTrading)
+            {
+                SetAutoTradingState(
+                    "OFF",
+                    "DISABLED");
                 return;
+            }
+
+            if (_plan == null)
+            {
+                SetAutoTradingState(
+                    "ARMED",
+                    ConfirmedSignalsOnly
+                        ? "WAITING FOR CONFIRMED PLAN"
+                        : "WAITING FOR SMART-ELIGIBLE PLAN");
+                return;
+            }
+
+            if (_decision == null ||
+                _decision.Direction == 0)
+            {
+                SetAutoTradingState(
+                    "ARMED",
+                    "WAITING FOR DECISION");
+                return;
+            }
+
+            if (ConfirmedSignalsOnly &&
+                !_decision.EntryAllowed)
+            {
+                SetAutoTradingState(
+                    "ARMED",
+                    string.IsNullOrWhiteSpace(
+                        _decision.BlockReason)
+                        ? "WAITING FOR CONFIRMATION"
+                        : _decision.BlockReason);
+                return;
+            }
 
             if (OneOrderPerSignal &&
-                _lastAutoM5 ==
-                closedM5)
+                _lastAutoM5 == closedM5)
+            {
+                SetAutoTradingState(
+                    "ARMED",
+                    "ALREADY TRADED THIS M5");
                 return;
+            }
 
             if (_decision.Confidence <
                 MinimumAutoConfidence)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "CONF " +
+                    _decision.Confidence +
+                    " < " +
+                    MinimumAutoConfidence);
                 return;
+            }
 
             if (_decision.SmartQuality <
                 MinimumAutoSmartQuality)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "SMART Q " +
+                    _decision.SmartQuality +
+                    " < " +
+                    MinimumAutoSmartQuality);
                 return;
+            }
 
             int levelQuality =
                 Math.Min(
@@ -14738,13 +14927,26 @@ namespace cAlgo
 
             if (levelQuality <
                 MinimumAutoLevelQuality)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "LEVEL Q " +
+                    levelQuality +
+                    " < " +
+                    MinimumAutoLevelQuality);
                 return;
+            }
 
             if (ManagedPositionCount() >=
                 Math.Max(
                     1,
                     MaximumOpenPositions))
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "MAX OPEN POSITIONS");
                 return;
+            }
 
             double entry =
                 NormalizePrice(
@@ -14762,20 +14964,37 @@ namespace cAlgo
                     entry,
                     _plan.Stop,
                     target))
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "INVALID ENTRY / SL / TP");
                 return;
+            }
 
             double atr =
                 Atr(
                     _m5Bars,
                     closedM5);
 
-            if (atr <= 0 ||
-                Math.Abs(
+            if (atr <= 0)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "ATR UNAVAILABLE");
+                return;
+            }
+
+            if (Math.Abs(
                     entry -
                     _plan.Entry) >
                 atr *
                 MaximumEntryExtensionAtr)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "ENTRY EXTENSION");
                 return;
+            }
 
             double stopPips =
                 Math.Abs(
@@ -14791,7 +15010,12 @@ namespace cAlgo
 
             if (stopPips <= 0 ||
                 targetPips <= 0)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "INVALID PIP DISTANCE");
                 return;
+            }
 
             double effectiveStopPips =
                 stopPips;
@@ -14811,7 +15035,12 @@ namespace cAlgo
 
             if (volume <
                 Symbol.VolumeInUnitsMin)
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "VOLUME BELOW MINIMUM");
                 return;
+            }
 
             try
             {
@@ -14820,10 +15049,18 @@ namespace cAlgo
                         ? TradeType.Buy
                         : TradeType.Sell;
 
+                string guardReason;
+
                 if (!PassesAutoTradeSafetyGuards(
                         type,
-                        volume))
+                        volume,
+                        out guardReason))
+                {
+                    SetAutoTradingState(
+                        "BLOCKED",
+                        guardReason);
                     return;
+                }
 
                 TradeResult result =
                     ExecuteMarketOrder(
@@ -14834,10 +15071,24 @@ namespace cAlgo
                         stopPips,
                         targetPips);
 
-                if (result == null ||
-                    !result.IsSuccessful ||
-                    result.Position == null)
+                if (result == null)
+                {
+                    SetAutoTradingState(
+                        "ERROR",
+                        "NULL TRADE RESULT");
                     return;
+                }
+
+                if (!result.IsSuccessful ||
+                    result.Position == null)
+                {
+                    SetAutoTradingState(
+                        "ERROR",
+                        result.Error.HasValue
+                            ? result.Error.Value.ToString()
+                            : "TRADE REJECTED");
+                    return;
+                }
 
                 _lastAutoM5 =
                     closedM5;
@@ -14862,6 +15113,11 @@ namespace cAlgo
                     }
                 }
 
+                SetAutoTradingState(
+                    "EXECUTED",
+                    "POSITION #" +
+                    result.Position.Id);
+
                 SendUnifiedAlert(
                     "AUTO|" +
                     closedM5,
@@ -14885,6 +15141,10 @@ namespace cAlgo
             }
             catch (Exception ex)
             {
+                SetAutoTradingState(
+                    "ERROR",
+                    ex.Message);
+
                 Print(
                     "CFIP CLEAN43 auto trade failed: {0}",
                     ex.Message);
@@ -16168,31 +16428,7 @@ namespace cAlgo
             }
         }
 
-        private double AggressiveTargetRR()
-        {
-            switch (AggressiveTpStage)
-            {
-                case CFIPClean43TargetStage.TP4:
-                    return Math.Max(
-                        3.0,
-                        Tp4MinimumRR);
-
-                case CFIPClean43TargetStage.TP3:
-                    return Math.Max(
-                        2.5,
-                        Tp3MinimumRR);
-
-                case CFIPClean43TargetStage.TP2:
-                    return Math.Max(
-                        2.0,
-                        Tp2MinimumRR);
-
-                default:
-                    return Math.Max(
-                        1.5,
-                        Tp1MinimumRR);
-            }
-        }
+        
 
         private void ProtectBrokerPositions(
             int closedM5)
@@ -16361,24 +16597,25 @@ namespace cAlgo
                 return;
 
             double target =
-                _reaction.Direction == 1
-                    ? entry +
-                      Math.Abs(
-                          entry -
-                          stop) *
-                      AggressiveTargetRR()
-                    : entry -
-                      Math.Abs(
-                          entry -
-                          stop) *
-                      AggressiveTargetRR();
+                SelectStructuralAutoTarget(
+                    closedM5,
+                    _reaction.Direction,
+                    entry,
+                    stop,
+                    atr,
+                    AggressiveTpStage);
 
             if (!IsAutoPlanValid(
                     _reaction.Direction,
                     entry,
                     stop,
                     target))
+            {
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "NO VALID STRUCTURAL TARGET");
                 return;
+            }
 
             double stopPips =
                 Math.Abs(
