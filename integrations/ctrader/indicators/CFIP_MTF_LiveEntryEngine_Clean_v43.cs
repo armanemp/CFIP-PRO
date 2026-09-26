@@ -1765,6 +1765,8 @@ namespace cAlgo
 
         private Border _panel;
         private StackPanel _panelStack;
+        private StackPanel _panelHeaderStack;
+        private TextBlock _panelHeaderTitle;
         private StackPanel _panelRowsStack;
         private ScrollViewer _panelScroll;
         private readonly List<TextBlock> _panelRows =
@@ -1772,6 +1774,7 @@ namespace cAlgo
         private StackPanel _buttonStack;
         private Button _closeButton;
         private Button _cancelButton;
+        private Button _panelRestoreButton;
 
         private Border _popup;
         private TextBlock _popupText;
@@ -12212,30 +12215,81 @@ namespace cAlgo
 
         private const int PanelRowCount = 64;
 
-        private void CreatePanel()
+                private void CreatePanel()
         {
             if (_panel != null)
                 return;
 
             try
             {
+                _panelHeaderStack =
+                    new StackPanel
+                    {
+                        Orientation =
+                            Orientation.Horizontal,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Top,
+                        Height = 30,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
+                    };
+
+                _panelHeaderTitle =
+                    new TextBlock
+                    {
+                        Text = "CFIP SMART",
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Center,
+                        TextAlignment =
+                            TextAlignment.Left,
+                        TextWrapping =
+                            TextWrapping.NoWrap,
+                        TextTrimming =
+                            TextTrimming.None,
+                        FontWeight =
+                            FontWeight.Bold,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
+                    };
+
                 _panelRowsStack =
                     new StackPanel
                     {
-                        Orientation = Orientation.Vertical,
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        BackgroundColor = Color.FromArgb(0, Color.Black)
+                        Orientation =
+                            Orientation.Vertical,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Top,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
                     };
 
                 _panelScroll =
                     new ScrollViewer
                     {
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
-                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                        BackgroundColor = Color.FromArgb(0, Color.Black)
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Top,
+                        HorizontalScrollBarVisibility =
+                            ScrollBarVisibility.Hidden,
+                        VerticalScrollBarVisibility =
+                            ScrollBarVisibility.Auto,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
                     };
 
                 _panelScroll.Content =
@@ -12244,19 +12298,31 @@ namespace cAlgo
                 _panelStack =
                     new StackPanel
                     {
-                        Orientation = Orientation.Vertical,
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        BackgroundColor = Color.FromArgb(0, Color.Black)
+                        Orientation =
+                            Orientation.Vertical,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Top,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
                     };
 
                 _buttonStack =
                     new StackPanel
                     {
-                        Orientation = Orientation.Horizontal,
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        BackgroundColor = Color.FromArgb(0, Color.Black)
+                        Orientation =
+                            Orientation.Horizontal,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Stretch,
+                        VerticalAlignment =
+                            VerticalAlignment.Top,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                0,
+                                Color.Black)
                     };
 
                 _closeButton =
@@ -12277,7 +12343,19 @@ namespace cAlgo
                 _buttonStack.AddChild(
                     _cancelButton);
 
+                CreatePanelToggleButton();
+
+                if (_panelToggleButton != null)
+                    _panelHeaderStack.AddChild(
+                        _panelToggleButton);
+
+                _panelHeaderStack.AddChild(
+                    _panelHeaderTitle);
+
                 CreatePanelRows();
+
+                _panelStack.AddChild(
+                    _panelHeaderStack);
 
                 _panelStack.AddChild(
                     _panelScroll);
@@ -12288,8 +12366,10 @@ namespace cAlgo
                 _panel =
                     new Border
                     {
-                        Child = _panelStack,
-                        IsHitTestVisible = true,
+                        Child =
+                            _panelStack,
+                        IsHitTestVisible =
+                            true,
                         BackgroundColor =
                             Color.FromArgb(
                                 ShowPanelBackground
@@ -12299,7 +12379,7 @@ namespace cAlgo
                                             255,
                                             PanelBackgroundAlpha))
                                     : 0,
-                                PanelBackground),
+                                Color.Black),
                         BorderColor =
                             Color.FromArgb(
                                 Math.Max(
@@ -12321,7 +12401,7 @@ namespace cAlgo
                 Chart.AddControl(
                     _panel);
 
-                CreatePanelToggleButton();
+                CreatePanelRestoreButton();
             }
             catch (Exception ex)
             {
@@ -12331,12 +12411,16 @@ namespace cAlgo
 
                 _panel = null;
                 _panelStack = null;
+                _panelHeaderStack = null;
+                _panelHeaderTitle = null;
                 _panelRowsStack = null;
                 _panelScroll = null;
                 _panelRows.Clear();
                 _buttonStack = null;
                 _closeButton = null;
                 _cancelButton = null;
+                _panelToggleButton = null;
+                _panelRestoreButton = null;
             }
         }
 
@@ -12373,7 +12457,7 @@ namespace cAlgo
             }
         }
 
-        private void CreatePanelToggleButton()
+                private void CreatePanelToggleButton()
         {
             if (!ShowPanelToggleButton ||
                 _panelToggleButton != null)
@@ -12382,81 +12466,189 @@ namespace cAlgo
             try
             {
                 _panelToggleButton =
-                    new Button();
-
-                _panelToggleButton.Text =
-                    "HIDE PANEL";
-
-                _panelToggleButton.Width =
-                    Math.Max(
-                        90,
-                        PanelToggleWidth);
-
-                _panelToggleButton.Height =
-                    Math.Max(
-                        22,
-                        PanelToggleHeight);
-
-                _panelToggleButton.Margin =
-                    Math.Max(
-                        0,
-                        PanelMargin);
-
-                _panelToggleButton.ForegroundColor =
-                    PanelTextColor;
-
-                _panelToggleButton.FontSize =
-                    Math.Max(
-                        8,
-                        PanelFontSize - 1);
-
-                _panelToggleButton.FontWeight =
-                    FontWeight.Bold;
-
-                _panelToggleButton.BackgroundColor =
-                    Color.FromArgb(
-                        ShowPanelBackground
-                            ? Math.Max(
+                    new Button
+                    {
+                        Text = "−",
+                        Width = 26,
+                        Height = 24,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Left,
+                        VerticalAlignment =
+                            VerticalAlignment.Center,
+                        HorizontalContentAlignment =
+                            HorizontalAlignment.Center,
+                        VerticalContentAlignment =
+                            VerticalAlignment.Center,
+                        ForegroundColor =
+                            PanelTextColor,
+                        FontSize =
+                            Math.Max(
+                                9,
+                                PanelFontSize),
+                        FontWeight =
+                            FontWeight.Bold,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                70,
+                                Color.Black),
+                        BorderColor =
+                            Color.FromArgb(
+                                Math.Max(
+                                    0,
+                                    Math.Min(
+                                        255,
+                                        PanelBorderAlpha)),
+                                PanelBorder),
+                        BorderThickness =
+                            Math.Max(
                                 0,
-                                Math.Min(
-                                    255,
-                                    PanelBackgroundAlpha))
-                            : 0,
-                        PanelBackground);
-
-                _panelToggleButton.BorderColor =
-                    Color.FromArgb(
-                        Math.Max(
-                            0,
+                                PanelBorderThickness),
+                        CornerRadius =
                             Math.Min(
-                                255,
-                                PanelBorderAlpha)),
-                        PanelBorder);
-
-                _panelToggleButton.BorderThickness =
-                    Math.Max(
-                        0,
-                        PanelBorderThickness);
-
-                _panelToggleButton.CornerRadius =
-                    Math.Max(
-                        0,
-                        PanelCornerRadius);
+                                5,
+                                Math.Max(
+                                    0,
+                                    PanelCornerRadius)),
+                        Margin =
+                            new Thickness(
+                                0,
+                                1,
+                                8,
+                                1)
+                    };
 
                 _panelToggleButton.Click +=
                     args => TogglePanel();
-
-                Chart.AddControl(
-                    _panelToggleButton);
-
-                SetPanelToggleAlignment();
             }
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN43 panel toggle failed: {0}",
+                    "CFIP CLEAN43 panel hide button failed: {0}",
                     ex.Message);
+
+                _panelToggleButton = null;
             }
+        }
+
+                private void CreatePanelRestoreButton()
+        {
+            if (_panelRestoreButton != null)
+                return;
+
+            try
+            {
+                _panelRestoreButton =
+                    new Button
+                    {
+                        Text = "+",
+                        Width = 26,
+                        Height = 26,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Left,
+                        VerticalAlignment =
+                            VerticalAlignment.Bottom,
+                        HorizontalContentAlignment =
+                            HorizontalAlignment.Center,
+                        VerticalContentAlignment =
+                            VerticalContentAlignment.Center,
+                        ForegroundColor =
+                            PanelTextColor,
+                        FontSize =
+                            Math.Max(
+                                9,
+                                PanelFontSize),
+                        FontWeight =
+                            FontWeight.Bold,
+                        BackgroundColor =
+                            Color.FromArgb(
+                                70,
+                                Color.Black),
+                        BorderColor =
+                            Color.FromArgb(
+                                Math.Max(
+                                    0,
+                                    Math.Min(
+                                        255,
+                                        PanelBorderAlpha)),
+                                PanelBorder),
+                        BorderThickness =
+                            Math.Max(
+                                0,
+                                PanelBorderThickness),
+                        CornerRadius =
+                            Math.Min(
+                                5,
+                                Math.Max(
+                                    0,
+                                    PanelCornerRadius)),
+                        IsVisible = false
+                    };
+
+                _panelRestoreButton.Click +=
+                    args => TogglePanel();
+
+                Chart.AddControl(
+                    _panelRestoreButton);
+
+                SetPanelRestoreAlignment();
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN43 panel restore button failed: {0}",
+                    ex.Message);
+
+                _panelRestoreButton = null;
+            }
+        }
+
+        private void SetPanelRestoreAlignment()
+        {
+            if (_panelRestoreButton == null)
+                return;
+
+            switch (PanelPosition)
+            {
+                case CFIPClean43PanelCorner.TopLeft:
+                    _panelRestoreButton.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _panelRestoreButton.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
+
+                case CFIPClean43PanelCorner.TopRight:
+                    _panelRestoreButton.VerticalAlignment =
+                        VerticalAlignment.Top;
+                    _panelRestoreButton.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+
+                case CFIPClean43PanelCorner.BottomRight:
+                    _panelRestoreButton.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _panelRestoreButton.HorizontalAlignment =
+                        HorizontalAlignment.Right;
+                    break;
+
+                default:
+                    _panelRestoreButton.VerticalAlignment =
+                        VerticalAlignment.Bottom;
+                    _panelRestoreButton.HorizontalAlignment =
+                        HorizontalAlignment.Left;
+                    break;
+            }
+
+            int margin =
+                Math.Max(
+                    4,
+                    PanelMargin);
+
+            _panelRestoreButton.Margin =
+                new Thickness(
+                    margin,
+                    margin,
+                    margin,
+                    margin);
         }
 
         private void TogglePanel()
@@ -12468,65 +12660,14 @@ namespace cAlgo
                 _panel.IsVisible =
                     !_panelHidden;
 
-            if (_panelToggleButton != null)
-                _panelToggleButton.Text =
-                    _panelHidden
-                        ? "SHOW PANEL"
-                        : "HIDE PANEL";
+            if (_panelRestoreButton != null)
+                _panelRestoreButton.IsVisible =
+                    _panelHidden;
         }
 
-        private void SetPanelToggleAlignment()
-        {
-            if (_panelToggleButton == null)
-                return;
+        
 
-            int margin =
-                Math.Max(
-                    0,
-                    PanelMargin);
-
-            _panelToggleButton.Margin =
-                new Thickness(
-                    margin,
-                    margin,
-                    margin,
-                    margin);
-
-            // Place the external toggle on the opposite horizontal side.
-            // This prevents it from sitting on top of the panel content.
-            switch (PanelPosition)
-            {
-                case CFIPClean43PanelCorner.TopLeft:
-                    _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Bottom;
-                    _panelToggleButton.HorizontalAlignment =
-                        HorizontalAlignment.Right;
-                    break;
-
-                case CFIPClean43PanelCorner.TopRight:
-                    _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Bottom;
-                    _panelToggleButton.HorizontalAlignment =
-                        HorizontalAlignment.Left;
-                    break;
-
-                case CFIPClean43PanelCorner.BottomRight:
-                    _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Top;
-                    _panelToggleButton.HorizontalAlignment =
-                        HorizontalAlignment.Left;
-                    break;
-
-                default:
-                    _panelToggleButton.VerticalAlignment =
-                        VerticalAlignment.Top;
-                    _panelToggleButton.HorizontalAlignment =
-                        HorizontalAlignment.Right;
-                    break;
-            }
-        }
-
-                        private void ApplyPanelVisualSettings(
+                                private void ApplyPanelVisualSettings(
             int contentWidth,
             int scrollHeight,
             int maxHeight,
@@ -12534,7 +12675,12 @@ namespace cAlgo
             int buttonHeight,
             int buttonGap)
         {
-            if (_panel == null)
+            if (_panel == null ||
+                _panelStack == null ||
+                _panelHeaderStack == null ||
+                _panelHeaderTitle == null ||
+                _panelScroll == null ||
+                _buttonStack == null)
                 return;
 
             int padding =
@@ -12546,6 +12692,8 @@ namespace cAlgo
                 Math.Max(
                     0,
                     PanelBorderThickness);
+
+            int headerHeight = 30;
 
             int buttonMargin =
                 Math.Max(
@@ -12559,12 +12707,20 @@ namespace cAlgo
                     : 0;
 
             int panelHeight =
+                headerHeight +
+                scrollHeight +
+                buttonAreaHeight +
+                padding * 2 +
+                border * 2;
+
+            panelHeight =
                 Math.Max(
-                    220,
-                    scrollHeight +
-                    buttonAreaHeight +
-                    padding * 2 +
-                    border * 2);
+                    180,
+                    Math.Min(
+                        panelHeight,
+                        Math.Max(
+                            220,
+                            maxHeight)));
 
             int backgroundAlpha =
                 ShowPanelBackground
@@ -12592,14 +12748,11 @@ namespace cAlgo
 
             _panel.MinWidth = 260;
             _panel.MaxWidth = 760;
-
-            _panel.MinHeight =
-                Math.Min(
-                    panelHeight,
-                    220);
-
+            _panel.MinHeight = 180;
             _panel.MaxHeight =
-                maxHeight;
+                Math.Max(
+                    220,
+                    maxHeight);
 
             _panel.Padding =
                 padding;
@@ -12612,7 +12765,7 @@ namespace cAlgo
             _panel.BackgroundColor =
                 Color.FromArgb(
                     backgroundAlpha,
-                    PanelBackground);
+                    Color.Black);
 
             _panel.BorderColor =
                 Color.FromArgb(
@@ -12627,12 +12780,66 @@ namespace cAlgo
                     0,
                     PanelCornerRadius);
 
-            _panelStack.Width =
+            _panelHeaderStack.Width =
                 Math.Max(
                     200,
                     contentWidth);
 
+            _panelHeaderStack.Height =
+                headerHeight;
+
+            _panelHeaderTitle.Width =
+                Math.Max(
+                    150,
+                    contentWidth -
+                    34);
+
+            _panelHeaderTitle.FontFamily =
+                string.IsNullOrWhiteSpace(
+                    PanelFontFamily)
+                    ? "Arial"
+                    : PanelFontFamily;
+
+            _panelHeaderTitle.FontSize =
+                Math.Max(
+                    9,
+                    PanelFontSize);
+
+            _panelHeaderTitle.ForegroundColor =
+                AutoTradingPanelColor();
+
+            _panelHeaderTitle.Text =
+                "CFIP SMART  •  " +
+                (EnableAutoTrading
+                    ? "AUTO ON"
+                    : "AUTO OFF");
+
+            _panelHeaderTitle.LineHeight =
+                Math.Max(
+                    14,
+                    PanelFontSize + 2);
+
+            _panelHeaderStack.BackgroundColor =
+                Color.FromArgb(
+                    0,
+                    Color.Black);
+
             _panelStack.BackgroundColor =
+                Color.FromArgb(
+                    0,
+                    Color.Black);
+
+            _panelRowsStack.BackgroundColor =
+                Color.FromArgb(
+                    0,
+                    Color.Black);
+
+            _panelScroll.BackgroundColor =
+                Color.FromArgb(
+                    0,
+                    Color.Black);
+
+            _buttonStack.BackgroundColor =
                 Color.FromArgb(
                     0,
                     Color.Black);
@@ -12641,11 +12848,6 @@ namespace cAlgo
                 Math.Max(
                     200,
                     contentWidth);
-
-            _panelRowsStack.BackgroundColor =
-                Color.FromArgb(
-                    0,
-                    Color.Black);
 
             _panelScroll.Width =
                 Math.Max(
@@ -12657,26 +12859,13 @@ namespace cAlgo
                     100,
                     scrollHeight);
 
-            _panelScroll.BackgroundColor =
-                Color.FromArgb(
-                    0,
-                    Color.Black);
-
             _buttonStack.Width =
                 Math.Max(
                     200,
                     contentWidth);
 
             _buttonStack.Height =
-                Math.Max(
-                    buttonAreaHeight,
-                    buttonHeight +
-                    buttonMargin * 2);
-
-            _buttonStack.BackgroundColor =
-                Color.FromArgb(
-                    0,
-                    Color.Black);
+                buttonAreaHeight;
 
             _buttonStack.IsVisible =
                 buttons;
@@ -12722,18 +12911,10 @@ namespace cAlgo
                     buttonMargin * 2 -
                     buttonGap);
 
-            int configuredButtonWidth =
-                Math.Max(
-                    90,
-                    ActionButtonWidth);
-
             int eachButtonWidth =
                 Math.Max(
                     90,
-                    Math.Min(
-                        configuredButtonWidth,
-                        availableButtonWidth /
-                        2));
+                    availableButtonWidth / 2);
 
             if (_closeButton != null)
             {
@@ -12767,7 +12948,7 @@ namespace cAlgo
                 _closeButton.BackgroundColor =
                     Color.FromArgb(
                         ShowPanelBackground
-                            ? 92
+                            ? 95
                             : 0,
                         SlLineColor);
 
@@ -12788,6 +12969,12 @@ namespace cAlgo
                         buttonMargin,
                         buttonGap / 2,
                         buttonMargin);
+
+                _closeButton.HorizontalContentAlignment =
+                    HorizontalAlignment.Center;
+
+                _closeButton.VerticalContentAlignment =
+                    VerticalAlignment.Center;
             }
 
             if (_cancelButton != null)
@@ -12822,7 +13009,7 @@ namespace cAlgo
                 _cancelButton.BackgroundColor =
                     Color.FromArgb(
                         ShowPanelBackground
-                            ? 76
+                            ? 65
                             : 0,
                         PanelAccentColor);
 
@@ -12843,52 +13030,39 @@ namespace cAlgo
                         buttonMargin,
                         buttonMargin,
                         buttonMargin);
-            }
 
-            SetPanelAlignment();
+                _cancelButton.HorizontalContentAlignment =
+                    HorizontalAlignment.Center;
+
+                _cancelButton.VerticalContentAlignment =
+                    VerticalAlignment.Center;
+            }
 
             if (_panelToggleButton != null)
             {
-                int toggleMargin =
-                    Math.Max(
-                        0,
-                        PanelMargin);
-
                 _panelToggleButton.IsVisible =
                     ShowPanelToggleButton;
 
                 _panelToggleButton.Width =
-                    Math.Max(
-                        90,
-                        PanelToggleWidth);
+                    26;
 
                 _panelToggleButton.Height =
-                    Math.Max(
-                        22,
-                        PanelToggleHeight);
-
-                _panelToggleButton.Margin =
-                    new Thickness(
-                        toggleMargin,
-                        toggleMargin,
-                        toggleMargin,
-                        toggleMargin);
+                    24;
 
                 _panelToggleButton.ForegroundColor =
                     PanelTextColor;
 
                 _panelToggleButton.FontSize =
                     Math.Max(
-                        8,
-                        PanelFontSize - 1);
-
-                _panelToggleButton.FontWeight =
-                    FontWeight.Bold;
+                        9,
+                        PanelFontSize);
 
                 _panelToggleButton.BackgroundColor =
                     Color.FromArgb(
-                        backgroundAlpha,
-                        PanelBackground);
+                        ShowPanelBackground
+                            ? 70
+                            : 0,
+                        Color.Black);
 
                 _panelToggleButton.BorderColor =
                     Color.FromArgb(
@@ -12899,15 +13073,130 @@ namespace cAlgo
                     border;
 
                 _panelToggleButton.CornerRadius =
-                    Math.Max(
-                        0,
-                        PanelCornerRadius);
-
-                SetPanelToggleAlignment();
+                    Math.Min(
+                        5,
+                        Math.Max(
+                            0,
+                            PanelCornerRadius));
             }
+
+            if (_panelRestoreButton != null)
+            {
+                _panelRestoreButton.IsVisible =
+                    _panelHidden;
+
+                _panelRestoreButton.Width = 26;
+                _panelRestoreButton.Height = 26;
+                _panelRestoreButton.ForegroundColor =
+                    PanelTextColor;
+                _panelRestoreButton.FontSize =
+                    Math.Max(
+                        9,
+                        PanelFontSize);
+                _panelRestoreButton.BackgroundColor =
+                    Color.FromArgb(
+                        ShowPanelBackground
+                            ? 70
+                            : 0,
+                        Color.Black);
+                _panelRestoreButton.BorderColor =
+                    Color.FromArgb(
+                        borderAlpha,
+                        PanelBorder);
+                _panelRestoreButton.BorderThickness =
+                    border;
+                _panelRestoreButton.CornerRadius =
+                    Math.Min(
+                        5,
+                        Math.Max(
+                            0,
+                            PanelCornerRadius));
+
+                SetPanelRestoreAlignment();
+            }
+
+            SetPanelAlignment();
         }
 
-                        private void RenderPanel()
+                                private int EstimatePanelScrollHeight(
+            int contentWidth,
+            int maxScrollHeight)
+        {
+            int fontSize =
+                Math.Max(
+                    8,
+                    PanelFontSize);
+
+            int lineHeight =
+                Math.Max(
+                    14,
+                    fontSize + 3);
+
+            int charsPerLine =
+                Math.Max(
+                    24,
+                    (int)(
+                        Math.Max(
+                            160,
+                            contentWidth) /
+                        Math.Max(
+                            4.5,
+                            fontSize * 0.55)));
+
+            int total = 0;
+
+            for (int i = 0;
+                 i < _panelRows.Count;
+                 i++)
+            {
+                TextBlock row =
+                    _panelRows[i];
+
+                if (row == null ||
+                    !row.IsVisible)
+                    continue;
+
+                int length =
+                    string.IsNullOrEmpty(
+                        row.Text)
+                        ? 1
+                        : row.Text.Length;
+
+                int lines =
+                    Math.Max(
+                        1,
+                        (int)Math.Ceiling(
+                            (double)length /
+                            charsPerLine));
+
+                lines =
+                    Math.Min(
+                        4,
+                        lines);
+
+                total +=
+                    lines *
+                    lineHeight +
+                    Math.Max(
+                        0,
+                        PanelRowPadding) *
+                    2 +
+                    Math.Max(
+                        1,
+                        PanelRowGap);
+            }
+
+            return
+                Math.Max(
+                    120,
+                    Math.Min(
+                        Math.Max(
+                            120,
+                            maxScrollHeight),
+                        total + 4));
+        }
+
+        private void RenderPanel()
         {
             if (!ShowUnifiedPanel)
             {
@@ -12920,6 +13209,8 @@ namespace cAlgo
 
             if (_panel == null ||
                 _panelStack == null ||
+                _panelHeaderStack == null ||
+                _panelHeaderTitle == null ||
                 _panelRowsStack == null ||
                 _panelScroll == null ||
                 _buttonStack == null ||
@@ -12928,6 +13219,9 @@ namespace cAlgo
 
             if (_panelToggleButton == null)
                 CreatePanelToggleButton();
+
+            if (_panelRestoreButton == null)
+                CreatePanelRestoreButton();
 
             _panel.IsVisible =
                 !_panelHidden;
@@ -12969,14 +13263,13 @@ namespace cAlgo
 
             int buttonAreaHeight =
                 buttons
-                    ? buttonHeight * 2 +
-                      buttonMargin * 4 +
-                      buttonGap
+                    ? buttonHeight +
+                      buttonMargin * 2
                     : 0;
 
             int configuredMaxHeight =
                 Math.Max(
-                    260,
+                    240,
                     PanelMaxHeight);
 
             int availableChartHeight =
@@ -13002,19 +13295,23 @@ namespace cAlgo
             int maxHeight =
                 availableChartHeight > 0
                     ? Math.Max(
-                        220,
+                        180,
                         Math.Min(
                             configuredMaxHeight,
                             availableChartHeight))
                     : configuredMaxHeight;
 
-            int scrollHeight =
+            int fixedHeight =
+                30 +
+                buttonAreaHeight +
+                padding * 2 +
+                border * 2;
+
+            int maximumScrollHeight =
                 Math.Max(
-                    100,
+                    120,
                     maxHeight -
-                    buttonAreaHeight -
-                    padding * 2 -
-                    border * 2);
+                    fixedHeight);
 
             for (int i = 0;
                  i < _panelRows.Count;
@@ -13046,6 +13343,11 @@ namespace cAlgo
 
             RenderPanelRows(
                 contentWidth);
+
+            int scrollHeight =
+                EstimatePanelScrollHeight(
+                    contentWidth,
+                    maximumScrollHeight);
 
             ApplyPanelVisualSettings(
                 contentWidth,
@@ -14220,7 +14522,7 @@ namespace cAlgo
                 frame.Evidence;
         }
 
-        private void RemovePanel()
+                private void RemovePanel()
         {
             if (_panel != null)
             {
@@ -14234,28 +14536,31 @@ namespace cAlgo
                 }
             }
 
-            if (_panelToggleButton != null)
+            if (_panelRestoreButton != null)
             {
                 try
                 {
                     Chart.RemoveControl(
-                        _panelToggleButton);
+                        _panelRestoreButton);
                 }
                 catch
                 {
                 }
             }
 
-            _panelToggleButton = null;
-            _panelHidden = false;
             _panel = null;
             _panelStack = null;
+            _panelHeaderStack = null;
+            _panelHeaderTitle = null;
             _panelRowsStack = null;
             _panelScroll = null;
             _panelRows.Clear();
             _buttonStack = null;
             _closeButton = null;
             _cancelButton = null;
+            _panelToggleButton = null;
+            _panelRestoreButton = null;
+            _panelHidden = false;
             _lastReactionAlertBar = -1;
             _panelStableHeader = "";
             _panelStableHeaderSinceUtc =
