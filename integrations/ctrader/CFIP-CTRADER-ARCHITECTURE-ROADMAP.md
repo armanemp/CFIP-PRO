@@ -771,7 +771,7 @@ The foundation is ready for behavior migration. No v73 file was overwritten.
 
 ## PHASE 2 — Configuration and parameter architecture
 
-**Status: NOT STARTED**
+**Status: COMPLETE — 2026-09-27**
 
 ### Objective
 
@@ -818,6 +818,74 @@ Examples from v73:
 Every parameter is ACTIVE/DEPRECATED/REMOVED and all effective values can be traced to one source.
 
 ---
+
+## Phase 2 completion record
+
+**Implementation version:** `integrations/ctrader/calude-edit-v75.cs`  
+**Phase document:** `docs/ctrader/CFIP-V75-PHASE-02-CONFIGURATION.md`  
+**Test:** `tests/unit/test_ctrader_v75_configuration.py`
+
+### Completed
+
+- preserved all **512/512** v73 public parameters in v75 in the same order, with no duplicate public parameter property names;
+- established `CFIPClean75ConfigSnapshot` as the single effective configuration carrier for the complete parameter surface;
+- grouped configuration into explicit canonical domains: Decision, MTF, Structure, Zones, Liquidity, Indicators, Entry, Risk/Targets, Live Management, Filters, Alerts, Automation, Smart Execution, Display, Intelligence, Confluence and Safety/Precision;
+- separated configured Auto Trading / Automatic Orders values from `CFIPClean75RuntimeAuthority`;
+- split parameter semantics conceptually rather than merging similarly named thresholds across different layers;
+- identified the confirmed duplicate protection control `AutoProtectBrokerPositions` → `AutoBrokerProtection` for deprecation/migration;
+- removed manual trade-entry authority from the clean architecture contract; `ShowTradeActionButtons` is compatibility-only and cannot be an execution authority;
+- retained safety-control concepts separately from manual entry controls;
+- established a complete parameter inventory with an explicit ACTIVE/DEPRECATED/REMOVED disposition for every parameter.
+
+### Critical signal/trading integrity decision
+
+No configuration consolidation was allowed to weaken signal quality or execution safety.
+
+The following remain explicitly separated for later migration:
+- global Decision thresholds vs Auto-Execution thresholds;
+- general Smart thresholds vs Smart Engine overlays;
+- Entry quality vs Entry-location confluence;
+- Entry/Trigger distance vs broker slippage vs fill deviation vs plan rebase;
+- structural stop limits vs fallback stop policy;
+- strategy TP ladder vs effective broker TP stage;
+- market auto-trading vs pending-order automation;
+- broker protection vs runtime execution switches.
+
+This preserves the higher-level intelligence and allows later phases to make these relationships explicit instead of collapsing them into one threshold.
+
+### Validation
+
+Repository-side source validation confirmed:
+
+- v73 parameter count = 512;
+- v75 parameter count = 512;
+- parameter names and order are identical;
+- no duplicate v75 parameter names;
+- braces are balanced;
+- one configuration snapshot construction occurs during initialization;
+- runtime authority is separate from configuration;
+- no direct cTrader broker mutation calls exist in the v75 shell;
+- manual-entry authority is explicitly unsupported;
+- manifest contains 512 parameter records.
+
+### Commits
+
+- `555e6bffe3fc41054c3587a8b2fcf82598b9fab2` — v75 configuration architecture
+- `9f6b1dd4a5e6b6495334ca2309700d34957596a5` — complete parameter inventory
+- `391fa0944d2488cd183a602212528dcaa221f0ab` — configuration integrity tests
+- `c43f1e422ce468649c65d6f0290d1cbb965d1c6f` — parameter declaration correction
+- `f319d5532cb38af629476526ac08f6b416517dac` — broker-boundary test correction
+- `99a81fb296c253f418a5fe7f755dff665df51bd4` — final parameter-attribute correction
+
+### Phase 2 acceptance decision
+
+**COMPLETE at the configuration/architecture-contract level.**
+
+The clean line now has a complete, traceable configuration surface. No functional parameter was silently discarded.
+
+### Next phase
+
+**Phase 3 — Time, MTF and data pipeline**
 
 ## PHASE 3 — Time, MTF and data pipeline
 
@@ -1858,7 +1926,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 |---|---|---|---|---|---|
 | 0 | Continuity & baseline freeze | COMPLETE | 2026-09-27 | v69-v73 + this roadmap | Repository/document review |
 | 1 | Architecture foundation | COMPLETE | 2026-09-27 | v74 | static contract checks added |
-| 2 | Configuration/parameters | NOT STARTED | — | — | — |
+| 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 512/512 parity + static validation |
 | 3 | Time/MTF/data | NOT STARTED | — | — | — |
 | 4 | Market model | NOT STARTED | — | — | — |
 | 5 | Structure/Zones/Liquidity | NOT STARTED | — | — | — |
@@ -1949,13 +2017,13 @@ At minimum record:
 
 **Current implementation reference:** v73
 
-**Current roadmap status:** Phase 1 complete.
+**Current roadmap status:** Phase 2 complete.
 
-**Current implementation status:** v74 now contains the Phase 1 clean architecture foundation. v73 remains the behavioral/reference baseline.
+**Current implementation status:** v75 now contains the Phase 2 configuration architecture and complete 512-parameter compatibility surface. v74 remains the Phase 1 contract foundation and v73 remains the behavioral/reference baseline.
 
-**Next implementation target:** Phase 2 — Configuration and parameter architecture.
+**Next implementation target:** Phase 3 — Time, MTF and data pipeline.
 
-**Critical instruction for the next phase:** Do not patch individual v73 symptoms. Start from the v74 contracts and migrate v73 behavior into one effective configuration model, preserving the established ownership boundaries.
+**Critical instruction for the next phase:** Start from the v75 configuration snapshot and v74 contracts. Migrate the v71 closed-bar/MTF behavior into immutable time/data snapshots without reintroducing forming-bar leakage or hidden timeframe-dependent signal logic.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
@@ -1968,7 +2036,7 @@ CFIP cTrader Clean Architecture
 
 Phase 0  ████████████████████  COMPLETE
 Phase 1  ████████████████████  COMPLETE
-Phase 2  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 2  ████████████████████  COMPLETE
 Phase 3  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 4  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 5  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
