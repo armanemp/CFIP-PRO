@@ -889,7 +889,7 @@ The clean line now has a complete, traceable configuration surface. No functiona
 
 ## PHASE 3 — Time, MTF and data pipeline
 
-**Status: NOT STARTED**
+**Status: COMPLETE — 2026-09-27**
 
 ### Objective
 
@@ -930,6 +930,82 @@ Every helper must be checked for hidden:
 A decision snapshot is temporally coherent across every timeframe.
 
 ---
+
+## Phase 3 completion record
+
+**Implementation version:** `integrations/ctrader/calude-edit-v76.cs`  
+**Phase document:** `docs/ctrader/CFIP-V76-PHASE-03-MTF-TIME.md`  
+**Test:** `tests/unit/test_ctrader_v76_mtf_time.py`
+
+### Completed
+
+- converted the v71 closed-bar rules into a first-class `CFIPClean76MtfSnapshot`;
+- established one canonical M5 analytical reference derived from the M5 series;
+- separated analytical reference time from current server UTC runtime time;
+- added user-local display time using the cTrader platform offset;
+- created per-timeframe closed-bar snapshots for M1/M5/M15/M30/H1/H4/D1/W1 plus the host chart;
+- created one shared `ResolveClosedBar()` resolver based on cTrader `Bars.OpenTimes.GetIndexByTime()`;
+- guaranteed that the final potentially-forming series item is never returned as a closed analysis bar;
+- required the selected bar's next open to be at or before the M5 reference;
+- added explicit reference freshness and typed MTF data status;
+- separated primary decision readiness from optional D1/W1 history availability;
+- added explicit temporal coherence validation for downstream Signal/Decision consumers;
+- initialized all eight MTF series in the v76 host;
+- kept Signal, Entry, Auto Trade, Auto Orders and broker mutations out of Phase 3 so the time/data contract remains side-effect free.
+
+### Important corrections during Phase 3
+
+- restored the explicit pre-history guard from v71 for references earlier than the first available bar;
+- corrected coherence semantics so missing optional D1/W1 history is not mistaken for temporal leakage;
+- corrected the new MTF test to scope the builder method precisely when a different configuration method is also named `Build()`.
+
+### Trading integrity carried forward
+
+The next Signal and execution phases must consume the v76 MTF snapshot rather than independently resolving indices. This is now a mandatory integration contract for:
+- Signal direction and confidence;
+- M5/M15/HTF structure;
+- Entry and Trigger;
+- automatic market execution;
+- automatic pending orders;
+- SL/TP planning;
+- live-management event timing.
+
+No forming-bar value may become evidence simply because a downstream helper has access to raw `Bars`.
+
+### Validation
+
+Direct repository/source validation confirmed:
+- v75/v76 parameter parity remains 512/512 in identical order;
+- v76 source braces are balanced;
+- required M1/M5/M15/M30/H1/H4/D1/W1 contracts exist;
+- a single MTF builder is used from the host calculation cycle;
+- closed-bar resolver guards the final series item and requires `nextOpen <= reference`;
+- UTC/local time sources are separated;
+- no `DateTime.Now` or `DateTime.UtcNow` usage was introduced;
+- no direct broker mutation or chart authority was introduced;
+- version isolation from v75 is preserved.
+
+A direct pytest runner attempt was blocked by the execution sandbox's inability to resolve `raw.githubusercontent.com`; therefore test execution is not claimed as passed. Final real cTrader compile/runtime validation remains a Phase 16 gate.
+
+### Commits
+
+- `4219e33099139bfc3f3260cb8c49f15597daf7d0` — v76 MTF/time pipeline
+- `7e181df5f8fd073a04a483b6f9684a034784e243` — Phase 3 document
+- `f5d1801f6d63f899e53e7d369cc01d4a11347076` — Phase 3 tests
+- `6c8f4512e2ac9ef310cded8ceb5f599c21115965` — test scope correction
+- `9fba770d63e8f74bb212fe312a7f2374b309e04c` — pre-history/coherence hardening
+- `8cbaeb4da1b5d7c2187d79f8c3ba9d576910e861` — boundary tests
+- `0f8237da49d955d4230102f0767ae2ab3ffba7d3` — final Phase 3 validation notes
+
+### Phase 3 acceptance decision
+
+**COMPLETE at the architecture/data-contract level.**
+
+The time/MTF layer now provides a single coherent input boundary for the later Signal and trading layers.
+
+### Next phase
+
+**Phase 4 — Market model: indicators, regime and confluence**
 
 ## PHASE 4 — Market model: indicators, regime and confluence
 
@@ -1927,7 +2003,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 0 | Continuity & baseline freeze | COMPLETE | 2026-09-27 | v69-v73 + this roadmap | Repository/document review |
 | 1 | Architecture foundation | COMPLETE | 2026-09-27 | v74 | static contract checks added |
 | 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 512/512 parity + static validation |
-| 3 | Time/MTF/data | NOT STARTED | — | — | — |
+| 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | NOT STARTED | — | — | — |
 | 5 | Structure/Zones/Liquidity | NOT STARTED | — | — | — |
 | 6 | Decision engine | NOT STARTED | — | — | — |
@@ -2017,13 +2093,13 @@ At minimum record:
 
 **Current implementation reference:** v73
 
-**Current roadmap status:** Phase 2 complete.
+**Current roadmap status:** Phase 3 complete.
 
-**Current implementation status:** v75 now contains the Phase 2 configuration architecture and complete 512-parameter compatibility surface. v74 remains the Phase 1 contract foundation and v73 remains the behavioral/reference baseline.
+**Current implementation status:** v76 now contains the Phase 3 canonical time/MTF data pipeline. v75 remains the Phase 2 configuration line, v74 remains the Phase 1 contract foundation, and v73 remains the behavioral/reference baseline.
 
-**Next implementation target:** Phase 3 — Time, MTF and data pipeline.
+**Next implementation target:** Phase 4 — Market model: indicators, regime and confluence.
 
-**Critical instruction for the next phase:** Start from the v75 configuration snapshot and v74 contracts. Migrate the v71 closed-bar/MTF behavior into immutable time/data snapshots without reintroducing forming-bar leakage or hidden timeframe-dependent signal logic.
+**Critical instruction for the next phase:** Start from the v76 MTF snapshot and v75 configuration snapshot. Build one normalized Market Model from the closed data, preserving every useful v73 feature while preventing duplicated evidence from being counted multiple times and keeping live execution data separate from closed analytical evidence.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
@@ -2037,7 +2113,7 @@ CFIP cTrader Clean Architecture
 Phase 0  ████████████████████  COMPLETE
 Phase 1  ████████████████████  COMPLETE
 Phase 2  ████████████████████  COMPLETE
-Phase 3  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 3  ████████████████████  COMPLETE
 Phase 4  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 5  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 6  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
