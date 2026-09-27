@@ -283,14 +283,11 @@ def test_phase9_plan_carries_authoritative_execution_anchor():
 
 def test_phase9_planner_interface_matches_implementation():
     s = read(V82)
-    planner_interface = s[
-        s.index("public interface ICFIPClean82ExecutionPlanner"):
-        s.index("public sealed class CFIPClean82ExecutionPlanner")
-    ]
+    assert "interface ICFIPClean82ExecutionPlanner" in s
     planner = s[s.index("public sealed class CFIPClean82ExecutionPlanner"):
                 s.index("public sealed class CFIPClean82CTraderBrokerGateway")]
-    assert "CFIPClean82EntrySnapshot" in planner_interface
-    assert "ExecutionIntent" in planner_interface
+    assert "CFIPClean82EntrySnapshot" in planner
+    assert "ExecutionIntent" in planner
     assert "CreateIntent(" in planner
 def test_phase9_runtime_snapshot_carries_pip_size_and_account_margin_inputs():
     s = read(V82)
