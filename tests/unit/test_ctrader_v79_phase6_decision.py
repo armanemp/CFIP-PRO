@@ -222,3 +222,30 @@ def test_phase6_market_dedup_is_order_independent():
     assert "aggregate.BullScore > aggregate.BearScore" in s
     assert "aggregate.BearScore > aggregate.BullScore" in s
     assert "exact tie is neutral" in s
+
+
+def test_phase6_restores_adaptive_directional_threshold_semantics():
+    s = read(V79)
+    assert '"MinimumSmartDirectionShare", 57' in s
+    assert '"AdaptiveSmartThresholds", true' in s
+    assert '"SmartRegimeBuffer", 6' in s
+    assert '"SmartScoreTemperature", 12.0' in s
+    assert "GetAdaptiveSmartThresholds(" in s
+    assert "CalculateDirectionalShares(" in s
+    assert "strongestShare >= adaptiveShareThreshold" not in s
+    assert "strongestShare < adaptiveShareThreshold" in s
+
+
+def test_phase6_never_creates_direction_from_zero_or_tied_evidence():
+    s = read(V79)
+    assert "e.Bull <= 0 &&" in s
+    assert "e.Bear <= 0" in s
+    assert "bullShare > bearShare" in s
+    assert "bearShare > bullShare" in s
+
+
+def test_phase6_uses_adaptive_smart_quality_and_edge_gates():
+    s = read(V79)
+    assert "edge < adaptiveEdgeThreshold" in s
+    assert "quality < adaptiveQualityThreshold" in s
+    assert 'Math.Max(\n                        configuration.Get("SmartConsensusThreshold", 57),\n                        adaptiveShareThreshold)' in s
