@@ -5307,7 +5307,7 @@ namespace cAlgo
         #region Entry Trigger
         // ============================================================
 
-                private bool TriggerReadyWithoutPrecisionGate(
+                private bool ClosedBarTriggerReady(
             Bars bars,
             int index,
             int direction)
@@ -5445,29 +5445,9 @@ namespace cAlgo
                 // closed-bar structure trigger = signal confirmation.
 // Live price/zone eligibility is evaluated separately by BuildExecutionModel
 // and IsExecutableMarketEntry immediately before broker execution.
-        private bool ClosedBarTriggerReady(
-            Bars bars,
-            int index,
-            int direction)
-        {
-            return
-                TriggerReadyWithoutPrecisionGate(
-                    bars,
-                    index,
-                    direction);
-        }
+        
 
-                private bool EntryTriggerReady(
-            Bars bars,
-            int index,
-            int direction)
-        {
-            return
-                ClosedBarTriggerReady(
-                    bars,
-                    index,
-                    direction);
-        }
+                
 
 
         private int BullTriggerScore(
