@@ -5534,13 +5534,41 @@ namespace cAlgo
             if (plan.EntryMode ==
                 CFIPClean69ExecutionMode.BreakoutMarket)
             {
+                if (!IsFinitePositive(
+                        plan.EntryTrigger))
+                {
+                    reason = "MISSING BREAKOUT TRIGGER";
+                    return false;
+                }
+
+                double tolerance =
+                    Math.Max(
+                        Symbol.TickSize * 2,
+                        Math.Max(
+                            Symbol.PipSize * 0.5,
+                            (Symbol.Ask - Symbol.Bid) * 2));
+
+                bool acceptable =
+                    plan.Direction == 1
+                        ? fillPrice >=
+                          plan.EntryTrigger - tolerance
+                        : fillPrice <=
+                          plan.EntryTrigger + tolerance;
+
+                if (!acceptable)
+                {
+                    reason =
+                        "BROKER FILL FAR FROM TRIGGER";
+                    return false;
+                }
+
                 if (!IsTriggerReached(
                         plan.Direction,
                         fillPrice,
                         plan.EntryTrigger))
                 {
-                    reason = "BROKER FILL BELOW TRIGGER";
-                    return false;
+                    reason =
+                        "BREAKOUT FILL • SLIPPAGE ACCEPTED";
                 }
 
                 return true;
@@ -5553,7 +5581,8 @@ namespace cAlgo
                     fillPrice,
                     out reason);
 
-            reason = "INVALID EXECUTION MODE";
+            reason =
+                "INVALID EXECUTION MODE";
             return false;
         }
 
@@ -15766,13 +15795,27 @@ namespace cAlgo
             if (model.Mode ==
                 CFIPClean69ExecutionMode.BreakoutMarket)
             {
-                return
-                    IsTriggerReached(
-                        model.Direction,
-                        entry,
-                        model.Trigger)
-                        ? "BREAKOUT CONFIRMED"
-                        : "BREAKOUT NOT CONFIRMED";
+                double tolerance =
+                    Math.Max(
+                        Symbol.TickSize * 2,
+                        Math.Max(
+                            Symbol.PipSize * 0.5,
+                            (Symbol.Ask - Symbol.Bid) * 2));
+
+                bool acceptable =
+                    model.Direction == 1
+                        ? entry >= model.Trigger - tolerance
+                        : entry <= model.Trigger + tolerance;
+
+                if (!acceptable)
+                    return "BREAKOUT NOT CONFIRMED";
+
+                return IsTriggerReached(
+                    model.Direction,
+                    entry,
+                    model.Trigger)
+                    ? "BREAKOUT CONFIRMED"
+                    : "BREAKOUT • SLIPPAGE ACCEPTED";
             }
 
             if (model.Mode ==
@@ -21597,7 +21640,11 @@ private Color AutoTradingPanelColor()
                     closedM5);
 
             if (atr <= 0)
+            {
+                _autoExecutionBlockReason =
+                    "AGGRESSIVE • ATR UNAVAILABLE";
                 return;
+            }
 
             string source;
             int quality;
@@ -21612,7 +21659,11 @@ private Color AutoTradingPanelColor()
                     out quality);
 
             if (!IsFinitePositive(stop))
+            {
+                _autoExecutionBlockReason =
+                    "AGGRESSIVE • INVALID SL";
                 return;
+            }
 
             double target =
                 SelectStructuralAutoTarget(
@@ -21672,7 +21723,11 @@ private Color AutoTradingPanelColor()
 
             if (volume <
                 Symbol.VolumeInUnitsMin)
+            {
+                _autoExecutionBlockReason =
+                    "AGGRESSIVE • VOLUME BELOW MINIMUM";
                 return;
+            }
 
             try
             {
@@ -21718,7 +21773,18 @@ private Color AutoTradingPanelColor()
                 if (result == null ||
                     !result.IsSuccessful ||
                     result.Position == null)
+                {
+                    _autoExecutionBlockReason =
+                        result != null &&
+                        result.Error.HasValue
+                            ? "AGGRESSIVE • " +
+                              result.Error.Value.ToString()
+                            : "AGGRESSIVE • TRADE REJECTED";
+                    SetAutoTradingState(
+                        "ERROR",
+                        _autoExecutionBlockReason);
                     return;
+                }
 
                 _lastAutoM5 =
                     closedM5;
@@ -21912,8 +21978,12 @@ private Color AutoTradingPanelColor()
 
             try
             {
-                Permissions.TradingPermission.Request();
-                return HasTradingPermission();
+                bool granted =
+                    Permissions.TradingPermission.Request();
+
+                return
+                    granted &&
+                    HasTradingPermission();
             }
             catch (Exception ex)
             {
@@ -22360,6 +22430,8 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
+            CleanupPendingOrdersIfNeeded(closedM5);
+
             PendingOrder existingPending =
                 GetManagedPendingOrder();
 
@@ -22369,8 +22441,6 @@ private Color AutoTradingPanelColor()
                     "PENDING ORDER EXISTS";
                 return;
             }
-
-            CleanupPendingOrdersIfNeeded(closedM5);
 
             if (ManagedPositionCount() >=
                 Math.Max(1, MaximumOpenPositions))
@@ -22818,7 +22888,11 @@ private Color AutoTradingPanelColor()
                     targetEntry,
                     stop,
                     target))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING LIMIT • INVALID SL/TP";
                 return false;
+            }
 
             double stopPips =
                 Math.Abs(
@@ -22846,7 +22920,11 @@ private Color AutoTradingPanelColor()
 
             if (volume <
                 Symbol.VolumeInUnitsMin)
+            {
+                _autoOrdersBlockReason =
+                    "PENDING LIMIT • VOLUME BELOW MINIMUM";
                 return false;
+            }
 
             string reason;
 
