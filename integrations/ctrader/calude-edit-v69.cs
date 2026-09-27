@@ -5409,6 +5409,7 @@ namespace cAlgo
                 new ExecutionModel
                 {
                     Direction = direction,
+                    Mode = CFIPClean69ExecutionMode.None,
                     Source = "NONE"
                 };
 
@@ -5451,18 +5452,14 @@ namespace cAlgo
             int m15Index =
                 ClosedIndex(
                     _m15Bars,
-                    _m5Bars.OpenTimes[
-                        closedM5]);
+                    _m5Bars.OpenTimes[closedM5]);
 
             double m15Atr =
                 m15Index >= 10
-                    ? Atr(
-                        _m15Bars,
-                        m15Index)
+                    ? Atr(_m15Bars, m15Index)
                     : 0;
 
-            if (m15Index >= 10 &&
-                m15Atr > 0)
+            if (m15Index >= 10 && m15Atr > 0)
             {
                 m15Fvg =
                     FindNearestFvg(
@@ -5484,18 +5481,13 @@ namespace cAlgo
             string source = "NONE";
             int quality = 0;
 
-            if (m5Fvg != null &&
-                m5Ob != null)
+            if (m5Fvg != null && m5Ob != null)
             {
                 double overlapLow =
-                    Math.Max(
-                        m5Fvg.Low,
-                        m5Ob.Low);
+                    Math.Max(m5Fvg.Low, m5Ob.Low);
 
                 double overlapHigh =
-                    Math.Min(
-                        m5Fvg.High,
-                        m5Ob.High);
+                    Math.Min(m5Fvg.High, m5Ob.High);
 
                 if (overlapHigh >= overlapLow)
                 {
@@ -5506,8 +5498,7 @@ namespace cAlgo
                 }
             }
 
-            if (quality == 0 &&
-                m5Fvg != null)
+            if (quality == 0 && m5Fvg != null)
             {
                 low = m5Fvg.Low;
                 high = m5Fvg.High;
@@ -5515,8 +5506,7 @@ namespace cAlgo
                 quality = 84;
             }
 
-            if (quality == 0 &&
-                m5Ob != null)
+            if (quality == 0 && m5Ob != null)
             {
                 low = m5Ob.Low;
                 high = m5Ob.High;
@@ -5529,14 +5519,10 @@ namespace cAlgo
                 m15Ob != null)
             {
                 double overlapLow =
-                    Math.Max(
-                        m15Fvg.Low,
-                        m15Ob.Low);
+                    Math.Max(m15Fvg.Low, m15Ob.Low);
 
                 double overlapHigh =
-                    Math.Min(
-                        m15Fvg.High,
-                        m15Ob.High);
+                    Math.Min(m15Fvg.High, m15Ob.High);
 
                 if (overlapHigh >= overlapLow)
                 {
@@ -5547,8 +5533,7 @@ namespace cAlgo
                 }
             }
 
-            if (quality == 0 &&
-                m15Fvg != null)
+            if (quality == 0 && m15Fvg != null)
             {
                 low = m15Fvg.Low;
                 high = m15Fvg.High;
@@ -5556,8 +5541,7 @@ namespace cAlgo
                 quality = 78;
             }
 
-            if (quality == 0 &&
-                m15Ob != null)
+            if (quality == 0 && m15Ob != null)
             {
                 low = m15Ob.Low;
                 high = m15Ob.High;
@@ -5572,16 +5556,12 @@ namespace cAlgo
                 double overlapLow =
                     Math.Max(
                         low,
-                        Math.Max(
-                            m15Fvg.Low,
-                            m15Ob.Low));
+                        Math.Max(m15Fvg.Low, m15Ob.Low));
 
                 double overlapHigh =
                     Math.Min(
                         high,
-                        Math.Min(
-                            m15Fvg.High,
-                            m15Ob.High));
+                        Math.Min(m15Fvg.High, m15Ob.High));
 
                 if (overlapHigh > overlapLow)
                 {
@@ -5662,17 +5642,11 @@ namespace cAlgo
                 _m15Frame.Direction == direction)
                 quality += 5;
 
-            // ENHANCEMENT (entry precision): M30 alignment was available on
-            // every other frame in the engine but was never checked here,
-            // so a precision entry could score high confluence while
-            // fighting the M30 trend outright. Small bonus, consistent with
-            // how M15 is weighted just above.
             if (_m30Frame != null &&
                 _m30Frame.Direction == direction)
                 quality += 3;
 
-            if (retest >=
-                MinimumRetestQuality)
+            if (retest >= MinimumRetestQuality)
                 quality += 5;
 
             quality =
@@ -5723,54 +5697,99 @@ namespace cAlgo
                           atr);
 
             bool inside =
-                market >=
-                low - tolerance &&
-                market <=
-                high + tolerance;
+                market >= low - tolerance &&
+                market <= high + tolerance;
 
-            bool withinIdealDistance =
-                Math.Abs(
-                    market -
-                    ideal) <=
-                atr *
-                Math.Max(
-                    0.05,
-                    MaximumEntryDistanceAtr);
+            bool triggerReached =
+                IsTriggerReached(
+                    direction,
+                    market,
+                    model.Trigger);
 
-            bool breakout =
-                AllowPrecisionBreakoutEntry &&
-                TriggerReadyWithoutPrecisionGate(
-                    _m5Bars,
-                    closedM5,
-                    direction);
+            bool continuation =
+                IsContinuationExecutionContext(direction);
 
-            model.InsideZone =
-                inside;
+            bool retestReady =
+                inside &&
+                !triggerReached;
 
-            model.Breakout =
-                breakout;
-
-            model.ActualEntry =
-                inside || breakout
-                    ? market
-                    : 0;
-
-            model.Ready =
+            bool qualityReady =
+                !RequirePrecisionEntry ||
                 quality >=
                 Math.Max(
                     40,
-                    MinimumEntryQuality) &&
-                withinIdealDistance &&
-                (inside ||
-                 breakout);
+                    MinimumEntryQuality);
 
-            model.Quality =
-                quality;
+            model.InsideZone = inside;
+            model.Breakout = triggerReached;
 
-            model.Source =
-                breakout && !inside
-                    ? source + "+BREAKOUT"
-                    : source;
+            if (triggerReached)
+            {
+                model.Mode =
+                    CFIPClean69ExecutionMode.BreakoutMarket;
+
+                model.ActualEntry =
+                    market;
+
+                model.Ready =
+                    qualityReady &&
+                    Math.Abs(
+                        market -
+                        model.Trigger) <=
+                    atr *
+                    Math.Max(
+                        0.10,
+                        MaximumEntryExtensionAtr);
+            }
+            else if (continuation)
+            {
+                model.Mode =
+                    CFIPClean69ExecutionMode.WaitingForTrigger;
+
+                model.ActualEntry = 0;
+                model.Ready = false;
+            }
+            else if (retestReady)
+            {
+                model.Mode =
+                    CFIPClean69ExecutionMode.RetestMarket;
+
+                model.ActualEntry =
+                    market;
+
+                model.Ready =
+                    qualityReady &&
+                    Math.Abs(
+                        market -
+                        model.IdealEntry) <=
+                    atr *
+                    Math.Max(
+                        0.05,
+                        MaximumEntryDistanceAtr) &&
+                    (retest >= MinimumRetestQuality ||
+                     !RequireRetestQuality);
+            }
+            else
+            {
+                model.Mode =
+                    CFIPClean69ExecutionMode.None;
+
+                model.ActualEntry = 0;
+                model.Ready = false;
+            }
+
+            model.Quality = quality;
+            model.Source = source;
+
+            if (model.Mode ==
+                CFIPClean69ExecutionMode.WaitingForTrigger)
+                model.Source += "+WAIT";
+            else if (model.Mode ==
+                     CFIPClean69ExecutionMode.RetestMarket)
+                model.Source += "+RETEST";
+            else if (model.Mode ==
+                     CFIPClean69ExecutionMode.BreakoutMarket)
+                model.Source += "+EXEC";
 
             return model;
         }
