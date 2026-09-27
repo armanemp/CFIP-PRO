@@ -67,6 +67,15 @@ Phase 8 does not:
 
 Those remain downstream phases.
 
+## Deep-audit corrections
+
+The implementation audit identified and corrected two integrity defects before Phase 8 acceptance:
+
+1. Target candidate selection could choose a liquidity level on the wrong side of the previously selected TP. The engine now requires each subsequent candidate to progress monotonically in the trade direction by at least the configured spacing.
+2. Signal identity and Plan identity were initially identical. They are now distinct: `SignalId` identifies the closed-reference directional decision, while `PlanId` identifies the resulting entry/stop plan. This prevents later lifecycle/idempotency domains from conflating a decision with a specific plan.
+
+A valid `TradePlan` now also enforces constructor-level coherence for direction, Entry direction, protective stop and TP1/ordered-ladder requirements.
+
 ## Validation
 
 The v81 source-level test suite covers:
