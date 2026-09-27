@@ -1,6 +1,6 @@
 
 // ============================================================================
-// CFIP-PRO · Clean Unified MTF Live Entry Engine v64
+// CFIP-PRO · Clean Unified MTF Live Entry Engine v65
 // ============================================================================
 // Structural precision execution release.
 //
@@ -21208,7 +21208,7 @@ private Color AutoTradingPanelColor()
         // ============================================================
         #endregion
 
-        #region v64 Runtime Execution Controls
+        #region v65 Runtime Execution Controls
         // ============================================================
 
         private bool HasTradingPermission()
