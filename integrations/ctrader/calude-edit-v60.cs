@@ -2607,6 +2607,8 @@ namespace cAlgo
             TrySmartPendingOrders(
                 closedM5);
 
+            RenderManagedPendingOrder();
+
             ProtectBrokerPositions(
                 closedM5);
 
@@ -15026,7 +15028,7 @@ namespace cAlgo
                         ? "TRIGGER  CONFIRMED"
                         : "TRIGGER  WAITING",
                     _decision.TriggerReady
-                        ? TpLineColor
+                        ? TriggerLineColor
                         : PanelWarningColor,
                     true,
                     contentWidth);
@@ -15136,7 +15138,7 @@ namespace cAlgo
                     Price(
                         _executionModel.Invalidation),
                     _executionModel.Ready
-                        ? TpLineColor
+                        ? TriggerLineColor
                         : PanelWarningColor,
                     false,
                     contentWidth);
@@ -15236,7 +15238,7 @@ namespace cAlgo
                         (_tp2Hit != 0
                             ? "  •  HIT"
                             : ""),
-                        TpLineColor,
+                        Tp2LineColor,
                         true,
                         contentWidth);
                 }
@@ -15259,7 +15261,7 @@ namespace cAlgo
                         (_tp3Hit != 0
                             ? "  •  HIT"
                             : ""),
-                        TpLineColor,
+                        Tp3LineColor,
                         true,
                         contentWidth);
                 }
@@ -15282,7 +15284,7 @@ namespace cAlgo
                         (_tp4Hit != 0
                             ? "  •  HIT"
                             : ""),
-                        TpLineColor,
+                        Tp4LineColor,
                         true,
                         contentWidth);
                 }
@@ -20428,6 +20430,138 @@ private Color AutoTradingPanelColor()
                         ex.Message);
                 }
             }
+        }
+
+        private void RenderManagedPendingOrder()
+        {
+            RemoveManagedPendingOrderObjects();
+
+            PendingOrder pending = null;
+
+            foreach (PendingOrder order in PendingOrders)
+            {
+                if (IsManagedPendingOrder(order) &&
+                    order.SymbolName == SymbolName)
+                {
+                    pending = order;
+                    break;
+                }
+            }
+
+            if (pending == null ||
+                !IsFinitePositive(
+                    pending.TargetPrice))
+                return;
+
+            int anchorBar =
+                Bars == null ||
+                Bars.Count < 2
+                    ? -1
+                    : Math.Max(
+                        0,
+                        Math.Min(
+                            Bars.Count - 1,
+                            MapM5ToChart(
+                                Math.Max(
+                                    1,
+                                    _lastEvaluatedM5),
+                                Bars.Count - 1)));
+
+            if (anchorBar < 0)
+                return;
+
+            DrawPlanLine(
+                P + "PENDING_ENTRY",
+                pending.TargetPrice,
+                TriggerLineColor,
+                true);
+
+            if (pending.StopLoss.HasValue &&
+                IsFinitePositive(
+                    pending.StopLoss.Value))
+            {
+                DrawPlanLine(
+                    P + "PENDING_SL",
+                    pending.StopLoss.Value,
+                    SlLineColor,
+                    true);
+            }
+
+            if (pending.TakeProfit.HasValue &&
+                IsFinitePositive(
+                    pending.TakeProfit.Value))
+            {
+                DrawPlanLine(
+                    P + "PENDING_TP",
+                    pending.TakeProfit.Value,
+                    TpLineColor,
+                    true);
+            }
+
+            string typeText =
+                pending.OrderType ==
+                    PendingOrderType.Stop
+                    ? "STOP"
+                    : pending.OrderType ==
+                      PendingOrderType.Limit
+                        ? "LIMIT"
+                        : "PENDING";
+
+            DrawPlanLabel(
+                P + "PENDING_ENTRY_LABEL",
+                "PENDING " +
+                typeText +
+                " " +
+                Price(
+                    pending.TargetPrice),
+                anchorBar,
+                pending.TargetPrice,
+                TriggerLineColor);
+
+            if (pending.StopLoss.HasValue &&
+                IsFinitePositive(
+                    pending.StopLoss.Value))
+            {
+                DrawPlanLabel(
+                    P + "PENDING_SL_LABEL",
+                    "SL " +
+                    Price(
+                        pending.StopLoss.Value),
+                    anchorBar,
+                    pending.StopLoss.Value,
+                    SlLineColor);
+            }
+
+            if (pending.TakeProfit.HasValue &&
+                IsFinitePositive(
+                    pending.TakeProfit.Value))
+            {
+                DrawPlanLabel(
+                    P + "PENDING_TP_LABEL",
+                    "TP " +
+                    Price(
+                        pending.TakeProfit.Value),
+                    anchorBar,
+                    pending.TakeProfit.Value,
+                    TpLineColor);
+            }
+        }
+
+        private void RemoveManagedPendingOrderObjects()
+        {
+            RemovePlanLine(
+                P + "PENDING_ENTRY");
+            RemovePlanLine(
+                P + "PENDING_SL");
+            RemovePlanLine(
+                P + "PENDING_TP");
+
+            Chart.RemoveObject(
+                P + "PENDING_ENTRY_LABEL");
+            Chart.RemoveObject(
+                P + "PENDING_SL_LABEL");
+            Chart.RemoveObject(
+                P + "PENDING_TP_LABEL");
         }
 
         private void OnPositionOpened(PositionOpenedEventArgs args)
