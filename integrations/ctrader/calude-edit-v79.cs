@@ -3995,24 +3995,37 @@ namespace cAlgo
 
                     aggregate.Seen = true;
 
-                    if (feature.Direction == CFIPClean79Direction.Buy)
-                        aggregate.Bull = Math.Max(aggregate.Bull, feature.Value);
-                    else
-                        aggregate.Bear = Math.Max(aggregate.Bear, feature.Value);
+                    // Feature.Value is normalized to [0,1], while Weight is
+                    // the market-model semantic weight. Keep that weighting,
+                    // but select only the strongest directional observation
+                    // for the family across all timeframes.
+                    double score = feature.Value * Math.Max(0, feature.Weight);
+
+                    if (score > aggregate.Score)
+                    {
+                        aggregate.Score = score;
+                        aggregate.Direction = feature.Direction;
+                    }
                 }
             }
 
             foreach (KeyValuePair<CFIPClean79MarketFeature, FeatureAggregate> pair in families)
             {
                 FeatureAggregate aggregate = pair.Value;
-                if (aggregate == null || !aggregate.Seen)
+                if (aggregate == null ||
+                    !aggregate.Seen ||
+                    aggregate.Score <= 0 ||
+                    aggregate.Direction == CFIPClean79Direction.Wait)
                     continue;
 
-                // One feature family contributes only its strongest observation
-                // across timeframes. This prevents MTF copies of the same
-                // phenomenon from inflating directional evidence.
-                e.Bull += aggregate.Bull * 10.0;
-                e.Bear += aggregate.Bear * 10.0;
+                // A market feature family contributes once. This prevents
+                // MTF copies and opposing observations of the same phenomenon
+                // from inflating or cancelling directional evidence.
+                if (aggregate.Direction == CFIPClean79Direction.Buy)
+                    e.Bull += aggregate.Score;
+                else
+                    e.Bear += aggregate.Score;
+
                 e.Independent++;
             }
         }
