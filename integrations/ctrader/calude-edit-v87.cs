@@ -9920,6 +9920,10 @@ public sealed class CFIPClean87TradePlanBuilder :
                 return false;
 
             record.RequestClose(utc);
+
+            RemoveQueuedProtectionAction(
+                record.BrokerPositionId);
+
             QueueCloseIfDue(
                 record,
                 reason ?? "CLOSE_REQUESTED",
@@ -10020,6 +10024,9 @@ public sealed class CFIPClean87TradePlanBuilder :
             record.SetExpectedProtection(
                 stopLoss,
                 takeProfit);
+
+            RemoveQueuedProtectionAction(
+                record.BrokerPositionId);
 
             QueueProtectionIfDue(
                 record,
@@ -10214,6 +10221,34 @@ public sealed class CFIPClean87TradePlanBuilder :
             }
         }
 
+        private void RemoveQueuedProtectionAction(
+            string brokerPositionId)
+        {
+            if (string.IsNullOrWhiteSpace(brokerPositionId))
+                return;
+
+            for (int i = _actions.Count - 1;
+                 i >= 0;
+                 i--)
+            {
+                if (_actions[i] != null &&
+                    string.Equals(
+                        _actions[i].BrokerPositionId,
+                        brokerPositionId,
+                        StringComparison.Ordinal) &&
+                    _actions[i].Kind ==
+                        CFIPClean87PositionActionKind.RestoreProtection)
+                {
+                    _actions.RemoveAt(i);
+                }
+            }
+
+            _actionKeys.Remove(
+                brokerPositionId +
+                "|" +
+                CFIPClean87PositionActionKind.RestoreProtection.ToString());
+        }
+
         private void Queue(CFIPClean87PositionAction action)
         {
             string key =
@@ -10356,6 +10391,7 @@ public sealed class CFIPClean87TradePlanBuilder :
         public double InitialEntryPrice;
         public double InitialRiskPrice;
         public double InitialVolumeInUnits;
+        public double LastObservedVolumeInUnits;
         public double InvalidationPrice;
         public CFIPClean87TargetStage ActiveTargetStage;
         public double PeakRR;
@@ -10388,7 +10424,7 @@ public sealed class CFIPClean87TradePlanBuilder :
             get { return _contexts.Count; }
         }
 
-        public IReadOnlyList<CFIPClean87LivePositionContext> Contexts
+        internal IReadOnlyList<CFIPClean87LivePositionContext> Contexts
         {
             get
             {
@@ -10465,6 +10501,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                     InitialEntryPrice = position.EntryPrice,
                     InitialRiskPrice = risk,
                     InitialVolumeInUnits = position.VolumeInUnits,
+                    LastObservedVolumeInUnits = position.VolumeInUnits,
                     InvalidationPrice = invalidation,
                     ActiveTargetStage = stage,
                     PeakRR = 0,
@@ -10496,20 +10533,33 @@ public sealed class CFIPClean87TradePlanBuilder :
                     out existing))
                 return;
 
-            if (plan == null ||
-                plan.Identity == null ||
-                snapshot.Comment == null ||
+            string planId = string.Empty;
+            bool belongsToPlan =
+                plan != null &&
+                plan.Identity != null &&
+                snapshot.Comment != null &&
                 snapshot.Comment.IndexOf(
                     plan.Identity.PlanId,
-                    StringComparison.Ordinal) < 0)
-                return;
+                    StringComparison.Ordinal) >= 0;
+
+            if (belongsToPlan)
+                planId = plan.Identity.PlanId;
 
             double risk =
-                plan.StructuralStop != null
+                snapshot.StopLoss.HasValue
                     ? Math.Abs(
                         snapshot.EntryPrice -
-                        plan.StructuralStop.Price)
+                        snapshot.StopLoss.Value)
                     : 0;
+
+            if (belongsToPlan &&
+                plan.StructuralStop != null)
+            {
+                risk =
+                    Math.Abs(
+                        snapshot.EntryPrice -
+                        plan.StructuralStop.Price);
+            }
 
             if (risk <= 0)
                 return;
@@ -10519,23 +10569,27 @@ public sealed class CFIPClean87TradePlanBuilder :
                 {
                     BrokerPositionId =
                         snapshot.BrokerPositionId,
-                    PlanId =
-                        plan.Identity.PlanId,
+                    PlanId = planId,
                     Direction = snapshot.Direction,
                     InitialEntryPrice =
                         snapshot.EntryPrice,
                     InitialRiskPrice = risk,
                     InitialVolumeInUnits =
                         snapshot.VolumeInUnits,
+                    LastObservedVolumeInUnits =
+                        snapshot.VolumeInUnits,
                     InvalidationPrice =
+                        belongsToPlan &&
                         plan.Entry != null &&
                         plan.Entry.Invalidation != null
                             ? plan.Entry.Invalidation.Price
                             : 0,
                     ActiveTargetStage =
-                        FindStageForTarget(
-                            plan,
-                            snapshot.TakeProfit),
+                        belongsToPlan
+                            ? FindStageForTarget(
+                                plan,
+                                snapshot.TakeProfit)
+                            : CFIPClean87TargetStage.TP1,
                     PeakRR = 0,
                     Tp1Consumed = false,
                     Tp2Consumed = false,
@@ -10547,7 +10601,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                     PartialAcceptedUtc = DateTime.MinValue,
                     PartialRejectAttempts = 0,
                     NextPartialRetryUtc = DateTime.MinValue,
-                    ManagementRecoveryRequired = false
+                    ManagementRecoveryRequired =
+                        !belongsToPlan
                 };
         }
 
@@ -10584,9 +10639,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                 context.PendingPartialExpectedRemainingVolume =
                     Math.Max(
                         0,
-                        FindCurrentVolumeForPendingResult(
-                            context,
-                            action.VolumeInUnits));
+                        context.LastObservedVolumeInUnits -
+                        action.VolumeInUnits);
                 context.PartialAcceptedUtc = utc;
                 context.PartialRejectAttempts = 0;
                 context.NextPartialRetryUtc = DateTime.MinValue;
@@ -10645,6 +10699,9 @@ public sealed class CFIPClean87TradePlanBuilder :
                             out context))
                         continue;
                 }
+
+                context.LastObservedVolumeInUnits =
+                    snapshot.VolumeInUnits;
 
                 double mark =
                     context.Direction ==
@@ -11246,6 +11303,20 @@ public sealed class CFIPClean87TradePlanBuilder :
                 }
             }
 
+            if (desiredStop.HasValue &&
+                !IsBrokerStopPriceValid(
+                    context.Direction,
+                    desiredStop.Value,
+                    runtime))
+                desiredStop = snapshot.StopLoss;
+
+            if (desiredTarget.HasValue &&
+                !IsBrokerTargetPriceValid(
+                    context.Direction,
+                    desiredTarget.Value,
+                    runtime))
+                desiredTarget = snapshot.TakeProfit;
+
             if (NeedsStopUpdate(
                     context.Direction,
                     snapshot.StopLoss,
@@ -11606,6 +11677,54 @@ public sealed class CFIPClean87TradePlanBuilder :
                         current.Value - epsilon;
         }
 
+        private bool IsBrokerStopPriceValid(
+            CFIPClean87Direction direction,
+            double price,
+            CFIPClean87RuntimeSnapshot runtime)
+        {
+            if (runtime == null ||
+                runtime.PipSize <= 0 ||
+                price <= 0)
+                return false;
+
+            double minimum =
+                runtime.BrokerConstraints != null
+                    ? runtime.BrokerConstraints.MinStopDistancePips *
+                      runtime.PipSize
+                    : 0;
+
+            return
+                direction == CFIPClean87Direction.Buy
+                    ? price <
+                        runtime.Bid - minimum
+                    : price >
+                        runtime.Ask + minimum;
+        }
+
+        private bool IsBrokerTargetPriceValid(
+            CFIPClean87Direction direction,
+            double price,
+            CFIPClean87RuntimeSnapshot runtime)
+        {
+            if (runtime == null ||
+                runtime.PipSize <= 0 ||
+                price <= 0)
+                return false;
+
+            double minimum =
+                runtime.BrokerConstraints != null
+                    ? runtime.BrokerConstraints.MinTakeProfitDistancePips *
+                      runtime.PipSize
+                    : 0;
+
+            return
+                direction == CFIPClean87Direction.Buy
+                    ? price >
+                        runtime.Ask + minimum
+                    : price <
+                        runtime.Bid - minimum;
+        }
+
         private double? BetterStop(
             CFIPClean87Direction direction,
             double? current,
@@ -11669,16 +11788,6 @@ public sealed class CFIPClean87TradePlanBuilder :
             return normalized;
         }
 
-        private double FindCurrentVolumeForPendingResult(
-            CFIPClean87LivePositionContext context,
-            double requested)
-        {
-            return Math.Max(
-                0,
-                context.InitialVolumeInUnits -
-                requested);
-        }
-
         private void ConfirmPartialProgress(
             CFIPClean87LivePositionContext context,
             CFIPClean87BrokerPositionSnapshot snapshot,
@@ -11691,7 +11800,7 @@ public sealed class CFIPClean87TradePlanBuilder :
             if (snapshot.VolumeInUnits <=
                 context.PendingPartialExpectedRemainingVolume +
                 Math.Max(
-                    0,
+                    runtimeVolumeTolerance(snapshot),
                     snapshot.VolumeInUnits *
                     0.001))
             {
@@ -11714,6 +11823,18 @@ public sealed class CFIPClean87TradePlanBuilder :
             if (context.PartialAcceptedUtc != DateTime.MinValue &&
                 context.PartialAcceptedUtc.AddSeconds(15) < utc)
                 context.ManagementRecoveryRequired = true;
+        }
+
+        private double runtimeVolumeTolerance(
+            CFIPClean87BrokerPositionSnapshot snapshot)
+        {
+            return
+                snapshot != null
+                    ? Math.Max(
+                        0,
+                        snapshot.VolumeInUnits *
+                        0.0001)
+                    : 0;
         }
 
         private CFIPClean87LivePositionAction NewClose(
