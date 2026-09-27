@@ -10510,9 +10510,7 @@ namespace cAlgo
 
             double minimumDepth =
                 Math.Max(
-                    Math.Abs(
-                        Symbol.Ask -
-                        Symbol.Bid),
+                    Symbol.PipSize * 2,
                     atr *
                     LiquiditySweepMinimumDepthAtr);
 
@@ -10545,9 +10543,7 @@ namespace cAlgo
 
             double minimumDepth =
                 Math.Max(
-                    Math.Abs(
-                        Symbol.Ask -
-                        Symbol.Bid),
+                    Symbol.PipSize * 2,
                     atr *
                     LiquiditySweepMinimumDepthAtr);
 
@@ -11106,9 +11102,7 @@ namespace cAlgo
                 double.MinValue;
 
             double market =
-                direction == 1
-                    ? Symbol.Ask
-                    : Symbol.Bid;
+                bars.ClosePrices[index];
 
             for (int i = index - 1;
                  i >= first;
