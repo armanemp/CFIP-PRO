@@ -296,3 +296,25 @@ def test_phase6_parameter_ownership_does_not_reintroduce_entry_logic():
     assert "execution confirmation belong to the Phase 7 Entry/Trigger owner." in s
     assert "v79 replaces the old" in s
     assert "additive regime-weighting layer with deduplicated evidence" in s
+
+
+def test_phase6_decision_quality_filter_is_not_entry_trigger_authority():
+    s = read(V79)
+    assert "Legacy name retained for preset parity. In Phase 6 this is" in s
+    assert "only a Decision-quality policy floor" in s
+    assert "actual Entry/Trigger eligibility" in s
+
+
+def test_phase6_engine_has_no_final_entry_or_broker_authority():
+    s = read(V79)
+    a = s.index("public sealed class CFIPClean79DecisionEngine")
+    b = s.index("// ------------------------------------------------------------------------\n    // Trade identity / idempotency", a)
+    engine = s[a:b]
+    assert engine.count("CFIPClean79Direction direction =") == 1
+    for token in [
+        ".ExecuteMarketOrder(", ".PlaceStopOrder(", ".PlaceLimitOrder(",
+        ".ModifyStopLossPrice(", ".ModifyTakeProfitPrice(",
+        ".ClosePosition(", ".CancelPendingOrder(", "Chart.", "CreatePanel("
+    ]:
+        assert token not in engine
+    assert "actual Entry/Trigger eligibility" in engine
