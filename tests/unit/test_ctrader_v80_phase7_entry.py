@@ -134,8 +134,7 @@ def test_phase7_has_canonical_entry_snapshot():
 def test_phase7_separates_ideal_entry_trigger_requested_entry():
     s = read(V80)
     model = s[s.index("public sealed class CFIPClean80EntryModel"):
-               s.index("// ------------------------------------------------------------------------
-    // Canonical targets")]
+               s.index("// ------------------------------------------------------------------------\n    // Canonical targets")]
     snapshot = entry_engine(s)
     assert "IdealEntry" in model
     assert "EntryZone" in model
