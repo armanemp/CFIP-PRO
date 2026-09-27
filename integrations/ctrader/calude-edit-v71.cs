@@ -184,15 +184,15 @@
 //    staying left-anchored so the text does not sit across the line.
 // ============================================================================
 
-// v71 changes (Phase 1 · lifecycle/runtime hardening):
-//  - Preserves v69 behavior while separating runtime quick-control state from
-//    public cTrader configuration parameters.
-//  - Live telemetry timeout can no longer terminate a still-open managed
-//    position.
-//  - Partial take-profit mutations now require broker success before their
-//    hit-state is consumed, allowing transient failures to retry.
-//  - Adds explicit telemetry-timeout state without taking ownership away from
-//    the broker lifecycle.
+// v71 changes (Phase 3 · MTF/time/closed-candle integrity):
+//  - All MTF decision frames are resolved from one shared reference timestamp.
+//  - Closed-bar decision mode maps chart confluence to a fully closed chart bar.
+//  - AnalyzeFrame now rejects the chart/series forming candle by contract.
+//  - D1/W1 frame construction uses the same minimum-history contract as all
+//    other analyzed frames.
+//  - Runtime/session timestamps use cTrader TimeInUtc rather than the host
+//    Windows clock.
+//  - Live market price remains reserved for execution/protection management.
 // ============================================================================
 
 // v66 changes (Phase 5 · runtime/UI authority + full execution/chart sync):
