@@ -1287,6 +1287,47 @@ The engine must detect when multiple indicators are measuring essentially the sa
 
 Every execution path receives the same DecisionSnapshot.
 
+### Phase 6 implementation record — 2026-09-27
+
+**Current implementation:** v79 (integrations/ctrader/calude-edit-v79.cs)
+
+**Commits:**
+- eb9aae213a34995374e9b8489de5ed147ae2569f — fix Phase 6 decision evidence deduplication and missing Decision state setter
+- c5ccefebb50b5abdc1180d0fa827aa1887f0c7bb — extend Phase 6 source-level validation
+
+**Implemented:**
+- authoritative CFIPClean79DecisionEngine
+- canonical CFIPClean79DecisionSnapshot
+- explicit Evidence → Score → Quality → Eligibility → Policy separation
+- structural, zone, liquidity, retest, regime and MTF inputs
+- exact block-reason collection with de-duplication
+- Confirmed / Aggressive / Pending / Soft policy modes
+- Decision state setter so the authoritative snapshot is actually persisted in cycle state
+- market evidence de-duplication by CFIPClean79MarketFeature across timeframes; MTF agreement remains a separate domain
+- structure-event family de-duplication for BOS/MSS/CHOCH and Displacement
+- confluence retained as a quality modifier rather than a second directional evidence source
+- no broker mutation or UI execution authority introduced in Phase 6
+
+**Validation added:**
+- parameter-surface preservation against v78
+- decision-engine contract checks
+- structure/zone/liquidity consumption checks
+- no broker/UI authority checks
+- decision-state setter check
+- market evidence de-duplication checks
+- structure-event family de-duplication checks
+- weighted quality-domain checks
+- brace/type/version isolation checks
+
+**Validation status:** source-level tests are committed, but they have not yet been executed in a local/CI environment from this turn. Phase 6 therefore remains **IN PROGRESS**.
+
+**Remaining before Phase 6 completion:**
+1. trace every existing signal/decision consumer and prove no parallel BUY/SELL authority remains
+2. prove every downstream execution path consumes the same DecisionSnapshot instance/value
+3. reconcile remaining v73-v78 decision semantics against the new pipeline
+4. run the complete applicable test/compile suite
+5. only then mark Phase 6 COMPLETE
+
 ---
 
 ## PHASE 7 — Entry / Trigger / Retest / Breakout engine
@@ -2150,7 +2191,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
 | 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
-| 6 | Decision engine | IN PROGRESS | 2026-09-27 | v79 | authoritative DecisionSnapshot, evidence/quality/policy pipeline; validation continues |
+| 6 | Decision engine | IN PROGRESS | 2026-09-27 | v79 | authoritative DecisionSnapshot; evidence de-duplication added; downstream-consumer audit and validation remain |
 | 7 | Entry/Trigger | NOT STARTED | — | — | — |
 | 8 | Risk/SL/Targets | NOT STARTED | — | — | — |
 | 9 | Unified execution | NOT STARTED | — | — | — |
@@ -2235,13 +2276,13 @@ At minimum record:
 
 # 18. Current position
 
-**Current implementation reference:** v73
+**Current implementation reference:** v79
 
-**Current roadmap status:** Phase 5 complete.
+**Current roadmap status:** Phase 6 in progress.
 
-**Current implementation status:** v78 now contains the Phase 5 canonical Structure/FVG/OB/Liquidity ledger on top of the v77 Market Model and v76 time/MTF contracts. v77 remains the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
+**Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts. v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until DecisionSnapshot validation and double-counting controls are complete.
+**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until downstream-consumer tracing, DecisionSnapshot single-source validation, full applicable tests/compile checks, and remaining v73-v78 semantic reconciliation are complete.
 
 **Critical instruction for the next phase:** Start from the v78 StructureSnapshot, v77 MarketModel and v76 MTF snapshot. Build one authoritative Decision engine that consumes the existing evidence exactly once, separates Evidence -> Score -> Quality -> Eligibility -> Policy, and becomes the sole source for Signal, Auto Trade and Auto Order eligibility.
 
@@ -2258,7 +2299,7 @@ Phase 0  ████████████████████  COMPLETE
 Phase 1  ████████████████████  COMPLETE
 Phase 2  ████████████████████  COMPLETE
 Phase 3  ████████████████████  COMPLETE
-Phase 4  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 4  ████████████████████  COMPLETE
 Phase 5  ████████████████████  COMPLETE
 Phase 6  ████████░░░░░░░░░░░░  IN PROGRESS
 Phase 7  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
