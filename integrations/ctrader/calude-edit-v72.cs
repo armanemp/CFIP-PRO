@@ -10764,7 +10764,7 @@ namespace cAlgo
                    upper / range > 0.20;
         }
 
-        private bool IsZoneFullyMitigated(
+                private bool IsZoneFullyMitigated(
             Bars bars,
             int createdIndex,
             int currentIndex,
@@ -10773,9 +10773,13 @@ namespace cAlgo
             double high)
         {
             if (!UseZoneMitigationGuard ||
-                bars == null ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    currentIndex,
+                    0) ||
                 createdIndex < 0 ||
-                currentIndex <= createdIndex)
+                currentIndex <= createdIndex ||
+                low >= high)
                 return false;
 
             int start =
@@ -10785,7 +10789,7 @@ namespace cAlgo
 
             int end =
                 Math.Min(
-                    bars.Count - 1,
+                    bars.Count - 2,
                     currentIndex);
 
             for (int i = start;
@@ -10807,16 +10811,21 @@ namespace cAlgo
             return false;
         }
 
-        private bool HasZoneRetest(
+
+                private bool HasZoneRetest(
             Bars bars,
             int createdIndex,
             int currentIndex,
             double low,
             double high)
         {
-            if (bars == null ||
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    currentIndex,
+                    0) ||
                 createdIndex < 0 ||
-                currentIndex <= createdIndex)
+                currentIndex <= createdIndex ||
+                low >= high)
                 return false;
 
             int start =
@@ -10826,7 +10835,7 @@ namespace cAlgo
 
             int end =
                 Math.Min(
-                    bars.Count - 1,
+                    bars.Count - 2,
                     currentIndex);
 
             for (int i = start;
@@ -10843,6 +10852,7 @@ namespace cAlgo
 
             return false;
         }
+
 
         private Zone FindNearestFvg(
             Bars bars,
@@ -11724,14 +11734,16 @@ namespace cAlgo
             };
         }
 
-                private bool HasOrderBlockLiquiditySweep(
+                        private bool HasOrderBlockLiquiditySweep(
             Bars bars,
             int index,
             int direction,
             double atr)
         {
-            if (bars == null ||
-                index < 5 ||
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    5) ||
                 atr <= 0)
                 return false;
 
@@ -11780,7 +11792,8 @@ namespace cAlgo
         }
 
 
-                private bool HasOrderBlockFvgConfluence(
+
+                        private bool HasOrderBlockFvgConfluence(
             Bars bars,
             int startIndex,
             int endIndex,
@@ -11792,7 +11805,11 @@ namespace cAlgo
             if (!UseFvg ||
                 bars == null ||
                 atr <= 0 ||
-                startIndex >= endIndex)
+                startIndex >= endIndex ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    endIndex,
+                    startIndex + 1))
                 return false;
 
             int first =
@@ -11899,6 +11916,7 @@ namespace cAlgo
 
             return false;
         }
+
 
 
         // Internal FVG engine: standard 3-candle FVG plus optional 2-bar imbalance, with body/wick-aware partial mitigation. No chart objects are created here.
