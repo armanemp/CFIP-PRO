@@ -97,7 +97,7 @@ def test_v77_market_model_consumes_closed_mtf_snapshot_indices() -> None:
         "public CFIPClean77MarketModel Build("
     )
     builder_end = source.index(
-        "private void AddFrameIfAvailable(",
+        "private void AddFrame(",
         builder_start,
     )
     builder = source[builder_start:builder_end]
@@ -145,8 +145,7 @@ def test_v77_preserves_rsi_exhaustion_and_configurable_regime_threshold() -> Non
     assert "AvoidRsiExhaustion" in source
     assert "bullScore - 5" in source
     assert "bearScore - 5" in source
-    assert "configuration.Get(
-                        "AdxMinimum"" in source
+    assert 'configuration.Get(\n                    "AdxMinimum"' in source
     assert "if (adx < adxMinimum)" in source
 
 
