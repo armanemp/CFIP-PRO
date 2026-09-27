@@ -86,6 +86,8 @@ def test_v78_fvg_consumption_never_resurrects() -> None:
         "currentLower = 0" in block and "currentUpper = 0" in block
     )
     assert "CFIPClean78ZoneLifecycle.Consumed" in block
+    assert "UseTwoBarImbalanceFvg" in source
+    assert "EnableFvgPartialMitigation" in source
 
 
 def test_v78_preserves_ob_mitigation_controls() -> None:
@@ -115,6 +117,7 @@ def test_v78_has_equal_liquidity_sweep_depth_and_forecast_state() -> None:
         "Forecast",
         "ForecastCandidate",
         "MarkForecastLiquidity",
+        "UseLiquidityForecast",
     ]:
         assert token in source
 
