@@ -5391,7 +5391,7 @@ namespace cAlgo
                 if (zone.Kind ==
                         CFIPClean80ZoneKind.OrderBlock &&
                     cfg.Get(
-                        "RequireOrderBlockRetest",
+                        "RequireObRetest",
                         false) &&
                     !zone.Contains(executablePrice))
                     continue;
