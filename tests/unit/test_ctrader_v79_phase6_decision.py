@@ -182,8 +182,7 @@ def test_phase6_policy_snapshot_invariants_are_enforced():
 def test_phase6_blocked_snapshot_is_not_marked_confirmed():
     s = read(V79)
     engine = s[s.index("public sealed class CFIPClean79DecisionEngine"):
-               s.index("// ------------------------------------------------------------------------
-    // Trade identity / idempotency")]
+               s.index("// ------------------------------------------------------------------------\n    // Trade identity / idempotency")]
     assert "CFIPClean79Direction.Wait" in engine
     assert "CFIPClean79DecisionPolicyMode.Soft" in engine
 
