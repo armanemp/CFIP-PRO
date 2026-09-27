@@ -20453,6 +20453,9 @@ private Color AutoTradingPanelColor()
                     pending.TargetPrice))
                 return;
 
+            if (!ShowLevelLines)
+                return;
+
             int anchorBar =
                 Bars == null ||
                 Bars.Count < 2
@@ -20474,7 +20477,7 @@ private Color AutoTradingPanelColor()
                 P + "PENDING_ENTRY",
                 pending.TargetPrice,
                 TriggerLineColor,
-                true);
+                ShowTrigger);
 
             if (pending.StopLoss.HasValue &&
                 IsFinitePositive(
@@ -20484,7 +20487,7 @@ private Color AutoTradingPanelColor()
                     P + "PENDING_SL",
                     pending.StopLoss.Value,
                     SlLineColor,
-                    true);
+                    ShowSL);
             }
 
             if (pending.TakeProfit.HasValue &&
@@ -20495,8 +20498,12 @@ private Color AutoTradingPanelColor()
                     P + "PENDING_TP",
                     pending.TakeProfit.Value,
                     TpLineColor,
-                    true);
+                    ShowTP1);
             }
+
+            if (!ShowLevelPriceLabels &&
+                !ShowSignalLabels)
+                return;
 
             string typeText =
                 pending.OrderType ==
@@ -21261,6 +21268,7 @@ private Color AutoTradingPanelColor()
         {
             RemovePlanObjects();
             RemoveHistoricalObjects();
+            RemoveManagedPendingOrderObjects();
 
             foreach (string name in _outcomeDrawn)
                 Chart.RemoveObject(name);
