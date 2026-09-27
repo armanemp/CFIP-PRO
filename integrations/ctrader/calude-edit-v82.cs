@@ -8206,19 +8206,18 @@ public sealed class CFIPClean82TradePlanBuilder :
                         "EXECUTION",
                         readiness.Kind.ToString().ToUpperInvariant()));
 
-            CFIPClean82TargetLevel target =
-                plan.TargetLadder.Find(
-                    configuration.Get(
-                        "AutoTpStage",
-                        CFIPClean82TargetStage.TP1));
-
-            if (target == null)
-                target = plan.TargetLadder.Find(
+            CFIPClean82TargetStage requestedStage =
+                configuration.Get(
+                    "AutoTpStage",
                     CFIPClean82TargetStage.TP1);
+
+            CFIPClean82TargetLevel target =
+                plan.TargetLadder.Find(requestedStage);
 
             if (target == null)
                 throw new ArgumentException(
-                    "Execution intent requires TP1.");
+                    "Requested execution target stage is unavailable.",
+                    "AutoTpStage");
 
             string seed =
                 plan.Identity.PlanId +
