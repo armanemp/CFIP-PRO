@@ -5859,8 +5859,11 @@ namespace cAlgo
                 false,
                 false,
                 0,
-                DateTime.MinValue,
-                DateTime.UtcNow,
+                decision == null
+                    ? DateTime.MinValue
+                    : decision.Direction == CFIPClean80Direction.Wait
+                        ? DateTime.MinValue
+                        : DateTime.UtcNow,
                 null,
                 blocks,
                 CFIPClean80Provenance.Direct(
