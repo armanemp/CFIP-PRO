@@ -222,8 +222,13 @@ def test_phase9_broker_mutation_isolated_to_gateway():
 
 def test_phase9_actual_fill_and_protection_state_are_broker_derived():
     s = read(V82)
-    for token in ("ActualFill", "EntryPrice", "StopLoss", "TakeProfit", "TradeResult"):
-        assert token in s
+    g = gateway(s)
+    assert "ActualFill" in s
+    assert "TradeResult" in g
+    assert "EntryPrice" in g
+    assert "StopLoss" in g
+    assert "TakeProfit" in g
+    assert "ProtectionState" in g
 def test_phase9_idempotency_checks_local_and_broker_state():
     s = read(V82)
     assert "History.FindAll" in s
@@ -278,10 +283,15 @@ def test_phase9_plan_carries_authoritative_execution_anchor():
 
 def test_phase9_planner_interface_matches_implementation():
     s = read(V82)
-    assert "ICFIPClean82ExecutionPlanner" in s
-    assert "CFIPClean82ExecutionPlanner" in s
-    assert "CFIPClean82EntrySnapshot" in s
-    assert "ExecutionIntent" in s
+    planner_interface = s[
+        s.index("public interface ICFIPClean82ExecutionPlanner"):
+        s.index("public sealed class CFIPClean82ExecutionPlanner")
+    ]
+    planner = s[s.index("public sealed class CFIPClean82ExecutionPlanner"):
+                s.index("public sealed class CFIPClean82CTraderBrokerGateway")]
+    assert "CFIPClean82EntrySnapshot" in planner_interface
+    assert "ExecutionIntent" in planner_interface
+    assert "CreateIntent(" in planner
 def test_phase9_runtime_snapshot_carries_pip_size_and_account_margin_inputs():
     s = read(V82)
     assert "double PipSize" in s
