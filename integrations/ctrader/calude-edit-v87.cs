@@ -10763,6 +10763,13 @@ public sealed class CFIPClean87TradePlanBuilder :
                         context.ActiveTargetStage =
                             context.PendingProtectionStage;
 
+                    if (context.PendingTakeProfit.HasValue &&
+                        structure != null)
+                    {
+                        context.LastTargetRepriceReferenceUtc =
+                            structure.ReferenceUtc;
+                    }
+
                     context.PendingStopLoss = null;
                     context.PendingTakeProfit = null;
                     context.PendingProtectionRequestedUtc =
