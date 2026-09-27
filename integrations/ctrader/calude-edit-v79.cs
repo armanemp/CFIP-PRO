@@ -2922,7 +2922,7 @@ namespace cAlgo
                 (expired ? 25 : 0));
 
             return new CFIPClean79ZoneRecord(
-                "CFIP78|" + timeframe + "|FVG|" + direction + "|" + created,
+                "CFIP79|" + timeframe + "|FVG|" + direction + "|" + created,
                 CFIPClean79ZoneKind.FairValueGap, direction, timeframe, created,
                 bars.OpenTimes[created], lower, upper,
                 eligible ? currentLower : 0,
@@ -3009,7 +3009,7 @@ namespace cAlgo
                     (retested ? 5 : 0) - (expired ? 20 : 0));
 
                 zones.Add(new CFIPClean79ZoneRecord(
-                    "CFIP78|" + timeframe + "|OB|" + direction + "|" + source,
+                    "CFIP79|" + timeframe + "|OB|" + direction + "|" + source,
                     CFIPClean79ZoneKind.OrderBlock, direction, timeframe, source,
                     bars.OpenTimes[source], low, high,
                     eligible ? low : 0, eligible ? high : 0,
@@ -3522,7 +3522,7 @@ namespace cAlgo
             double strengthAtr, int quality, string detail)
         {
             events.Add(new CFIPClean79StructureEventRecord(
-                "CFIP78|" + timeframe + "|" + kind + "|" + index,
+                "CFIP79|" + timeframe + "|" + kind + "|" + index,
                 kind, direction, timeframe, index, bars.OpenTimes[index], price,
                 strengthAtr, quality,
                 CFIPClean79Provenance.Direct("STRUCTURE", detail)));
@@ -3538,7 +3538,7 @@ namespace cAlgo
             int safe = Math.Max(0, Math.Min(index, bars.Count - 1));
             double reference = bars.ClosePrices[safe];
             list.Add(new CFIPClean79LiquidityRecord(
-                "CFIP78|" + timeframe + "|" + kind + "|" + index,
+                "CFIP79|" + timeframe + "|" + kind + "|" + index,
                 kind, side, sweepDirection, timeframe, safe, bars.OpenTimes[safe],
                 price, tolerance, Math.Abs(price - reference),
                 swept ? tolerance : 0, swept, false, quality,
