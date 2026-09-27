@@ -285,3 +285,18 @@ def test_phase10_broker_position_snapshot_retains_comment_for_restart_identity()
     s = read(V83)
     assert "public string Comment" in s
     assert "position.Comment" in s
+
+
+def test_phase10_execution_configuration_keys_exist_on_canonical_parameter_surface():
+    s = read(V83)
+    properties = {
+        name
+        for name in re.findall(
+            r'\[Parameter\("[^"]+".*?\)\]\s*\r?\n\s*public\s+[^\s]+\s+(\w+)\s*\{\s*get;\s*set;\s*\}',
+            s,
+        )
+    }
+    keys = set(re.findall(r'configuration\.Get\(\s*"([^"]+)"\s*,', s))
+    assert len(properties) == 513
+    assert keys <= properties
+    assert len(keys) >= 100
