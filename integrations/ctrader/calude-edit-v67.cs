@@ -15016,6 +15016,15 @@ namespace cAlgo
                 _panelToggleButton.IsVisible =
                     ShowPanelToggleButton;
 
+                int toggleSide =
+                    Math.Max(
+                        22,
+                        Math.Min(
+                            40,
+                            Math.Min(
+                                PanelToggleWidth,
+                                PanelToggleHeight)));
+
                 _panelToggleButton.Width =
                     toggleSide;
 
@@ -18786,7 +18795,7 @@ private Color AutoTradingPanelColor()
             double stop =
                 _plan.Stop;
 
-            target =
+            double target =
                 AutoTarget(
                     _plan,
                     EffectiveAutoTpStage());
