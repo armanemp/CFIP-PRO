@@ -207,6 +207,9 @@ def test_phase7_has_breakout_trigger_path():
     assert "breakoutAnchor" in e
     assert "breakoutZone.Zone.CurrentUpper" in e
     assert "breakoutZone.Zone.CurrentLower" in e
+    assert "MinimumTriggerBodyAtr" in e
+    assert "MaximumTriggerRangeAtr" in e
+    assert "MinimumCloseLocation" in e
     assert "CFIPClean80EntryMode.BreakoutMarket" in e
     assert "CFIPClean80EntryTriggerState.WaitingBreakout" in e
     assert "triggerReached" in e
@@ -276,3 +279,26 @@ def test_phase7_preserves_manual_trade_entry_safety_contract():
     assert "ExecuteMarketOrder" not in entry_engine(s)
     assert "PlaceStopOrder" not in entry_engine(s)
     assert "PlaceLimitOrder" not in entry_engine(s)
+
+
+def test_phase7_trigger_evidence_does_not_borrow_generic_market_evidence():
+    e = entry_engine(read(V80))
+    start = e.index("private bool TryFindFreshBreakoutEvent")
+    end = e.index("private bool IsTriggerEvent", start)
+    fresh = e[start:end]
+    assert "IndependentEvidence" not in fresh
+    assert "structuralBreakPresent" in fresh
+    assert "displacementPresent" in fresh
+    assert "liquiditySweepPresent" in fresh
+    assert "triggerEvidence" in fresh
+
+
+def test_phase7_retest_can_execute_after_confirmed_touch_with_live_distance_gate():
+    e = entry_engine(read(V80))
+    start = e.index("private bool TryFindRetestZone")
+    end = e.index("private ZoneCandidate FindBestExecutionZone", start)
+    retest = e[start:end]
+    assert "priceInsideExpandedZone" in retest
+    assert "bool touched =" in retest
+    assert "MaximumEntryDistanceAtr" not in retest
+    assert "RequireRetestCloseConfirmation" in retest
