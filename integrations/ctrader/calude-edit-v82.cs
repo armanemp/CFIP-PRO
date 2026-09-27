@@ -10732,10 +10732,24 @@ public sealed class CFIPClean82TradePlanBuilder :
             if (result.ReconciliationRequired &&
                 result.BrokerPositionId.Length > 0)
             {
-                _brokerGateway.ModifyProtection(
-                    result.BrokerPositionId,
-                    intent.StopLoss.Price,
-                    intent.EffectiveTarget.Price);
+                CFIPClean82ExecutionResult protectionResult =
+                    _brokerGateway.ModifyProtection(
+                        result.BrokerPositionId,
+                        intent.StopLoss.Price,
+                        intent.EffectiveTarget.Price);
+
+                if (!protectionResult.Accepted)
+                {
+                    _state.Execution = protectionResult;
+                    _lifecycle.TryTransition(
+                        CFIPClean82LifecycleState.RecoveryRequired,
+                        _state.Runtime.ServerUtc,
+                        "BROKER_PROTECTION_RECOVERY_FAILED");
+                }
+                else
+                {
+                    _state.Execution = protectionResult;
+                }
             }
         }
 
