@@ -7393,6 +7393,9 @@ public sealed class CFIPClean87TradePlanBuilder :
                 case CFIPClean87LifecycleState.Flat:
                     return
                         to == CFIPClean87LifecycleState.SignalDetected ||
+                        to == CFIPClean87LifecycleState.PendingOrder ||
+                        to == CFIPClean87LifecycleState.LivePosition ||
+                        to == CFIPClean87LifecycleState.RecoveryRequired ||
                         to == CFIPClean87LifecycleState.Closed;
 
                 case CFIPClean87LifecycleState.SignalDetected:
@@ -7436,6 +7439,7 @@ public sealed class CFIPClean87TradePlanBuilder :
 
                 case CFIPClean87LifecycleState.RecoveryRequired:
                     return
+                        to == CFIPClean87LifecycleState.PendingOrder ||
                         to == CFIPClean87LifecycleState.LivePosition ||
                         to == CFIPClean87LifecycleState.Closed ||
                         to == CFIPClean87LifecycleState.Error ||
@@ -7444,6 +7448,9 @@ public sealed class CFIPClean87TradePlanBuilder :
                 case CFIPClean87LifecycleState.Closed:
                     return
                         to == CFIPClean87LifecycleState.SignalDetected ||
+                        to == CFIPClean87LifecycleState.PendingOrder ||
+                        to == CFIPClean87LifecycleState.LivePosition ||
+                        to == CFIPClean87LifecycleState.RecoveryRequired ||
                         to == CFIPClean87LifecycleState.Flat;
 
                 case CFIPClean87LifecycleState.Rejected:
@@ -7956,6 +7963,11 @@ public sealed class CFIPClean87TradePlanBuilder :
                 entry.Mode != plan.EntryMode)
                 blocks.Add(CFIPClean87BlockReason.EntryInvalid);
 
+            if (plan.Identity == null ||
+                string.IsNullOrWhiteSpace(plan.Identity.SignalId) ||
+                string.IsNullOrWhiteSpace(plan.Identity.PlanId))
+                blocks.Add(CFIPClean87BlockReason.DataIncomplete);
+
             CFIPClean87ExecutionKind kind =
                 market
                     ? CFIPClean87ExecutionKind.Market
@@ -8105,8 +8117,11 @@ public sealed class CFIPClean87TradePlanBuilder :
             int exposureLimit =
                 Math.Max(1, configuration.Get("MaximumOpenPositions", 1));
 
-            if (runtime.ManagedPositionCount >= exposureLimit ||
-                (pending && runtime.ManagedPendingOrderCount >= exposureLimit))
+            int managedExposure =
+                runtime.ManagedPositionCount +
+                runtime.ManagedPendingOrderCount;
+
+            if (managedExposure >= exposureLimit)
                 blocks.Add(CFIPClean87BlockReason.ExistingExposureBlocked);
 
             if (configuration.Get("EnableDailyLossLimit", true))
@@ -14275,6 +14290,12 @@ if (active != null &&
         private ICFIPClean87EntryTriggerEngine _entryTriggerEngine;
         private ICFIPClean87TradePlanBuilder _tradePlanBuilder;
         private DateTime _lastMarketReferenceUtc = DateTime.MinValue;
+        private readonly HashSet<string> _submittedExecutionKeys =
+            new HashSet<string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, DateTime> _awaitingBrokerConfirmations =
+            new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        private static readonly TimeSpan BrokerConfirmationGrace =
+            TimeSpan.FromSeconds(5);
 
         private CFIPClean87LivePositionManager _livePositionManager;
 
@@ -14629,6 +14650,17 @@ if (active != null &&
             _submittedExecutionKeys.Add(
                 intent.Identity.IdempotencyKey);
 
+            if (intent.Kind == CFIPClean87ExecutionKind.Market)
+                RegisterBrokerConfirmation(
+                    "POSITION",
+                    result.BrokerPositionId,
+                    _state.Runtime.ServerUtc);
+            else
+                RegisterBrokerConfirmation(
+                    "ORDER",
+                    result.BrokerOrderId,
+                    _state.Runtime.ServerUtc);
+
             if (intent.Kind != CFIPClean87ExecutionKind.Market &&
                 result.BrokerOrderId.Length > 0 &&
                 _pendingOrderLifecycle != null)
@@ -14927,9 +14959,15 @@ if (active != null &&
         private void PendingOrders_Created(
             PendingOrderCreatedEventArgs args)
         {
-            if (_pendingOrderLifecycle != null &&
-                args != null &&
-                args.PendingOrder != null)
+            if (args == null ||
+                args.PendingOrder == null)
+                return;
+
+            ConfirmBrokerObject(
+                "ORDER",
+                args.PendingOrder.Id.ToString());
+
+            if (_pendingOrderLifecycle != null)
                 _pendingOrderLifecycle.RegisterExisting(
                     args.PendingOrder,
                     TimeInUtc);
@@ -14948,67 +14986,85 @@ if (active != null &&
         private void PendingOrders_Filled(
             PendingOrderFilledEventArgs args)
         {
-            if (_pendingOrderLifecycle != null &&
-                args != null &&
-                args.PendingOrder != null &&
-                args.Position != null)
-            {
+            if (args == null ||
+                args.PendingOrder == null ||
+                args.Position == null)
+                return;
+
+            ConfirmBrokerObject(
+                "ORDER",
+                args.PendingOrder.Id.ToString());
+            ConfirmBrokerObject(
+                "POSITION",
+                args.Position.Id.ToString());
+
+            if (_pendingOrderLifecycle != null)
                 _pendingOrderLifecycle.HandleFilled(
                     args.PendingOrder,
                     args.Position,
                     TimeInUtc);
 
-                if (_positionLifecycle != null)
-                    _positionLifecycle.RegisterOpened(
-                        args.Position,
-                        TimeInUtc,
-                        args.PendingOrder.StopLoss,
-                        args.PendingOrder.TakeProfit);
-
-                if (_livePositionManager != null)
-                    _livePositionManager.Register(
-                        args.Position,
-                        _state != null ? _state.Plan : null);
-
-                _lifecycle.TryTransition(
-                    CFIPClean87LifecycleState.LivePosition,
+            if (_positionLifecycle != null)
+                _positionLifecycle.RegisterOpened(
+                    args.Position,
                     TimeInUtc,
-                    "PENDING_FILLED_TO_POSITION");
-            }
+                    args.PendingOrder.StopLoss,
+                    args.PendingOrder.TakeProfit);
+
+            if (_livePositionManager != null)
+                _livePositionManager.Register(
+                    args.Position,
+                    _state != null ? _state.Plan : null);
+
+            _lifecycle.TryTransition(
+                CFIPClean87LifecycleState.LivePosition,
+                TimeInUtc,
+                "PENDING_FILLED_TO_POSITION");
         }
 
         private void PendingOrders_Cancelled(
             PendingOrderCancelledEventArgs args)
         {
-            if (_pendingOrderLifecycle != null &&
-                args != null &&
-                args.PendingOrder != null)
-            {
+            if (args == null ||
+                args.PendingOrder == null)
+                return;
+
+            ConfirmBrokerObject(
+                "ORDER",
+                args.PendingOrder.Id.ToString());
+
+            if (_pendingOrderLifecycle != null)
                 _pendingOrderLifecycle.HandleCancelled(
                     args.PendingOrder,
                     TimeInUtc);
 
+            if (_state != null &&
+                _state.Runtime != null)
                 ReconcileBrokerState();
-            }
         }
 
         private void Positions_Opened(
             PositionOpenedEventArgs args)
         {
-            if (_positionLifecycle != null &&
-                args != null &&
-                args.Position != null)
-            {
+            if (args == null ||
+                args.Position == null)
+                return;
+
+            ConfirmBrokerObject(
+                "POSITION",
+                args.Position.Id.ToString());
+
+            if (_positionLifecycle != null)
                 _positionLifecycle.RegisterOpened(
                     args.Position,
                     TimeInUtc,
                     args.Position.StopLoss,
                     args.Position.TakeProfit);
-                if (_livePositionManager != null)
-                    _livePositionManager.Register(
-                        args.Position,
-                        _state != null ? _state.Plan : null);
-            }
+
+            if (_livePositionManager != null)
+                _livePositionManager.Register(
+                    args.Position,
+                    _state != null ? _state.Plan : null);
         }
 
         private void Positions_Modified(
@@ -15025,20 +15081,26 @@ if (active != null &&
         private void Positions_Closed(
             PositionClosedEventArgs args)
         {
-            if (_positionLifecycle != null &&
-                args != null &&
-                args.Position != null)
-            {
+            if (args == null ||
+                args.Position == null)
+                return;
+
+            ConfirmBrokerObject(
+                "POSITION",
+                args.Position.Id.ToString());
+
+            if (_positionLifecycle != null)
                 _positionLifecycle.HandleClosed(
                     args.Position,
                     TimeInUtc);
 
-                if (_livePositionManager != null)
-                    _livePositionManager.HandleClosed(
-                        args.Position);
+            if (_livePositionManager != null)
+                _livePositionManager.HandleClosed(
+                    args.Position);
 
+            if (_state != null &&
+                _state.Runtime != null)
                 ReconcileBrokerState();
-            }
         }
 
         private void ProcessLivePositionManagement()
@@ -15261,6 +15323,11 @@ if (active != null &&
                     continue;
                 }
 
+                _pendingOrderLifecycle.HandleActionResult(
+                    action,
+                    result,
+                    _state.Runtime.ServerUtc);
+
                 if (!result.Accepted)
                 {
                     _lifecycle.TryTransition(
@@ -15301,16 +15368,78 @@ if (active != null &&
                 _state.Runtime.DailyRealizedNetProfit < -limit;
         }
 
+        private void RegisterBrokerConfirmation(
+            string kind,
+            string brokerId,
+            DateTime utc)
+        {
+            if (!string.IsNullOrWhiteSpace(brokerId))
+                _awaitingBrokerConfirmations[kind + ":" + brokerId] =
+                    utc + BrokerConfirmationGrace;
+        }
+
+        private void ConfirmBrokerObject(
+            string kind,
+            string brokerId)
+        {
+            if (!string.IsNullOrWhiteSpace(brokerId))
+                _awaitingBrokerConfirmations.Remove(
+                    kind + ":" + brokerId);
+        }
+
+        private bool HasPendingBrokerConfirmation(DateTime utc)
+        {
+            var expired = new List<string>();
+            bool pending = false;
+
+            foreach (var pair in _awaitingBrokerConfirmations)
+            {
+                if (utc >= pair.Value)
+                    expired.Add(pair.Key);
+                else
+                    pending = true;
+            }
+
+            for (int i = 0; i < expired.Count; i++)
+                _awaitingBrokerConfirmations.Remove(expired[i]);
+
+            if (expired.Count > 0 &&
+                _lifecycle != null)
+                _lifecycle.TryTransition(
+                    CFIPClean87LifecycleState.RecoveryRequired,
+                    utc,
+                    "BROKER_CONFIRMATION_TIMEOUT");
+
+            return pending;
+        }
+
         private void ReconcileBrokerState()
         {
             if (_brokerStateReader == null ||
+                _state == null ||
+                _state.Runtime == null ||
+                _configuration == null ||
                 !Server.IsConnected)
                 return;
+
+            bool awaitingConfirmation =
+                HasPendingBrokerConfirmation(
+                    _state.Runtime.ServerUtc);
 
             _state.Broker =
                 _brokerStateReader.ReadManagedState(
                     SymbolName,
                     _configuration.StrategyId);
+
+            foreach (var position in _state.Broker.Positions)
+                ConfirmBrokerObject(
+                    "POSITION",
+                    position.BrokerPositionId);
+
+            foreach (var order in _state.Broker.PendingOrders)
+                ConfirmBrokerObject(
+                    "ORDER",
+                    order.BrokerOrderId);
 
             if (_pendingOrderLifecycle != null)
                 _pendingOrderLifecycle.ReconcileBrokerState(
@@ -15332,12 +15461,13 @@ if (active != null &&
                     _state.Runtime.ServerUtc,
                     "BROKER_PENDING_PRESENT");
             }
-            else if (_lifecycle.State ==
-                     CFIPClean87LifecycleState.LivePosition ||
-                     _lifecycle.State ==
-                     CFIPClean87LifecycleState.PendingOrder ||
-                     _lifecycle.State ==
-                     CFIPClean87LifecycleState.ExitRequested)
+            else if (!awaitingConfirmation &&
+                     (_lifecycle.State ==
+                      CFIPClean87LifecycleState.LivePosition ||
+                      _lifecycle.State ==
+                      CFIPClean87LifecycleState.PendingOrder ||
+                      _lifecycle.State ==
+                      CFIPClean87LifecycleState.ExitRequested))
             {
                 _lifecycle.TryTransition(
                     CFIPClean87LifecycleState.Closed,
