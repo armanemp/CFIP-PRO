@@ -21095,8 +21095,7 @@ private Color AutoTradingPanelColor()
                     "TRADING PERMISSION NOT GRANTED");
 
                 ShowPopup(
-                    "AUTO TRADING
-Trading permission is required.");
+                    "AUTO TRADING\nTrading permission is required.");
             }
             else
             {
@@ -21129,8 +21128,7 @@ Trading permission is required.");
                 EnableAutomaticOrders = false;
 
                 ShowPopup(
-                    "AUTO ORDERS
-Trading permission is required.");
+                    "AUTO ORDERS\nTrading permission is required.");
             }
             else
             {
