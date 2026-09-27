@@ -13239,7 +13239,7 @@ public sealed class CFIPClean88TradePlanBuilder :
 [Parameter("SL Reprice Start RR", Group = "10 · Live Management", DefaultValue = 1.00, MinValue = 0.5, MaxValue = 10)]
         public double SlRepriceStartRR { get; set; }
 
-[Parameter("SlRepriceBreathingAtr", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
+[Parameter("SL Reprice Breathing ATR", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
         public double SlRepriceBreathingAtr { get; set; }
 
 [Parameter("SL Reprice Step ATR", Group = "10 · Live Management", DefaultValue = 0.08, MinValue = 0.01, MaxValue = 1)]
