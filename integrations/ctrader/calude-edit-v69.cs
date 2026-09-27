@@ -5401,6 +5401,162 @@ namespace cAlgo
         #region Plan Engine
         // ============================================================
 
+        private bool IsTriggerReached(
+            int direction,
+            double market,
+            double trigger)
+        {
+            if (!IsFinitePositive(market) ||
+                !IsFinitePositive(trigger))
+                return false;
+
+            double tolerance =
+                Math.Max(
+                    Symbol.TickSize,
+                    Symbol.PipSize * 0.10);
+
+            return direction == 1
+                ? market >= trigger - tolerance
+                : direction == -1 &&
+                  market <= trigger + tolerance;
+        }
+
+        private bool IsContinuationExecutionContext(
+            int direction)
+        {
+            if (_decision == null ||
+                _decision.Direction != direction ||
+                _m5Frame == null ||
+                _m15Frame == null)
+                return false;
+
+            return
+                _m5Frame.Direction == direction &&
+                _m15Frame.Direction == direction;
+        }
+
+        private string ExecutionModeText(
+            CFIPClean69ExecutionMode mode)
+        {
+            switch (mode)
+            {
+                case CFIPClean69ExecutionMode.WaitingForTrigger:
+                    return "WAIT TRIGGER";
+                case CFIPClean69ExecutionMode.RetestMarket:
+                    return "RETEST MARKET";
+                case CFIPClean69ExecutionMode.BreakoutMarket:
+                    return "BREAKOUT MARKET";
+                case CFIPClean69ExecutionMode.ContinuationStop:
+                    return "CONTINUATION STOP";
+                case CFIPClean69ExecutionMode.ReversalLimit:
+                    return "REVERSAL LIMIT";
+                default:
+                    return "NONE";
+            }
+        }
+
+        private bool IsExecutableMarketEntry(
+            Plan plan,
+            double market,
+            out string reason)
+        {
+            reason = "OK";
+
+            if (plan == null)
+            {
+                reason = "NO PLAN";
+                return false;
+            }
+
+            if (!IsFinitePositive(market))
+            {
+                reason = "INVALID MARKET";
+                return false;
+            }
+
+            if (plan.EntryMode ==
+                CFIPClean69ExecutionMode.BreakoutMarket)
+            {
+                if (!IsTriggerReached(
+                        plan.Direction,
+                        market,
+                        plan.EntryTrigger))
+                {
+                    reason = "WAITING FOR TRIGGER";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (plan.EntryMode ==
+                CFIPClean69ExecutionMode.RetestMarket)
+            {
+                double tolerance =
+                    Math.Max(
+                        Symbol.TickSize,
+                        Math.Max(
+                            Symbol.PipSize,
+                            Symbol.Ask - Symbol.Bid));
+
+                if (market <
+                        plan.EntryZoneLow - tolerance ||
+                    market >
+                        plan.EntryZoneHigh + tolerance)
+                {
+                    reason = "OUTSIDE RETEST ZONE";
+                    return false;
+                }
+
+                return true;
+            }
+
+            reason =
+                ExecutionModeText(
+                    plan.EntryMode);
+            return false;
+        }
+
+        private bool IsExecutableFillPrice(
+            Plan plan,
+            double fillPrice,
+            out string reason)
+        {
+            reason = "OK";
+
+            if (plan == null ||
+                !IsFinitePositive(fillPrice))
+            {
+                reason = "INVALID FILL";
+                return false;
+            }
+
+            if (plan.EntryMode ==
+                CFIPClean69ExecutionMode.BreakoutMarket)
+            {
+                if (!IsTriggerReached(
+                        plan.Direction,
+                        fillPrice,
+                        plan.EntryTrigger))
+                {
+                    reason = "BROKER FILL BELOW TRIGGER";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (plan.EntryMode ==
+                CFIPClean69ExecutionMode.RetestMarket)
+                return IsExecutableMarketEntry(
+                    plan,
+                    fillPrice,
+                    out reason);
+
+            reason = "INVALID EXECUTION MODE";
+            return false;
+        }
+
         private ExecutionModel BuildExecutionModel(
             int closedM5,
             int direction)
@@ -5816,25 +5972,51 @@ namespace cAlgo
                     closedM5,
                     direction);
 
-            if (RequirePrecisionEntry &&
-                (execution == null ||
-                 !execution.Ready))
+            if (execution == null ||
+                !execution.Ready ||
+                !IsFinitePositive(
+                    execution.ActualEntry))
+                return null;
+
+            if (execution.Mode !=
+                    CFIPClean69ExecutionMode.BreakoutMarket &&
+                execution.Mode !=
+                    CFIPClean69ExecutionMode.RetestMarket)
                 return null;
 
             double entry =
-                execution != null &&
-                execution.Ready &&
-                IsFinitePositive(
-                    execution.ActualEntry)
-                    ? NormalizePrice(
-                        execution.ActualEntry)
-                    : NormalizePrice(
-                        direction == 1
-                            ? Symbol.Ask
-                            : Symbol.Bid);
+                NormalizePrice(
+                    execution.ActualEntry);
 
             if (!IsFinitePositive(entry))
                 return null;
+
+            if (RequirePrecisionEntry &&
+                execution.Quality <
+                Math.Max(
+                    40,
+                    MinimumEntryQuality))
+                return null;
+
+            Plan executionProbe =
+                new Plan
+                {
+                    Direction = direction,
+                    EntryMode = execution.Mode,
+                    EntryTrigger = execution.Trigger,
+                    EntryZoneLow = execution.ZoneLow,
+                    EntryZoneHigh = execution.ZoneHigh
+                };
+
+            string executionReason;
+
+            if (!IsExecutableMarketEntry(
+                    executionProbe,
+                    entry,
+                    out executionReason))
+                return null;
+
+
 
             string stopSource;
             int stopQuality;
@@ -6036,6 +6218,10 @@ namespace cAlgo
                 new Plan
                 {
                     Direction = direction,
+                    EntryMode =
+                        execution == null
+                            ? CFIPClean69ExecutionMode.None
+                            : execution.Mode,
                     Entry = NormalizePrice(entry),
                     IdealEntry =
                         execution == null
@@ -8382,8 +8568,12 @@ namespace cAlgo
                 (_decision == null
                     ? 0
                     : _decision.SmartQuality) +
+                " | MODE " +
+                ExecutionModeText(plan.EntryMode) +
                 " | ENTRY " +
                 Price(plan.Entry) +
+                " | TRIGGER " +
+                Price(plan.EntryTrigger) +
                 " | IDEAL " +
                 Price(plan.IdealEntry) +
                 " | ENTRY Q " +
@@ -13239,7 +13429,10 @@ namespace cAlgo
             {
                 DrawPlanLabel(
                     P + "IDEAL_ENTRY_LABEL",
-                    "IDEAL " +
+                    (_plan.EntryMode ==
+                        CFIPClean69ExecutionMode.BreakoutMarket
+                        ? "ZONE MID "
+                        : "IDEAL ") +
                     Price(
                         _plan.IdealEntry),
                     bar,
@@ -15944,6 +16137,9 @@ namespace cAlgo
                 AddPanelRow(
                     ref slot,
                     "ENTRY MODEL  •  " +
+                    ExecutionModeText(
+                        _executionModel.Mode) +
+                    "  •  " +
                     _executionModel.Source +
                     "  •  Q" +
                     _executionModel.Quality,
