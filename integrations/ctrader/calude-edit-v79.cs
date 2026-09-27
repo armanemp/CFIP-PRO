@@ -5723,7 +5723,7 @@ namespace cAlgo
         // migrate to CFIPClean79ConfigSnapshot in subsequent phases.
         // No parameter is silently dropped during the architectural migration.
         // ====================================================================
-        #region Migrated Configuration Surface (512 parameters)
+        #region Migrated Configuration Surface (513 parameters)
 
 [Parameter("Minimum Confidence", Group = "01 · Decision", DefaultValue = 72, MinValue = 50, MaxValue = 99)]
         public int MinimumConfidence { get; set; }
