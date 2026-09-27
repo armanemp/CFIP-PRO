@@ -1117,7 +1117,7 @@ The v77 Market Model is now the single upstream analytical source for the next S
 Phase 5 — Structure, FVG, OB and Liquidity ledger
 ## PHASE 5 — Structure, FVG, OB and Liquidity ledger
 
-**Status: NOT STARTED**
+**Status: COMPLETE — 2026-09-27**
 
 ### Objective
 
@@ -1163,6 +1163,82 @@ Entry, stop and target engines consume the same structural objects.
 
 ---
 
+## Phase 5 completion record
+
+**Implementation version:** integrations/ctrader/calude-edit-v78.cs
+**Phase document:** docs/ctrader/CFIP-V78-PHASE-05-STRUCTURE-ZONES.md
+**Test:** tests/unit/test_ctrader_v78_structure_ledger.py
+
+### Completed
+
+- created one canonical StructureSnapshot and StructureLedgerBuilder;
+- normalized BOS, MSS, CHOCH, displacement, confirmed swings and liquidity-sweep events;
+- created explicit FVG and Order Block records with identity, provenance, age and lifecycle;
+- implemented FVG three-candle detection plus optional two-bar imbalance detection;
+- preserved FVG partial mitigation control and the non-resurrection safety invariant after full consumption;
+- preserved OB displacement requirement, body/full-range selection, mitigation, consumption and expiry;
+- created explicit liquidity records for equal highs/lows, swings, prior day/week, configured session, daily pivot/R1/R2/S1/S2 and forecast candidates;
+- separated liquidity Side from SweepDirection so target/entry consumers can query overhead/underfoot liquidity without semantic overload;
+- centralized zone/FVG/liquidity confluence;
+- created PremiumDiscountState as a context object rather than a final signal;
+- wired StructureSnapshot into EngineState so future Signal, Entry, Stop and Target engines can consume the same structural authority;
+- removed the legacy duplicate StructureEvent/ZoneSnapshot/LiquiditySnapshot type family from v78.
+
+### Trading/signal integrity
+
+Phase 5 does not own the final BUY/SELL signal and does not execute trades. It is the single structural evidence source upstream of Phase 6 Decision and Phase 7 Entry/Trigger.
+
+Automatic market trading, automatic pending orders, smart SL/TP, broker protection, live management, partials, reversal/exhaustion and outcomes remain preserved as downstream capabilities.
+
+The intended dependency is now:
+
+`MTF Snapshot -> Market Model -> Structure Snapshot -> Decision -> Trade Plan -> Execution`
+
+No downstream phase should rediscover FVG/OB/liquidity independently.
+
+### Validation
+
+Repository/source validation confirms:
+- v77/v78 parameter surface = 512/512 with identical names and order;
+- braces are balanced;
+- no duplicate public type declarations;
+- exactly one canonical StructureLedgerBuilder, StructureSnapshot, StructureEventRecord, ZoneRecord and LiquidityRecord;
+- legacy duplicate structural type declarations are absent;
+- BOS/MSS/CHOCH/displacement/sweep coverage exists;
+- FVG includes three-candle and optional two-bar imbalance semantics;
+- partial mitigation and non-resurrection are represented;
+- OB mitigation/displacement/age controls remain represented;
+- equal liquidity, sweep depth, prior day/week, session, pivots and forecast state are represented;
+- confluence is centralized;
+- StructureSnapshot wiring is present in EngineState and the calculation cycle;
+- structure analysis is driven by the canonical closed-MTF snapshot;
+- no direct broker mutation or chart authority exists in v78;
+- no v77 legacy references remain.
+
+A direct pytest runtime execution is not claimed in the sandbox. Real cTrader compilation/runtime remains the final Phase 16 release gate.
+
+### Phase 5 commits
+
+- e5faa462ef656a22f2b7b8d353fbefd67f905fa8 — initial v78 structural ledger
+- 35c6721e9e1b0a9efde515bece0dbc5ab227ae21 — forecast liquidity
+- 673dade67ed4f51b96741545555dd01c98607de8 — remove legacy duplicate structural types
+- 517d981e1e225484e4bdd750754be5fa31bfff6d — two-bar FVG / partial mitigation
+- 1ace48324fa32e276277da4acbc73fd24dfa41e5 — structural coverage tests
+- 3e622e1855a14f28493fca3d4c61235c0f74c92b — documentation update
+- e77ea9adb5acd58389b5d8af5a2b23d421d20896 — canonical structural test
+- cdbdfbb2f494526d08a4541766c647f882764c4f — legacy type documentation
+- 517d981e1e225484e4bdd750754be5fa31bfff6d — final FVG semantic correction
+- d84eaee6d6485df0bcea5ba9b4c7255c9dbf82c4 — final legacy-type test correction
+
+### Phase 5 acceptance decision
+
+COMPLETE at the architecture/structural-contract level.
+
+The structural ledger is ready to become the single upstream source for Phase 6 Signal/Decision.
+
+### Next phase
+
+Phase 6 — Decision engine
 ## PHASE 6 — Decision engine
 
 **Status: NOT STARTED**
@@ -2073,7 +2149,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 512/512 parity + static validation |
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
-| 5 | Structure/Zones/Liquidity | NOT STARTED | — | — | — |
+| 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
 | 6 | Decision engine | NOT STARTED | — | — | — |
 | 7 | Entry/Trigger | NOT STARTED | — | — | — |
 | 8 | Risk/SL/Targets | NOT STARTED | — | — | — |
@@ -2161,13 +2237,13 @@ At minimum record:
 
 **Current implementation reference:** v73
 
-**Current roadmap status:** Phase 4 complete.
+**Current roadmap status:** Phase 5 complete.
 
-**Current implementation status:** v77 now contains the Phase 4 normalized Market Model on top of the v76 time/MTF pipeline. v76 remains the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
+**Current implementation status:** v78 now contains the Phase 5 canonical Structure/FVG/OB/Liquidity ledger on top of the v77 Market Model and v76 time/MTF contracts. v77 remains the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Next implementation target:** Phase 5 — Structure, FVG, OB and Liquidity ledger.
+**Next implementation target:** Phase 6 — Decision engine.
 
-**Critical instruction for the next phase:** Start from the v77 Market Model and canonical v76 MTF snapshot. Build one authoritative Structure/Zone/Liquidity ledger so Entry, Stop and Target logic all consume the same BOS/MSS/CHOCH/FVG/OB/liquidity objects, with no independent rediscovery or contradictory BUY/SELL logic.
+**Critical instruction for the next phase:** Start from the v78 StructureSnapshot, v77 MarketModel and v76 MTF snapshot. Build one authoritative Decision engine that consumes the existing evidence exactly once, separates Evidence -> Score -> Quality -> Eligibility -> Policy, and becomes the sole source for Signal, Auto Trade and Auto Order eligibility.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
