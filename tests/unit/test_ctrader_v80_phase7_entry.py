@@ -318,3 +318,9 @@ def test_phase7_breakout_ignores_future_structural_events():
     end = e.index("private bool IsTriggerEvent", start)
     fresh = e[start:end]
     assert "item.TimeUtc > referenceUtc" in fresh
+
+
+def test_phase7_order_block_retest_uses_canonical_parameter_name():
+    e = entry_engine(read(V80))
+    assert '"RequireObRetest"' in e
+    assert '"RequireOrderBlockRetest"' not in e
