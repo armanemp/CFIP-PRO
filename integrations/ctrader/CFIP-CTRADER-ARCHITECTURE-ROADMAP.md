@@ -1296,6 +1296,8 @@ Every execution path receives the same DecisionSnapshot.
 - c5ccefebb50b5abdc1180d0fa827aa1887f0c7bb — extend Phase 6 source-level validation
 - 307ac7adb48d6e36fbd337e5d72b73089920dccf — preserve reference-gated market/structure state across Calculate cycles
 - 32617129ed375067b269f4048c352371c39bf7ae — validate cycle-state retention and decision reuse
+- 6912347a8e9a08c41fefabc26c6db9b37e0b7bde — preserve feature weights while deduplicating market evidence
+- 8321ce0f53d90e3762522428299deacc0b87a04a — validate weighted market-evidence deduplication
 
 **Implemented:**
 - authoritative CFIPClean79DecisionEngine
@@ -1324,8 +1326,8 @@ Every execution path receives the same DecisionSnapshot.
 **Validation status:** source-level tests are committed. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
 
 **Remaining before Phase 6 completion:**
-1. trace every existing signal/decision consumer and prove no parallel BUY/SELL authority remains
-2. prove every downstream execution path consumes the same DecisionSnapshot instance/value
+1. trace every existing signal/decision consumer and prove no parallel BUY/SELL authority remains — current v79 host has no downstream execution consumer yet
+2. prove every downstream execution path consumes the same DecisionSnapshot instance/value — must be enforced when Phase 7+ execution paths are attached
 3. reconcile remaining v73-v78 decision semantics against the new pipeline
 4. run the complete applicable test/compile suite
 5. only then mark Phase 6 COMPLETE
