@@ -2446,7 +2446,11 @@ namespace cAlgo
             {
                 Positions.Opened += OnPositionOpened;
                 Positions.Closed += OnPositionClosed;
+                Positions.Modified += OnPositionModified;
+                PendingOrders.Created += OnPendingOrderCreated;
+                PendingOrders.Modified += OnPendingOrderModified;
                 PendingOrders.Filled += OnPendingOrderFilled;
+                PendingOrders.Cancelled += OnPendingOrderCancelled;
             }
             catch (Exception ex)
             {
@@ -2478,7 +2482,11 @@ namespace cAlgo
             {
                 Positions.Opened -= OnPositionOpened;
                 Positions.Closed -= OnPositionClosed;
+                Positions.Modified -= OnPositionModified;
+                PendingOrders.Created -= OnPendingOrderCreated;
+                PendingOrders.Modified -= OnPendingOrderModified;
                 PendingOrders.Filled -= OnPendingOrderFilled;
+                PendingOrders.Cancelled -= OnPendingOrderCancelled;
             }
             catch
             {
@@ -23917,7 +23925,105 @@ private Color AutoTradingPanelColor()
                 true);
         }
 
-                private void OnPositionClosed(PositionClosedEventArgs args)
+                private void OnPositionModified(
+            PositionModifiedEventArgs args)
+        {
+            if (args == null ||
+                args.Position == null ||
+                !IsManagedPosition(args.Position))
+                return;
+
+            Position position =
+                args.Position;
+
+            _activeBrokerStop =
+                position.StopLoss.HasValue
+                    ? NormalizePrice(position.StopLoss.Value)
+                    : 0;
+
+            _activeBrokerTarget =
+                position.TakeProfit.HasValue
+                    ? NormalizePrice(position.TakeProfit.Value)
+                    : 0;
+
+            if (_plan != null &&
+                _plan.IsLivePosition &&
+                _plan.PositionId == position.Id &&
+                _lifecycleState !=
+                    CFIPClean70LifecycleState.ExitRequested)
+            {
+                _brokerProtectionRecoveryRequired =
+                    !position.StopLoss.HasValue ||
+                    !position.TakeProfit.HasValue;
+
+                SetLifecycleState(
+                    _brokerProtectionRecoveryRequired
+                        ? CFIPClean70LifecycleState.RecoveryRequired
+                        : CFIPClean70LifecycleState.LivePosition,
+                    _brokerProtectionRecoveryRequired
+                        ? "BROKER POSITION MODIFIED • PROTECTION MISSING"
+                        : "BROKER POSITION MODIFIED");
+            }
+        }
+
+        private void OnPendingOrderCreated(
+            PendingOrderCreatedEventArgs args)
+        {
+            if (args == null ||
+                args.PendingOrder == null ||
+                !IsManagedPendingOrder(args.PendingOrder))
+                return;
+
+            SetLifecycleState(
+                CFIPClean70LifecycleState.PendingOrder,
+                "PENDING ORDER CREATED #" +
+                args.PendingOrder.Id);
+        }
+
+        private void OnPendingOrderModified(
+            PendingOrderModifiedEventArgs args)
+        {
+            if (args == null ||
+                args.PendingOrder == null ||
+                !IsManagedPendingOrder(args.PendingOrder))
+                return;
+
+            SetLifecycleState(
+                CFIPClean70LifecycleState.PendingOrder,
+                "PENDING ORDER MODIFIED #" +
+                args.PendingOrder.Id);
+        }
+
+        private void OnPendingOrderCancelled(
+            PendingOrderCancelledEventArgs args)
+        {
+            if (args == null ||
+                args.PendingOrder == null ||
+                !IsManagedPendingOrder(args.PendingOrder))
+                return;
+
+            PendingOrder remaining =
+                GetManagedPendingOrder();
+
+            if (remaining == null &&
+                GetManagedPosition() == null &&
+                _plan == null)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    "PENDING ORDER CANCELLED #" +
+                    args.PendingOrder.Id);
+            }
+            else if (remaining == null &&
+                     GetManagedPosition() != null)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.LivePosition,
+                    "PENDING ORDER CANCELLED • LIVE POSITION EXISTS");
+            }
+        }
+
+        private void OnPositionClosed(PositionClosedEventArgs args)
         {
             if (args == null ||
                 !IsManagedPosition(args.Position))
