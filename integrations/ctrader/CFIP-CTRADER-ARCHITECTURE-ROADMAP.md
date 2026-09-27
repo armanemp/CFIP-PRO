@@ -1464,6 +1464,12 @@ The chart line, panel, plan and execution intent all agree on what Entry and Tri
 - 1681fb5bdb48d5398c55915de6f6c958739338c4 — add Phase 7 architecture tests
 - 14ee16b479e141187bf33993c1af8345d4bb910b — correct Phase 7 source assertions
 - 088d0f99aea1661760e9b9a660f1ee118a245ad8 — record Phase 7 architecture and validation
+- 7ab75ecdb6d4587b47756c348fce3ce525a029ab — harden retest detection and typed trigger evidence
+- b589a3f9ea37c49a1ae4e098a326d586d9f1e6c4 — make blocked entry timestamps deterministic
+- d597d62d4426db0046752d126a488e62b236c425 — remove invalid zone midpoint property usage
+- 958de27e84c398333c6582cf95ad6a82eea3e285 — eliminate remaining invalid zone midpoint references
+- 35f78e12b36375c1cf166af8320fa4691c4449f9 — remove inconsistent entry timestamp handling
+- 0cada1be318bd1a2919a7f256637e38aab73ffd0 — enforce typed trigger evidence and retest touch semantics
 - e4fac0af0add7d84a3999ac6edaa0cc84b2c4016 — add cTrader static-test workflow
 
 **Implemented:**
@@ -1487,11 +1493,14 @@ The chart line, panel, plan and execution intent all agree on what Entry and Tri
 
 - exact v79/v80 parameter parity at 513/513
 - balanced braces, unique declarations and version isolation
+- no invalid ZoneRecord midpoint usage
 - exactly one Decision evaluation and one Entry evaluation
 - direct _state.Decision propagation
 - no Broker/UI mutation in the Entry engine
 - retest/breakout/trigger/stale/expiry/invalidation/spread/precision source checks
-- 19 dedicated Phase-7 source-level tests
+- trigger evidence is isolated from generic market IndependentEvidence
+- breakout trigger candle-body/range/close-location gates are wired
+- 21 dedicated Phase-7 source-level tests
 
 **Acceptance status:**
 
