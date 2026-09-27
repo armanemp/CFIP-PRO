@@ -331,7 +331,17 @@ def test_phase6_neutral_direction_does_not_accumulate_directional_gate_blocks():
     s = read(V79)
     assert "CFIPClean79Direction.Wait" in s
     assert "ConfidenceTooLow" in s
-    assert "directional" in s.lower()
+
+    decision = s[s.index("public sealed class CFIPClean79DecisionEngine"):]
+    assert 'if (direction == CFIPClean79Direction.Wait)' in decision
+    assert 'blocks.Add(CFIPClean79BlockReason.NoDirection)' in decision
+
+    directional_section = decision[
+        decision.index("if (direction != CFIPClean79Direction.Wait)")
+        if "if (direction != CFIPClean79Direction.Wait)" in decision
+        else decision.index("else")
+    :]
+    assert "blocks.Add(CFIPClean79BlockReason.ConfidenceTooLow)" in directional_section
 def test_phase6_structure_and_liquidity_identities_are_version_isolated():
     s = read(V79)
     assert '"CFIP79|" + timeframe + "|" + kind + "|" + index' in s
