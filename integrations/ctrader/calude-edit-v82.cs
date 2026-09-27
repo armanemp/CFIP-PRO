@@ -7146,7 +7146,7 @@ public sealed class CFIPClean82TradePlanBuilder :
             string brokerError,
             CFIPClean82ProtectionState protectionState,
             bool reconciliationRequired,
-            string statusDetail)
+            string statusDetail = "")
         {
             Accepted = accepted;
             BrokerOrderId = brokerOrderId ?? string.Empty;
@@ -7814,6 +7814,7 @@ public sealed class CFIPClean82TradePlanBuilder :
         public double RequestedPrice { get; private set; }
         public double VolumeInUnits { get; private set; }
         public double RiskAmount { get; private set; }
+        public double EstimatedMargin { get; private set; }
         public IReadOnlyList<CFIPClean82BlockReason> BlockReasons { get { return _blockReasons; } }
 
         public CFIPClean82ExecutionReadiness(
@@ -7824,6 +7825,7 @@ public sealed class CFIPClean82TradePlanBuilder :
             double requestedPrice,
             double volumeInUnits,
             double riskAmount,
+            double estimatedMargin,
             IList<CFIPClean82BlockReason> blockReasons)
         {
             Eligible = eligible;
@@ -7833,6 +7835,7 @@ public sealed class CFIPClean82TradePlanBuilder :
             RequestedPrice = Math.Max(0, requestedPrice);
             VolumeInUnits = Math.Max(0, volumeInUnits);
             RiskAmount = Math.Max(0, riskAmount);
+            EstimatedMargin = Math.Max(0, estimatedMargin);
             _blockReasons =
                 new ReadOnlyCollection<CFIPClean82BlockReason>(
                     new List<CFIPClean82BlockReason>(
@@ -7850,7 +7853,8 @@ public sealed class CFIPClean82TradePlanBuilder :
             CFIPClean82RuntimeSnapshot runtime,
             CFIPClean82ConfigSnapshot configuration,
             double volumeInUnits,
-            double riskAmount);
+            double riskAmount,
+            double estimatedMargin);
     }
 
     public sealed class CFIPClean82ExecutionPolicy : ICFIPClean82ExecutionPolicy
@@ -7862,7 +7866,8 @@ public sealed class CFIPClean82TradePlanBuilder :
             CFIPClean82RuntimeSnapshot runtime,
             CFIPClean82ConfigSnapshot configuration,
             double volumeInUnits,
-            double riskAmount)
+            double riskAmount,
+            double estimatedMargin)
         {
             var blocks = new List<CFIPClean82BlockReason>();
 
@@ -7884,7 +7889,8 @@ public sealed class CFIPClean82TradePlanBuilder :
                 blocks.Add(CFIPClean82BlockReason.PolicyBlocked);
 
             if (entry.Decision != decision ||
-                entry.Direction != decision.Direction)
+                entry.Direction != decision.Direction ||
+                entry.Mode != plan.EntryMode)
                 blocks.Add(CFIPClean82BlockReason.EntryInvalid);
 
             CFIPClean82ExecutionKind kind =
@@ -7899,16 +7905,20 @@ public sealed class CFIPClean82TradePlanBuilder :
             if (market)
             {
                 if (!entry.Eligible ||
-                    entry.State != CFIPClean82EntryTriggerState.Ready ||
-                    !configuration.Get("EnableAutoTrading", false))
+                    entry.State != CFIPClean82EntryTriggerState.Ready)
                     blocks.Add(CFIPClean82BlockReason.EntryInvalid);
+
+                if (!configuration.Get("EnableAutoTrading", false))
+                    blocks.Add(CFIPClean82BlockReason.PolicyBlocked);
             }
             else if (pending)
             {
                 if (entry.State != CFIPClean82EntryTriggerState.WaitingBreakout ||
-                    entry.Model == null ||
-                    !configuration.Get("EnableAutomaticOrders", false))
+                    entry.Model == null)
                     blocks.Add(CFIPClean82BlockReason.EntryInvalid);
+
+                if (!configuration.Get("EnableAutomaticOrders", false))
+                    blocks.Add(CFIPClean82BlockReason.PolicyBlocked);
             }
             else
             {
@@ -7980,13 +7990,32 @@ public sealed class CFIPClean82TradePlanBuilder :
                     Math.Max(0, maxUsage - buffer) /
                     100.0;
 
+                double projectedMargin =
+                    runtime.Margin +
+                    Math.Max(0, estimatedMargin);
+
                 if (runtime.Equity <= 0 ||
                     runtime.FreeMargin <= 0 ||
-                    runtime.Margin > allowedMargin)
+                    estimatedMargin < 0 ||
+                    estimatedMargin > runtime.FreeMargin ||
+                    projectedMargin > allowedMargin)
                     blocks.Add(CFIPClean82BlockReason.RiskInvalid);
             }
 
-            if (volumeInUnits <= 0 || riskAmount <= 0)
+            double riskPercent =
+                Math.Max(
+                    0,
+                    configuration.Get(
+                        "RiskPercentEquity",
+                        0.50));
+            double riskBudget =
+                runtime.Equity * riskPercent / 100.0;
+
+            if (volumeInUnits <= 0 ||
+                riskAmount <= 0 ||
+                (riskBudget > 0 &&
+                 riskAmount > riskBudget * 1.01) ||
+                estimatedMargin < 0)
                 blocks.Add(CFIPClean82BlockReason.RiskInvalid);
 
             return new CFIPClean82ExecutionReadiness(
@@ -7997,6 +8026,7 @@ public sealed class CFIPClean82TradePlanBuilder :
                 ResolveRequestedPrice(entry),
                 volumeInUnits,
                 riskAmount,
+                estimatedMargin,
                 blocks);
         }
 
@@ -8032,6 +8062,7 @@ public sealed class CFIPClean82TradePlanBuilder :
                 0,
                 0,
                 0,
+                0,
                 blocks);
         }
     }
@@ -8049,6 +8080,12 @@ public sealed class CFIPClean82TradePlanBuilder :
                 configuration == null || readiness == null || !readiness.Eligible)
                 throw new ArgumentException(
                     "Execution intent requires eligible execution state.");
+
+            if (entry.Mode != plan.EntryMode ||
+                entry.Direction != plan.Direction ||
+                readiness.Kind == CFIPClean82ExecutionKind.None)
+                throw new ArgumentException(
+                    "Execution intent must match the authoritative TradePlan.");
 
             var requested =
                 new CFIPClean82PriceLevel(
@@ -8177,7 +8214,9 @@ public sealed class CFIPClean82TradePlanBuilder :
                         label,
                         stopPips,
                         targetPips,
-                        intent.ExpiryUtc);
+                        ProtectionType.Relative,
+                        intent.ExpiryUtc,
+                        comment);
                 else if (intent.Kind == CFIPClean82ExecutionKind.Limit)
                     result = _host.PlaceLimitOrder(
                         type,
@@ -10492,6 +10531,18 @@ public sealed class CFIPClean82TradePlanBuilder :
             double riskAmount =
                 CalculateRiskAmount(_state.Plan, volume);
 
+            TradeType tradeType =
+                _state.Plan.Direction == CFIPClean82Direction.Buy
+                    ? TradeType.Buy
+                    : TradeType.Sell;
+
+            double estimatedMargin =
+                volume > 0
+                    ? Symbol.GetEstimatedMargin(
+                        tradeType,
+                        volume)
+                    : 0;
+
             var readiness =
                 _executionPolicy.Evaluate(
                     _state.Decision,
@@ -10500,10 +10551,24 @@ public sealed class CFIPClean82TradePlanBuilder :
                     _state.Runtime,
                     _configuration,
                     volume,
-                    riskAmount);
+                    riskAmount,
+                    estimatedMargin);
 
             if (!readiness.Eligible)
                 return;
+
+            _lifecycle.TryTransition(
+                CFIPClean82LifecycleState.SignalDetected,
+                _state.Runtime.ServerUtc,
+                "DECISION_PLAN_READY");
+            _lifecycle.TryTransition(
+                CFIPClean82LifecycleState.PlanReady,
+                _state.Runtime.ServerUtc,
+                "TRADE_PLAN_VALID");
+            _lifecycle.TryTransition(
+                CFIPClean82LifecycleState.ExecutionReady,
+                _state.Runtime.ServerUtc,
+                "EXECUTION_POLICY_ACCEPTED");
 
             var intent =
                 _executionPlanner.CreateIntent(
@@ -10521,9 +10586,31 @@ public sealed class CFIPClean82TradePlanBuilder :
             _state.Execution = result;
 
             if (!result.Accepted)
+            {
+                _lifecycle.TryTransition(
+                    CFIPClean82LifecycleState.Rejected,
+                    _state.Runtime.ServerUtc,
+                    "BROKER_EXECUTION_REJECTED");
                 return;
+            }
 
-            _submittedExecutionKeys.Add(intent.Identity.IdempotencyKey);
+            _submittedExecutionKeys.Add(
+                intent.Identity.IdempotencyKey);
+
+            if (intent.Kind == CFIPClean82ExecutionKind.Market)
+            {
+                _lifecycle.TryTransition(
+                    CFIPClean82LifecycleState.LivePosition,
+                    _state.Runtime.ServerUtc,
+                    "BROKER_MARKET_ACCEPTED");
+            }
+            else
+            {
+                _lifecycle.TryTransition(
+                    CFIPClean82LifecycleState.PendingOrder,
+                    _state.Runtime.ServerUtc,
+                    "BROKER_PENDING_ACCEPTED");
+            }
 
             if (result.ReconciliationRequired &&
                 result.BrokerPositionId.Length > 0)
@@ -10759,15 +10846,31 @@ public sealed class CFIPClean82TradePlanBuilder :
                     _configuration.StrategyId);
 
             if (_state.Broker.Positions.Count > 0)
+            {
                 _lifecycle.TryTransition(
                     CFIPClean82LifecycleState.LivePosition,
                     _state.Runtime.ServerUtc,
                     "BROKER_POSITION_PRESENT");
+            }
             else if (_state.Broker.PendingOrders.Count > 0)
+            {
                 _lifecycle.TryTransition(
                     CFIPClean82LifecycleState.PendingOrder,
                     _state.Runtime.ServerUtc,
                     "BROKER_PENDING_PRESENT");
+            }
+            else if (_lifecycle.State ==
+                     CFIPClean82LifecycleState.LivePosition ||
+                     _lifecycle.State ==
+                     CFIPClean82LifecycleState.PendingOrder ||
+                     _lifecycle.State ==
+                     CFIPClean82LifecycleState.ExitRequested)
+            {
+                _lifecycle.TryTransition(
+                    CFIPClean82LifecycleState.Closed,
+                    _state.Runtime.ServerUtc,
+                    "BROKER_OBJECTS_ABSENT");
+            }
         }
 
     }
