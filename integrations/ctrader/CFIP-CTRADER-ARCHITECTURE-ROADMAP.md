@@ -1557,6 +1557,7 @@ No consumer independently rebuilds a different TP ladder.
 
 **Commits:**
 - 3559572ae6b63967d7f994be0f7ee1f00ffe4b08 — start v81 Phase 8 risk/stop/target architecture
+- bb128fbaa606e116b12c3ffab59f7fb65b3fcf48 — record Phase 8 deep-audit corrections
 - ea6062b97f30576880636608f96a6ef685f456d8 — add Phase 8 source-level validation
 - 554ec09139436a4b62abdcf36187f02556beb15 — record Phase 8 architecture
 - c5299be7e852c43bac9ab73c7a6844903990044b — correct Phase 8 provenance assertion
@@ -1582,6 +1583,11 @@ Phase 8 never reconstructs direction or entry semantics. The TradePlan is downst
 
 **Acceptance status:**
 Phase 8 is not accepted yet. Phase 7 runtime acceptance remains a prerequisite for the complete release chain, and Phase 8 additionally requires real cTrader compilation plus controlled risk/target scenario validation.
+
+**Deep-audit corrections:**
+- target candidates must progress monotonically beyond the previous TP in the selected direction by the configured spacing;
+- `SignalId` and `PlanId` are now distinct identities;
+- valid TradePlan construction enforces direction/entry/protection/TP1 invariants.
 
 ---
 
