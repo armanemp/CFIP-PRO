@@ -919,7 +919,8 @@ namespace cAlgo
         {
             if (bars == null ||
                 bars.Count < 2 ||
-                reference == DateTime.MinValue)
+                reference == DateTime.MinValue ||
+                reference < bars.OpenTimes[0])
                 return
                     CFIPClean76MtfBarSnapshot.Missing(
                         timeframe);
@@ -1001,14 +1002,21 @@ namespace cAlgo
                 snapshot.W1
             };
 
+            if (!snapshot.IsPrimaryDecisionReady)
+                return false;
+
             for (int i = 0; i < items.Length; i++)
             {
                 CFIPClean76MtfBarSnapshot item =
                     items[i];
 
+                // D1/W1 may legitimately be unavailable when history is
+                // insufficient. Missing optional data is not temporal leakage.
                 if (item == null ||
-                    !item.IsAvailable ||
-                    !item.IsFullyClosedAtReference ||
+                    !item.IsAvailable)
+                    continue;
+
+                if (!item.IsFullyClosedAtReference ||
                     item.ClosedIndex < 0 ||
                     item.BarOpenUtc >= snapshot.ReferenceUtc ||
                     item.NextBarOpenUtc >
