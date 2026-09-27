@@ -21745,55 +21745,57 @@ private Color AutoTradingPanelColor()
                     return false;
                 }
 
-                try
+                double protectedProfit =
+                    livePosition.NetProfit;
+
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.ExitRequested,
+                    "ACTIVE PLAN REVERSAL");
+
+                if (!TryClosePosition(
+                        livePosition,
+                        "ACTIVE PLAN REVERSAL"))
                 {
-                    double protectedProfit =
-                        livePosition.NetProfit;
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.RecoveryRequired,
+                        "ACTIVE PLAN REVERSAL • EXIT REJECTED");
 
-                    TradeResult closeResult =
-                        ClosePosition(
-                            livePosition);
-
-                    if (closeResult == null ||
-                        !closeResult.IsSuccessful)
-                    {
-                        SetAutoTradingState(
-                            "ERROR",
-                            "REVERSAL CLOSE FAILED");
-                        return false;
-                    }
-
-                    _lastExitM5 =
-                        closedM5;
-
-                    SetAutoTradingState(
-                        "EXECUTED",
-                        "REVERSAL CLOSE #" +
-                        livePosition.Id);
-
-                    SendUnifiedAlert(
-                        "REVERSAL-CLOSE|" +
-                        livePosition.Id,
-                        "CFIP CLEAN70 REVERSAL CLOSE | #" +
-                        livePosition.Id +
-                        " | protected +" +
-                        protectedProfit.ToString("F2"),
-                        _plan.Direction,
-                        true);
-                }
-                catch (Exception ex)
-                {
                     SetAutoTradingState(
                         "ERROR",
-                        "REVERSAL CLOSE: " +
-                        CompactText(
-                            ex.Message,
-                            80));
+                        "REVERSAL CLOSE REJECTED");
+
                     return false;
                 }
+
+                _lastExitM5 =
+                    Math.Max(
+                        _lastExitM5,
+                        closedM5);
+
+                SetAutoTradingState(
+                    "EXECUTED",
+                    "REVERSAL EXIT REQUESTED #" +
+                    livePosition.Id);
+
+                SendUnifiedAlert(
+                    "REVERSAL-CLOSE|" +
+                    livePosition.Id,
+                    "CFIP CLEAN70 ACTIVE PLAN REVERSAL • EXIT REQUESTED | #" +
+                    livePosition.Id +
+                    " | protected +" +
+                    protectedProfit.ToString("F2"),
+                    _plan.Direction,
+                    true);
+
+                return true;
             }
 
+            SetLifecycleState(
+                CFIPClean70LifecycleState.Closed,
+                "REVERSAL • POSITION ABSENT");
+
             _plan = null;
+            _executionModel = null;
             RemovePlanObjects();
 
             return true;
