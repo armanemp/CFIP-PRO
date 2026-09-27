@@ -15746,6 +15746,42 @@ namespace cAlgo
                 "  S2 " + Price(s2);
         }
 
+        private string GetExecutionRelationText(
+            ExecutionModel model,
+            double entry)
+        {
+            if (model == null)
+                return "NONE";
+
+            if (model.Mode ==
+                CFIPClean69ExecutionMode.WaitingForTrigger)
+                return
+                    model.Direction == 1
+                        ? "BUY WAIT • ENTRY MUST REACH TRIGGER ABOVE"
+                        : "SELL WAIT • ENTRY MUST REACH TRIGGER BELOW";
+
+            if (!IsFinitePositive(entry))
+                return "NOT EXECUTABLE";
+
+            if (model.Mode ==
+                CFIPClean69ExecutionMode.BreakoutMarket)
+            {
+                return
+                    IsTriggerReached(
+                        model.Direction,
+                        entry,
+                        model.Trigger)
+                        ? "BREAKOUT CONFIRMED"
+                        : "BREAKOUT NOT CONFIRMED";
+            }
+
+            if (model.Mode ==
+                CFIPClean69ExecutionMode.RetestMarket)
+                return "RETEST INSIDE ZONE";
+
+            return ExecutionModeText(model.Mode);
+        }
+
         private void RenderPanelRows(
             int contentWidth)
         {
@@ -15878,6 +15914,47 @@ namespace cAlgo
                     : PanelSecondaryTextColor,
                 false,
                 contentWidth);
+
+            AddPanelRow(
+                ref slot,
+                "EXEC MODE  " +
+                (_executionModel == null
+                    ? "NONE"
+                    : ExecutionModeText(
+                        _executionModel.Mode)) +
+                "  •  ENTRY " +
+                (_executionModel != null &&
+                 IsFinitePositive(
+                     _executionModel.ActualEntry)
+                    ? Price(
+                        _executionModel.ActualEntry)
+                    : "WAIT") +
+                "  •  TRIGGER " +
+                (_executionModel != null
+                    ? Price(
+                        _executionModel.Trigger)
+                    : "-"),
+                _executionModel != null &&
+                _executionModel.Mode ==
+                    CFIPClean69ExecutionMode.BreakoutMarket
+                    ? EntryLineColor
+                    : TriggerLineColor,
+                true,
+                contentWidth);
+
+            if (_executionModel != null &&
+                _executionModel.Direction != 0)
+            {
+                AddPanelRow(
+                    ref slot,
+                    "ENTRY RELATION  " +
+                    GetExecutionRelationText(
+                        _executionModel,
+                        _executionModel.ActualEntry),
+                    PanelSecondaryTextColor,
+                    false,
+                    contentWidth);
+            }
 
             AddPanelRow(
                 ref slot,
@@ -16098,7 +16175,10 @@ namespace cAlgo
 
                     AddPanelRow(
                         ref slot,
-                        "PREDICTION  ENTRY " +
+                        "PREDICTION  " +
+                        ExecutionModeText(
+                            _prediction.Mode) +
+                        "  •  ENTRY " +
                         Price(_prediction.Entry) +
                         "  •  TRIGGER " +
                         Price(_prediction.Trigger),
@@ -20352,25 +20432,53 @@ private Color AutoTradingPanelColor()
             if (atr <= 0)
                 return p;
 
-            p.Entry =
-                NormalizePrice(
-                    _m5Bars.ClosePrices[
-                        closedM5]);
-
-            Zone zone =
-                FindNearestOpposingZone(
-                    _m5Bars,
+            ExecutionModel predictionExecution =
+                BuildExecutionModel(
                     closedM5,
-                    p.Direction,
-                    atr);
+                    p.Direction);
 
-            if (zone != null)
+            p.Mode =
+                predictionExecution == null
+                    ? CFIPClean69ExecutionMode.None
+                    : predictionExecution.Mode;
+
+            if (predictionExecution != null &&
+                predictionExecution.ZoneHigh >
+                predictionExecution.ZoneLow)
             {
-                p.ZoneLow = zone.Low;
-                p.ZoneHigh = zone.High;
+                p.ZoneLow =
+                    NormalizePrice(
+                        predictionExecution.ZoneLow);
+
+                p.ZoneHigh =
+                    NormalizePrice(
+                        predictionExecution.ZoneHigh);
+
+                p.Trigger =
+                    NormalizePrice(
+                        predictionExecution.Trigger);
+
+                p.Entry =
+                    predictionExecution.Ready &&
+                    IsFinitePositive(
+                        predictionExecution.ActualEntry)
+                        ? NormalizePrice(
+                            predictionExecution.ActualEntry)
+                        : p.Mode ==
+                          CFIPClean69ExecutionMode.WaitingForTrigger
+                            ? NormalizePrice(
+                                predictionExecution.Trigger)
+                            : NormalizePrice(
+                                _m5Bars.ClosePrices[
+                                    closedM5]);
             }
             else
             {
+                p.Entry =
+                    NormalizePrice(
+                        _m5Bars.ClosePrices[
+                            closedM5]);
+
                 p.ZoneLow =
                     p.Entry -
                     atr * 0.30;
@@ -20378,14 +20486,14 @@ private Color AutoTradingPanelColor()
                 p.ZoneHigh =
                     p.Entry +
                     atr * 0.30;
-            }
 
-            p.Trigger =
-                p.Direction == 1
-                    ? p.ZoneHigh +
-                      atr * EntryBufferAtr
-                    : p.ZoneLow -
-                      atr * EntryBufferAtr;
+                p.Trigger =
+                    p.Direction == 1
+                        ? p.ZoneHigh +
+                          atr * EntryBufferAtr
+                        : p.ZoneLow -
+                          atr * EntryBufferAtr;
+            }
 
             string stopSource;
             int stopQuality;
@@ -22042,7 +22150,9 @@ private Color AutoTradingPanelColor()
             double stop,
             double target,
             int createdM5,
-            double volume)
+            double volume,
+            CFIPClean69ExecutionMode entryMode =
+                CFIPClean69ExecutionMode.BreakoutMarket)
         {
             double risk =
                 Math.Abs(
@@ -22052,6 +22162,7 @@ private Color AutoTradingPanelColor()
             return new Plan
             {
                 Direction = direction,
+                EntryMode = entryMode,
                 Entry = NormalizePrice(entry),
                 IdealEntry = NormalizePrice(entry),
                 Stop = NormalizePrice(stop),
@@ -22755,7 +22866,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    DateTime.UtcNow.AddMinutes(
+                    Server.Time.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -23120,7 +23231,11 @@ private Color AutoTradingPanelColor()
                         Math.Max(
                             1,
                             _lastEvaluatedM5),
-                        args.Position.VolumeInUnits);
+                        args.Position.VolumeInUnits,
+                        args.PendingOrder.OrderType ==
+                            PendingOrderType.Stop
+                            ? CFIPClean69ExecutionMode.ContinuationStop
+                            : CFIPClean69ExecutionMode.ReversalLimit);
 
                 _plan.PositionId =
                     args.Position.Id;
