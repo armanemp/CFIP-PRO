@@ -8336,10 +8336,10 @@ public sealed class CFIPClean85TradePlanBuilder :
 
     public sealed class CFIPClean85CTraderBrokerGateway : ICFIPClean85BrokerGateway
     {
-        private readonly CFIP_MTF_LiveEntryEngine_Clean_v84 _host;
+        private readonly CFIP_MTF_LiveEntryEngine_Clean_v85 _host;
 
         public CFIPClean85CTraderBrokerGateway(
-            CFIP_MTF_LiveEntryEngine_Clean_v84 host)
+            CFIP_MTF_LiveEntryEngine_Clean_v85 host)
         {
             _host = host ?? throw new ArgumentNullException("host");
         }
@@ -8702,10 +8702,10 @@ public sealed class CFIPClean85TradePlanBuilder :
 
     public sealed class CFIPClean85CTraderBrokerStateReader : ICFIPClean85BrokerStateReader
     {
-        private readonly CFIP_MTF_LiveEntryEngine_Clean_v84 _host;
+        private readonly CFIP_MTF_LiveEntryEngine_Clean_v85 _host;
 
         public CFIPClean85CTraderBrokerStateReader(
-            CFIP_MTF_LiveEntryEngine_Clean_v84 host)
+            CFIP_MTF_LiveEntryEngine_Clean_v85 host)
         {
             _host = host ?? throw new ArgumentNullException("host");
         }
@@ -10131,7 +10131,7 @@ public sealed class CFIPClean85TradePlanBuilder :
         IsOverlay = true,
         TimeZone = TimeZones.UTC,
         AccessRights = AccessRights.None)]
-    public class CFIP_MTF_LiveEntryEngine_Clean_v84 : Indicator
+    public class CFIP_MTF_LiveEntryEngine_Clean_v85 : Indicator
     {
         private Bars _m1Bars;
         private Bars _m5Bars;
