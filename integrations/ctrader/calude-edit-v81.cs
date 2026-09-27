@@ -6091,7 +6091,6 @@ public sealed class CFIPClean81TradePlanBuilder :
                 "PHASE8_INPUT_INCOMPLETE");
 
         if (!decision.DecisionEligible ||
-            !entry.Eligible ||
             entry.Model == null ||
             !CFIPClean81DirectionRules.IsDirectional(decision.Direction))
             return InvalidPlan(
@@ -6099,7 +6098,29 @@ public sealed class CFIPClean81TradePlanBuilder :
                 entry,
                 mtf,
                 runtime,
-                "DECISION_OR_ENTRY_NOT_ELIGIBLE");
+                "DECISION_OR_ENTRY_MODEL_INVALID");
+
+        bool marketEntryReady =
+            entry.Eligible &&
+            entry.State == CFIPClean81EntryTriggerState.Ready &&
+            (entry.Mode == CFIPClean81EntryMode.RetestMarket ||
+             entry.Mode == CFIPClean81EntryMode.BreakoutMarket);
+
+        bool pendingProposal =
+            !entry.Eligible &&
+            entry.State == CFIPClean81EntryTriggerState.WaitingBreakout &&
+            (entry.Mode == CFIPClean81EntryMode.ContinuationStop ||
+             entry.Mode == CFIPClean81EntryMode.ReversalLimit) &&
+            (entry.Mode == CFIPClean81EntryMode.ReversalLimit ||
+             entry.Model.Trigger != null);
+
+        if (!marketEntryReady && !pendingProposal)
+            return InvalidPlan(
+                decision,
+                entry,
+                mtf,
+                runtime,
+                "ENTRY_NOT_PLAN_READY");
 
         if (entry.Decision != decision ||
             entry.Direction != decision.Direction)
@@ -6119,10 +6140,7 @@ public sealed class CFIPClean81TradePlanBuilder :
                 runtime,
                 "M5_RISK_FRAME_UNAVAILABLE");
 
-        double entryPrice =
-            entry.RequestedEntry != null
-                ? entry.RequestedEntry.Price
-                : entry.Model.IdealEntry.Price;
+        double entryPrice = ResolvePlanEntryPrice(entry);
 
         if (entryPrice <= 0)
             return InvalidPlan(
@@ -6368,6 +6386,25 @@ public sealed class CFIPClean81TradePlanBuilder :
                 structuralStop
                     ? "STRUCTURAL_RISK_TARGET_PLAN"
                     : "EXPLICIT_STOP_FALLBACK_TARGET_PLAN"));
+    }
+
+    private double ResolvePlanEntryPrice(
+        CFIPClean81EntrySnapshot entry)
+    {
+        if (entry == null || entry.Model == null)
+            return 0;
+
+        if (entry.Mode == CFIPClean81EntryMode.ContinuationStop &&
+            entry.Model.Trigger != null)
+            return entry.Model.Trigger.Price;
+
+        if (entry.Mode == CFIPClean81EntryMode.ReversalLimit)
+            return entry.Model.IdealEntry.Price;
+
+        if (entry.RequestedEntry != null)
+            return entry.RequestedEntry.Price;
+
+        return entry.Model.IdealEntry.Price;
     }
 
     private StopCandidate FindStructuralStop(
