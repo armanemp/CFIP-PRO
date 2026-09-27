@@ -9383,7 +9383,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                     order.Id.ToString(),
                     out record))
             {
-                RegisterExisting(order, DateTime.MinValue);
+                RegisterExisting(order, utc);
                 return;
             }
 
