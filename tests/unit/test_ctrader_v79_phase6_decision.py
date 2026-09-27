@@ -287,3 +287,12 @@ def test_phase6_advanced_confluence_is_a_quality_switch():
     assert 'configuration.Get("UseAdvancedConfluence", true)' in s
     assert "confluenceQuality" in s
     assert "e.BullConfluence" in s and "e.BearConfluence" in s
+
+
+def test_phase6_parameter_ownership_does_not_reintroduce_entry_logic():
+    s = read(V79)
+    assert "Compatibility parameter retained for preset parity. The clean Decision" in s
+    assert "Phase 7 owns it." in s
+    assert "execution confirmation belong to the Phase 7 Entry/Trigger owner." in s
+    assert "v79 replaces the old" in s
+    assert "additive regime-weighting layer with deduplicated evidence" in s
