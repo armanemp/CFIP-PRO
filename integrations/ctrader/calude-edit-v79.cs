@@ -3568,7 +3568,10 @@ namespace cAlgo
         public int StructuralConfirmations { get; private set; }
         public string Regime { get; private set; }
         public int RegimeQuality { get; private set; }
-        public bool EntryEligible { get; private set; }
+
+        // Decision-level eligibility. Entry/Trigger eligibility belongs to Phase 7.
+        public bool DecisionEligible { get; private set; }
+
         public CFIPClean79DecisionPolicyMode PolicyMode { get; private set; }
         public IReadOnlyList<CFIPClean79BlockReason> BlockReasons
         {
@@ -3586,7 +3589,7 @@ namespace cAlgo
             int structuralConfirmations,
             string regime,
             int regimeQuality,
-            bool entryEligible,
+            bool decisionEligible,
             CFIPClean79DecisionPolicyMode policyMode,
             IList<CFIPClean79BlockReason> blockReasons,
             CFIPClean79Provenance provenance)
@@ -3600,13 +3603,38 @@ namespace cAlgo
             StructuralConfirmations = Math.Max(0, structuralConfirmations);
             Regime = regime ?? string.Empty;
             RegimeQuality = Math.Max(0, Math.Min(100, regimeQuality));
-            EntryEligible = entryEligible;
+            DecisionEligible = decisionEligible;
             PolicyMode = policyMode;
+
+            var normalizedBlocks =
+                new List<CFIPClean79BlockReason>(
+                    blockReasons ??
+                    new List<CFIPClean79BlockReason>());
+
+            if (DecisionEligible &&
+                (Direction == CFIPClean79Direction.Wait ||
+                 normalizedBlocks.Count > 0))
+                throw new ArgumentException(
+                    "Eligible decision cannot be WAIT or blocked.",
+                    "decisionEligible");
+
+            if (!DecisionEligible &&
+                (PolicyMode == CFIPClean79DecisionPolicyMode.Confirmed ||
+                 PolicyMode == CFIPClean79DecisionPolicyMode.Aggressive))
+                throw new ArgumentException(
+                    "Confirmed/Aggressive policy requires decision eligibility.",
+                    "policyMode");
+
+            if (PolicyMode == CFIPClean79DecisionPolicyMode.Pending &&
+                (Direction == CFIPClean79Direction.Wait ||
+                 normalizedBlocks.Count == 0))
+                throw new ArgumentException(
+                    "Pending policy requires a directional blocked setup.",
+                    "policyMode");
+
             _blockReasons =
                 new ReadOnlyCollection<CFIPClean79BlockReason>(
-                    new List<CFIPClean79BlockReason>(
-                        blockReasons ??
-                        new List<CFIPClean79BlockReason>()));
+                    normalizedBlocks);
             Provenance =
                 provenance ??
                 CFIPClean79Provenance.Direct(
@@ -3628,6 +3656,8 @@ namespace cAlgo
             public double Bear;
             public int Independent;
             public int Structural;
+            public int BullStructuralConfirmations;
+            public int BearStructuralConfirmations;
             public int BullStructure;
             public int BearStructure;
             public int BullZone;
@@ -3686,6 +3716,15 @@ namespace cAlgo
             CFIPClean79MarketFrame m5 = market.FindFrame("M5");
             int marketQuality = m5 == null ? 0 : m5.MarketQuality;
             int regimeQuality = m5 == null ? 0 : m5.RegimeQuality;
+
+            // Structural confirmations belong to the selected direction only.
+            // Opposing confirmations must never satisfy the selected direction's gate.
+            e.Structural =
+                direction == CFIPClean79Direction.Buy
+                    ? e.BullStructuralConfirmations
+                    : direction == CFIPClean79Direction.Sell
+                        ? e.BearStructuralConfirmations
+                        : 0;
 
             int structureQuality =
                 direction == CFIPClean79Direction.Buy
@@ -3851,8 +3890,18 @@ namespace cAlgo
                 market.FindFrame("D1"),
                 market.FindFrame("W1"));
 
-            bool bullStructureBreak = false;
-            bool bearStructureBreak = false;
+            bool bullM5Break = false;
+            bool bullM5Displacement = false;
+            bool bullM15Break = false;
+            bool bullH1Break = false;
+            bool bullH4Break = false;
+
+            bool bearM5Break = false;
+            bool bearM5Displacement = false;
+            bool bearM15Break = false;
+            bool bearH1Break = false;
+            bool bearH4Break = false;
+
             int bullDisplacement = 0;
             int bearDisplacement = 0;
 
@@ -3867,48 +3916,81 @@ namespace cAlgo
                     x.Kind == CFIPClean79StructureEventKind.MarketStructureShift ||
                     x.Kind == CFIPClean79StructureEventKind.ChangeOfCharacter;
 
+                bool isM5 = string.Equals(
+                    x.Timeframe, "M5", StringComparison.OrdinalIgnoreCase);
+                bool isM15 = string.Equals(
+                    x.Timeframe, "M15", StringComparison.OrdinalIgnoreCase);
+                bool isH1 = string.Equals(
+                    x.Timeframe, "H1", StringComparison.OrdinalIgnoreCase);
+                bool isH4 = string.Equals(
+                    x.Timeframe, "H4", StringComparison.OrdinalIgnoreCase);
+
                 if (x.Direction == CFIPClean79Direction.Buy)
                 {
                     if (isStructureBreak)
                     {
-                        bullStructureBreak = true;
                         e.BullStructure = Math.Max(e.BullStructure, x.Quality);
+
+                        if (isM5) bullM5Break = true;
+                        else if (isM15) bullM15Break = true;
+                        else if (isH1) bullH1Break = true;
+                        else if (isH4) bullH4Break = true;
                     }
                     else if (x.Kind == CFIPClean79StructureEventKind.Displacement)
+                    {
                         bullDisplacement = Math.Max(bullDisplacement, x.Quality);
+                        if (isM5) bullM5Displacement = true;
+                    }
                 }
                 else
                 {
                     if (isStructureBreak)
                     {
-                        bearStructureBreak = true;
                         e.BearStructure = Math.Max(e.BearStructure, x.Quality);
+
+                        if (isM5) bearM5Break = true;
+                        else if (isM15) bearM15Break = true;
+                        else if (isH1) bearH1Break = true;
+                        else if (isH4) bearH4Break = true;
                     }
                     else if (x.Kind == CFIPClean79StructureEventKind.Displacement)
+                    {
                         bearDisplacement = Math.Max(bearDisplacement, x.Quality);
+                        if (isM5) bearM5Displacement = true;
+                    }
                 }
             }
 
-            if (bullStructureBreak)
-            {
-                e.Structural++;
-                e.Bull += e.BullStructure * 0.10;
-            }
-            if (bearStructureBreak)
-            {
-                e.Structural++;
-                e.Bear += e.BearStructure * 0.10;
-            }
+            // Preserve the v73 confirmation concept without treating BOS/MSS/CHOCH
+            // as three independent confirmations. A structural-break family counts
+            // once per timeframe; M5 displacement remains a distinct confirmation.
+            e.BullStructuralConfirmations =
+                (bullM5Break ? 1 : 0) +
+                (bullM5Displacement ? 1 : 0) +
+                (bullM15Break ? 1 : 0) +
+                (bullH1Break ? 1 : 0) +
+                (bullH4Break ? 1 : 0);
+
+            e.BearStructuralConfirmations =
+                (bearM5Break ? 1 : 0) +
+                (bearM5Displacement ? 1 : 0) +
+                (bearM15Break ? 1 : 0) +
+                (bearH1Break ? 1 : 0) +
+                (bearH4Break ? 1 : 0);
+
+            e.Bull += e.BullStructuralConfirmations > 0
+                ? e.BullStructure * 0.10
+                : 0;
+
+            e.Bear += e.BearStructuralConfirmations > 0
+                ? e.BearStructure * 0.10
+                : 0;
+
             if (bullDisplacement > 0)
-            {
-                e.Structural++;
                 e.Bull += bullDisplacement * 0.10;
-            }
+
             if (bearDisplacement > 0)
-            {
-                e.Structural++;
                 e.Bear += bearDisplacement * 0.10;
-            }
 
             for (int i = 0; i < structure.Zones.Count; i++)
             {
@@ -4153,7 +4235,7 @@ namespace cAlgo
                 CFIPClean79Direction.Wait,
                 0, 0, 0, 0, 0, 0, "UNKNOWN", 0,
                 false,
-                CFIPClean79DecisionPolicyMode.Confirmed,
+                CFIPClean79DecisionPolicyMode.Soft,
                 blocks,
                 CFIPClean79Provenance.Direct("DECISION_ENGINE", rule));
         }
