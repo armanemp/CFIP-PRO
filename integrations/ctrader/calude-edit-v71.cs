@@ -1302,7 +1302,7 @@ namespace cAlgo
         [Parameter("Smart Trail Minimum RR", Group = "15 · CONTROL — ADVANCED", DefaultValue = 1.00, MinValue = 0.5, MaxValue = 10)]
         public double SmartTrailMinimumRR { get; set; }
 
-        [Parameter("Smart Use Closed-Bar Decision", Group = "15 · CONTROL — ADVANCED", DefaultValue = true)]
+        [Parameter("Smart Use Closed-Bar Decision (Safety-Enforced)", Group = "15 · CONTROL — ADVANCED", DefaultValue = true)]
         public bool SmartUseClosedBarDecision { get; set; }
 
         [Parameter("Smart Target Nearest Bias", Group = "15 · CONTROL — ADVANCED", DefaultValue = 0.65, MinValue = 0.20, MaxValue = 1.0, Step = 0.05)]
@@ -2639,20 +2639,14 @@ namespace cAlgo
                         : null;
 
                 int decisionChartIndex =
-                    SmartUseClosedBarDecision
-                        ? MapM5ToChart(
-                            closedM5,
-                            index)
-                        : index;
+                    MapM5ToClosedChart(
+                        closedM5,
+                        index);
 
                 _decision =
                     BuildDecision(
                         decisionChartIndex,
-                        SmartUseClosedBarDecision
-                            ? closedM5
-                            : Math.Max(
-                                1,
-                                _m5Bars.Count - 1),
+                        closedM5,
                         reference);
 
                 RefreshMarketSuitability(
@@ -3762,6 +3756,9 @@ namespace cAlgo
         // DECISION
         // ============================================================
 
+        // Automated decision safety invariant: all automated decision inputs
+        // come from fully closed bars at a single M5 UTC reference. The chart
+        // confluence index is also closed at that same reference.
         private Decision BuildDecision(
             int chartIndex,
             int closedM5,
