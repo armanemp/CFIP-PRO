@@ -8375,21 +8375,14 @@ public sealed class CFIPClean87TradePlanBuilder :
                 if (!CFIPClean87DirectionRules.IsDirectional(intent.Direction))
                     return Failure("PROTECTION_DIRECTION_INVALID");
 
-                bool protectiveStop =
-                    intent.Direction == CFIPClean87Direction.Buy
-                        ? stop < requested
-                        : stop > requested;
-
-                if (!protectiveStop)
-                    return Failure("PROTECTION_DIRECTION_INVALID");
-
-                bool validTargetDirection =
-                    intent.Direction == CFIPClean87Direction.Buy
-                        ? target > requested
-                        : target < requested;
-
-                if (!validTargetDirection)
-                    return Failure("TARGET_DIRECTION_INVALID");
+                string protectionError;
+                if (!ValidateProtectionLevels(
+                        intent.Direction,
+                        requested,
+                        stop,
+                        target,
+                        out protectionError))
+                    return Failure(protectionError);
 
                 string label =
                     _host.Configuration.Get(
@@ -8518,8 +8511,32 @@ public sealed class CFIPClean87TradePlanBuilder :
                 if (position == null)
                     return Failure("POSITION_NOT_FOUND");
 
+                double? effectiveStop =
+                    stopLoss.HasValue
+                        ? stopLoss
+                        : position.StopLoss;
+
+                double? effectiveTarget =
+                    takeProfit.HasValue
+                        ? takeProfit
+                        : position.TakeProfit;
+
+                string protectionError;
+                if (!ValidateProtectionLevels(
+                        position.TradeType == TradeType.Buy
+                            ? CFIPClean87Direction.Buy
+                            : CFIPClean87Direction.Sell,
+                        position.EntryPrice,
+                        effectiveStop,
+                        effectiveTarget,
+                        out protectionError))
+                    return Failure(protectionError);
+
                 TradeResult result =
-                    _host.ModifyPosition(position, stopLoss, takeProfit);
+                    _host.ModifyPosition(
+                        position,
+                        stopLoss,
+                        takeProfit);
 
                 return result.IsSuccessful
                     ? new CFIPClean87ExecutionResult(
@@ -8656,6 +8673,17 @@ public sealed class CFIPClean87TradePlanBuilder :
                     !effectiveTarget.HasValue)
                     return Failure("PENDING_PROTECTION_INCOMPLETE");
 
+                string protectionError;
+                if (!ValidateProtectionLevels(
+                        order.TradeType == TradeType.Buy
+                            ? CFIPClean87Direction.Buy
+                            : CFIPClean87Direction.Sell,
+                        order.TargetPrice,
+                        effectiveStop,
+                        effectiveTarget,
+                        out protectionError))
+                    return Failure(protectionError);
+
                 TradeResult result =
                     _host.ModifyPendingOrder(
                         order,
@@ -8716,6 +8744,108 @@ public sealed class CFIPClean87TradePlanBuilder :
             {
                 return Failure(ex.Message);
             }
+        }
+
+        private bool ValidateProtectionLevels(
+            CFIPClean87Direction direction,
+            double anchor,
+            double? stopLoss,
+            double? takeProfit,
+            out string error)
+        {
+            error = string.Empty;
+
+            if (!CFIPClean87DirectionRules.IsDirectional(direction) ||
+                anchor <= 0 ||
+                _host.Symbol.PipSize <= 0)
+            {
+                error = "PROTECTION_DIRECTION_INVALID";
+                return false;
+            }
+
+            if (stopLoss.HasValue)
+            {
+                bool validStop =
+                    direction == CFIPClean87Direction.Buy
+                        ? stopLoss.Value < anchor
+                        : stopLoss.Value > anchor;
+
+                if (!validStop)
+                {
+                    error = "PROTECTION_DIRECTION_INVALID";
+                    return false;
+                }
+
+                double minStopPips =
+                    MinimumDistancePips(
+                        _host.Symbol.MinStopLossDistance);
+
+                if (minStopPips > 0 &&
+                    Math.Abs(anchor - stopLoss.Value) /
+                    _host.Symbol.PipSize + 0.000001 <
+                    minStopPips)
+                {
+                    error = "BROKER_STOP_DISTANCE_INVALID";
+                    return false;
+                }
+            }
+
+            if (takeProfit.HasValue)
+            {
+                bool validTarget =
+                    direction == CFIPClean87Direction.Buy
+                        ? takeProfit.Value > anchor
+                        : takeProfit.Value < anchor;
+
+                if (!validTarget)
+                {
+                    error = "TARGET_DIRECTION_INVALID";
+                    return false;
+                }
+
+                double minTargetPips =
+                    MinimumDistancePips(
+                        _host.Symbol.MinTakeProfitDistance);
+
+                if (minTargetPips > 0 &&
+                    Math.Abs(takeProfit.Value - anchor) /
+                    _host.Symbol.PipSize + 0.000001 <
+                    minTargetPips)
+                {
+                    error = "BROKER_TARGET_DISTANCE_INVALID";
+                    return false;
+                }
+            }
+
+            if (!stopLoss.HasValue &&
+                !takeProfit.HasValue)
+            {
+                error = "PROTECTION_INCOMPLETE";
+                return false;
+            }
+
+            return true;
+        }
+
+        private double MinimumDistancePips(double rawDistance)
+        {
+            if (rawDistance <= 0 ||
+                _host.Symbol.PipSize <= 0)
+                return 0;
+
+            if (_host.Symbol.MinDistanceType ==
+                SymbolMinDistanceType.Pips)
+                return rawDistance;
+
+            double reference =
+                Math.Max(
+                    _host.Symbol.Ask,
+                    _host.Symbol.Bid);
+
+            return reference > 0
+                ? reference * rawDistance / 100.0 /
+                  _host.Symbol.PipSize
+                : 0;
         }
 
         private CFIPClean87ExecutionResult Success(
@@ -9949,6 +10079,13 @@ public sealed class CFIPClean87TradePlanBuilder :
             if (_records.TryGetValue(id, out record))
             {
                 record.RebaseActualEntry(position.EntryPrice);
+                record.SetExpectedProtection(
+                    expectedStopLoss,
+                    expectedTakeProfit);
+                VerifyProtection(
+                    position,
+                    record,
+                    utc);
                 return;
             }
 
@@ -10268,7 +10405,23 @@ public sealed class CFIPClean87TradePlanBuilder :
             bool hasStop = position.StopLoss.HasValue;
             bool hasTarget = position.TakeProfit.HasValue;
 
-            if (hasStop && hasTarget)
+            bool stopDrift =
+                record.ExpectedStopLoss.HasValue &&
+                (!hasStop ||
+                 !PricesMatch(
+                     position.StopLoss.Value,
+                     record.ExpectedStopLoss.Value));
+
+            bool targetDrift =
+                record.ExpectedTakeProfit.HasValue &&
+                (!hasTarget ||
+                 !PricesMatch(
+                     position.TakeProfit.Value,
+                     record.ExpectedTakeProfit.Value));
+
+            if (hasStop && hasTarget &&
+                !stopDrift &&
+                !targetDrift)
             {
                 if (!record.CloseRequested &&
                     record.State !=
@@ -10286,7 +10439,9 @@ public sealed class CFIPClean87TradePlanBuilder :
 
             QueueProtectionIfDue(
                 record,
-                "POSITION_PROTECTION_MISSING",
+                stopDrift || targetDrift
+                    ? "POSITION_PROTECTION_DRIFT"
+                    : "POSITION_PROTECTION_MISSING",
                 utc);
         }
 
@@ -10298,7 +10453,23 @@ public sealed class CFIPClean87TradePlanBuilder :
             bool hasStop = snapshot.StopLoss.HasValue;
             bool hasTarget = snapshot.TakeProfit.HasValue;
 
-            if (hasStop && hasTarget)
+            bool stopDrift =
+                record.ExpectedStopLoss.HasValue &&
+                (!hasStop ||
+                 !PricesMatch(
+                     snapshot.StopLoss.Value,
+                     record.ExpectedStopLoss.Value));
+
+            bool targetDrift =
+                record.ExpectedTakeProfit.HasValue &&
+                (!hasTarget ||
+                 !PricesMatch(
+                     snapshot.TakeProfit.Value,
+                     record.ExpectedTakeProfit.Value));
+
+            if (hasStop && hasTarget &&
+                !stopDrift &&
+                !targetDrift)
             {
                 if (!record.CloseRequested &&
                     record.State !=
@@ -10312,13 +10483,22 @@ public sealed class CFIPClean87TradePlanBuilder :
             {
                 QueueProtectionIfDue(
                     record,
-                    "BROKER_PROTECTION_DRIFT",
+                    stopDrift || targetDrift
+                        ? "BROKER_PROTECTION_DRIFT"
+                        : "BROKER_PROTECTION_MISSING",
                     utc);
             }
             else
             {
                 record.MarkProtectionRecoveryRequired();
             }
+        }
+
+        private static bool PricesMatch(
+            double actual,
+            double expected)
+        {
+            return Math.Abs(actual - expected) <= 0.000001;
         }
 
         private void QueueProtectionIfDue(
