@@ -191,8 +191,7 @@ def test_phase6_has_single_decision_evaluation_authority():
     s = read(V79)
     assert s.count("_decisionEngine.Evaluate(") == 1
     engine = s[s.index("public sealed class CFIPClean79DecisionEngine"):
-               s.index("// ------------------------------------------------------------------------
-    // Trade identity / idempotency")]
+               s.index("// ------------------------------------------------------------------------\n    // Trade identity / idempotency")]
     assert engine.count("new CFIPClean79DecisionSnapshot(") == 2
 
 
