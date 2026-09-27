@@ -210,3 +210,15 @@ def test_phase6_structural_confirmations_are_directional_and_family_deduplicated
     assert "e.BearStructuralConfirmations" in s
     assert "bullM5Break" in s and "bullM5Displacement" in s
     assert "bearM5Break" in s and "bearM5Displacement" in s
+
+
+def test_phase6_market_dedup_is_order_independent():
+    s = read(V79)
+    assert "private sealed class FeatureAggregate" in s
+    assert "public double BullScore;" in s
+    assert "public double BearScore;" in s
+    assert "aggregate.BullScore = Math.Max" in s
+    assert "aggregate.BearScore = Math.Max" in s
+    assert "aggregate.BullScore > aggregate.BearScore" in s
+    assert "aggregate.BearScore > aggregate.BullScore" in s
+    assert "exact tie is neutral" in s
