@@ -2749,6 +2749,7 @@ namespace cAlgo
             AddPriorDayWeekLiquidity(liquidity, mtf, d1Bars, w1Bars, configuration);
             AddSessionLiquidity(liquidity, mtf, m5Bars, configuration);
             AddDailyPivots(liquidity, mtf, d1Bars, configuration);
+            MarkForecastLiquidity(liquidity, market.M5);
             MarkConfluence(zones, liquidity, configuration);
 
             var direction = ResolveDirection(events);
@@ -3294,6 +3295,51 @@ namespace cAlgo
             AddLiquidity(liquidity, CFIPClean78LiquidityKind.DailyS2,
                 CFIPClean78LiquiditySide.Below, CFIPClean78Direction.Wait,
                 "D1", d1Bars, p, pivot - range, 0, 66, false, "daily S2");
+        }
+
+        private void MarkForecastLiquidity(
+            IList<CFIPClean78LiquidityRecord> liquidity,
+            CFIPClean78MarketFrame m5)
+        {
+            if (m5 == null ||
+                !m5.DataValid)
+                return;
+
+            double price = m5.Close;
+
+            for (int i = 0; i < liquidity.Count; i++)
+            {
+                CFIPClean78LiquidityRecord item = liquidity[i];
+
+                bool ahead =
+                    (item.Side == CFIPClean78LiquiditySide.Above &&
+                     item.Price > price) ||
+                    (item.Side == CFIPClean78LiquiditySide.Below &&
+                     item.Price < price);
+
+                if (!ahead ||
+                    item.Swept ||
+                    item.ForecastCandidate)
+                    continue;
+
+                liquidity[i] =
+                    new CFIPClean78LiquidityRecord(
+                        item.Id,
+                        CFIPClean78LiquidityKind.Forecast,
+                        item.Side,
+                        item.SweepDirection,
+                        item.Timeframe,
+                        item.BarIndex,
+                        item.TimeUtc,
+                        item.Price,
+                        item.Tolerance,
+                        item.Distance,
+                        item.Penetration,
+                        item.Swept,
+                        true,
+                        item.Quality,
+                        item.Provenance);
+            }
         }
 
         private void MarkConfluence(
