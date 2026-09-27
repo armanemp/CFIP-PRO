@@ -9021,7 +9021,7 @@ public sealed class CFIPClean83TradePlanBuilder :
                     CFIPClean83PendingOrderActionKind.RestoreProtection,
                     record.ExpectedStopLoss,
                     record.ExpectedTakeProfit,
-                    "FILLED_POSITION_PROTECTION_MISSING"));
+                    "PENDING_OR_FILLED_PROTECTION_MISSING"));
 
             record.MarkProtectionRecoveryRequired();
         }
@@ -11589,11 +11589,7 @@ public sealed class CFIPClean83TradePlanBuilder :
                     args.PendingOrder,
                     TimeInUtc);
 
-                _lifecycle.TryTransition(
-                    CFIPClean83LifecycleState.Closed,
-                    TimeInUtc,
-                    "PENDING_CANCELLED_" +
-                    args.Reason.ToString());
+                ReconcileBrokerState();
             }
         }
 
