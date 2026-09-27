@@ -193,3 +193,37 @@ def test_v71_normal_auto_execution_allows_only_live_gate_bypass() -> None:
         assert f'case "{reason}":' in helper
 
     assert "IsLiveExecutionGateReason" in auto_trade
+
+
+def test_v71_mtf_context_is_nested_under_indicator() -> None:
+    v71 = read_source(V71)
+
+    indicator = v71.index(
+        "public class CFIP_MTF_LiveEntryEngine_Clean_v71 : Indicator",
+    )
+    context = v71.index("private sealed class MtfClosedContext")
+
+    assert context > indicator
+
+    prefix = v71[:indicator].rstrip()
+    assert prefix.endswith(
+        "[Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]"
+    )
+
+
+def test_v71_mtf_context_is_built_once_from_reference() -> None:
+    v71 = read_source(V71)
+    calculate = extract_method(v71, "Calculate")
+    builder = extract_method(v71, "BuildMtfClosedContext")
+
+    assert calculate.count("BuildMtfClosedContext(") == 1
+    assert "mtf.M5" in calculate
+    assert "mtf.M1" in calculate
+    assert "mtf.M15" in calculate
+    assert "mtf.M30" in calculate
+    assert "mtf.H1" in calculate
+    assert "mtf.H4" in calculate
+    assert "mtf.D1" in calculate
+    assert "mtf.W1" in calculate
+
+    assert builder.count("ClosedIndex(") == 8
