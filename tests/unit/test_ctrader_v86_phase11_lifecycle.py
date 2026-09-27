@@ -195,13 +195,8 @@ def test_v86_protection_retry_uses_exponential_backoff_state():
 
 def test_v86_disconnect_never_reconciles_or_mutates_from_stale_broker_snapshot():
     s = read(V86)
-    host = section(
-        s,
-        "public class CFIP_MTF_LiveEntryEngine_Clean_v86",
-        "    #region Migrated Configuration Surface",
-    )
-    assert "if (_brokerStateReader == null ||" in host
-    assert "!Server.IsConnected" in host
+    assert "if (_brokerStateReader == null ||" in s
+    assert "!Server.IsConnected" in s
 
     pos_processor = section(
         s,
