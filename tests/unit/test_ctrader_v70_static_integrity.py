@@ -370,3 +370,73 @@ def test_v72_does_not_reintroduce_host_clock_or_old_execution_label() -> None:
     assert "DateTime.UtcNow" not in v72
     assert "CFIP SMART70" not in v72
     assert "SMART70" not in v72
+
+
+
+def test_v73_execution_intent_contract_is_unified() -> None:
+    v73 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v73.cs"
+    )
+
+    assert "class ExecutionIntent" in v73
+    assert "BuildExecutionIntent(" in v73
+    assert "ValidateExecutionIntent(" in v73
+    assert "ValidateActualMarketFill(" in v73
+
+    for mode in ["Confirmed", "Soft", "Aggressive", "Pending"]:
+        assert f"CFIPClean73DecisionPolicyMode.{mode}" in v73
+
+    assert "allowUnconfirmedAutoPlan" not in v73
+
+    for method_name in [
+        "TryAutoTrade",
+        "TryAggressiveAutoTrade",
+        "PlaceContinuationStop",
+        "PlaceReversalLimit",
+    ]:
+        assert "ExecutionIntent" in extract_method(v73, method_name)
+
+
+def test_v73_aggressive_fill_is_rebased_from_actual_broker_price() -> None:
+    v73 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v73.cs"
+    )
+    aggressive = extract_method(v73, "TryAggressiveAutoTrade")
+
+    assert "actualFill" in aggressive
+    assert "ValidateActualMarketFill" in aggressive
+    assert "actualStop" in aggressive
+    assert "actualTarget" in aggressive
+    assert "result.Position.EntryPrice" in aggressive
+
+
+def test_v73_market_execution_intent_is_validated_before_broker_call() -> None:
+    v73 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v73.cs"
+    )
+    auto = extract_method(v73, "TryAutoTrade")
+
+    intent_pos = auto.index("ExecutionIntent marketIntent")
+    broker_pos = auto.index("ExecuteMarketOrder(")
+
+    assert intent_pos < broker_pos
+    assert "ValidateExecutionIntent" in auto
+
+
+def test_v73_pending_execution_paths_use_intent_contract() -> None:
+    v73 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v73.cs"
+    )
+
+    stop = extract_method(v73, "PlaceContinuationStop")
+    limit = extract_method(v73, "PlaceReversalLimit")
+
+    assert "ExecutionIntent pendingIntent" in stop
+    assert "ValidateExecutionIntent" in stop
+    assert "pendingIntent.StopPips" in stop
+    assert "pendingIntent.TargetPips" in stop
+
+    assert "ExecutionIntent pendingIntent" in limit
+    assert "ValidateExecutionIntent" in limit
+    assert "pendingIntent.StopPips" in limit
+    assert "pendingIntent.TargetPips" in limit
