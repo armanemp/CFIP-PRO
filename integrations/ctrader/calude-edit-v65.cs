@@ -12970,9 +12970,12 @@ namespace cAlgo
                     triggerDistinct &&
                     !_plan.IsLivePosition);
 
+                double displayStop =
+                    GetActiveBrokerStopPrice();
+
                 DrawPlanLine(
                     P + "SL",
-                    _plan.Stop,
+                    displayStop,
                     SlLineColor,
                     ShowSL);
 
@@ -13100,11 +13103,13 @@ namespace cAlgo
                 y,
                 SignalArrowColorFor(
                     _plan.Direction,
-                    _decision != null &&
-                    _decision.SmartQuality >=
-                    SmartStrongSetupQuality
-                        ? "STRONG"
-                        : "CONFIRMED"));
+                    _plan.IsLivePosition
+                        ? "CONFIRMED"
+                        : _decision != null &&
+                          _decision.SmartQuality >=
+                          SmartStrongSetupQuality
+                            ? "STRONG"
+                            : "CONFIRMED"));
         }
 
         private void RenderPlanLabels()
@@ -13182,16 +13187,18 @@ namespace cAlgo
                     TriggerLineColor);
             }
 
+            double displayStop =
+                GetActiveBrokerStopPrice();
+
             if (ShowSL &&
-                IsFinitePositive(_plan.Stop))
+                IsFinitePositive(displayStop))
             {
                 DrawPlanLabel(
                     P + "SL_LABEL",
                     "SL " +
-                    Price(
-                        _plan.Stop),
+                    Price(displayStop),
                     bar,
-                    _plan.Stop,
+                    displayStop,
                     SlLineColor);
             }
 
@@ -21975,12 +21982,11 @@ private Color AutoTradingPanelColor()
                     !result.IsSuccessful ||
                     result.PendingOrder == null)
                 {
-                    SetAutoTradingState(
-                        "ERROR",
+                    _autoOrdersBlockReason =
                         result != null &&
                         result.Error.HasValue
                             ? result.Error.Value.ToString()
-                            : "PENDING STOP REJECTED");
+                            : "PENDING STOP REJECTED";
 
                     return false;
                 }
@@ -21992,9 +21998,8 @@ private Color AutoTradingPanelColor()
                 _executionModel = null;
                 RemovePlanObjects();
 
-                SetAutoTradingState(
-                    "ORDER PLACED",
-                    "STOP " + Price(trigger));
+                _autoOrdersBlockReason =
+                    "ORDER PLACED • STOP " + Price(trigger);
 
                 SendUnifiedAlert(
                     "PENDING-STOP|" + closedM5,
@@ -22179,12 +22184,11 @@ private Color AutoTradingPanelColor()
                     !result.IsSuccessful ||
                     result.PendingOrder == null)
                 {
-                    SetAutoTradingState(
-                        "ERROR",
+                    _autoOrdersBlockReason =
                         result != null &&
                         result.Error.HasValue
                             ? result.Error.Value.ToString()
-                            : "PENDING LIMIT REJECTED");
+                            : "PENDING LIMIT REJECTED";
 
                     return false;
                 }
@@ -22196,10 +22200,9 @@ private Color AutoTradingPanelColor()
                 _executionModel = null;
                 RemovePlanObjects();
 
-                SetAutoTradingState(
-                    "ORDER PLACED",
-                    "LIMIT " +
-                    Price(targetEntry));
+                _autoOrdersBlockReason =
+                    "ORDER PLACED • LIMIT " +
+                    Price(targetEntry);
 
                 SendUnifiedAlert(
                     "PENDING-LIMIT|" + closedM5,
@@ -22358,7 +22361,8 @@ private Color AutoTradingPanelColor()
                 TriggerLineColor,
                 ShowTrigger);
 
-            if (pending.StopLoss.HasValue &&
+            if (ShowSL &&
+                pending.StopLoss.HasValue &&
                 IsFinitePositive(
                     pending.StopLoss.Value))
             {
@@ -22369,7 +22373,8 @@ private Color AutoTradingPanelColor()
                     ShowSL);
             }
 
-            if (pending.TakeProfit.HasValue &&
+            if (ShowTP1 &&
+                pending.TakeProfit.HasValue &&
                 IsFinitePositive(
                     pending.TakeProfit.Value))
             {
@@ -22393,16 +22398,19 @@ private Color AutoTradingPanelColor()
                         ? "LIMIT"
                         : "PENDING";
 
-            DrawPlanLabel(
-                P + "PENDING_ENTRY_LABEL",
-                "PENDING " +
-                typeText +
-                " " +
-                Price(
-                    pending.TargetPrice),
-                anchorBar,
-                pending.TargetPrice,
-                TriggerLineColor);
+            if (ShowTrigger)
+            {
+                DrawPlanLabel(
+                    P + "PENDING_ENTRY_LABEL",
+                    "PENDING " +
+                    typeText +
+                    " " +
+                    Price(
+                        pending.TargetPrice),
+                    anchorBar,
+                    pending.TargetPrice,
+                    TriggerLineColor);
+            }
 
             if (pending.StopLoss.HasValue &&
                 IsFinitePositive(
@@ -22482,7 +22490,11 @@ private Color AutoTradingPanelColor()
                 _plan.IsLivePosition &&
                 _plan.PositionId ==
                 args.Position.Id)
+            {
                 _plan = null;
+                _activeBrokerStop = 0;
+                _activeBrokerTarget = 0;
+            }
         }
 
         private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
