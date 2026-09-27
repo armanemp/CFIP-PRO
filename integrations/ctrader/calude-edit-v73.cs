@@ -3010,15 +3010,15 @@ namespace cAlgo
                     }
                 }
 
-                bool allowUnconfirmedAutoPlan =
-                    AutoTradingEnabled &&
-                    !ConfirmedSignalsOnly;
-
-                ReconcilePreTradePlanDirection(closedM5);
+                ReconcilePreTradePlanDirection(
+                    closedM5);
 
                 EnsureSignalPlan(
                     closedM5,
-                    allowUnconfirmedAutoPlan);
+                    AutoTradingEnabled &&
+                    !ConfirmedSignalsOnly
+                        ? CFIPClean73DecisionPolicyMode.Soft
+                        : CFIPClean73DecisionPolicyMode.Confirmed);
 
                 _lastEvaluatedM5 =
                     closedM5;
@@ -20144,7 +20144,9 @@ private Color AutoTradingPanelColor()
             {
                 EnsureSignalPlan(
                     closedM5,
-                    !ConfirmedSignalsOnly);
+                    ConfirmedSignalsOnly
+                        ? CFIPClean73DecisionPolicyMode.Confirmed
+                        : CFIPClean73DecisionPolicyMode.Soft);
 
                 if (_plan == null)
                 {
