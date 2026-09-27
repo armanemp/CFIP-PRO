@@ -3,7 +3,7 @@
 **Date:** 2026-09-27  
 **Baseline:** `integrations/ctrader/calude-edit-v73.cs`  
 **Implementation:** `integrations/ctrader/calude-edit-v75.cs`  
-**Parameter count:** 512  
+**Parameter count:** 513  
 
 ## Phase objective
 
@@ -557,7 +557,7 @@ The configuration layer does not weaken the decision or execution pipeline. Sign
 | 509 | `AggressiveMinimumSmartQuality` | `int` | 13 · AUTO TRADING | Automation | **ACTIVE** | `AggressiveMinimumSmartQuality` — Unique semantic input retained. |
 | 510 | `AggressiveRiskPercentEquity` | `double` | 13 · AUTO TRADING | Automation | **ACTIVE** | `AggressiveRiskPercentEquity` — Unique semantic input retained. |
 | 511 | `AggressiveTpStage` | `CFIPClean75TargetStage` | 13 · AUTO TRADING | Automation | **ACTIVE** | `AggressiveTpStage` — Unique semantic input retained. |
-| 512 | `AggressiveRequireSmartAgreement` | `bool` | 13 · AUTO TRADING | Automation | **ACTIVE** | `AggressiveRequireSmartAgreement` — Unique semantic input retained. |
+| 513 | `AggressiveRequireSmartAgreement` | `bool` | 13 · AUTO TRADING | Automation | **ACTIVE** | `AggressiveRequireSmartAgreement` — Unique semantic input retained. |
 
 ## Semantic duplicate review
 
@@ -575,7 +575,7 @@ This distinction is intentional: collapsing thresholds across Decision, Entry, a
 
 ## Phase 2 acceptance
 
-- all 512 v73 parameters are carried into v75 without silent omission;
+- all 513 v73 parameters are carried into v75 without silent omission;
 - no duplicate public parameter property names;
 - every parameter has a disposition;
 - one immutable/effectively immutable configuration snapshot captures the complete public parameter surface;
