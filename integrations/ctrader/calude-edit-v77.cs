@@ -2595,14 +2595,6 @@ namespace cAlgo
         Both = 3
     }
 
-    public enum CFIPClean77TargetStage
-    {
-        TP1 = 0,
-        TP2 = 1,
-        TP3 = 2,
-        TP4 = 3
-    }
-
     // ------------------------------------------------------------------------
     // cTrader host adapter — no broker mutation and no UI authority in Phase 1.
     // ------------------------------------------------------------------------
