@@ -104,6 +104,19 @@ The v71 contract is now:
 
 This removes a major source of decision/entry timing drift while preserving the live execution behavior needed for retest and breakout entry.
 
+## Current Phase 3 status
+
+Completed in the v71 line:
+
+- one shared closed MTF reference context
+- closed chart confluence mapping
+- closed-only frame-engine boundary
+- closed-only trigger confirmation
+- live-price entry gate kept separate
+- server UTC runtime clock
+- D1/W1 minimum-history contract alignment
+- obsolete duplicate trigger path removed
+
 ## Remaining Phase 3 work
 
 
