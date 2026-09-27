@@ -1,9 +1,10 @@
 // ============================================================================
 // CFIP-PRO cTrader — v87 Clean Architecture Foundation
-// Phase: 11 · Position Lifecycle — Re-audit / Hardening
+// Phase: 12 · Live Position Management
 //
-// v87 carries the clean Phase-6/7/8/9 contracts forward and adds the first-class
-// pending-order lifecycle. It does NOT copy the v73 monolith.
+// v87 carries the clean Decision/Entry/Risk/Execution/Pending/Position
+// contracts forward and adds first-class Live Position Management.
+// It does NOT copy the v73 monolith.
 // v73 remains the frozen behavioral/reference baseline; previous numbered clean versions remain historical and untouched.
     // v87 parent/reference: v79 Phase-6 Decision engine.
 // v87 extends the type/ownership boundaries through the normalized execution
