@@ -8337,7 +8337,9 @@ public sealed class CFIPClean82TradePlanBuilder :
                         label,
                         stopPips,
                         targetPips,
-                        intent.ExpiryUtc);
+                        ProtectionType.Relative,
+                        intent.ExpiryUtc,
+                        comment);
                 else
                     return Failure("EXECUTION_KIND_INVALID");
 
