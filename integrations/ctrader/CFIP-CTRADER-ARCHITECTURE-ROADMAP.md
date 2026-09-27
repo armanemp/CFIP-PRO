@@ -1515,7 +1515,7 @@ Phase 7 is not accepted yet. Real cTrader compilation and controlled runtime/sce
 
 ## PHASE 8 — Risk, Stop and Reward model
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
 
 ### Objective
 
@@ -1547,9 +1547,41 @@ Target generation is one engine.
 
 No consumer independently rebuilds a different TP ladder.
 
-### Acceptance
+### Phase 8 implementation record — 2026-09-27
 
-Given one PlanSnapshot, every execution path obtains the same target ladder.
+**Current implementation:** v81 (`integrations/ctrader/calude-edit-v81.cs`)
+
+**Phase document:** `docs/ctrader/CFIP-V81-PHASE-08-RISK-TARGETS.md`
+
+**Static tests:** `tests/unit/test_ctrader_v81_phase8_risk_targets.py`
+
+**Commits:**
+- 3559572ae6b63967d7f994be0f7ee1f00ffe4b08 — start v81 Phase 8 risk/stop/target architecture
+- ea6062b97f30576880636608f96a6ef685f456d8 — add Phase 8 source-level validation
+- 554ec09139436a4b62abdcf36187f02556beb15 — record Phase 8 architecture
+- c5299be7e852c43bac9ab73c7a6844903990044b — correct Phase 8 provenance assertion
+
+**Implemented:**
+- one authoritative `CFIPClean81TradePlanBuilder`
+- exact Phase-6 DecisionSnapshot + Phase-7 EntrySnapshot consumption
+- snapshot identity coherence check; no direction recomputation
+- structural stop hierarchy: Entry invalidation → M5 FVG/OB → M5 swing → optional H1/H4/D1 swing
+- explicit minimum/maximum structural-risk ATR bounds
+- explicit ATR fallback with typed provenance when structural policy permits fallback
+- one authoritative TP1–TP4 target ladder builder
+- configured RR floors, adaptive quality-based RR expansion, target spacing, clearance and maximum extension
+- liquidity target selection with HTF provenance
+- opposing-zone obstacle detection
+- explicit synthetic RR target fallback
+- target ladder directional ordering validation
+- downstream Plan persistence after Entry evaluation
+- no broker mutation, order placement, live management or UI authority in Phase 8
+
+**Important integrity rule:**
+Phase 8 never reconstructs direction or entry semantics. The TradePlan is downstream of the exact Decision/Entry snapshots. A fallback stop/target is explicitly marked through `CFIPClean81Provenance` and cannot silently masquerade as structural.
+
+**Acceptance status:**
+Phase 8 is not accepted yet. Phase 7 runtime acceptance remains a prerequisite for the complete release chain, and Phase 8 additionally requires real cTrader compilation plus controlled risk/target scenario validation.
 
 ---
 
