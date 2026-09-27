@@ -82,10 +82,10 @@ def test_v76_preserves_complete_parameter_surface_from_v75() -> None:
     names75 = parameter_names(v75)
     names76 = parameter_names(v76)
 
-    assert len(names75) == 512
-    assert len(names76) == 512
+    assert len(names75) == 513
+    assert len(names76) == 513
     assert names76 == names75
-    assert len(set(names76)) == 512
+    assert len(set(names76)) == 513
 
 
 def test_v76_has_closed_mtf_snapshot_contract() -> None:
