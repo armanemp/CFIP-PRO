@@ -126,7 +126,7 @@ def test_phase8_consumes_exact_decision_and_entry_snapshots():
 def test_phase8_structural_stop_precedes_fallback():
     e = phase8_engine(read(V81))
     assert "FindStructuralStop(" in e
-    assert "EntryInvalidation" in e
+    assert "ENTRY_INVALIDATION" in e
     assert "M5_FVG_STOP" in e
     assert "M5_OB_STOP" in e
     assert "M5_SWING_STOP" in e
