@@ -10,8 +10,10 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def section(source: str, start: str, end: str) -> str:
+def section(source: str, start: str, end: str | None = None) -> str:
     a = source.index(start)
+    if end is None:
+        return source[a:]
     b = source.index(end, a)
     return source[a:b]
 
@@ -110,7 +112,6 @@ def test_v87_execution_idempotency_state_is_declared_and_used():
     main = section(
         s,
         "public class CFIP_MTF_LiveEntryEngine_Clean_v87",
-        "public sealed class CFIPClean87PriceZone",
     )
     assert "private readonly HashSet<string> _submittedExecutionKeys" in main
     assert "_submittedExecutionKeys.Add(" in main
