@@ -318,3 +318,31 @@ def test_phase10_identity_parser_returns_values_not_marker_prefixes():
     assert "signalStart + signalMarker.Length" in section
     assert "planStart + planMarker.Length" in section
     assert ".Trim('|')" in section
+
+
+def test_phase10_plan_identity_is_v83_end_to_end():
+    s = read(V83)
+    assert "return\n            \"CFIP83|PLAN|\"" in s
+    assert "return\n            \"CFIP83|SIGNAL|\"" in s
+    assert "CFIP81|PLAN|" not in s
+    assert "CFIP81|SIGNAL|" not in s
+    assert "CFIP82|EXEC|" not in s
+
+
+def test_phase10_stale_pending_orders_are_cancelled_on_plan_supersession():
+    m = pending_manager(read(V83))
+    assert "InvalidateSupersededPlan(" in m
+    assert "PLAN_SUPERSEDED" in m
+    assert "string.Equals(" in m
+    h = host(read(V83))
+    assert "_pendingOrderLifecycle.InvalidateSupersededPlan(" in h
+    assert "IsExecutionDuplicate(_state.Plan)" in h
+
+
+def test_phase10_stale_order_without_plan_identity_is_not_automatically_cancelled():
+    m = pending_manager(read(V83))
+    start = m.index("public void InvalidateSupersededPlan")
+    end = m.index("public void Evaluate", start)
+    section = m[start:end]
+    assert "string.IsNullOrWhiteSpace(record.PlanId)" in section
+    assert "continue;" in section
