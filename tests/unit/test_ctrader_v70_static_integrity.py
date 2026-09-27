@@ -302,3 +302,19 @@ def test_v71_d1_w1_frame_gates_match_analyze_contract() -> None:
     assert "w1Index >= 30" in v71
     assert "d1Index >= 10" not in v71
     assert "w1Index >= 10" not in v71
+
+
+
+def test_v71_decision_policy_is_explicit_and_named() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+
+    assert "enum CFIPClean71DecisionPolicyMode" in v71
+    for mode in ["Confirmed", "Soft", "Aggressive", "Pending"]:
+        assert f"CFIPClean71DecisionPolicyMode.{mode}" in v71
+
+    assert "ResolveDecisionPolicy(" in v71
+    assert "allowUnconfirmedAutoPlan" not in v71
+    assert "private bool ShouldCreatePlan(" in v71
+    assert "CFIPClean71DecisionPolicyMode policy" in v71
