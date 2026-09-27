@@ -406,6 +406,12 @@ namespace cAlgo
         [Parameter("Use Daily Weekly Liquidity", Group = "05 · Liquidity", DefaultValue = true)]
         public bool UseDailyWeeklyLiquidity { get; set; }
 
+        [Parameter("Use Daily Pivots", Group = "05 · Liquidity", DefaultValue = true)]
+        public bool UseDailyPivots { get; set; }
+
+        [Parameter("Daily Pivot Weight", Group = "05 · Liquidity", DefaultValue = 18, MinValue = 1, MaxValue = 50)]
+        public int DailyPivotWeight { get; set; }
+
         #endregion
 
         #region Parameters · Indicators
@@ -873,6 +879,9 @@ namespace cAlgo
 
         [Parameter("Max Auto Margin Usage %", Group = "13 · AUTO TRADING", DefaultValue = 80, MinValue = 10, MaxValue = 100)]
         public double MaxAutoMarginUsagePercent { get; set; }
+
+        [Parameter("Margin Buffer %", Group = "13 · AUTO TRADING", DefaultValue = 10, MinValue = 0, MaxValue = 40)]
+        public double MarginBufferPercent { get; set; }
 
         [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN48")]
         public string AutoTradeLabel { get; set; }
@@ -2119,6 +2128,7 @@ namespace cAlgo
         private int _lastPendingSignalM5 = -1;
         private int _lastPendingCleanupM5 = -1;
         private int _lastAutoTradingReminderM5 = -1;
+        private int _lastVisualDirection = 0;
         private string _lastAlertMessage = "";
         private int _lastAlertDirection;
         private bool _lastAlertCritical;
@@ -2406,7 +2416,7 @@ namespace cAlgo
                         SendUnifiedAlert(
                             "HIGH|" +
                             closedM5,
-                            "CFIP CLEAN48 HIGH CONFIDENCE | " +
+                            "CFIP CLEAN60 HIGH CONFIDENCE | " +
                             (_decision.Direction == 1
                                 ? "BUY"
                                 : "SELL") +
@@ -2439,7 +2449,7 @@ namespace cAlgo
                             SendUnifiedAlert(
                                 "RESTRICT|" +
                                 restrictionMessage,
-                                "CFIP CLEAN48 ENTRY BLOCKED | " +
+                                "CFIP CLEAN60 ENTRY BLOCKED | " +
                                 restrictionMessage,
                                 _decision.Direction,
                                 false);
@@ -2474,7 +2484,7 @@ namespace cAlgo
                         SendUnifiedAlert(
                             "SMART|" +
                             closedM5,
-                            "CFIP CLEAN48 SMART DECISION | " +
+                            "CFIP CLEAN60 SMART DECISION | " +
                             (_decision.Direction == 1
                                 ? "BUY"
                                 : "SELL") +
@@ -2493,6 +2503,8 @@ namespace cAlgo
                 bool allowUnconfirmedAutoPlan =
                     EnableAutoTrading &&
                     !ConfirmedSignalsOnly;
+
+                ReconcilePreTradePlanDirection(closedM5);
 
                 EnsureSignalPlan(
                     closedM5,
@@ -2698,7 +2710,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 indicator initialization failed: {0}",
+                    "CFIP CLEAN60 indicator initialization failed: {0}",
                     ex.Message);
             }
 
@@ -6848,6 +6860,16 @@ namespace cAlgo
                 entry,
                 atr);
 
+            if (UseDailyPivots)
+            {
+                AddDailyPivotLevels(
+                    levels,
+                    direction,
+                    entry,
+                    atr,
+                    _m5Bars.OpenTimes[closedM5]);
+            }
+
             if (UseMultiTfLevelMap)
             {
                 AddHtfTargets(
@@ -7219,6 +7241,68 @@ namespace cAlgo
                     Math.Max(
                         SessionWeight,
                         LiquidityTargetMinimumScore));
+            }
+        }
+
+        private void AddDailyPivotLevels(
+            List<Level> levels,
+            int direction,
+            double entry,
+            double atr,
+            DateTime reference)
+        {
+            if (!UseDailyPivots ||
+                _d1Bars == null ||
+                _d1Bars.Count < 3 ||
+                atr <= 0)
+                return;
+
+            int index =
+                ClosedIndex(
+                    _d1Bars,
+                    reference);
+
+            if (index <= 0)
+                return;
+
+            int previous = index - 1;
+
+            double high = _d1Bars.HighPrices[previous];
+            double low = _d1Bars.LowPrices[previous];
+            double close = _d1Bars.ClosePrices[previous];
+
+            if (high <= low ||
+                !IsFinitePositive(close))
+                return;
+
+            double pivot = (high + low + close) / 3.0;
+            double range = high - low;
+
+            double r1 = 2.0 * pivot - low;
+            double s1 = 2.0 * pivot - high;
+            double r2 = pivot + range;
+            double s2 = pivot - range;
+            double r3 = high + 2.0 * (pivot - low);
+            double s3 = low - 2.0 * (high - pivot);
+
+            double weight =
+                Math.Max(
+                    1,
+                    DailyPivotWeight);
+
+            AddLevel(levels, pivot, "PIVOT", "D1", 1, weight);
+
+            if (direction == 1)
+            {
+                AddLevel(levels, r1, "PIVOT_R1", "D1", 1, weight + 4);
+                AddLevel(levels, r2, "PIVOT_R2", "D1", 1, weight + 8);
+                AddLevel(levels, r3, "PIVOT_R3", "D1", 1, weight + 10);
+            }
+            else if (direction == -1)
+            {
+                AddLevel(levels, s1, "PIVOT_S1", "D1", 1, weight + 4);
+                AddLevel(levels, s2, "PIVOT_S2", "D1", 1, weight + 8);
+                AddLevel(levels, s3, "PIVOT_S3", "D1", 1, weight + 10);
             }
         }
 
@@ -7996,6 +8080,25 @@ namespace cAlgo
         #region Active Plan Management
         // ============================================================
 
+        private void ReconcilePreTradePlanDirection(int closedM5)
+        {
+            if (_plan == null ||
+                _plan.IsLivePosition ||
+                _decision == null ||
+                _decision.Direction == 0 ||
+                _decision.Direction == _plan.Direction)
+                return;
+
+            RemovePlanObjects();
+            _plan = null;
+            _executionModel = null;
+            _lastVisualDirection = _decision.Direction;
+
+            SetAutoTradingState(
+                "ARMED",
+                "PRE-TRADE PLAN SUPERSEDED");
+        }
+
         private void ActivatePlan(
             Plan plan)
         {
@@ -8026,7 +8129,7 @@ namespace cAlgo
             ClearWatchObjects();
 
             string message =
-                "CFIP CLEAN48 " +
+                "CFIP CLEAN60 " +
                 (plan.Direction == 1
                     ? "BUY"
                     : "SELL") +
@@ -8194,7 +8297,7 @@ namespace cAlgo
                     Price(_plan.Stop) +
                     "|" +
                     Price(_plan.Tp1),
-                    "CFIP CLEAN48 SMART PLAN UPDATE | SL " +
+                    "CFIP CLEAN60 SMART PLAN UPDATE | SL " +
                     Price(_plan.Stop) +
                     " | TP1 " +
                     Price(_plan.Tp1) +
@@ -8219,7 +8322,7 @@ namespace cAlgo
                 SendUnifiedAlert(
                     "INVALIDPLAN|" +
                     _plan.CreatedM5,
-                    "CFIP CLEAN48 PLAN INVALIDATED | STRUCTURE / RR / SPREAD GUARD",
+                    "CFIP CLEAN60 PLAN INVALIDATED | STRUCTURE / RR / SPREAD GUARD",
                     _plan.Direction,
                     true);
 
@@ -8285,7 +8388,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "SL|" +
                         _plan.CreatedM5,
-                        "CFIP CLEAN48 SL HIT | " +
+                        "CFIP CLEAN60 SL HIT | " +
                         Price(_plan.Stop),
                         -1,
                         true);
@@ -8317,7 +8420,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "TP1|" +
                         _plan.CreatedM5,
-                        "CFIP CLEAN48 TP1 HIT | " +
+                        "CFIP CLEAN60 TP1 HIT | " +
                         Price(_plan.Tp1),
                         _plan.Direction,
                         true);
@@ -8340,7 +8443,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "TP2|" +
                         _plan.CreatedM5,
-                        "CFIP CLEAN48 TP2 HIT | " +
+                        "CFIP CLEAN60 TP2 HIT | " +
                         Price(_plan.Tp2),
                         _plan.Direction,
                         false);
@@ -8359,7 +8462,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "TP3|" +
                         _plan.CreatedM5,
-                        "CFIP CLEAN48 TP3 HIT | " +
+                        "CFIP CLEAN60 TP3 HIT | " +
                         Price(_plan.Tp3),
                         _plan.Direction,
                         false);
@@ -8391,7 +8494,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "TP4|" +
                         _plan.CreatedM5,
-                        "CFIP CLEAN48 TP4 HIT | " +
+                        "CFIP CLEAN60 TP4 HIT | " +
                         Price(_plan.Tp4),
                         _plan.Direction,
                         true);
@@ -8446,7 +8549,7 @@ namespace cAlgo
                     SendUnifiedAlert(
                         "INVALID-RISK|" +
                         closedM5,
-                        "CFIP CLEAN48 FALSE SIGNAL RISK | " +
+                        "CFIP CLEAN60 FALSE SIGNAL RISK | " +
                         (_plan.Direction == 1
                             ? "BUY"
                             : "SELL"),
@@ -8494,7 +8597,7 @@ namespace cAlgo
                 SendUnifiedAlert(
                     "INVALID|" +
                     closedM5,
-                    "CFIP CLEAN48 SETUP UNDER PRESSURE | " +
+                    "CFIP CLEAN60 SETUP UNDER PRESSURE | " +
                     (_plan.Direction == 1
                         ? "BUY"
                         : "SELL") +
@@ -8669,7 +8772,7 @@ namespace cAlgo
                 SendUnifiedAlert(
                     "STRUCT-INVALID|" +
                     closedM5,
-                    "CFIP CLEAN48 STRUCTURAL INVALIDATION | " +
+                    "CFIP CLEAN60 STRUCTURAL INVALIDATION | " +
                     (_plan.Direction == 1
                         ? "BUY"
                         : "SELL") +
@@ -12632,7 +12735,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 plan label failed: {0}",
+                    "CFIP CLEAN60 plan label failed: {0}",
                     ex.Message);
             }
         }
@@ -12797,7 +12900,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 level render failed [{0}]: {1}",
+                    "CFIP CLEAN60 level render failed [{0}]: {1}",
                     name,
                     ex.Message);
             }
@@ -12868,7 +12971,7 @@ namespace cAlgo
                         closedM5 +
                         "|" +
                         _decision.Direction,
-                        "CFIP CLEAN48 " +
+                        "CFIP CLEAN60 " +
                         (_decision.Direction == 1
                             ? "BUY"
                             : "SELL") +
@@ -13012,7 +13115,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 icon render failed: {0}",
+                    "CFIP CLEAN60 icon render failed: {0}",
                     ex.Message);
             }
         }
@@ -13316,7 +13419,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 panel creation failed: {0}",
+                    "CFIP CLEAN60 panel creation failed: {0}",
                     ex.Message);
 
                 _panel = null;
@@ -13447,7 +13550,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 panel hide button failed: {0}",
+                    "CFIP CLEAN60 panel hide button failed: {0}",
                     ex.Message);
 
                 _panelToggleButton = null;
@@ -13519,7 +13622,7 @@ namespace cAlgo
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 panel restore button failed: {0}",
+                    "CFIP CLEAN60 panel restore button failed: {0}",
                     ex.Message);
 
                 _panelRestoreButton = null;
@@ -14414,6 +14517,45 @@ namespace cAlgo
             return state;
         }
 
+        private string PredictionReadinessText()
+        {
+            if (_decision == null)
+                return "NO DECISION";
+
+            if (_decision.EntryAllowed)
+                return "ENTRY CONFIRMED";
+
+            if (_reaction != null &&
+                _reaction.EntryAllowed)
+                return "LIVE REACTION READY";
+
+            if (_prediction != null &&
+                _prediction.Direction != 0)
+                return
+                    (_prediction.Direction == 1 ? "BUY" : "SELL") +
+                    " PREDICTED • CONF " +
+                    _prediction.Confidence;
+
+            return
+                "WAIT • " +
+                (string.IsNullOrWhiteSpace(_decision.BlockReason)
+                    ? "STRUCTURAL GATE"
+                    : _decision.BlockReason);
+        }
+
+        private Color PredictionReadinessColor()
+        {
+            if (_decision != null &&
+                _decision.EntryAllowed)
+                return TpLineColor;
+
+            if (_reaction != null &&
+                _reaction.EntryAllowed)
+                return PanelAccentColor;
+
+            return PanelWarningColor;
+        }
+
         private void RenderPanelRows(
             int contentWidth)
         {
@@ -14710,6 +14852,14 @@ namespace cAlgo
                         contentWidth);
                 }
             }
+
+            AddPanelRow(
+                ref slot,
+                "READINESS  " +
+                PredictionReadinessText(),
+                PredictionReadinessColor(),
+                true,
+                contentWidth);
 
             if (_executionModel != null &&
                 _executionModel.Direction != 0)
@@ -15231,27 +15381,26 @@ namespace cAlgo
 
         private int GetAuthoritativeDirection()
         {
-            if (!UseAuthoritativeSignalState)
-                return _decision != null
-                    ? _decision.Direction
-                    : 0;
-
             if (_plan != null &&
+                _plan.IsLivePosition &&
                 (_plan.Direction == 1 ||
                  _plan.Direction == -1))
                 return _plan.Direction;
 
-            if (_decision != null &&
-                _decision.EntryAllowed &&
-                (_decision.Direction == 1 ||
-                 _decision.Direction == -1))
-                return _decision.Direction;
-
             if (_reaction != null &&
                 _reaction.EntryAllowed &&
+                _reaction.Confidence >=
+                Math.Max(
+                    LiveReactionThreshold,
+                    LiveReactionStrongThreshold) &&
                 (_reaction.Direction == 1 ||
                  _reaction.Direction == -1))
                 return _reaction.Direction;
+
+            if (_decision != null &&
+                (_decision.Direction == 1 ||
+                 _decision.Direction == -1))
+                return _decision.Direction;
 
             if (_prediction != null &&
                 _prediction.Direction != 0 &&
@@ -15261,20 +15410,31 @@ namespace cAlgo
                     EarlySetupConfidence))
                 return _prediction.Direction;
 
-            return _decision != null
-                ? _decision.Direction
-                : 0;
+            return 0;
         }
 
         private string GetAuthoritativeState(
             int direction)
         {
-            if (_plan != null)
+            if (_plan != null &&
+                _plan.IsLivePosition)
                 return direction == 1
                     ? "BUY ACTIVE"
                     : direction == -1
                         ? "SELL ACTIVE"
                         : "ACTIVE";
+
+            if (_reaction != null &&
+                _reaction.EntryAllowed &&
+                _reaction.Confidence >=
+                Math.Max(
+                    LiveReactionThreshold,
+                    LiveReactionStrongThreshold))
+                return direction == 1
+                    ? "BUY REACTION"
+                    : direction == -1
+                        ? "SELL REACTION"
+                        : "REACTION";
 
             if (_decision != null &&
                 _decision.EntryAllowed)
@@ -15284,14 +15444,6 @@ namespace cAlgo
                         ? "SELL READY"
                         : "READY";
 
-            if (_reaction != null &&
-                _reaction.EntryAllowed)
-                return direction == 1
-                    ? "BUY REACTION"
-                    : direction == -1
-                        ? "SELL REACTION"
-                        : "REACTION";
-
             if (_prediction != null &&
                 _prediction.Direction != 0)
                 return direction == 1
@@ -15300,14 +15452,11 @@ namespace cAlgo
                         ? "SELL PREDICTION"
                         : "PREDICTION";
 
-            if (_decision != null)
-                return direction == 1
-                    ? "BUY WATCH"
-                    : direction == -1
-                        ? "SELL WATCH"
-                        : "WAITING";
-
-            return "WAITING";
+            return direction == 1
+                ? "BUY WATCH"
+                : direction == -1
+                    ? "SELL WATCH"
+                    : "WAITING";
         }
 
         private string GetSignalSynchronizationText()
@@ -15657,7 +15806,7 @@ namespace cAlgo
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 popup creation failed: {0}",
+                        "CFIP CLEAN60 popup creation failed: {0}",
                         ex.Message);
 
                     _popup = null;
@@ -15930,7 +16079,7 @@ namespace cAlgo
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 sound alert failed: {0}",
+                        "CFIP CLEAN60 sound alert failed: {0}",
                         ex.Message);
                 }
             }
@@ -15953,7 +16102,7 @@ namespace cAlgo
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 email failed: {0}",
+                        "CFIP CLEAN60 email failed: {0}",
                         ex.Message);
                 }
             }
@@ -16863,6 +17012,13 @@ private Color AutoTradingPanelColor()
                 CalculateVolume(
                     effectiveStopPips);
 
+            volume =
+                AdjustVolumeForMargin(
+                    _plan.Direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell,
+                    volume);
+
             if (volume <
                 Symbol.VolumeInUnitsMin)
             {
@@ -16952,7 +17108,7 @@ private Color AutoTradingPanelColor()
                     catch (Exception ex)
                     {
                         Print(
-                            "CFIP CLEAN48 broker protection failed: {0}",
+                            "CFIP CLEAN60 broker protection failed: {0}",
                             ex.Message);
                     }
                 }
@@ -16965,7 +17121,7 @@ private Color AutoTradingPanelColor()
                 SendUnifiedAlert(
                     "AUTO|" +
                     closedM5,
-                    "CFIP CLEAN48 AUTO " +
+                    "CFIP CLEAN60 AUTO " +
                     (_plan.Direction == 1
                         ? "BUY"
                         : "SELL") +
@@ -16990,8 +17146,92 @@ private Color AutoTradingPanelColor()
                     ex.Message);
 
                 Print(
-                    "CFIP CLEAN48 auto trade failed: {0}",
+                    "CFIP CLEAN60 auto trade failed: {0}",
                     ex.Message);
+            }
+        }
+
+        private double AdjustVolumeForMargin(
+            TradeType tradeType,
+            double volume)
+        {
+            if (!IsFinitePositive(volume) ||
+                !UseAutoMarginGuard)
+                return volume;
+
+            try
+            {
+                double freeMargin =
+                    Math.Max(
+                        0,
+                        Account.FreeMargin);
+
+                double usage =
+                    Math.Max(
+                        10,
+                        Math.Min(
+                            100,
+                            MaxAutoMarginUsagePercent -
+                            Math.Max(
+                                0,
+                                Math.Min(
+                                    40,
+                                    MarginBufferPercent))));
+
+                double allowed =
+                    freeMargin *
+                    usage /
+                    100.0;
+
+                if (allowed <= 0)
+                    return 0;
+
+                double estimated =
+                    Symbol.GetEstimatedMargin(
+                        tradeType,
+                        volume);
+
+                if (!IsFinitePositive(estimated) ||
+                    estimated <= allowed)
+                    return Symbol.NormalizeVolumeInUnits(
+                        volume,
+                        RoundingMode.Down);
+
+                double reduced =
+                    Symbol.NormalizeVolumeInUnits(
+                        volume *
+                        allowed /
+                        estimated,
+                        RoundingMode.Down);
+
+                while (reduced >= Symbol.VolumeInUnitsMin)
+                {
+                    double check =
+                        Symbol.GetEstimatedMargin(
+                            tradeType,
+                            reduced);
+
+                    if (!IsFinitePositive(check) ||
+                        check <= allowed)
+                        break;
+
+                    reduced =
+                        Symbol.NormalizeVolumeInUnits(
+                            reduced -
+                            Symbol.VolumeInUnitsStep,
+                            RoundingMode.Down);
+                }
+
+                return reduced >= Symbol.VolumeInUnitsMin
+                    ? reduced
+                    : 0;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN60 margin sizing failed: {0}",
+                    ex.Message);
+                return 0;
             }
         }
 
@@ -17059,7 +17299,7 @@ private Color AutoTradingPanelColor()
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 volume calculation failed: {0}",
+                    "CFIP CLEAN60 volume calculation failed: {0}",
                     ex.Message);
 
                 return 0;
@@ -17263,7 +17503,7 @@ private Color AutoTradingPanelColor()
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 close failed: {0}",
+                        "CFIP CLEAN60 close failed: {0}",
                         ex.Message);
                 }
             }
@@ -17296,7 +17536,7 @@ private Color AutoTradingPanelColor()
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 cancel failed: {0}",
+                        "CFIP CLEAN60 cancel failed: {0}",
                         ex.Message);
                 }
             }
@@ -18063,7 +18303,7 @@ private Color AutoTradingPanelColor()
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 prediction render failed: {0}",
+                    "CFIP CLEAN60 prediction render failed: {0}",
                     ex.Message);
             }
         }
@@ -18141,7 +18381,7 @@ private Color AutoTradingPanelColor()
                     closedM5 +
                     "|" +
                     direction,
-                    "CFIP CLEAN48 BOS | " +
+                    "CFIP CLEAN60 BOS | " +
                     (direction == 1
                         ? "BUY"
                         : "SELL"),
@@ -18166,7 +18406,7 @@ private Color AutoTradingPanelColor()
                     closedM5 +
                     "|" +
                     direction,
-                    "CFIP CLEAN48 MSS/CHOCH | " +
+                    "CFIP CLEAN60 MSS/CHOCH | " +
                     (direction == 1
                         ? "BUY"
                         : "SELL"),
@@ -18188,7 +18428,7 @@ private Color AutoTradingPanelColor()
                     closedM5 +
                     "|" +
                     direction,
-                    "CFIP CLEAN48 LIQUIDITY SWEEP | " +
+                    "CFIP CLEAN60 LIQUIDITY SWEEP | " +
                     (direction == 1
                         ? "BUY"
                         : "SELL"),
@@ -18314,7 +18554,7 @@ private Color AutoTradingPanelColor()
                 closedM5 +
                 "|" +
                 opposite,
-                "CFIP CLEAN48 ACTIVE PLAN INVALIDATED | " +
+                "CFIP CLEAN60 ACTIVE PLAN INVALIDATED | " +
                 (opposite == 1
                     ? "BUY"
                     : "SELL") +
@@ -18468,7 +18708,7 @@ private Color AutoTradingPanelColor()
                 catch (Exception ex)
                 {
                     Print(
-                        "CFIP CLEAN48 broker protection failed: {0}",
+                        "CFIP CLEAN60 broker protection failed: {0}",
                         ex.Message);
                 }
             }
@@ -18592,6 +18832,13 @@ private Color AutoTradingPanelColor()
                 CalculateAggressiveVolume(
                     effectiveStopPips);
 
+            volume =
+                AdjustVolumeForMargin(
+                    _reaction.Direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell,
+                    volume);
+
             if (volume <
                 Symbol.VolumeInUnitsMin)
                 return;
@@ -18653,6 +18900,8 @@ private Color AutoTradingPanelColor()
                 _plan.PositionId =
                     result.Position.Id;
 
+                EnrichLivePlanTargets(closedM5);
+
                 if (AutoBrokerProtection)
                 {
                     try
@@ -18668,7 +18917,7 @@ private Color AutoTradingPanelColor()
                     catch (Exception ex)
                     {
                         Print(
-                            "CFIP CLEAN48 aggressive protection failed: {0}",
+                            "CFIP CLEAN60 aggressive protection failed: {0}",
                             ex.Message);
                     }
                 }
@@ -18676,7 +18925,7 @@ private Color AutoTradingPanelColor()
                 SendUnifiedAlert(
                     "AUTO-REACTION|" +
                     closedM5,
-                    "CFIP CLEAN48 AUTO REACTION " +
+                    "CFIP CLEAN60 AUTO REACTION " +
                     (_reaction.Direction == 1
                         ? "BUY"
                         : "SELL") +
@@ -18695,7 +18944,7 @@ private Color AutoTradingPanelColor()
             catch (Exception ex)
             {
                 Print(
-                    "CFIP CLEAN48 aggressive auto trade failed: {0}",
+                    "CFIP CLEAN60 aggressive auto trade failed: {0}",
                     ex.Message);
             }
         }
@@ -18882,6 +19131,176 @@ private Color AutoTradingPanelColor()
             return count;
         }
 
+        private void EnrichLivePlanTargets(int closedM5)
+        {
+            if (_plan == null ||
+                !_plan.IsLivePosition ||
+                _m5Bars == null)
+                return;
+
+            int index =
+                Math.Max(
+                    1,
+                    Math.Min(
+                        closedM5,
+                        _m5Bars.Count - 2));
+
+            double atr =
+                Atr(
+                    _m5Bars,
+                    index);
+
+            if (atr <= 0)
+                return;
+
+            List<Level> levels =
+                BuildTargetLevels(
+                    index,
+                    _plan.Direction,
+                    _plan.Entry,
+                    atr);
+
+            List<Level> selected =
+                SelectTargets(
+                    levels,
+                    index,
+                    _plan.Entry,
+                    Math.Max(
+                        Symbol.PipSize,
+                        _plan.Risk),
+                    _plan.Direction,
+                    atr);
+
+            double baseTarget = _plan.Tp1;
+
+            _plan.Tp2 =
+                FindFurtherLiveTarget(
+                    selected,
+                    index,
+                    baseTarget,
+                    atr);
+
+            double base2 =
+                _plan.Tp2 > 0
+                    ? _plan.Tp2
+                    : baseTarget;
+
+            _plan.Tp3 =
+                FindFurtherLiveTarget(
+                    selected,
+                    index,
+                    base2,
+                    atr);
+
+            double base3 =
+                _plan.Tp3 > 0
+                    ? _plan.Tp3
+                    : base2;
+
+            _plan.Tp4 =
+                FindFurtherLiveTarget(
+                    selected,
+                    index,
+                    base3,
+                    atr);
+
+            ApplyTargetMeta(
+                levels,
+                _plan.Tp2,
+                atr,
+                out _plan.Tp2Source,
+                out _plan.Tp2Quality);
+
+            ApplyTargetMeta(
+                levels,
+                _plan.Tp3,
+                atr,
+                out _plan.Tp3Source,
+                out _plan.Tp3Quality);
+
+            ApplyTargetMeta(
+                levels,
+                _plan.Tp4,
+                atr,
+                out _plan.Tp4Source,
+                out _plan.Tp4Quality);
+
+            _plan.HtfTargetCount =
+                CountHtfTargetsInPlan(
+                    _plan);
+
+            RecalculatePlanRR();
+        }
+
+        private double FindFurtherLiveTarget(
+            List<Level> selected,
+            int index,
+            double previous,
+            double atr)
+        {
+            if (selected == null ||
+                !IsFinitePositive(previous) ||
+                _plan == null)
+                return 0;
+
+            double best = 0;
+            double bestScore = double.MinValue;
+
+            foreach (Level level in selected)
+            {
+                if (level == null ||
+                    !IsFinitePositive(level.Price) ||
+                    level.Score < SmartTargetQuality)
+                    continue;
+
+                bool farther =
+                    _plan.Direction == 1
+                        ? level.Price > previous + Symbol.PipSize
+                        : level.Price < previous - Symbol.PipSize;
+
+                if (!farther)
+                    continue;
+
+                double rr =
+                    Math.Abs(
+                        level.Price -
+                        _plan.Entry) /
+                    Math.Max(
+                        Symbol.PipSize,
+                        _plan.Risk);
+
+                if (rr >
+                    Math.Max(
+                        0,
+                        MaximumRewardRR))
+                    continue;
+
+                if (RejectTargetObstacle &&
+                    HasTargetObstacle(
+                        _m5Bars,
+                        index,
+                        _plan.Direction,
+                        _plan.Entry,
+                        level.Price,
+                        atr))
+                    continue;
+
+                double score =
+                    level.Score +
+                    (IsHtfTimeframe(level.Timeframe)
+                        ? HtfRewardBonus
+                        : 0);
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = NormalizePrice(level.Price);
+                }
+            }
+
+            return best;
+        }
+
         private Plan CreateManagedPlanFromExecution(
             int direction,
             double entry,
@@ -18950,6 +19369,8 @@ private Color AutoTradingPanelColor()
 
                 _plan.PositionId =
                     position.Id;
+
+                EnrichLivePlanTargets(closedM5);
 
                 _lastMarket =
                     position.TradeType == TradeType.Buy
@@ -19240,6 +19661,13 @@ private Color AutoTradingPanelColor()
                     EffectiveRiskStopPips(
                         stopPips));
 
+            volume =
+                AdjustVolumeForMargin(
+                    direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell,
+                    volume);
+
             if (volume <
                 Symbol.VolumeInUnitsMin)
                 return false;
@@ -19416,6 +19844,13 @@ private Color AutoTradingPanelColor()
                 CalculateVolume(
                     EffectiveRiskStopPips(
                         stopPips));
+
+            volume =
+                AdjustVolumeForMargin(
+                    direction == 1
+                        ? TradeType.Buy
+                        : TradeType.Sell,
+                    volume);
 
             if (volume <
                 Symbol.VolumeInUnitsMin)
@@ -19625,6 +20060,11 @@ private Color AutoTradingPanelColor()
 
                 _plan.PositionId =
                     args.Position.Id;
+
+                EnrichLivePlanTargets(
+                    Math.Max(
+                        1,
+                        _lastEvaluatedM5));
             }
 
             SendUnifiedAlert(
