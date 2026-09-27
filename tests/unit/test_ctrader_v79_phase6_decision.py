@@ -259,9 +259,9 @@ def test_phase6_reconciles_legacy_location_and_htf_confidence_semantics():
     assert "e.Bear += 6.0" in s
     assert "ApplyHigherTimeframePenalty(" in s
     assert 'cfg.Get("HigherTfPenalty", 7)' in s
-    assert "market.FindFrame("H1")" in s
-    assert "market.FindFrame("H4")" in s
-    assert "market.FindFrame("D1")" in s
+    assert 'market.FindFrame("H1")' in s
+    assert 'market.FindFrame("H4")' in s
+    assert 'market.FindFrame("D1")' in s
 
 
 def test_phase6_softmax_share_calculation_is_temperature_controlled():
