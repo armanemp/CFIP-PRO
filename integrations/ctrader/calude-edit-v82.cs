@@ -8574,8 +8574,10 @@ public sealed class CFIPClean82TradePlanBuilder :
     {
         CFIPClean82ExecutionIntent CreateIntent(
             CFIPClean82TradePlan plan,
+            CFIPClean82EntrySnapshot entry,
             CFIPClean82RuntimeSnapshot runtime,
-            CFIPClean82ConfigSnapshot configuration);
+            CFIPClean82ConfigSnapshot configuration,
+            CFIPClean82ExecutionReadiness readiness);
     }
 
     public interface ICFIPClean82BrokerGateway
