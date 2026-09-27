@@ -8302,11 +8302,12 @@ public sealed class CFIPClean83TradePlanBuilder :
                 string label =
                     _host.Configuration.Get(
                         "AutoTradeLabel",
-                        "CFIP-SMART-CLEAN82");
+                        "CFIP-SMART-CLEAN83");
 
                 string comment =
+                    "CFIP83|SIGNAL|" +
                     intent.TradeIdentity.SignalId +
-                    "|" +
+                    "|PLAN|" +
                     intent.TradeIdentity.PlanId;
 
                 TradeResult result;
@@ -9202,22 +9203,32 @@ public sealed class CFIPClean83TradePlanBuilder :
 
             if (signalStart >= 0)
             {
+                int signalValueStart =
+                    signalStart + signalMarker.Length;
+
                 int signalEnd =
                     planStart > signalStart
-                        ? planStart - 1
+                        ? planStart
                         : comment.Length;
 
                 signalId =
                     comment.Substring(
-                        signalStart,
+                        signalValueStart,
                         Math.Max(
                             0,
-                            signalEnd - signalStart));
+                            signalEnd - signalValueStart))
+                    .Trim('|');
             }
 
             if (planStart >= 0)
+            {
+                int planValueStart =
+                    planStart + planMarker.Length;
+
                 planId =
-                    comment.Substring(planStart);
+                    comment.Substring(planValueStart)
+                    .Trim('|');
+            }
         }
 
         private bool IsManaged(PendingOrder order)
