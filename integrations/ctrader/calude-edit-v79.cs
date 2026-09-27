@@ -3717,7 +3717,10 @@ namespace cAlgo
                 out adaptiveShareThreshold,
                 out adaptiveEdgeThreshold);
 
-            Evidence e = CollectEvidence(market, structure);
+            Evidence e = CollectEvidence(
+                market,
+                structure,
+                configuration);
 
             int bullShare;
             int bearShare;
@@ -3809,6 +3812,12 @@ namespace cAlgo
             int confidence = Clamp(
                 (int)Math.Round(quality * 0.70 + (50 + edge) * 0.30),
                 0, 100);
+
+            confidence = ApplyHigherTimeframePenalty(
+                confidence,
+                direction,
+                market,
+                configuration);
 
             if (direction == CFIPClean79Direction.Wait)
                 blocks.Add(CFIPClean79BlockReason.NoDirection);
@@ -3914,7 +3923,8 @@ namespace cAlgo
 
         private Evidence CollectEvidence(
             CFIPClean79MarketModel market,
-            CFIPClean79StructureSnapshot structure)
+            CFIPClean79StructureSnapshot structure,
+            CFIPClean79ConfigSnapshot configuration)
         {
             var e = new Evidence();
 
@@ -4078,6 +4088,19 @@ namespace cAlgo
                 }
             }
 
+            if (configuration.Get("UsePremiumDiscount", true) &&
+                structure.PremiumDiscount != null &&
+                structure.PremiumDiscount.Available)
+            {
+                // Preserve the v73 location bias: discount supports BUY,
+                // premium supports SELL. This affects directional score only;
+                // it is not an independent-evidence count.
+                if (structure.PremiumDiscount.IsDiscount)
+                    e.Bull += 6.0;
+                else if (structure.PremiumDiscount.IsPremium)
+                    e.Bear += 6.0;
+            }
+
             // Confluence is a quality modifier, not another directional evidence
             // source. It is consumed only by the weighted quality domain.
             return e;
@@ -4156,6 +4179,60 @@ namespace cAlgo
                     e.Independent++;
                 }
             }
+        }
+
+        private int ApplyHigherTimeframePenalty(
+            int confidence,
+            CFIPClean79Direction direction,
+            CFIPClean79MarketModel market,
+            CFIPClean79ConfigSnapshot cfg)
+        {
+            if (direction == CFIPClean79Direction.Wait ||
+                market == null)
+                return confidence;
+
+            int basePenalty = Math.Max(
+                0,
+                cfg.Get("HigherTfPenalty", 7));
+
+            if (basePenalty == 0)
+                return confidence;
+
+            bool h1Against = IsAgainst(
+                market.FindFrame("H1"),
+                direction);
+
+            bool h4Against = IsAgainst(
+                market.FindFrame("H4"),
+                direction);
+
+            bool d1Against = IsAgainst(
+                market.FindFrame("D1"),
+                direction);
+
+            if (!h1Against && !h4Against && !d1Against)
+                return confidence;
+
+            int penalty =
+                basePenalty +
+                (d1Against
+                    ? basePenalty / 2
+                    : 0);
+
+            return Clamp(
+                confidence - penalty,
+                0,
+                100);
+        }
+
+        private bool IsAgainst(
+            CFIPClean79MarketFrame frame,
+            CFIPClean79Direction direction)
+        {
+            return frame != null &&
+                   frame.DataValid &&
+                   frame.BiasDirection != CFIPClean79Direction.Wait &&
+                   frame.BiasDirection != direction;
         }
 
         private void CalculateDirectionalShares(
