@@ -883,7 +883,7 @@ namespace cAlgo
         [Parameter("Margin Buffer %", Group = "13 · AUTO TRADING", DefaultValue = 10, MinValue = 0, MaxValue = 40)]
         public double MarginBufferPercent { get; set; }
 
-        [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN48")]
+        [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN60")]
         public string AutoTradeLabel { get; set; }
 
         [Parameter("Auto Broker Protection", Group = "13 · AUTO TRADING", DefaultValue = true)]
@@ -12912,9 +12912,14 @@ namespace cAlgo
         {
             ClearPlanObjects();
 
-            if (_decision == null ||
-                _decision.Direction == 0)
+            if (Bars == null ||
+                Bars.Count < 2)
                 return;
+
+            bool decisionReady =
+                _decision != null &&
+                _decision.EntryAllowed &&
+                _decision.Direction != 0;
 
             bool reactionReady =
                 EnableLiveReaction &&
@@ -12922,6 +12927,16 @@ namespace cAlgo
                 _reaction != null &&
                 _reaction.EntryAllowed &&
                 _reaction.Direction != 0;
+
+            int visualDirection =
+                GetAuthoritativeDirection();
+
+            if (visualDirection == 0)
+            {
+                Chart.RemoveObject(P + "WATCH_ARROW");
+                Chart.RemoveObject(P + "REACTION_ARROW");
+                return;
+            }
 
             int hostBar =
                 MapM5ToChart(
@@ -12935,12 +12950,32 @@ namespace cAlgo
                         Bars.Count - 1,
                         hostBar));
 
+            int reactionBar =
+                MapM5ToChart(
+                    _m5Bars.Count - 1,
+                    chartIndex);
+
+            reactionBar =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        Bars.Count - 1,
+                        reactionBar));
+
+            int arrowBar =
+                reactionReady &&
+                visualDirection == _reaction.Direction
+                    ? reactionBar
+                    : hostBar;
+
             double atr =
                 Atr(
                     Bars,
                     Math.Max(
                         1,
-                        hostBar));
+                        Math.Min(
+                            Bars.Count - 1,
+                            arrowBar)));
 
             double offset =
                 Math.Max(
@@ -12953,111 +12988,97 @@ namespace cAlgo
                         0.02,
                         ArrowOffsetAtr));
 
-            if (!reactionReady &&
-                ShowEarlyWatch)
+            string arrowState =
+                reactionReady &&
+                visualDirection == _reaction.Direction
+                    ? (_reaction.Confidence >=
+                       Math.Max(
+                           LiveReactionThreshold,
+                           LiveReactionStrongThreshold)
+                        ? "STRONG"
+                        : "REACTION")
+                    : decisionReady
+                        ? "CONFIRMED"
+                        : "WATCH";
+
+            if (ShowSignalArrow)
             {
-                if (AlertOnEarlyWatch &&
-                    _decision.Confidence >=
-                    Math.Max(
-                        60,
-                        MinimumConfidence - 8) &&
-                    _decision.Confidence <
-                    MinimumConfidence &&
-                    _lastEarlyAlertM5 !=
-                    closedM5)
-                {
-                    SendUnifiedAlert(
-                        "WATCH|" +
-                        closedM5 +
-                        "|" +
-                        _decision.Direction,
-                        "CFIP CLEAN60 " +
-                        (_decision.Direction == 1
-                            ? "BUY"
-                            : "SELL") +
-                        " WATCH | CONF " +
-                        _decision.Confidence +
-                        " | SMART " +
-                        _decision.SmartQuality +
-                        " | " +
-                        _decision.Reason,
-                        _decision.Direction,
-                        false);
-
-                    _lastEarlyAlertM5 =
-                        closedM5;
-                }
-
-                if (ShowSignalArrow &&
-                    ShowEarlyArrow)
-                {
-                    DrawIcon(
-                        P + "WATCH_ARROW",
-                        _decision.Direction == 1
-                            ? ChartIconType.UpArrow
-                            : ChartIconType.DownArrow,
-                        hostBar,
-                        _decision.Direction == 1
-                            ? Bars.LowPrices[hostBar] -
-                              offset
-                            : Bars.HighPrices[hostBar] +
-                              offset,
-                        SignalArrowColorFor(
-                            _decision.Direction,
-                            "WATCH"));
-                }
-            }
-
-            if (reactionReady)
-            {
-                int reactionBar =
-                    MapM5ToChart(
-                        _m5Bars.Count - 1,
-                        chartIndex);
-
-                reactionBar =
-                    Math.Max(
-                        0,
-                        Math.Min(
-                            Bars.Count - 1,
-                            reactionBar));
-
                 DrawIcon(
-                    P + "REACTION_ARROW",
-                    _reaction.Direction == 1
+                    P + "WATCH_ARROW",
+                    visualDirection == 1
                         ? ChartIconType.UpArrow
                         : ChartIconType.DownArrow,
-                    reactionBar,
-                    _reaction.Direction == 1
-                        ? Bars.LowPrices[reactionBar] -
-                          offset
-                        : Bars.HighPrices[reactionBar] +
-                          offset,
+                    arrowBar,
+                    visualDirection == 1
+                        ? Bars.LowPrices[arrowBar] - offset
+                        : Bars.HighPrices[arrowBar] + offset,
                     SignalArrowColorFor(
-                        _reaction.Direction,
-                        _reaction.Confidence >=
-                            Math.Max(
-                                LiveReactionThreshold,
-                                LiveReactionStrongThreshold)
-                            ? "STRONG"
-                            : "REACTION"));
-
-                if (AlertOnReaction &&
-                    AlertOnLiveReaction &&
-                    _lastReactionAlertBar !=
-                    _m5Bars.Count - 1)
-                {
-                    SendUnifiedAlert(
-                        "REACTION|" +
-                        _m5Bars.Count,
-                        _reaction.Reason,
-                        _reaction.Direction,
-                        false);
-
-                    _lastReactionAlertBar =
-                        _m5Bars.Count - 1;
-                }
+                        visualDirection,
+                        arrowState));
             }
+            else
+            {
+                Chart.RemoveObject(
+                    P + "WATCH_ARROW");
+            }
+
+            Chart.RemoveObject(
+                P + "REACTION_ARROW");
+
+            if (_decision != null &&
+                !decisionReady &&
+                ShowEarlyWatch &&
+                AlertOnEarlyWatch &&
+                _decision.Confidence >=
+                Math.Max(
+                    60,
+                    MinimumConfidence - 8) &&
+                _decision.Confidence <
+                MinimumConfidence &&
+                _lastEarlyAlertM5 !=
+                closedM5)
+            {
+                SendUnifiedAlert(
+                    "WATCH|" +
+                    closedM5 +
+                    "|" +
+                    _decision.Direction,
+                    "CFIP CLEAN60 " +
+                    (_decision.Direction == 1
+                        ? "BUY"
+                        : "SELL") +
+                    " WATCH | CONF " +
+                    _decision.Confidence +
+                    " | SMART " +
+                    _decision.SmartQuality +
+                    " | " +
+                    _decision.Reason,
+                    _decision.Direction,
+                    false);
+
+                _lastEarlyAlertM5 =
+                    closedM5;
+            }
+
+            if (reactionReady &&
+                AlertOnReaction &&
+                AlertOnLiveReaction &&
+                _lastReactionAlertBar !=
+                _m5Bars.Count - 1)
+            {
+                SendUnifiedAlert(
+                    "REACTION|" +
+                    _m5Bars.Count,
+                    _reaction.Reason,
+                    _reaction.Direction,
+                    false);
+
+                _lastReactionAlertBar =
+                    _m5Bars.Count - 1;
+            }
+
+            _lastVisualDirection =
+                visualDirection;
         }
 
         private int _lastReactionAlertBar = -1;
@@ -14556,6 +14577,44 @@ namespace cAlgo
             return PanelWarningColor;
         }
 
+        private string DailyPivotPanelText()
+        {
+            if (_d1Bars == null ||
+                _d1Bars.Count < 3)
+                return "UNAVAILABLE";
+
+            int idx =
+                ClosedIndex(
+                    _d1Bars,
+                    DateTime.UtcNow);
+
+            if (idx <= 0)
+                return "UNAVAILABLE";
+
+            int prev = idx - 1;
+
+            double h = _d1Bars.HighPrices[prev];
+            double l = _d1Bars.LowPrices[prev];
+            double c = _d1Bars.ClosePrices[prev];
+
+            if (h <= l)
+                return "INVALID";
+
+            double p = (h + l + c) / 3.0;
+
+            double r1 = 2.0 * p - l;
+            double s1 = 2.0 * p - h;
+            double r2 = p + (h - l);
+            double s2 = p - (h - l);
+
+            return
+                "P " + Price(p) +
+                "  R1 " + Price(r1) +
+                "  S1 " + Price(s1) +
+                "  R2 " + Price(r2) +
+                "  S2 " + Price(s2);
+        }
+
         private void RenderPanelRows(
             int contentWidth)
         {
@@ -14588,7 +14647,7 @@ namespace cAlgo
 
             AddPanelRow(
                 ref slot,
-                "CFIP SMART CLEAN48  •  " +
+                "CFIP SMART CLEAN60  •  " +
                 stableState,
                 PanelDirectionColor(
                     stateDirection),
@@ -14634,6 +14693,16 @@ namespace cAlgo
 
             AddPanelRow(
                 ref slot,
+            if (UseDailyPivots)
+            {
+                AddPanelRow(
+                    ref slot,
+                    "PIVOT  " + DailyPivotPanelText(),
+                    PanelAccentColor,
+                    false,
+                    contentWidth);
+            }
+
                 GetSessionPanelText(),
                 GetSessionPanelColor(),
                 true,
@@ -15381,6 +15450,11 @@ namespace cAlgo
 
         private int GetAuthoritativeDirection()
         {
+            if (!UseAuthoritativeSignalState)
+                return _decision != null
+                    ? _decision.Direction
+                    : 0;
+
             if (_plan != null &&
                 _plan.IsLivePosition &&
                 (_plan.Direction == 1 ||
@@ -16095,7 +16169,7 @@ namespace cAlgo
                     Notifications.SendEmail(
                         SenderEmail,
                         ReceiverEmail,
-                        "CFIP SMART CLEAN48 " +
+                        "CFIP SMART CLEAN60 " +
                         SymbolName,
                         message);
                 }
@@ -17472,7 +17546,7 @@ private Color AutoTradingPanelColor()
             return
                 string.IsNullOrWhiteSpace(
                     AutoTradeLabel)
-                    ? "CFIP-SMART-CLEAN48"
+                    ? "CFIP-SMART-CLEAN60"
                     : AutoTradeLabel.Trim();
         }
 
