@@ -346,3 +346,15 @@ def test_phase10_stale_order_without_plan_identity_is_not_automatically_cancelle
     section = m[start:end]
     assert "string.IsNullOrWhiteSpace(record.PlanId)" in section
     assert "continue;" in section
+
+
+def test_phase10_pending_protection_uses_single_absolute_gateway_mutation():
+    g = gateway(read(V83))
+    start = g.index("public CFIPClean83ExecutionResult ModifyPendingProtection")
+    end = g.index("public CFIPClean83ExecutionResult CancelPendingOrder", start)
+    section = g[start:end]
+    assert "_host.ModifyPendingOrder(" in section
+    assert "ProtectionType.Absolute" in section
+    assert "order.ExpirationTime" in section
+    assert "ModifyStopLossPrice" not in section
+    assert "ModifyTakeProfitPrice" not in section
