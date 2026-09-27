@@ -18367,6 +18367,21 @@ private Color AutoTradingPanelColor()
             _plan.Entry =
                 actualEntry;
 
+            // The broker may fill at a slightly different price than the
+            // executable quote. Rebuild the complete structural ladder from
+            // the actual fill so chart, plan and broker protection converge.
+            if (RebuildSmartExecutionLevels(
+                    closedM5,
+                    direction,
+                    actualEntry,
+                    atr))
+            {
+                _plan.Entry =
+                    actualEntry;
+
+                return;
+            }
+
             double currentStop =
                 _plan.Stop;
 
