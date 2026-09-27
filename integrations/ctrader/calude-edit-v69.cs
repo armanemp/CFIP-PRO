@@ -2067,8 +2067,6 @@ namespace cAlgo
             public double Invalidation;
             public int Quality;
             public bool Ready;
-            public bool InsideZone;
-            public bool Breakout;
             public string Source;
         }
 
@@ -5927,9 +5925,6 @@ namespace cAlgo
                 Math.Max(
                     40,
                     MinimumEntryQuality);
-
-            model.InsideZone = inside;
-            model.Breakout = triggerReached;
 
             if (triggerReached)
             {
