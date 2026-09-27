@@ -151,3 +151,13 @@ def test_phase6_reuses_persisted_market_structure_for_decision():
     assert "_state.Market != null" in s
     assert "_state.Structure != null" in s
     assert "_state.SetDecision(" in s
+
+
+def test_phase6_evidence_dedup_preserves_market_feature_weights():
+    s = read(V79)
+    assert "feature.Value * Math.Max(0, feature.Weight)" in s
+    assert "aggregate.Direction = feature.Direction" in s
+    assert "e.Bull += aggregate.Score" in s
+    assert "e.Bear += aggregate.Score" in s
+    assert "aggregate.Bull = Math.Max" not in s
+    assert "aggregate.Bear = Math.Max" not in s
