@@ -5430,9 +5430,32 @@ namespace cAlgo
                 _m15Frame == null)
                 return false;
 
+            bool m5Aligned =
+                _m5Frame.Direction == direction;
+
+            bool m15Compatible =
+                _m15Frame.Direction == direction ||
+                (_m15Frame.Direction == 0 &&
+                 AllowM15NeutralPullback);
+
+            bool trendRegime =
+                string.Equals(
+                    _decision.Regime,
+                    "TREND",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    _decision.Regime,
+                    "EXPANSION",
+                    StringComparison.OrdinalIgnoreCase);
+
             return
-                _m5Frame.Direction == direction &&
-                _m15Frame.Direction == direction;
+                m5Aligned &&
+                m15Compatible &&
+                (trendRegime ||
+                 _decision.StructuralConfirmations >=
+                 Math.Max(
+                     3,
+                     MinimumStructuralConfirmations));
         }
 
         private string ExecutionModeText(
