@@ -164,7 +164,15 @@ def test_v76_uses_one_mtf_snapshot_per_calculation_cycle() -> None:
 
 def test_v76_mtf_builder_reads_all_eight_series_once() -> None:
     source = read(V76)
-    builder = extract_method(source, "Build")
+
+    builder_start = source.index(
+        "public static CFIPClean76MtfSnapshot Build("
+    )
+    builder_end = source.index(
+        "public static bool HasPrimaryHistory(",
+        builder_start,
+    )
+    builder = source[builder_start:builder_end]
 
     for token in [
         "m1Bars",
