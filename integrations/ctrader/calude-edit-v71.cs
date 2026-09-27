@@ -13209,6 +13209,49 @@ namespace cAlgo
 
 
 
+        private bool IsHardDecisionBlockReason(
+            string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                return false;
+
+            switch (reason.Trim().ToUpperInvariant())
+            {
+                case "SESSION":
+                case "FRIDAY":
+                case "SPREAD":
+                case "VOLATILITY GUARD":
+                case "REGIME NO-TRADE":
+                case "NEWS":
+                case "COOLDOWN":
+                case "DIRECTION FLIP":
+                case "CHOP":
+                case "M1 MISALIGNMENT":
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsLiveExecutionGateReason(
+            string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                return false;
+
+            switch (reason.Trim().ToUpperInvariant())
+            {
+                case "TRIGGER":
+                case "M5 TRIGGER":
+                case "ENTRY LOCATION":
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         private bool ShouldCreatePlan(
             int closedM5,
             bool allowUnconfirmedAutoPlan)
@@ -13221,11 +13264,20 @@ namespace cAlgo
                 _decision.Direction == 0)
                 return false;
 
-            if (!_decision.EntryAllowed &&
-                !(allowUnconfirmedAutoPlan &&
-                  _decision.Confidence >= MinimumAutoConfidence &&
-                  _decision.SmartQuality >= MinimumAutoSmartQuality))
-                return false;
+            if (!_decision.EntryAllowed)
+            {
+                bool softPlanEligible =
+                    allowUnconfirmedAutoPlan &&
+                    !IsHardDecisionBlockReason(
+                        _decision.BlockReason) &&
+                    _decision.Confidence >=
+                        MinimumAutoConfidence &&
+                    _decision.SmartQuality >=
+                        MinimumAutoSmartQuality;
+
+                if (!softPlanEligible)
+                    return false;
+            }
 
             if (BlockSameBarReentryAfterExit &&
                 _lastExitM5 == closedM5)
@@ -19802,21 +19854,30 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
-            if (ConfirmedSignalsOnly &&
-                !_decision.EntryAllowed)
+            if (!_decision.EntryAllowed)
             {
-                _autoExecutionBlockReason =
-                    string.IsNullOrWhiteSpace(
-                        _decision.BlockReason)
-                        ? "WAITING FOR CONFIRMATION"
-                        : _decision.BlockReason;
-                SetAutoTradingState(
-                    "ARMED",
-                    string.IsNullOrWhiteSpace(
-                        _decision.BlockReason)
-                        ? "WAITING FOR CONFIRMATION"
-                        : _decision.BlockReason);
-                return;
+                bool liveGate =
+                    !ConfirmedSignalsOnly &&
+                    IsLiveExecutionGateReason(
+                        _decision.BlockReason);
+
+                if (!liveGate)
+                {
+                    _autoExecutionBlockReason =
+                        string.IsNullOrWhiteSpace(
+                            _decision.BlockReason)
+                            ? "WAITING FOR CONFIRMATION"
+                            : _decision.BlockReason;
+
+                    SetAutoTradingState(
+                        "ARMED",
+                        string.IsNullOrWhiteSpace(
+                            _decision.BlockReason)
+                            ? "WAITING FOR CONFIRMATION"
+                            : _decision.BlockReason);
+
+                    return;
+                }
             }
 
             if (OneOrderPerSignal &&
