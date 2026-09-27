@@ -12176,6 +12176,43 @@ namespace cAlgo
         #region Plan Engine VALIDATION
         // ============================================================
 
+        private double MinimumTakeProfitDistancePrice()
+        {
+            try
+            {
+                double distance =
+                    Math.Max(
+                        0,
+                        Symbol.MinTakeProfitDistance);
+
+                if (distance <= 0)
+                    return
+                        Math.Max(
+                            Symbol.TickSize,
+                            Symbol.PipSize);
+
+                if (Symbol.MinDistanceType ==
+                    SymbolMinDistanceType.Pips)
+                    return
+                        distance *
+                        Math.Max(
+                            Symbol.PipSize,
+                            Symbol.TickSize);
+
+                return
+                    Symbol.Bid *
+                    distance /
+                    100.0;
+            }
+            catch
+            {
+                return
+                    Math.Max(
+                        Symbol.TickSize,
+                        Symbol.PipSize);
+            }
+        }
+
         private bool IsValidTarget(
             int direction,
             double entry,
@@ -12185,10 +12222,15 @@ namespace cAlgo
                 !IsFinitePositive(target))
                 return false;
 
+            double minimumDistance =
+                Math.Max(
+                    Symbol.TickSize,
+                    MinimumTakeProfitDistancePrice());
+
             return direction == 1
-                ? target > entry
+                ? target > entry + minimumDistance
                 : direction == -1 &&
-                  target < entry;
+                  target < entry - minimumDistance;
         }
 
         private double MinimumProtectionDistancePrice()
@@ -17055,9 +17097,6 @@ namespace cAlgo
 
         private bool HasManagedOpenPosition()
         {
-            string managedLabel =
-                NormalizeLabel();
-
             foreach (Position position in Positions)
             {
                 if (position == null ||
@@ -17065,11 +17104,7 @@ namespace cAlgo
                     SymbolName)
                     continue;
 
-                if (ManagedActionsOnly &&
-                    !string.Equals(
-                        position.Label,
-                        managedLabel,
-                        StringComparison.Ordinal))
+                if (!IsManagedPosition(position))
                     continue;
 
                 return true;
@@ -17227,9 +17262,6 @@ private void ExecutePartialClose(
                 percentOfOriginal <= 0)
                 return;
 
-            string managedLabel =
-                NormalizeLabel();
-
             foreach (Position position in Positions)
             {
                 if (position == null ||
@@ -17237,11 +17269,7 @@ private void ExecutePartialClose(
                     SymbolName)
                     continue;
 
-                if (ManagedActionsOnly &&
-                    !string.Equals(
-                        position.Label,
-                        managedLabel,
-                        StringComparison.Ordinal))
+                if (!IsManagedPosition(position))
                     continue;
 
                 double closeVolume =
@@ -18327,6 +18355,8 @@ private Color AutoTradingPanelColor()
             if (DailyLossLimitHit(
                     DateTime.UtcNow))
             {
+                _autoExecutionBlockReason =
+                    "DAILY LOSS LIMIT";
                 SetAutoTradingState(
                     "BLOCKED",
                     "DAILY LOSS LIMIT REACHED");
@@ -18357,6 +18387,8 @@ private Color AutoTradingPanelColor()
             if (_decision == null ||
                 _decision.Direction == 0)
             {
+                _autoExecutionBlockReason =
+                    "NO DECISION";
                 SetAutoTradingState(
                     "ARMED",
                     "WAITING FOR DECISION");
@@ -18366,6 +18398,11 @@ private Color AutoTradingPanelColor()
             if (ConfirmedSignalsOnly &&
                 !_decision.EntryAllowed)
             {
+                _autoExecutionBlockReason =
+                    string.IsNullOrWhiteSpace(
+                        _decision.BlockReason)
+                        ? "WAITING FOR CONFIRMATION"
+                        : _decision.BlockReason;
                 SetAutoTradingState(
                     "ARMED",
                     string.IsNullOrWhiteSpace(
@@ -18378,6 +18415,8 @@ private Color AutoTradingPanelColor()
             if (OneOrderPerSignal &&
                 _lastAutoM5 == closedM5)
             {
+                _autoExecutionBlockReason =
+                    "ALREADY TRADED THIS M5";
                 SetAutoTradingState(
                     "ARMED",
                     "ALREADY TRADED THIS M5");
@@ -18387,6 +18426,11 @@ private Color AutoTradingPanelColor()
             if (_decision.Confidence <
                 MinimumAutoConfidence)
             {
+                _autoExecutionBlockReason =
+                    "CONF " +
+                    _decision.Confidence +
+                    " < " +
+                    MinimumAutoConfidence;
                 SetAutoTradingState(
                     "BLOCKED",
                     "CONF " +
@@ -18399,6 +18443,11 @@ private Color AutoTradingPanelColor()
             if (_decision.SmartQuality <
                 MinimumAutoSmartQuality)
             {
+                _autoExecutionBlockReason =
+                    "SMART Q " +
+                    _decision.SmartQuality +
+                    " < " +
+                    MinimumAutoSmartQuality;
                 SetAutoTradingState(
                     "BLOCKED",
                     "SMART Q " +
@@ -18429,6 +18478,11 @@ private Color AutoTradingPanelColor()
             if (levelQuality <
                 MinimumAutoLevelQuality)
             {
+                _autoExecutionBlockReason =
+                    "LEVEL Q " +
+                    levelQuality +
+                    " < " +
+                    MinimumAutoLevelQuality;
                 SetAutoTradingState(
                     "BLOCKED",
                     "LEVEL Q " +
@@ -18443,6 +18497,8 @@ private Color AutoTradingPanelColor()
                     1,
                     MaximumOpenPositions))
             {
+                _autoExecutionBlockReason =
+                    "MAX OPEN POSITIONS";
                 SetAutoTradingState(
                     "BLOCKED",
                     "MAX OPEN POSITIONS");
@@ -18559,6 +18615,8 @@ private Color AutoTradingPanelColor()
 
                 if (!EnsureTradingPermission())
                 {
+                    _autoExecutionBlockReason =
+                        "TRADING PERMISSION";
                     SetAutoTradingState(
                         "BLOCKED",
                         "TRADING PERMISSION NOT GRANTED");
@@ -18572,6 +18630,9 @@ private Color AutoTradingPanelColor()
                         volume,
                         out guardReason))
                 {
+                    _autoExecutionBlockReason =
+                        guardReason;
+
                     SetAutoTradingState(
                         "BLOCKED",
                         guardReason);
@@ -18852,18 +18913,10 @@ private Color AutoTradingPanelColor()
         private int ManagedPositionCount()
         {
             int count = 0;
-            string label =
-                NormalizeLabel();
 
             foreach (Position position in Positions)
             {
-                if (position == null)
-                    continue;
-
-                if (position.SymbolName ==
-                    SymbolName &&
-                    position.Label ==
-                    label)
+                if (IsManagedPosition(position))
                     count++;
             }
 
@@ -20666,6 +20719,8 @@ private Color AutoTradingPanelColor()
 
                 if (!EnsureTradingPermission())
                 {
+                    _autoExecutionBlockReason =
+                        "TRADING PERMISSION";
                     SetAutoTradingState(
                         "BLOCKED",
                         "TRADING PERMISSION NOT GRANTED");
@@ -20703,6 +20758,9 @@ private Color AutoTradingPanelColor()
 
                 _lastAutoM5 =
                     closedM5;
+
+                _autoExecutionBlockReason =
+                    "EXECUTED";
 
                 _plan =
                     CreateManagedPlanFromExecution(
@@ -22334,6 +22392,21 @@ private Color AutoTradingPanelColor()
             SyncQuickExecutionControls();
         }
 
+      "QUICK ENABLED");
+            }
+            else
+            {
+                _autoExecutionBlockReason =
+                    "TRADING PERMISSION";
+
+                SetAutoTradingState(
+                    "BLOCKED",
+                    "TRADING PERMISSION REQUIRED");
+            }
+
+            SyncQuickExecutionControls();
+        }
+
         private void OnAutoTradingQuickToggleUnchecked(
             ToggleButtonEventArgs args)
         {
@@ -22360,6 +22433,17 @@ private Color AutoTradingPanelColor()
             EnableAutomaticOrders = true;
             _autoOrdersBlockReason =
                 "AWAITING ORDER SETUP";
+
+            SyncQuickExecutionControls();
+        }
+
+DER SETUP";
+            }
+            else
+            {
+                _autoOrdersBlockReason =
+                    "TRADING PERMISSION";
+            }
 
             SyncQuickExecutionControls();
         }
