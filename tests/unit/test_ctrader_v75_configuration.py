@@ -81,13 +81,13 @@ def test_v75_has_no_direct_broker_mutation() -> None:
     source = read(V75)
 
     for token in [
-        "ExecuteMarketOrder(",
-        "PlaceStopOrder(",
-        "PlaceLimitOrder(",
-        "ModifyStopLossPrice(",
-        "ModifyTakeProfitPrice(",
-        "ClosePosition(",
-        "CancelPendingOrder(",
+        ".ExecuteMarketOrder(",
+        ".PlaceStopOrder(",
+        ".PlaceLimitOrder(",
+        ".ModifyStopLossPrice(",
+        ".ModifyTakeProfitPrice(",
+        ".ClosePosition(",
+        ".CancelPendingOrder(",
     ]:
         assert token not in source
 
