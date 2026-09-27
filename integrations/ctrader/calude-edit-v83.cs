@@ -8793,6 +8793,7 @@ public sealed class CFIPClean83TradePlanBuilder :
 
     public sealed class CFIPClean83PendingOrderLifecycleManager
     {
+        private readonly string _managedLabel;
         private readonly Dictionary<string, CFIPClean83PendingOrderRecord> _records =
             new Dictionary<string, CFIPClean83PendingOrderRecord>(
                 StringComparer.Ordinal);
@@ -8800,6 +8801,12 @@ public sealed class CFIPClean83TradePlanBuilder :
             new List<CFIPClean83PendingOrderAction>();
         private readonly HashSet<string> _actionKeys =
             new HashSet<string>(StringComparer.Ordinal);
+
+        public CFIPClean83PendingOrderLifecycleManager(
+            string managedLabel)
+        {
+            _managedLabel = managedLabel ?? string.Empty;
+        }
 
         public IReadOnlyList<CFIPClean83PendingOrderRecord> Records
         {
@@ -8822,12 +8829,19 @@ public sealed class CFIPClean83TradePlanBuilder :
             if (_records.ContainsKey(key))
                 return;
 
+            string signalId;
+            string planId;
+            ParseIdentity(
+                order.Comment,
+                out signalId,
+                out planId);
+
             _records[key] =
                 CreateRecord(
                     order,
                     utc,
-                    string.Empty,
-                    string.Empty,
+                    signalId,
+                    planId,
                     null);
         }
 
@@ -8905,7 +8919,15 @@ public sealed class CFIPClean83TradePlanBuilder :
             }
 
             if (record != null)
+            {
                 record.MarkFilled(utc);
+
+                if (!position.StopLoss.HasValue ||
+                    !position.TakeProfit.HasValue)
+                {
+                    QueueProtectionRecoveryForRecord(record);
+                }
+            }
         }
 
         public void HandleCancelled(
@@ -8980,12 +9002,10 @@ public sealed class CFIPClean83TradePlanBuilder :
             return result;
         }
 
-        private void QueueProtectionRecoveryIfRequired(
-            PendingOrder order,
+        private void QueueProtectionRecoveryForRecord(
             CFIPClean83PendingOrderRecord record)
         {
-            if (order.StopLoss.HasValue &&
-                order.TakeProfit.HasValue)
+            if (record == null)
                 return;
 
             if (!record.ExpectedStopLoss.HasValue &&
@@ -9001,8 +9021,27 @@ public sealed class CFIPClean83TradePlanBuilder :
                     CFIPClean83PendingOrderActionKind.RestoreProtection,
                     record.ExpectedStopLoss,
                     record.ExpectedTakeProfit,
-                    "PENDING_PROTECTION_MISSING"));
+                    "FILLED_POSITION_PROTECTION_MISSING"));
+
             record.MarkProtectionRecoveryRequired();
+        }
+
+        private void QueueProtectionRecoveryIfRequired(
+            PendingOrder order,
+            CFIPClean83PendingOrderRecord record)
+        {
+            if (order.StopLoss.HasValue &&
+                order.TakeProfit.HasValue)
+                return;
+
+            if (!record.ExpectedStopLoss.HasValue &&
+                !record.ExpectedTakeProfit.HasValue)
+            {
+                record.MarkProtectionRecoveryRequired();
+                return;
+            }
+
+            QueueProtectionRecoveryForRecord(record);
         }
 
         private void Queue(CFIPClean83PendingOrderAction action)
@@ -9045,10 +9084,57 @@ public sealed class CFIPClean83TradePlanBuilder :
                         : order.ExpirationTime);
         }
 
+        private void ParseIdentity(
+            string comment,
+            out string signalId,
+            out string planId)
+        {
+            signalId = string.Empty;
+            planId = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(comment))
+                return;
+
+            const string signalMarker = "CFIP83|SIGNAL|";
+            const string planMarker = "CFIP83|PLAN|";
+
+            int signalStart =
+                comment.IndexOf(
+                    signalMarker,
+                    StringComparison.Ordinal);
+            int planStart =
+                comment.IndexOf(
+                    planMarker,
+                    StringComparison.Ordinal);
+
+            if (signalStart >= 0)
+            {
+                int signalEnd =
+                    planStart > signalStart
+                        ? planStart - 1
+                        : comment.Length;
+
+                signalId =
+                    comment.Substring(
+                        signalStart,
+                        Math.Max(
+                            0,
+                            signalEnd - signalStart));
+            }
+
+            if (planStart >= 0)
+                planId =
+                    comment.Substring(planStart);
+        }
+
         private bool IsManaged(PendingOrder order)
         {
             return
                 order != null &&
+                string.Equals(
+                    order.Label,
+                    _managedLabel,
+                    StringComparison.Ordinal) &&
                 order.Comment != null &&
                 order.Comment.IndexOf(
                     "CFIP83|",
@@ -10919,7 +11005,10 @@ public sealed class CFIPClean83TradePlanBuilder :
                 new CFIPClean83CTraderBrokerStateReader(this);
 
             _pendingOrderLifecycle =
-                new CFIPClean83PendingOrderLifecycleManager();
+                new CFIPClean83PendingOrderLifecycleManager(
+                    _configuration.Get(
+                        "AutoTradeLabel",
+                        "CFIP-SMART-CLEAN83"));
 
             PendingOrders.Created += PendingOrders_Created;
             PendingOrders.Modified += PendingOrders_Modified;
