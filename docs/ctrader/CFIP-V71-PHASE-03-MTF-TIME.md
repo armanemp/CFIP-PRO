@@ -87,9 +87,25 @@ At every newly closed M5 bar:
 
 The primary decision engine therefore sees a temporally coherent cross-timeframe snapshot.
 
+## Additional v71 decision/execution boundary hardening
+
+v71 also separates the closed-bar decision trigger from the live execution trigger.
+
+Previously, `EntryTriggerReady()` could call `BuildExecutionModel()`, whose market-location decision uses the current `Symbol.Ask/Bid`. That meant a decision generated at a newly closed M5 bar could become blocked by the exact price location at that instant and stay frozen until the next M5 decision cycle.
+
+The v71 contract is now:
+
+- `ClosedBarTriggerReady()` evaluates the closed M5 structure trigger only.
+- `BuildDecision()` and `PassesDecisionFilters()` use the closed-bar trigger.
+- `BuildExecutionModel()` remains live-price aware.
+- `IsExecutableMarketEntry()` is the final live entry gate immediately before broker execution.
+- normal auto execution may re-evaluate only explicit live-gate reasons such as `TRIGGER`, `M5 TRIGGER` and `ENTRY LOCATION`.
+- quality, MTF, news, session, spread, volatility, cooldown, direction-flip and no-trade blocks cannot be bypassed by the soft-plan path.
+
+This removes a major source of decision/entry timing drift while preserving the live execution behavior needed for retest and breakout entry.
+
 ## Remaining Phase 3 work
 
-The following still need to be handled before Phase 3 is fully closed:
 
 - formalize an immutable `MtfSnapshot` object rather than assigning eight mutable frame fields directly
 - verify all structure/zone helper methods respect their supplied index and do not internally substitute a live index
