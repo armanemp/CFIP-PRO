@@ -139,6 +139,17 @@ def test_v77_uses_c_trader_native_indicator_accessors() -> None:
         assert token in source
 
 
+def test_v77_preserves_rsi_exhaustion_and_configurable_regime_threshold() -> None:
+    source = read(V77)
+
+    assert "AvoidRsiExhaustion" in source
+    assert "bullScore - 5" in source
+    assert "bearScore - 5" in source
+    assert "configuration.Get(
+                        "AdxMinimum"" in source
+    assert "if (adx < adxMinimum)" in source
+
+
 def test_v77_regime_is_typed_not_string_based() -> None:
     source = read(V77)
 
@@ -185,6 +196,16 @@ def test_v77_market_model_wiring_is_single_and_reference_driven() -> None:
     assert calculate.count("_marketModelBuilder.Build(") == 1
     assert calculate.count("_state.SetMarket(market);") == 1
     assert "mtf.ReferenceUtc != _lastMarketReferenceUtc" in calculate
+
+
+def test_v77_has_no_duplicate_public_type_declarations() -> None:
+    source = read(V77)
+
+    public_types = re.findall(
+        r"public\s+(?:sealed\s+)?(?:class|enum|interface|static class)\s+(\w+)",
+        source,
+    )
+    assert len(public_types) == len(set(public_types))
 
 
 def test_v77_version_isolation_and_balance() -> None:
