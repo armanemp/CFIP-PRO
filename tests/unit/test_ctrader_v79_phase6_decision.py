@@ -371,3 +371,17 @@ def test_v79_parameter_surface_is_exactly_513_and_unique():
     assert len(set(a)) == 513
     assert len(set(b)) == 513
     assert a == b
+
+
+def test_phase6_zone_quality_does_not_absorb_confluence_bonus():
+    s = read(V79)
+    assert "int q = Clamp(z.Quality);" in s
+    assert "fvg ? 8 : 0" not in s
+    assert 'liq ? cfg.Get("SmartLiquidityPoolBonus", 12)' not in s
+    assert "Confluence is a quality modifier" in s
+
+
+def test_phase6_parameter_surface_is_documented_as_513():
+    s = read(V79)
+    assert "Migrated Configuration Surface (513 parameters)" in s
+    assert "Migrated Configuration Surface (512 parameters)" not in s
