@@ -357,4 +357,4 @@ def test_phase9_requested_tp_stage_is_not_silently_replaced():
     assert 'configuration.Get(' in planner
     assert "AutoTpStage" in planner
     assert "if (target == null)" in planner
-    assert "Execution intent requires TP1." in planner
+    assert "Requested execution target stage is unavailable." in planner
