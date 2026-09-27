@@ -2311,8 +2311,8 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
 | 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
-| 6 | Decision engine | IN PROGRESS | 2026-09-27 | v79 | authoritative DecisionSnapshot; evidence de-duplication added; downstream-consumer audit and validation remain |
-| 7 | Entry/Trigger | NOT STARTED | — | — | — |
+| 6 | Decision engine | SEMANTICALLY COMPLETE / VERIFICATION PENDING | 2026-09-27 | v79 | authoritative DecisionSnapshot; evidence de-duplication; v80 downstream snapshot contract enforced; runtime verification pending |
+| 7 | Entry/Trigger | PRE-ACCEPTANCE IMPLEMENTATION | 2026-09-27 | v80 | canonical EntrySnapshot; retest/breakout trigger engine; runtime acceptance pending |
 | 8 | Risk/SL/Targets | NOT STARTED | — | — | — |
 | 9 | Unified execution | NOT STARTED | — | — | — |
 | 10 | Pending orders | NOT STARTED | — | — | — |
