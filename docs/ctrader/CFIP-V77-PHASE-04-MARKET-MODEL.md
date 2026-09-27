@@ -21,7 +21,7 @@ The following existing analytical concepts were carried forward with their core 
 
 - EMA fast/slow trend state
 - EMA slope
-- RSI midpoint bias and exhaustion-aware groundwork
+- RSI midpoint bias and exhaustion penalty from v73
 - ADX
 - DI+/DI− directional bias
 - ATR volatility
@@ -111,7 +111,7 @@ The v73 regime semantics are represented as a typed enum:
 
 ATR ratio and ADX remain the primary regime inputs, with EMA separation contributing transition/trend quality.
 
-Regime is context, not an automatic BUY/SELL signal.
+Regime is context, not an automatic BUY/SELL signal. The v73 `AdxMinimum` parameter remains the regime threshold rather than a new hard-coded decision value.
 
 ## MTF integrity
 
@@ -153,6 +153,9 @@ Repository-side source validation confirmed:
 - native cTrader indicator access contracts are present;
 - ten unique market features are explicitly registered;
 - typed regime exists;
+- v73 RSI exhaustion scoring behavior remains represented;
+- regime threshold is driven by the configured `AdxMinimum` value;
+- no duplicate public type declarations remain;
 - market model is driven by closed MTF snapshots;
 - forming-bar protection remains in place;
 - no broker mutation/chart authority entered the market layer;
