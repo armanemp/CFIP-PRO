@@ -159,7 +159,23 @@
 //    auto-entry path has no Plan/TP ladder to scale out of, so it is
 //    unaffected and keeps its existing single-target behavior.
 // ============================================================================
-// v59 changes (chart visuals + more auto-trading, per second wishlist):
+// v60 Phase continuation:
+//  - Phase 1 · Signal semantics: ENTRY is the execution-price/zone anchor;
+//    TRIGGER is the activation/confirmation threshold. They are no longer
+//    treated as interchangeable price levels.
+//  - Phase 2 · Smart protection: broker SL/TP are supplied by CFIP's
+//    structural engine, then continuously repriced from live structure,
+//    risk-free state, momentum, liquidity and reward context. No generic
+//    cTrader trailing stop is used.
+//  - Phase 3 · Order/visual authority: a live Position owns its chart
+//    objects; a Pending Order owns its pending objects; Prediction/Watch
+//    objects cannot remain underneath an authoritative execution object.
+//  - Phase 4 · Safety controls: Close Positions and Cancel Orders remain
+//    visible independently of optional display toggles.
+//  - Phase 5 · Runtime panel: live position and pending-order broker state
+//    are displayed alongside the engine state.
+//
+// // v59 changes (chart visuals + more auto-trading, per second wishlist):
 //  - Chart clarity: TP1-4 lines and their price labels now use distinct
 //    colors (TP1 Lime, TP2 SpringGreen, TP3 Turquoise, TP4 Gold — closer =
 //    green, farther/bigger reward = gold) instead of one shared TP color,
@@ -886,7 +902,7 @@ namespace cAlgo
         [Parameter("Auto Trade Label", Group = "13 · AUTO TRADING", DefaultValue = "CFIP-SMART-CLEAN60")]
         public string AutoTradeLabel { get; set; }
 
-        [Parameter("Auto Broker Protection", Group = "13 · AUTO TRADING", DefaultValue = true)]
+        [Parameter("Smart Broker Protection", Group = "13 · AUTO TRADING", DefaultValue = true)]
         public bool AutoBrokerProtection { get; set; }
 
         [Parameter("One Order Per Signal", Group = "13 · AUTO TRADING", DefaultValue = true)]
@@ -1915,7 +1931,7 @@ namespace cAlgo
         [Parameter("Managed Position Label", Group = "13 · AUTO TRADING", DefaultValue = "")]
         public string ManagedPositionLabel { get; set; }
 
-        [Parameter("Sync Broker Take Profit", Group = "13 · AUTO TRADING", DefaultValue = false)]
+        [Parameter("Sync Smart Broker Take Profit", Group = "13 · AUTO TRADING", DefaultValue = true)]
         public bool SyncBrokerTakeProfit { get; set; }
 
         [Parameter("Prevent Broker TP Backward Move", Group = "13 · AUTO TRADING", DefaultValue = true)]
@@ -13059,6 +13075,16 @@ namespace cAlgo
                 Bars.Count < 2)
                 return;
 
+            PendingOrder pendingAuthority =
+                GetManagedPendingOrder();
+
+            if (pendingAuthority != null)
+            {
+                Chart.RemoveObject(P + "WATCH_ARROW");
+                Chart.RemoveObject(P + "REACTION_ARROW");
+                return;
+            }
+
             bool decisionReady =
                 _decision != null &&
                 _decision.EntryAllowed &&
@@ -14089,9 +14115,7 @@ namespace cAlgo
                 buttonAreaHeight;
 
             _buttonStack.IsVisible =
-                buttons ||
-                (_panelToggleButton != null &&
-                 ShowPanelToggleButton);
+                true;
 
             for (int i = 0;
                  i < _panelRows.Count;
@@ -14151,17 +14175,17 @@ namespace cAlgo
 
             int eachButtonWidth =
                 Math.Max(
-                    90,
+                    82,
                     Math.Min(
                         Math.Max(
-                            100,
+                            92,
                             ActionButtonWidth),
                         availableButtonWidth / 2));
 
             if (_closeButton != null)
             {
                 _closeButton.IsVisible =
-                    buttons;
+                    true;
 
                 _closeButton.Width =
                     eachButtonWidth;
@@ -14222,7 +14246,7 @@ namespace cAlgo
             if (_cancelButton != null)
             {
                 _cancelButton.IsVisible =
-                    buttons;
+                    true;
 
                 _cancelButton.Width =
                     eachButtonWidth;
@@ -14516,8 +14540,7 @@ namespace cAlgo
                     border * 2);
 
             bool buttons =
-                ShowTradeActionButtons ||
-                AlwaysShowSafetyButtons;
+                true;
 
             // Close/Cancel are safety controls and remain available by default
             // even when the optional "Show Trade Action Buttons" switch was
@@ -14528,8 +14551,7 @@ namespace cAlgo
             // otherwise turning off "Show Trade Action Buttons" would also
             // hide the toggle button.
             bool showButtonRow =
-                buttons ||
-                ShowPanelToggleButton;
+                true;
 
             int buttonHeight =
                 Math.Max(
@@ -19091,8 +19113,12 @@ private Color AutoTradingPanelColor()
         private void ProtectBrokerPositions(
             int closedM5)
         {
-            if (!AutoProtectBrokerPositions ||
-                _plan == null ||
+            if (!AutoBrokerProtection &&
+                !AutoProtectBrokerPositions)
+                return;
+
+            if (_plan == null ||
+                !_plan.IsLivePosition ||
                 _lastBrokerModifyM5 ==
                 closedM5)
                 return;
@@ -19114,9 +19140,21 @@ private Color AutoTradingPanelColor()
             {
                 if (position == null ||
                     position.SymbolName !=
-                    SymbolName ||
-                    position.Label !=
-                    label)
+                    SymbolName)
+                    continue;
+
+                bool byPlanId =
+                    _plan.PositionId > 0 &&
+                    position.Id ==
+                    _plan.PositionId;
+
+                bool byManagedLabel =
+                    AutoProtectBrokerPositions &&
+                    position.Label ==
+                    label;
+
+                if (!byPlanId &&
+                    !byManagedLabel)
                     continue;
 
                 try
@@ -19131,9 +19169,24 @@ private Color AutoTradingPanelColor()
                             position.EntryPrice,
                             _plan.Stop))
                     {
-                        position.ModifyStopLossPrice(
+                        double normalizedStop =
                             NormalizePrice(
-                                _plan.Stop));
+                                _plan.Stop);
+
+                        bool materiallyDifferent =
+                            !position.StopLoss.HasValue ||
+                            Math.Abs(
+                                position.StopLoss.Value -
+                                normalizedStop) >=
+                            Math.Max(
+                                Symbol.TickSize,
+                                Symbol.PipSize * 0.25);
+
+                        if (materiallyDifferent)
+                        {
+                            position.ModifyStopLossPrice(
+                                normalizedStop);
+                        }
                     }
 
                     if (SyncBrokerTakeProfit)
@@ -19165,9 +19218,23 @@ private Color AutoTradingPanelColor()
 
                             if (move)
                             {
-                                position.ModifyTakeProfitPrice(
-                                    NormalizePrice(
-                                        target));
+                                double normalizedTarget =
+                                    NormalizePrice(target);
+
+                                bool materiallyDifferent =
+                                    !position.TakeProfit.HasValue ||
+                                    Math.Abs(
+                                        position.TakeProfit.Value -
+                                        normalizedTarget) >=
+                                    Math.Max(
+                                        Symbol.TickSize,
+                                        Symbol.PipSize * 0.25);
+
+                                if (materiallyDifferent)
+                                {
+                                    position.ModifyTakeProfitPrice(
+                                        normalizedTarget);
+                                }
                             }
                         }
                     }
@@ -20202,6 +20269,10 @@ private Color AutoTradingPanelColor()
                 _lastPendingSignalM5 =
                     closedM5;
 
+                _plan = null;
+                _executionModel = null;
+                RemovePlanObjects();
+
                 SetAutoTradingState(
                     "ORDER PLACED",
                     "STOP " + Price(trigger));
@@ -20401,6 +20472,10 @@ private Color AutoTradingPanelColor()
 
                 _lastPendingSignalM5 =
                     closedM5;
+
+                _plan = null;
+                _executionModel = null;
+                RemovePlanObjects();
 
                 SetAutoTradingState(
                     "ORDER PLACED",
