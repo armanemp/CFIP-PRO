@@ -46,7 +46,7 @@ The event handlers remain observational: they update the lifecycle ledger and, f
 
 A submitted or modified pending order missing SL/TP becomes explicit recovery state. After a pending order fills, if the resulting Position is missing either protection component and the expected protection is known, a RestoreProtection action is queued.
 
-The broker gateway implements pending-order price-based protection mutation through cTrader's current PendingOrder methods. citeturn557778view0
+The broker gateway implements pending-order protection mutation through a single absolute-price `ModifyPendingOrder` call, preserving the current target and expiration rather than issuing separate Stop Loss and Take Profit mutations. cTrader documents the absolute protection overload and the PendingOrder modification shortcuts. citeturn0search0turn0search3
 
 ### Automatic cleanup
 
@@ -72,7 +72,7 @@ Existing CFIP-managed pending orders are adopted at initialization. Broker comme
 
 ## Limitations before acceptance
 
-- stale-order invalidation beyond explicit broker expiry and daily-loss cancellation still needs a dedicated policy for setup supersession.
+- stale-order invalidation is now tied to plan supersession: a managed pending order with a known PlanId is cancelled when a newer valid TradePlan becomes authoritative; orders without recoverable PlanId are not auto-cancelled.
 - partial-fill / multi-position semantics require scenario coverage in the runtime validation stage.
 - restart adoption is source-modeled but still requires controlled cTrader runtime verification.
 - Phase 9 execution-envelope / fill-deviation / plan-rebase policies remain pending.
