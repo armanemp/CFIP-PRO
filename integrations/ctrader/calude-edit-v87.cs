@@ -8878,6 +8878,16 @@ public sealed class CFIPClean87TradePlanBuilder :
         public DateTime? CancelledUtc { get; private set; }
         public CFIPClean87PendingOrderLifecycleState State { get; private set; }
 
+        private readonly List<string> _brokerPositionIds =
+            new List<string>();
+        private int _protectionAttempts;
+        private int _cancelAttempts;
+        private bool _protectionActionPending;
+        private bool _cancelActionPending;
+        private bool _cancelRequested;
+        private DateTime _nextProtectionRetryUtc = DateTime.MinValue;
+        private DateTime _nextCancelRetryUtc = DateTime.MinValue;
+
         public CFIPClean87PendingOrderRecord(
             string brokerOrderId,
             string signalId,
@@ -8900,6 +8910,68 @@ public sealed class CFIPClean87TradePlanBuilder :
             ExpectedTakeProfit = expectedTakeProfit;
             CreatedUtc = createdUtc;
             ExpectedExpiryUtc = expectedExpiryUtc;
+            State = CFIPClean87PendingOrderLifecycleState.Pending;
+        }
+
+        public bool IsProtectionRetryDue(DateTime utc)
+        {
+            return
+                !_protectionActionPending &&
+                utc >= _nextProtectionRetryUtc;
+        }
+
+        public void MarkProtectionActionQueued()
+        {
+            _protectionActionPending = true;
+        }
+
+        public void MarkProtectionActionAccepted()
+        {
+            _protectionActionPending = false;
+            _protectionAttempts = 0;
+            _nextProtectionRetryUtc = DateTime.MinValue;
+            State = CFIPClean87PendingOrderLifecycleState.Pending;
+        }
+
+        public void MarkProtectionActionFailed(DateTime utc)
+        {
+            _protectionActionPending = false;
+            _protectionAttempts++;
+            _nextProtectionRetryUtc =
+                utc + RetryDelay(_protectionAttempts);
+            State =
+                CFIPClean87PendingOrderLifecycleState.ProtectionRecoveryRequired;
+        }
+
+        public bool IsCancelRetryDue(DateTime utc)
+        {
+            return
+                !_cancelActionPending &&
+                utc >= _nextCancelRetryUtc;
+        }
+
+        public void MarkCancelActionQueued()
+        {
+            _cancelActionPending = true;
+            _cancelRequested = true;
+        }
+
+        public void MarkCancelActionAccepted(DateTime utc)
+        {
+            _cancelActionPending = false;
+            _cancelAttempts = 0;
+            _cancelRequested = true;
+            _nextCancelRetryUtc =
+                utc + TimeSpan.FromSeconds(5);
+        }
+
+        public void MarkCancelActionFailed(DateTime utc)
+        {
+            _cancelActionPending = false;
+            _cancelAttempts++;
+            _cancelRequested = true;
+            _nextCancelRetryUtc =
+                utc + RetryDelay(_cancelAttempts);
             State = CFIPClean87PendingOrderLifecycleState.Pending;
         }
 
@@ -8946,12 +9018,29 @@ public sealed class CFIPClean87TradePlanBuilder :
         public void MarkCancelled(DateTime utc)
         {
             CancelledUtc = utc;
+            _cancelActionPending = false;
+            _cancelRequested = false;
             State = CFIPClean87PendingOrderLifecycleState.Cancelled;
         }
 
         public void MarkReconciled()
         {
+            _cancelActionPending = false;
+            _cancelRequested = false;
+            _protectionActionPending = false;
             State = CFIPClean87PendingOrderLifecycleState.Reconciled;
+        }
+
+        private static TimeSpan RetryDelay(int attempts)
+        {
+            int normalized = Math.Max(1, attempts);
+            int exponent = Math.Min(6, normalized - 1);
+            int seconds = 2;
+
+            for (int i = 0; i < exponent; i++)
+                seconds = Math.Min(60, seconds * 2);
+
+            return TimeSpan.FromSeconds(seconds);
         }
     }
 
@@ -8994,6 +9083,9 @@ public sealed class CFIPClean87TradePlanBuilder :
         {
             _managedLabel = managedLabel ?? string.Empty;
         }
+
+        private static readonly TimeSpan BrokerConfirmationGrace =
+            TimeSpan.FromSeconds(5);
 
         public void ReconcileBrokerState(
             IReadOnlyList<CFIPClean87BrokerPendingOrderSnapshot> activeOrders,
@@ -9050,6 +9142,11 @@ public sealed class CFIPClean87TradePlanBuilder :
                 }
                 else
                 {
+                    if (record.CreatedUtc != DateTime.MinValue &&
+                        utc >= record.CreatedUtc &&
+                        utc - record.CreatedUtc < BrokerConfirmationGrace)
+                        continue;
+
                     record.MarkReconciled();
                 }
             }
@@ -9139,8 +9236,11 @@ public sealed class CFIPClean87TradePlanBuilder :
                 return;
             }
 
-            if (!order.StopLoss.HasValue ||
-                !order.TakeProfit.HasValue)
+            if (!ProtectionMatches(
+                    order.StopLoss,
+                    order.TakeProfit,
+                    record.ExpectedStopLoss,
+                    record.ExpectedTakeProfit))
                 QueueProtectionRecoveryIfRequired(
                     order,
                     record);
@@ -9171,6 +9271,40 @@ public sealed class CFIPClean87TradePlanBuilder :
 
                 // Protection recovery belongs to the resulting Position
                 // lifecycle, using its actual broker Position id.
+            }
+        }
+
+        public void HandleActionResult(
+            CFIPClean87PendingOrderAction action,
+            CFIPClean87ExecutionResult result,
+            DateTime utc)
+        {
+            if (action == null || result == null)
+                return;
+
+            CFIPClean87PendingOrderRecord record;
+            if (!_records.TryGetValue(
+                    action.BrokerOrderId,
+                    out record))
+                return;
+
+            if (action.Kind ==
+                CFIPClean87PendingOrderActionKind.Cancel)
+            {
+                if (result.Accepted)
+                    record.MarkCancelActionAccepted(utc);
+                else
+                    record.MarkCancelActionFailed(utc);
+                return;
+            }
+
+            if (action.Kind ==
+                CFIPClean87PendingOrderActionKind.RestoreProtection)
+            {
+                if (result.Accepted)
+                    record.MarkProtectionActionAccepted();
+                else
+                    record.MarkProtectionActionFailed(utc);
             }
         }
 
@@ -9259,13 +9393,10 @@ public sealed class CFIPClean87TradePlanBuilder :
                         StringComparison.Ordinal))
                     continue;
 
-                Queue(
-                    new CFIPClean87PendingOrderAction(
-                        record.BrokerOrderId,
-                        CFIPClean87PendingOrderActionKind.Cancel,
-                        null,
-                        null,
-                        "PLAN_SUPERSEDED"));
+                QueueCancelIfDue(
+                    record,
+                    "PLAN_SUPERSEDED",
+                    DateTime.UtcNow);
             }
         }
 
@@ -9292,27 +9423,26 @@ public sealed class CFIPClean87TradePlanBuilder :
 
                 if (dailyLossBreached)
                 {
-                    Queue(
-                        new CFIPClean87PendingOrderAction(
-                            record.BrokerOrderId,
-                            CFIPClean87PendingOrderActionKind.Cancel,
-                            null,
-                            null,
-                            "DAILY_LOSS_LIMIT"));
+                    QueueCancelIfDue(
+                        record,
+                        "DAILY_LOSS_LIMIT",
+                        utc);
                     continue;
                 }
 
                 if (record.ExpectedExpiryUtc.HasValue &&
                     record.ExpectedExpiryUtc.Value <= utc)
                 {
-                    Queue(
-                        new CFIPClean87PendingOrderAction(
-                            record.BrokerOrderId,
-                            CFIPClean87PendingOrderActionKind.Cancel,
-                            null,
-                            null,
-                            "EXPECTED_EXPIRY"));
+                    QueueCancelIfDue(
+                        record,
+                        "EXPECTED_EXPIRY",
+                        utc);
+                    continue;
                 }
+
+                if (record.State ==
+                    CFIPClean87PendingOrderLifecycleState.ProtectionRecoveryRequired)
+                    QueueProtectionRecoveryForRecord(record);
             }
         }
 
@@ -9330,7 +9460,8 @@ public sealed class CFIPClean87TradePlanBuilder :
         private void QueueProtectionRecoveryForRecord(
             CFIPClean87PendingOrderRecord record)
         {
-            if (record == null)
+            if (record == null ||
+                !record.IsProtectionRetryDue(DateTime.UtcNow))
                 return;
 
             if (!record.ExpectedStopLoss.HasValue &&
@@ -9346,8 +9477,9 @@ public sealed class CFIPClean87TradePlanBuilder :
                     CFIPClean87PendingOrderActionKind.RestoreProtection,
                     record.ExpectedStopLoss,
                     record.ExpectedTakeProfit,
-                    "PENDING_OR_FILLED_PROTECTION_MISSING"));
+                    "PENDING_PROTECTION_DRIFT"));
 
+            record.MarkProtectionActionQueued();
             record.MarkProtectionRecoveryRequired();
         }
 
@@ -9367,6 +9499,57 @@ public sealed class CFIPClean87TradePlanBuilder :
             }
 
             QueueProtectionRecoveryForRecord(record);
+        }
+
+        private void QueueCancelIfDue(
+            CFIPClean87PendingOrderRecord record,
+            string reason,
+            DateTime utc)
+        {
+            if (record == null ||
+                !record.IsCancelRetryDue(utc))
+                return;
+
+            Queue(
+                new CFIPClean87PendingOrderAction(
+                    record.BrokerOrderId,
+                    CFIPClean87PendingOrderActionKind.Cancel,
+                    null,
+                    null,
+                    reason));
+
+            record.MarkCancelActionQueued();
+        }
+
+        private static bool ProtectionMatches(
+            double? actualStop,
+            double? actualTarget,
+            double? expectedStop,
+            double? expectedTarget)
+        {
+            if (expectedStop.HasValue &&
+                (!actualStop.HasValue ||
+                 !PricesMatch(
+                     actualStop.Value,
+                     expectedStop.Value)))
+                return false;
+
+            if (expectedTarget.HasValue &&
+                (!actualTarget.HasValue ||
+                 !PricesMatch(
+                     actualTarget.Value,
+                     expectedTarget.Value)))
+                return false;
+
+            return actualStop.HasValue &&
+                   actualTarget.HasValue;
+        }
+
+        private static bool PricesMatch(
+            double actual,
+            double expected)
+        {
+            return Math.Abs(actual - expected) <= 0.000001;
         }
 
         private void Queue(CFIPClean87PendingOrderAction action)
