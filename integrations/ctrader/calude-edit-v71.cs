@@ -7,7 +7,10 @@
 // actual-entry structural repricing, and chart/broker execution consistency.
 //
 // Decision and execution are separate:
-//   Direction -> execution zone -> precise entry -> structural stop
+// v71 MTF contract: all decision frames use bars fully closed at one UTC
+// reference. Chart-level confluence is mapped to the last fully closed chart
+// bar; live price remains reserved for execution/protection management.
+////   Direction -> execution zone -> precise entry -> structural stop
 //   -> HTF/liquidity reward ladder -> validated RR envelope.
 //
 // SL/TP are not fixed-distance or simple trailing levels. Structural changes
@@ -2514,10 +2517,14 @@ namespace cAlgo
                 return;
             }
 
+            DateTime reference =
+                _m5Bars.OpenTimes[
+                    _m5Bars.Count - 1];
+
             int closedM5 =
-                Math.Max(
-                    1,
-                    _m5Bars.Count - 2);
+                ClosedIndex(
+                    _m5Bars,
+                    reference);
 
             if (closedM5 < 30)
             {
@@ -2526,10 +2533,6 @@ namespace cAlgo
                 RenderPanel();
                 return;
             }
-
-            DateTime reference =
-                _m5Bars.OpenTimes[
-                    _m5Bars.Count - 1];
 
             bool newClosedBar =
                 closedM5 !=
@@ -3779,14 +3782,19 @@ namespace cAlgo
 
             if (UseAdvancedConfluence)
             {
+                int closedChartIndex =
+                    MapM5ToClosedChart(
+                        closedM5,
+                        chartIndex);
+
                 buy +=
                     LiveBias(
-                        chartIndex,
+                        closedChartIndex,
                         1);
 
                 sell +=
                     LiveBias(
-                        chartIndex,
+                        closedChartIndex,
                         -1);
             }
 
@@ -14310,6 +14318,52 @@ namespace cAlgo
                     "CFIP CLEAN71 icon render failed: {0}",
                     ex.Message);
             }
+        }
+
+        private int ClosedChartIndex(
+            DateTime reference,
+            int fallback)
+        {
+            if (Bars == null ||
+                Bars.Count < 2 ||
+                reference == DateTime.MinValue)
+                return -1;
+
+            int closed =
+                ClosedIndex(
+                    Bars,
+                    reference);
+
+            if (closed >= 0 &&
+                closed < Bars.Count - 1)
+                return closed;
+
+            return Math.Max(
+                0,
+                Math.Min(
+                    Bars.Count - 2,
+                    fallback));
+        }
+
+        private int MapM5ToClosedChart(
+            int m5Index,
+            int alternate)
+        {
+            if (_m5Bars == null ||
+                Bars == null ||
+                m5Index < 0 ||
+                m5Index >= _m5Bars.Count)
+                return Math.Max(
+                    0,
+                    Math.Min(
+                        Math.Max(
+                            0,
+                            Bars.Count - 2),
+                        alternate));
+
+            return ClosedChartIndex(
+                _m5Bars.OpenTimes[m5Index],
+                alternate);
         }
 
         private int MapM5ToChart(
