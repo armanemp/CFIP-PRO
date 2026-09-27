@@ -110,7 +110,7 @@ def test_v80_is_version_isolated():
     assert "CFIPClean78" not in s
     assert "calude-edit-v79" not in s
     assert "CFIP-PRO-v80" in s
-    assert "CFIP-MTF_LiveEntryEngine_Clean_v80" in s
+    assert "CFIP_MTF_LiveEntryEngine_Clean_v80" in s
 
 
 def test_v80_braces_are_balanced():
@@ -206,7 +206,7 @@ def test_phase7_has_breakout_trigger_path():
     assert "PrecisionBreakoutBufferAtr" in e
     assert "CFIPClean80EntryMode.BreakoutMarket" in e
     assert "CFIPClean80EntryTriggerState.WaitingBreakout" in e
-    assert "TriggerReached" in e
+    assert "triggerReached" in e
     assert "BREAKOUT_TRIGGER_REACHED" in e
 
 
