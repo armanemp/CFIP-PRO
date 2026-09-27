@@ -1,6 +1,6 @@
 // ============================================================================
 // CFIP-PRO cTrader — v77 Clean Architecture Foundation
-// Phase: 3 · Time, MTF and data pipeline
+// Phase: 4 · Market model, indicators, regime and confluence
 //
 // This version intentionally does NOT copy the v73 monolith.
 // v73 remains the frozen behavioral/reference baseline.
@@ -1899,6 +1899,26 @@ namespace cAlgo
                     vwapEvidence && vwapEnabled,
                     healthyEvidence && healthyEnabled);
 
+            bool avoidRsiExhaustion =
+                configuration.Get(
+                    "AvoidRsiExhaustion",
+                    true);
+
+            if (avoidRsiExhaustion)
+            {
+                if (rsi >= 75)
+                    bullScore =
+                        Math.Max(
+                            0,
+                            bullScore - 5);
+
+                if (rsi <= 25)
+                    bearScore =
+                        Math.Max(
+                            0,
+                            bearScore - 5);
+            }
+
             int bullNormalized =
                 NormalizeScore(bullScore, possibleScore);
 
@@ -1922,6 +1942,7 @@ namespace cAlgo
                     atr,
                     previousAtr,
                     adx,
+                    adxMinimum,
                     Math.Abs(
                         emaSpread));
 
@@ -2085,6 +2106,7 @@ namespace cAlgo
             double atr,
             double previousAtr,
             double adx,
+            int adxMinimum,
             double emaSpread)
         {
             if (atr <= 0 || previousAtr <= 0)
@@ -2098,7 +2120,7 @@ namespace cAlgo
             if (ratio <= 0.80)
                 return CFIPClean77Regime.Compression;
 
-            if (adx < 20)
+            if (adx < adxMinimum)
                 return CFIPClean77Regime.Range;
 
             if (emaSpread <= atr * 0.10)
