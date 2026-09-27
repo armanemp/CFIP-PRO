@@ -3732,11 +3732,16 @@ namespace cAlgo
             int strongestShare = Math.Max(bullShare, bearShare);
 
             CFIPClean79Direction direction =
-                strongestShare >= adaptiveShareThreshold
-                    ? (bullShare >= bearShare
-                        ? CFIPClean79Direction.Buy
-                        : CFIPClean79Direction.Sell)
-                    : CFIPClean79Direction.Wait;
+                e.Bull <= 0 &&
+                e.Bear <= 0
+                    ? CFIPClean79Direction.Wait
+                    : strongestShare < adaptiveShareThreshold
+                        ? CFIPClean79Direction.Wait
+                        : bullShare > bearShare
+                            ? CFIPClean79Direction.Buy
+                            : bearShare > bullShare
+                                ? CFIPClean79Direction.Sell
+                                : CFIPClean79Direction.Wait;
 
             int edge = Math.Abs(bullShare - bearShare);
 
