@@ -9365,10 +9365,15 @@ public sealed class CFIPClean87TradePlanBuilder :
                     intent.ExpiryUtc);
 
             _records[record.BrokerOrderId] = record;
-            QueueProtectionRecoveryIfRequired(order, record);
+            QueueProtectionRecoveryIfRequired(
+                order,
+                record,
+                utc);
         }
 
-        public void HandleModified(PendingOrder order)
+        public void HandleModified(
+            PendingOrder order,
+            DateTime utc)
         {
             if (!IsManaged(order))
                 return;
@@ -9389,7 +9394,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                     record.ExpectedTakeProfit))
                 QueueProtectionRecoveryIfRequired(
                     order,
-                    record);
+                    record,
+                    utc);
         }
 
         public void HandleFilled(
@@ -9542,7 +9548,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                 QueueCancelIfDue(
                     record,
                     "PLAN_SUPERSEDED",
-                    DateTime.UtcNow);
+                    utc);
             }
         }
 
@@ -9588,7 +9594,9 @@ public sealed class CFIPClean87TradePlanBuilder :
 
                 if (record.State ==
                     CFIPClean87PendingOrderLifecycleState.ProtectionRecoveryRequired)
-                    QueueProtectionRecoveryForRecord(record);
+                    QueueProtectionRecoveryForRecord(
+                        record,
+                        utc);
             }
         }
 
@@ -9604,10 +9612,11 @@ public sealed class CFIPClean87TradePlanBuilder :
         }
 
         private void QueueProtectionRecoveryForRecord(
-            CFIPClean87PendingOrderRecord record)
+            CFIPClean87PendingOrderRecord record,
+            DateTime utc)
         {
             if (record == null ||
-                !record.IsProtectionRetryDue(DateTime.UtcNow))
+                !record.IsProtectionRetryDue(utc))
                 return;
 
             if (!record.ExpectedStopLoss.HasValue &&
@@ -9631,7 +9640,8 @@ public sealed class CFIPClean87TradePlanBuilder :
 
         private void QueueProtectionRecoveryIfRequired(
             PendingOrder order,
-            CFIPClean87PendingOrderRecord record)
+            CFIPClean87PendingOrderRecord record,
+            DateTime utc)
         {
             if (order.StopLoss.HasValue &&
                 order.TakeProfit.HasValue)
@@ -9644,7 +9654,9 @@ public sealed class CFIPClean87TradePlanBuilder :
                 return;
             }
 
-            QueueProtectionRecoveryForRecord(record);
+            QueueProtectionRecoveryForRecord(
+                record,
+                utc);
         }
 
         private void QueueCancelIfDue(
@@ -11006,6 +11018,15 @@ public sealed class CFIPClean87TradePlanBuilder :
                     Tp1Consumed = false,
                     Tp2Consumed = false,
                     PartialPending = false,
+                    ProtectionPending = false,
+                    PendingStopLoss = null,
+                    PendingTakeProfit = null,
+                    PendingProtectionStage =
+                        CFIPClean87TargetStage.TP1,
+                    PendingProtectionRequestedUtc =
+                        DateTime.MinValue,
+                    LastTargetRepriceReferenceUtc =
+                        DateTime.MinValue,
                     PendingPartialStage =
                         CFIPClean87TargetStage.TP1,
                     PendingPartialRequestedVolume = 0,
@@ -13067,7 +13088,7 @@ public sealed class CFIPClean87TradePlanBuilder :
 [Parameter("SL Reprice Start RR", Group = "10 · Live Management", DefaultValue = 1.00, MinValue = 0.5, MaxValue = 10)]
         public double SlRepriceStartRR { get; set; }
 
-[Parameter("SlRepriceBreathingAtr", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
+[Parameter("SL Reprice Breathing ATR", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
         public double SlRepriceBreathingAtr { get; set; }
 
 [Parameter("SL Reprice Step ATR", Group = "10 · Live Management", DefaultValue = 0.08, MinValue = 0.01, MaxValue = 1)]
@@ -14995,7 +15016,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                 args != null &&
                 args.PendingOrder != null)
                 _pendingOrderLifecycle.HandleModified(
-                    args.PendingOrder);
+                    args.PendingOrder,
+                    TimeInUtc);
         }
 
         private void PendingOrders_Filled(
