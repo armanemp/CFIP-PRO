@@ -1305,6 +1305,11 @@ Every execution path receives the same DecisionSnapshot.
 - ae1d25b983f10ec2546a29efb6fc05bd188ba37d — harden DecisionSnapshot invariants and directional structural confirmations
 - b7f3e4cc95a354553aead1e96a3237633a094fd3 — define FeatureAggregate and make market-feature deduplication order-independent
 - e7f5fbe3083b6ccc0b129653374f38ba098571ff — add order-independent market evidence validation
+- 16ec11e2f44a086d9134817b634c1362293e85fb — reconcile adaptive smart decision semantics
+- 9d0892d2223a63001d36970b58db6888df7a8d57 — keep zero and tied evidence neutral
+- fa30d58c95f0bf1798555f1a534276bdf7a353fe — reconcile Premium/Discount location bias and HTF confidence penalty
+- 6f3cb428cac9bc04a26d6bccb01c6f1249b30c9a — validate adaptive Phase 6 semantics
+- 19bc33ce80b3328cc31b7b20362a5cbb031ca4b2 — validate legacy decision semantics reconciliation
 - c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
 
 **Implemented:**
@@ -1321,6 +1326,10 @@ Every execution path receives the same DecisionSnapshot.
 - structure-event family de-duplication for BOS/MSS/CHOCH and Displacement
 - structural confirmation count is direction-specific and deduplicated by structural-break family per M5/M15/H1/H4 timeframe, with M5 displacement as a separate confirmation
 - opposing-direction structural evidence cannot satisfy the selected direction's structural gate
+- adaptive smart thresholds are restored from v73 semantics using regime-aware quality/share/edge policy without reusing Trigger/Entry gates
+- directional shares use the configured SmartScoreTemperature softmax and exact zero/tie evidence remains WAIT
+- Premium/Discount is preserved as location bias only and does not increment independent evidence
+- HigherTfPenalty is preserved as a confidence-risk penalty for H1/H4/D1 opposition, separate from directional evidence
 - Feature aggregation now keeps strongest BUY and SELL observations separately; exact ties contribute no directional evidence, eliminating timeframe-order bias
 - added the missing internal `FeatureAggregate` type required by the deduplication implementation
 - confluence retained as a quality modifier rather than a second directional evidence source
@@ -1338,12 +1347,15 @@ Every execution path receives the same DecisionSnapshot.
 - brace/type/version isolation checks
 - stale market-evidence assertions replaced with weighted-deduplication assertions
 - decision policy consistency and single-evaluation authority checks
+- adaptive threshold and softmax checks
+- zero/tie direction safety checks
+- legacy location-bias and HTF-penalty checks
 
 **Latest findings/fixes:** a compile-critical missing internal type was found: v79 referenced `FeatureAggregate` without defining it. This is now fixed. A second decision-integrity defect was also found: equal-strength opposing observations of one market feature could inherit the answer from timeframe loop order. The aggregator now resolves BUY/SELL strengths symmetrically and treats exact ties as neutral.
 
 A structural-gate semantic defect was also found during deep audit: the prior deduplicated event counter could not reliably reach the default `MinimumStructuralConfirmations=4` for a single selected direction because it collapsed opposing and multi-timeframe confirmations into one global counter. v79 now preserves the v73 confirmation intent while deduplicating BOS/MSS/CHOCH within each timeframe and selecting only the chosen direction. `DecisionSnapshot` now also enforces policy/eligibility consistency at construction time.
 
-**Validation status:** source-level tests are committed, including the new order-independent aggregation checks. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
+**Validation status:** source-level tests are committed, including order-independent aggregation, adaptive threshold, softmax, zero/tie safety, location-bias and HTF-penalty checks. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
 
 **Remaining before Phase 6 completion:**
 1. v79 source audit currently shows no downstream execution/UI consumer that creates a competing final direction; keep this invariant enforced as Phase 7+ consumers are attached
