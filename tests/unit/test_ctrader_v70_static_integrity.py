@@ -224,3 +224,14 @@ def test_v70_has_balanced_braces() -> None:
     stripped = re.sub(r'"(?:\\.|[^"\\])*"', '""', stripped)
 
     assert stripped.count("{") == stripped.count("}")
+
+
+def test_v70_restores_c_trader_indicator_initialize_lifecycle() -> None:
+    v70 = read_source(V70)
+
+    assert re.search(
+        r"protected\s+override\s+void\s+Initialize\s*\(\)",
+        v70,
+    )
+    assert v70.count("protected override void Initialize()") == 1
+    assert v70.count("public override void Calculate(int index)") == 1
