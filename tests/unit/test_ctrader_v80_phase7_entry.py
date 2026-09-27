@@ -302,3 +302,19 @@ def test_phase7_retest_can_execute_after_confirmed_touch_with_live_distance_gate
     assert "bool touched =" in retest
     assert "MaximumEntryDistanceAtr" not in retest
     assert "RequireRetestCloseConfirmation" in retest
+
+
+def test_phase7_retest_rejects_zone_created_after_reference_bar():
+    e = entry_engine(read(V80))
+    start = e.index("private bool TryFindRetestZone")
+    end = e.index("private ZoneCandidate FindBestExecutionZone", start)
+    retest = e[start:end]
+    assert "m5.ClosedBarTimeUtc < zone.CreatedUtc" in retest
+
+
+def test_phase7_breakout_ignores_future_structural_events():
+    e = entry_engine(read(V80))
+    start = e.index("private bool TryFindFreshBreakoutEvent")
+    end = e.index("private bool IsTriggerEvent", start)
+    fresh = e[start:end]
+    assert "item.TimeUtc > referenceUtc" in fresh
