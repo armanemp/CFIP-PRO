@@ -18739,12 +18739,55 @@ private Color AutoTradingPanelColor()
                     0,
                     3);
 
-            if (stageIndex >= selected.Count ||
-                selected[stageIndex] == null)
-                return 0;
+            // All execution paths use the same progressive fallback policy:
+            // requested stage -> nearest available earlier stage -> synthetic
+            // RR target (when explicitly permitted). This keeps pending,
+            // aggressive and market execution behavior identical.
+            for (int i = stageIndex;
+                 i >= 0;
+                 i--)
+            {
+                if (i < selected.Count &&
+                    selected[i] != null &&
+                    IsFinitePositive(
+                        selected[i].Price))
+                    return NormalizePrice(
+                        selected[i].Price);
+            }
 
-            return NormalizePrice(
-                selected[stageIndex].Price);
+            double fallbackRR =
+                stageIndex == 0
+                    ? Math.Max(
+                        FallbackTp1RR,
+                        MinimumRequiredRR())
+                    : stageIndex == 1
+                        ? Math.Max(
+                            FallbackTp2RR,
+                            Tp2MinimumRR)
+                        : stageIndex == 2
+                            ? Math.Max(
+                                FallbackTp3RR,
+                                Tp3MinimumRR)
+                            : Math.Max(
+                                FallbackTp4RR,
+                                Tp4MinimumRR);
+
+            bool requiresHtf =
+                stageIndex == 0
+                    ? RequireHtfRewardForTp1
+                    : RequireHtfRewardForTp2Plus;
+
+            if (AllowSyntheticTargetFallback &&
+                !requiresHtf &&
+                fallbackRR > 0)
+            {
+                return NormalizePrice(
+                    direction == 1
+                        ? entry + risk * fallbackRR
+                        : entry - risk * fallbackRR);
+            }
+
+            return 0;
         }
 
         private void ReconcileLivePlanToActualFill(
