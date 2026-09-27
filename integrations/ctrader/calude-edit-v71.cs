@@ -14,7 +14,7 @@
 // v71 MTF contract: all decision frames use bars fully closed at one UTC
 // reference. Chart-level confluence is mapped to the last fully closed chart
 // bar; live price remains reserved for execution/protection management.
-////   Direction -> execution zone -> precise entry -> structural stop
+//   Direction -> execution zone -> precise entry -> structural stop
 //   -> HTF/liquidity reward ladder -> validated RR envelope.
 //
 // SL/TP are not fixed-distance or simple trailing levels. Structural changes
@@ -2682,14 +2682,14 @@ namespace cAlgo
                         h4Index);
 
                 _d1Frame =
-                    d1Index >= 10
+                    d1Index >= 30
                         ? AnalyzeFrame(
                             _d1Bars,
                             d1Index)
                         : null;
 
                 _w1Frame =
-                    w1Index >= 10
+                    w1Index >= 30
                         ? AnalyzeFrame(
                             _w1Bars,
                             w1Index)
@@ -14491,7 +14491,7 @@ namespace cAlgo
                 alternate);
         }
 
-        private int MapM5ToChart(
+                private int MapM5ToChart(
             int m5Index,
             int alternate)
         {
@@ -14499,25 +14499,21 @@ namespace cAlgo
                 Bars == null ||
                 m5Index < 0 ||
                 m5Index >= _m5Bars.Count)
-                return Math.Max(
-                    0,
-                    Math.Min(
-                        alternate,
-                        Bars.Count - 1));
+                return ClosedChartIndex(
+                    DateTime.MinValue,
+                    alternate);
 
             int mapped =
                 Bars.OpenTimes.GetIndexByTime(
                     _m5Bars.OpenTimes[m5Index]);
 
-            return
-                mapped >= 0 &&
-                mapped < Bars.Count
-                    ? mapped
-                    : Math.Max(
-                        0,
-                        Math.Min(
-                            alternate,
-                            Bars.Count - 1));
+            if (mapped >= 0 &&
+                mapped < Bars.Count)
+                return mapped;
+
+            return ClosedChartIndex(
+                _m5Bars.OpenTimes[m5Index],
+                alternate);
         }
 
         private void ClearWatchObjects()
