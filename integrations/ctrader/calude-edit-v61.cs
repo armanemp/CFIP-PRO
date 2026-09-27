@@ -13915,7 +13915,7 @@ namespace cAlgo
 
         
 
-                                private void ApplyPanelVisualSettings(
+        private void ApplyPanelVisualSettings(
             int contentWidth,
             int scrollHeight,
             int maxHeight,
@@ -14700,6 +14700,8 @@ namespace cAlgo
                 buttons,
                 buttonHeight,
                 buttonGap);
+
+            SyncQuickExecutionControls();
         }
 
         private string GetAutoTradingPanelState()
