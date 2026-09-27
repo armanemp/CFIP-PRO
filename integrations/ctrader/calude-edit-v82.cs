@@ -5974,6 +5974,7 @@ namespace cAlgo
         public CFIPClean82Direction Direction { get; private set; }
         public CFIPClean82EntryMode EntryMode { get; private set; }
         public CFIPClean82EntryModel Entry { get; private set; }
+        public CFIPClean82PriceLevel ExecutionAnchor { get; private set; }
         public CFIPClean82PriceLevel StructuralStop { get; private set; }
         public CFIPClean82TargetLadder TargetLadder { get; private set; }
         public double RiskRewardToTp1 { get; private set; }
@@ -5989,6 +5990,7 @@ namespace cAlgo
             CFIPClean82Direction direction,
             CFIPClean82EntryMode entryMode,
             CFIPClean82EntryModel entry,
+            CFIPClean82PriceLevel executionAnchor,
             CFIPClean82PriceLevel structuralStop,
             CFIPClean82TargetLadder targetLadder,
             double riskRewardToTp1,
@@ -6007,6 +6009,9 @@ namespace cAlgo
             Entry =
                 entry ??
                 throw new ArgumentNullException("entry");
+            ExecutionAnchor =
+                executionAnchor ??
+                throw new ArgumentNullException("executionAnchor");
             StructuralStop =
                 structuralStop ??
                 throw new ArgumentNullException("structuralStop");
@@ -6032,9 +6037,7 @@ namespace cAlgo
 
                 if (!CFIPClean82DirectionRules.IsProtectivePrice(
                     Direction,
-                    Entry.RequestedEntry != null
-                        ? Entry.RequestedEntry.Price
-                        : Entry.IdealEntry.Price,
+                    ExecutionAnchor.Price,
                     StructuralStop.Price))
                     throw new ArgumentException(
                         "TradePlan structural stop must protect the selected direction.",
@@ -6383,6 +6386,12 @@ public sealed class CFIPClean82TradePlanBuilder :
             decision.Direction,
             entry.Mode,
             entry.Model,
+            new CFIPClean82PriceLevel(
+                entryPrice,
+                "EXECUTION_ANCHOR",
+                CFIPClean82Provenance.Direct(
+                    "PHASE8",
+                    "PLAN_EXECUTION_ANCHOR")),
             new CFIPClean82PriceLevel(
                 stop.Price,
                 structuralStop
@@ -6995,6 +7004,12 @@ public sealed class CFIPClean82TradePlanBuilder :
                 ? entry.Mode
                 : CFIPClean82EntryMode.None,
             entryModel,
+            new CFIPClean82PriceLevel(
+                safeEntry,
+                "InvalidPlanExecutionAnchor",
+                CFIPClean82Provenance.Direct(
+                    "PHASE8",
+                    "INVALID_PLAN")),
             new CFIPClean82PriceLevel(
                 safeEntry,
                 "InvalidPlanStop",
@@ -10583,7 +10598,7 @@ public sealed class CFIPClean82TradePlanBuilder :
 
             double stopPips =
                 Math.Abs(
-                    plan.Entry.IdealEntry.Price -
+                    plan.ExecutionAnchor.Price -
                     plan.StructuralStop.Price) /
                 Symbol.PipSize;
 
