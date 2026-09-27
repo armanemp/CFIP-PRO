@@ -3855,84 +3855,93 @@ namespace cAlgo
                 configuration);
 
             if (direction == CFIPClean79Direction.Wait)
-                blocks.Add(CFIPClean79BlockReason.NoDirection);
-
-            if (confidence < configuration.Get("MinimumConfidence", 72))
-                blocks.Add(CFIPClean79BlockReason.ConfidenceTooLow);
-
-            if (edge < adaptiveEdgeThreshold)
-                blocks.Add(CFIPClean79BlockReason.EvidenceInsufficient);
-
-            if (quality < adaptiveQualityThreshold)
-                blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
-
-            if (mtfAgreement < configuration.Get("MinimumTimeframeAgreement", 72) &&
-                configuration.Get("RequireHigherTfAgreement", true))
-                blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
-
-            int requiredEvidence = Math.Max(
-                configuration.Get("MinimumIndependentEvidence", 4),
-                configuration.Get("EnableSmartDecisionEngine", true)
-                    ? configuration.Get("SmartMinimumIndependentEvidence", 4) : 0);
-
-            if (e.Independent < requiredEvidence)
-                blocks.Add(CFIPClean79BlockReason.EvidenceInsufficient);
-
-            if (configuration.Get("RequireStructuralConfirmation", true) &&
-                e.Structural < configuration.Get("MinimumStructuralConfirmations", 4))
-                blocks.Add(CFIPClean79BlockReason.StructureInvalid);
-
-            if (configuration.Get("RequireCoreAgreement", true) &&
-                !CoreAgreement(direction, market, configuration))
-                blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
-
-            if (configuration.Get("EnableSmartDecisionEngine", true))
             {
-                if (configuration.Get("RequireSmartConsensus", true) &&
-                    strongestShare <
-                    Math.Max(
-                        configuration.Get("SmartConsensusThreshold", 57),
-                        adaptiveShareThreshold))
-                {
-                    bool soft =
-                        configuration.Get("AllowSmartSoftGate", true) &&
-                        quality >= configuration.Get("SmartStrongSetupQuality", 82) &&
-                        edge >= configuration.Get("SmartStrongSetupEdge", 10) &&
-                        e.Independent >= requiredEvidence + 1;
-
-                    if (!soft)
-                        blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
-                }
-
-                if (mtfAgreement <
-                    configuration.Get("SmartMinimumTimeframeAgreement", 72))
-                    blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
+                // A neutral directional consensus is the root decision block.
+                // Direction-dependent gates are not meaningful until a direction
+                // exists, so they must not pollute the exact block-reason ledger.
+                blocks.Add(CFIPClean79BlockReason.NoDirection);
             }
-
-            // Legacy name retained for preset parity. In Phase 6 this is
-            // only a Decision-quality policy floor; actual Entry/Trigger eligibility
-            // remains exclusively owned by Phase 7.
-            if (configuration.Get("UseSmartEntryQualityFilter", true) &&
-                quality < Math.Max(
-                    configuration.Get("SmartQualityThreshold", 70),
-                    Math.Max(
-                        adaptiveQualityThreshold,
-                        configuration.Get("EnableSmartDecisionEngine", true)
-                            ? SmartMinimumConsensusFloor(configuration)
-                            : 0)))
-                blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
-
-            if (configuration.Get("UseRegimeNoTradeGuard", true) &&
-                RegimeBlocked(regime, regimeQuality, configuration))
-                blocks.Add(CFIPClean79BlockReason.VolatilityBlocked);
-
-            if (configuration.Get("UseHistoricalChoppinessGuard", true) &&
-                m5 != null && m5.Choppy &&
-                market.M15 != null && market.M15.Choppy &&
-                quality < Math.Max(
-                    configuration.Get("SmartRegimeQualityFloor", 55) + 5,
-                    configuration.Get("NoTradeMinimumSmartQuality", 55) + 5))
-                blocks.Add(CFIPClean79BlockReason.VolatilityBlocked);
+            else
+            {
+                if (confidence < configuration.Get("MinimumConfidence", 72))
+                    blocks.Add(CFIPClean79BlockReason.ConfidenceTooLow);
+    
+                if (edge < adaptiveEdgeThreshold)
+                    blocks.Add(CFIPClean79BlockReason.EvidenceInsufficient);
+    
+                if (quality < adaptiveQualityThreshold)
+                    blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
+    
+                if (mtfAgreement < configuration.Get("MinimumTimeframeAgreement", 72) &&
+                    configuration.Get("RequireHigherTfAgreement", true))
+                    blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
+    
+                int requiredEvidence = Math.Max(
+                    configuration.Get("MinimumIndependentEvidence", 4),
+                    configuration.Get("EnableSmartDecisionEngine", true)
+                        ? configuration.Get("SmartMinimumIndependentEvidence", 4) : 0);
+    
+                if (e.Independent < requiredEvidence)
+                    blocks.Add(CFIPClean79BlockReason.EvidenceInsufficient);
+    
+                if (configuration.Get("RequireStructuralConfirmation", true) &&
+                    e.Structural < configuration.Get("MinimumStructuralConfirmations", 4))
+                    blocks.Add(CFIPClean79BlockReason.StructureInvalid);
+    
+                if (configuration.Get("RequireCoreAgreement", true) &&
+                    !CoreAgreement(direction, market, configuration))
+                    blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
+    
+                if (configuration.Get("EnableSmartDecisionEngine", true))
+                {
+                    if (configuration.Get("RequireSmartConsensus", true) &&
+                        strongestShare <
+                        Math.Max(
+                            configuration.Get("SmartConsensusThreshold", 57),
+                            adaptiveShareThreshold))
+                    {
+                        bool soft =
+                            configuration.Get("AllowSmartSoftGate", true) &&
+                            quality >= configuration.Get("SmartStrongSetupQuality", 82) &&
+                            edge >= configuration.Get("SmartStrongSetupEdge", 10) &&
+                            e.Independent >= requiredEvidence + 1;
+    
+                        if (!soft)
+                            blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
+                    }
+    
+                    if (mtfAgreement <
+                        configuration.Get("SmartMinimumTimeframeAgreement", 72))
+                        blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
+                }
+    
+                // Legacy name retained for preset parity. In Phase 6 this is
+                // only a Decision-quality policy floor; actual Entry/Trigger eligibility
+                // remains exclusively owned by Phase 7.
+                if (configuration.Get("UseSmartEntryQualityFilter", true) &&
+                    quality < Math.Max(
+                        configuration.Get("SmartQualityThreshold", 70),
+                        Math.Max(
+                            adaptiveQualityThreshold,
+                            configuration.Get("EnableSmartDecisionEngine", true)
+                                ? SmartMinimumConsensusFloor(configuration)
+                                : 0)))
+                    blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
+    
+                if (configuration.Get("UseRegimeNoTradeGuard", true) &&
+                    RegimeBlocked(regime, regimeQuality, configuration))
+                    blocks.Add(CFIPClean79BlockReason.VolatilityBlocked);
+    
+                if (configuration.Get("UseHistoricalChoppinessGuard", true) &&
+                    m5 != null && m5.Choppy &&
+                    market.M15 != null && market.M15.Choppy &&
+                    quality < Math.Max(
+                        configuration.Get("SmartRegimeQualityFloor", 55) + 5,
+                        configuration.Get("NoTradeMinimumSmartQuality", 55) + 5))
+                    blocks.Add(CFIPClean79BlockReason.VolatilityBlocked);
+    
+    
+            }
 
             blocks = Distinct(blocks);
 
