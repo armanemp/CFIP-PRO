@@ -12898,7 +12898,7 @@ public sealed class CFIPClean88TradePlanBuilder :
         IsOverlay = true,
         TimeZone = TimeZones.UTC,
         AccessRights = AccessRights.None)]
-    public class CFIP_MTF_LiveEntryEngine_Clean_v87 : Indicator
+    public class CFIP_MTF_LiveEntryEngine_Clean_v88 : Indicator
     {
         private Bars _m1Bars;
         private Bars _m5Bars;
