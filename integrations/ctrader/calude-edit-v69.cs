@@ -19305,14 +19305,28 @@ private Color AutoTradingPanelColor()
 
                 if (_plan == null)
                 {
-                    _autoExecutionBlockReason =
-                        "NO ELIGIBLE PLAN";
+                    if (_executionModel != null &&
+                        _executionModel.Mode ==
+                            CFIPClean69ExecutionMode.WaitingForTrigger)
+                    {
+                        _autoExecutionBlockReason =
+                            "WAITING FOR TRIGGER";
 
-                    SetAutoTradingState(
-                        "ARMED",
-                        ConfirmedSignalsOnly
-                            ? "WAITING FOR CONFIRMED PLAN"
-                            : "WAITING FOR SMART-ELIGIBLE PLAN");
+                        SetAutoTradingState(
+                            "ARMED",
+                            "WAITING FOR TRIGGER");
+                    }
+                    else
+                    {
+                        _autoExecutionBlockReason =
+                            "NO ELIGIBLE PLAN";
+
+                        SetAutoTradingState(
+                            "ARMED",
+                            ConfirmedSignalsOnly
+                                ? "WAITING FOR CONFIRMED PLAN"
+                                : "WAITING FOR SMART-ELIGIBLE PLAN");
+                    }
 
                     return;
                 }
@@ -19398,6 +19412,9 @@ private Color AutoTradingPanelColor()
                     _plan.Direction,
                     out suitabilityReason))
             {
+                _autoExecutionBlockReason =
+                    "SUITABILITY • " +
+                    suitabilityReason;
                 SetAutoTradingState(
                     "BLOCKED",
                     suitabilityReason);
@@ -22598,8 +22615,21 @@ private Color AutoTradingPanelColor()
                 }
             }
 
-            _autoOrdersBlockReason =
-                "NO ELIGIBLE PENDING SETUP";
+            if (pendingDirection == 0)
+            {
+                _autoOrdersBlockReason =
+                    "NO ELIGIBLE PENDING SETUP";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    _autoOrdersBlockReason) ||
+                _autoOrdersBlockReason ==
+                    "NOT EVALUATED")
+            {
+                _autoOrdersBlockReason =
+                    "PENDING EXECUTION BLOCKED";
+            }
         }
 
         private double EffectiveRiskStopPips(double stopPips)
