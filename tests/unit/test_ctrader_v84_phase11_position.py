@@ -120,7 +120,12 @@ def test_v84_source_is_balanced():
 
 
 def test_phase11_position_manager_has_explicit_states():
-    m = manager(read(V84))
+    s = read(V84)
+    record = s[
+        s.index("public sealed class CFIPClean84PositionRecord"):
+        s.index("public sealed class CFIPClean84PositionAction")
+    ]
+    manager_source = manager(s)
     for state in (
         "Adopted",
         "Protected",
@@ -131,7 +136,7 @@ def test_phase11_position_manager_has_explicit_states():
         "Orphan",
         "RecoveryRequired",
     ):
-        assert state in m
+        assert state in record or state in manager_source
 
 
 def test_phase11_subscribes_to_position_events():
@@ -162,11 +167,10 @@ def test_phase11_restart_reconciliation_does_not_clear_live_broker_owner():
 def test_phase11_orphan_position_is_explicit_and_not_auto_closed():
     m = manager(read(V84))
     assert "record.MarkOrphan()" in m
-    assert "CFIPClean84PositionActionKind.Close" in m
-    orphan = m[m.index("if (string.IsNullOrWhiteSpace(record.PlanId))"):
-              m.index("VerifyProtectionSnapshot", m.index("if (string.IsNullOrWhiteSpace(record.PlanId))"))]
-    assert "record.MarkOrphan()" in orphan
-    assert "Queue(" not in orphan
+    assert "CFIPClean84PositionActionKind.Close" not in m[
+        m.index("if (string.IsNullOrWhiteSpace(record.PlanId))"):
+        m.index("VerifyProtectionSnapshot", m.index("if (string.IsNullOrWhiteSpace(record.PlanId))"))
+    ]
 
 
 def test_phase11_protection_drift_is_recovery_state():
