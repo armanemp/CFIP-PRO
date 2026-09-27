@@ -5085,10 +5085,19 @@ namespace cAlgo
                             "EntryBufferAtr",
                             0.05)));
 
+            double breakoutAnchor =
+                direction == CFIPClean80Direction.Buy
+                    ? Math.Max(
+                        triggerEvent.Price,
+                        breakoutZone.Zone.CurrentUpper)
+                    : Math.Min(
+                        triggerEvent.Price,
+                        breakoutZone.Zone.CurrentLower);
+
             double triggerPrice =
                 direction == CFIPClean80Direction.Buy
-                    ? triggerEvent.Price + m5.Atr * bufferAtr
-                    : triggerEvent.Price - m5.Atr * bufferAtr;
+                    ? breakoutAnchor + m5.Atr * bufferAtr
+                    : breakoutAnchor - m5.Atr * bufferAtr;
 
             double triggerTolerance =
                 m5.Atr *
