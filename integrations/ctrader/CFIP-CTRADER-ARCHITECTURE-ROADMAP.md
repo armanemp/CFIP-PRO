@@ -1241,7 +1241,7 @@ The structural ledger is ready to become the single upstream source for Phase 6 
 Phase 6 — Decision engine
 ## PHASE 6 — Decision engine
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — 2026-09-27**
 
 ### Objective
 
@@ -2150,7 +2150,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
 | 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
-| 6 | Decision engine | NOT STARTED | — | — | — |
+| 6 | Decision engine | IN PROGRESS | 2026-09-27 | v79 | authoritative DecisionSnapshot, evidence/quality/policy pipeline; validation continues |
 | 7 | Entry/Trigger | NOT STARTED | — | — | — |
 | 8 | Risk/SL/Targets | NOT STARTED | — | — | — |
 | 9 | Unified execution | NOT STARTED | — | — | — |
@@ -2241,7 +2241,7 @@ At minimum record:
 
 **Current implementation status:** v78 now contains the Phase 5 canonical Structure/FVG/OB/Liquidity ledger on top of the v77 Market Model and v76 time/MTF contracts. v77 remains the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Next implementation target:** Phase 6 — Decision engine.
+**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until DecisionSnapshot validation and double-counting controls are complete.
 
 **Critical instruction for the next phase:** Start from the v78 StructureSnapshot, v77 MarketModel and v76 MTF snapshot. Build one authoritative Decision engine that consumes the existing evidence exactly once, separates Evidence -> Score -> Quality -> Eligibility -> Policy, and becomes the sole source for Signal, Auto Trade and Auto Order eligibility.
 
@@ -2259,8 +2259,8 @@ Phase 1  ████████████████████  COMPLETE
 Phase 2  ████████████████████  COMPLETE
 Phase 3  ████████████████████  COMPLETE
 Phase 4  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
-Phase 5  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
-Phase 6  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 5  ████████████████████  COMPLETE
+Phase 6  ████████░░░░░░░░░░░░  IN PROGRESS
 Phase 7  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 8  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 9  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
