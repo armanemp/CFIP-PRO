@@ -1139,6 +1139,7 @@ namespace cAlgo
         // Typed interpretation; this is market bias, not final trade direction.
         public CFIPClean77Direction BiasDirection { get; private set; }
         public int BiasStrength { get; private set; }
+        public int MarketQuality { get; private set; }
         public int BullScore { get; private set; }
         public int BearScore { get; private set; }
         public int BullScoreNormalized { get; private set; }
@@ -1194,6 +1195,7 @@ namespace cAlgo
             double rangeAtr,
             CFIPClean77Direction biasDirection,
             int biasStrength,
+            int marketQuality,
             int bullScore,
             int bearScore,
             int bullScoreNormalized,
@@ -1235,6 +1237,9 @@ namespace cAlgo
             RangeAtr = Math.Max(0, rangeAtr);
             BiasDirection = biasDirection;
             BiasStrength = Math.Max(0, Math.Min(100, biasStrength));
+            MarketQuality =
+                Math.Max(0,
+                    Math.Min(100, marketQuality));
             BullScore = Math.Max(0, bullScore);
             BearScore = Math.Max(0, bearScore);
             BullScoreNormalized =
