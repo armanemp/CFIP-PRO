@@ -288,6 +288,21 @@ namespace cAlgo
         ReversalLimit = 5
     }
 
+    public enum CFIPClean70LifecycleState
+    {
+        Flat = 0,
+        Signal = 1,
+        PlanReady = 2,
+        ExecutionReady = 3,
+        PendingOrder = 4,
+        LivePosition = 5,
+        ExitRequested = 6,
+        RecoveryRequired = 7,
+        Closed = 8,
+        Rejected = 9,
+        Error = 10
+    }
+
     [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class CFIP_MTF_LiveEntryEngine_Clean_v70 : Indicator
     {
@@ -2225,6 +2240,14 @@ namespace cAlgo
         private bool _lastConfiguredAutomaticOrders;
         private bool _outcomeTelemetryTimedOut;
 
+        private CFIPClean70LifecycleState _lifecycleState =
+            CFIPClean70LifecycleState.Flat;
+
+        private string _lifecycleReason =
+            "INITIALIZING";
+
+        private bool _brokerProtectionRecoveryRequired;
+
         // Public cTrader parameters are configuration inputs. These private
         // flags are the single runtime authority used by execution, panel
         // state and quick controls so UI state cannot become execution state
@@ -2431,6 +2454,10 @@ namespace cAlgo
             }
 
             InitializeExecutionRuntimeState();
+
+            SetLifecycleState(
+                CFIPClean70LifecycleState.Flat,
+                "READY");
 
             CreatePanel();
 
@@ -8629,6 +8656,10 @@ namespace cAlgo
 
             _executionModel = null;
 
+            SetLifecycleState(
+                CFIPClean70LifecycleState.PlanReady,
+                "PLAN READY");
+
             ClearWatchObjects();
 
             string message =
@@ -8835,6 +8866,35 @@ namespace cAlgo
 
                 _lastExitM5 =
                     closedM5;
+
+                Position integrityPosition =
+                    GetManagedPositionById(
+                        _plan.PositionId);
+
+                if (integrityPosition != null)
+                {
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.ExitRequested,
+                        "PLAN INTEGRITY FAILURE");
+
+                    if (!TryClosePosition(
+                            integrityPosition,
+                            "PLAN INTEGRITY FAILURE"))
+                    {
+                        SetLifecycleState(
+                            CFIPClean70LifecycleState.RecoveryRequired,
+                            "PLAN INTEGRITY EXIT REJECTED");
+
+                        _autoExecutionBlockReason =
+                            "PLAN INTEGRITY EXIT REJECTED";
+                    }
+
+                    return;
+                }
+
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    "PLAN INVALID • NO BROKER POSITION");
 
                 _plan = null;
                 RemovePlanObjects();
@@ -9306,7 +9366,7 @@ namespace cAlgo
             }
         }
 
-        private bool CheckStructuralSetupInvalidation(
+                private bool CheckStructuralSetupInvalidation(
             int closedM5,
             double market)
         {
@@ -9417,30 +9477,22 @@ namespace cAlgo
                     0.02,
                     InvalidationZoneCloseAtr);
 
-            bool zoneFailure;
-
-            if (_plan.Direction == 1)
-            {
-                zoneFailure =
-                    market <
-                    _plan.Stop -
-                    zoneTolerance &&
-                    (_m5Frame == null ||
-                     _m5Frame.StructureBear ||
-                     _m5Frame.MssBear ||
-                     _m5Frame.ChochBear);
-            }
-            else
-            {
-                zoneFailure =
-                    market >
-                    _plan.Stop +
-                    zoneTolerance &&
-                    (_m5Frame == null ||
-                     _m5Frame.StructureBull ||
-                     _m5Frame.MssBull ||
-                     _m5Frame.ChochBull);
-            }
+            bool zoneFailure =
+                _plan.Direction == 1
+                    ? market <
+                      _plan.Stop -
+                      zoneTolerance &&
+                      (_m5Frame == null ||
+                       _m5Frame.StructureBear ||
+                       _m5Frame.MssBear ||
+                       _m5Frame.ChochBear)
+                    : market >
+                      _plan.Stop +
+                      zoneTolerance &&
+                      (_m5Frame == null ||
+                       _m5Frame.StructureBull ||
+                       _m5Frame.MssBull ||
+                       _m5Frame.ChochBull);
 
             bool invalid =
                 (structureFailure ||
@@ -9480,30 +9532,49 @@ namespace cAlgo
                     closedM5;
             }
 
-            if (EnableOutcomeTelemetry &&
-                !_outcomeRegistered)
-            {
-                RegisterOutcome(
-                    _plan.Direction,
-                    false);
+            Position position =
+                GetManagedPositionById(
+                    _plan.PositionId);
 
-                _outcomeRegistered =
-                    true;
+            if (position == null)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    "STRUCTURE INVALIDATED • POSITION ALREADY CLOSED");
+                return false;
             }
 
-            _losses++;
-            _lastExitM5 =
-                closedM5;
+            SetLifecycleState(
+                CFIPClean70LifecycleState.ExitRequested,
+                "STRUCTURAL INVALIDATION");
 
-            DrawOutcomeMarker(
-                "STRUCT INVALID",
-                market,
-                false);
+            if (!TryClosePosition(
+                    position,
+                    "STRUCTURAL INVALIDATION"))
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.RecoveryRequired,
+                    "STRUCTURAL EXIT REJECTED");
 
-            _plan = null;
-            RemovePlanObjects();
+                _autoExecutionBlockReason =
+                    "STRUCTURAL EXIT REJECTED";
+
+                SendUnifiedAlert(
+                    "STRUCT-INVALID-EXIT-FAILED|" +
+                    position.Id,
+                    "CFIP CLEAN70 STRUCTURAL INVALIDATION • BROKER EXIT REJECTED | #" +
+                    position.Id,
+                    _plan.Direction,
+                    true);
+            }
+
+            _lastExitM5 = closedM5;
+
+            // _plan remains authoritative until OnPositionClosed confirms
+            // that the broker position is actually gone.
             return true;
         }
+
 
         private int CalculateSmartExitPressure(
             double market,
@@ -18003,19 +18074,10 @@ private bool ExecutePartialClose(
 
                         if (shouldMove)
                         {
-                            try
-                            {
-                                position.ModifyStopLossPrice(
-                                    NormalizePrice(
-                                        position.EntryPrice));
-                            }
-                            catch (Exception ex)
-                            {
-                                Print(
-                                    "CFIP CLEAN70 partial break-even failed ({0}): {1}",
-                                    tag,
-                                    ex.Message);
-                            }
+                            TryModifyStopLoss(
+                                position,
+                                position.EntryPrice,
+                                "PARTIAL BREAK-EVEN");
                         }
                     }
 
@@ -19107,6 +19169,231 @@ private Color AutoTradingPanelColor()
             SyncQuickExecutionControls();
         }
 
+        private void SetLifecycleState(
+            CFIPClean70LifecycleState state,
+            string reason)
+        {
+            _lifecycleState = state;
+            _lifecycleReason =
+                string.IsNullOrWhiteSpace(reason)
+                    ? state.ToString().ToUpperInvariant()
+                    : reason;
+        }
+
+        private Position GetManagedPositionById(long positionId)
+        {
+            if (positionId <= 0)
+                return null;
+
+            foreach (Position position in Positions)
+            {
+                if (position != null &&
+                    position.Id == positionId &&
+                    IsManagedPosition(position))
+                    return position;
+            }
+
+            return null;
+        }
+
+        private bool TryModifyStopLoss(
+            Position position,
+            double price,
+            string context)
+        {
+            if (position == null ||
+                !IsFinitePositive(price))
+                return false;
+
+            double normalized =
+                NormalizePrice(price);
+
+            if (!IsFinitePositive(normalized))
+                return false;
+
+            try
+            {
+                TradeResult result =
+                    position.ModifyStopLossPrice(normalized);
+
+                if (result == null ||
+                    !result.IsSuccessful)
+                {
+                    Print(
+                        "CFIP CLEAN70 SL mutation rejected ({0}).",
+                        context);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN70 SL mutation failed ({0}): {1}",
+                    context,
+                    ex.Message);
+                return false;
+            }
+        }
+
+        private bool TryModifyTakeProfit(
+            Position position,
+            double price,
+            string context)
+        {
+            if (position == null ||
+                !IsFinitePositive(price))
+                return false;
+
+            double normalized =
+                NormalizePrice(price);
+
+            if (!IsFinitePositive(normalized))
+                return false;
+
+            try
+            {
+                TradeResult result =
+                    position.ModifyTakeProfitPrice(normalized);
+
+                if (result == null ||
+                    !result.IsSuccessful)
+                {
+                    Print(
+                        "CFIP CLEAN70 TP mutation rejected ({0}).",
+                        context);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN70 TP mutation failed ({0}): {1}",
+                    context,
+                    ex.Message);
+                return false;
+            }
+        }
+
+        private bool TryClosePosition(
+            Position position,
+            string context,
+            double? volumeInUnits = null)
+        {
+            if (position == null)
+                return false;
+
+            try
+            {
+                TradeResult result =
+                    volumeInUnits.HasValue
+                        ? ClosePosition(
+                            position,
+                            volumeInUnits.Value)
+                        : ClosePosition(position);
+
+                if (result == null ||
+                    !result.IsSuccessful)
+                {
+                    Print(
+                        "CFIP CLEAN70 close rejected ({0}).",
+                        context);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN70 close failed ({0}): {1}",
+                    context,
+                    ex.Message);
+                return false;
+            }
+        }
+
+        private bool TryCancelPendingOrder(
+            PendingOrder order,
+            string context)
+        {
+            if (order == null)
+                return false;
+
+            try
+            {
+                TradeResult result =
+                    CancelPendingOrder(order);
+
+                if (result == null ||
+                    !result.IsSuccessful)
+                {
+                    Print(
+                        "CFIP CLEAN70 pending cancel rejected ({0}).",
+                        context);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Print(
+                    "CFIP CLEAN70 pending cancel failed ({0}): {1}",
+                    context,
+                    ex.Message);
+                return false;
+            }
+        }
+
+        private bool EnsureBrokerProtectionForPosition(
+            Position position,
+            double stop,
+            double target,
+            string context,
+            int direction)
+        {
+            bool stopOk =
+                TryModifyStopLoss(
+                    position,
+                    stop,
+                    context + " • SL");
+
+            bool targetOk =
+                TryModifyTakeProfit(
+                    position,
+                    target,
+                    context + " • TP");
+
+            bool protectedOk =
+                stopOk &&
+                targetOk;
+
+            _brokerProtectionRecoveryRequired =
+                !protectedOk;
+
+            if (!protectedOk)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.RecoveryRequired,
+                    context +
+                    " • BROKER PROTECTION REJECTED");
+
+                SendUnifiedAlert(
+                    "PROTECTION-REJECTED|" +
+                    position.Id,
+                    "CFIP CLEAN70 BROKER PROTECTION REJECTED | #" +
+                    position.Id,
+                    direction,
+                    true);
+            }
+
+            return protectedOk;
+        }
+
         private bool IsExecutionPlanConsistent(
             int direction,
             double entry,
@@ -19722,22 +20009,12 @@ private Color AutoTradingPanelColor()
 
                 if (AutoBrokerProtection)
                 {
-                    try
-                    {
-                        result.Position.ModifyStopLossPrice(
-                            NormalizePrice(
-                                _plan.Stop));
-
-                        result.Position.ModifyTakeProfitPrice(
-                            NormalizePrice(
-                                target));
-                    }
-                    catch (Exception ex)
-                    {
-                        Print(
-                            "CFIP CLEAN70 broker protection failed: {0}",
-                            ex.Message);
-                    }
+                    EnsureBrokerProtectionForPosition(
+                        result.Position,
+                        _plan.Stop,
+                        target,
+                        "NEW MARKET ENTRY",
+                        _plan.Direction);
                 }
 
                 SetAutoTradingState(
@@ -20176,55 +20453,76 @@ private Color AutoTradingPanelColor()
                     : AutoTradeLabel.Trim();
         }
 
-        private void CloseAllPositions()
+                private void CloseAllPositions()
         {
+            bool allClosedOrAbsent = true;
+
             foreach (Position position in Positions)
             {
                 if (!IsManagedPosition(position))
                     continue;
 
-                try
-                {
-                    ClosePosition(position);
-                }
-                catch (Exception ex)
-                {
-                    Print(
-                        "CFIP CLEAN70 close failed: {0}",
-                        ex.Message);
-                }
+                if (!TryClosePosition(
+                        position,
+                        "END OF DAY"))
+                    allClosedOrAbsent = false;
             }
 
             if (GetManagedPosition() == null)
             {
                 _plan = null;
                 _executionModel = null;
+                _activeBrokerStop = 0;
+                _activeBrokerTarget = 0;
+
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    "END OF DAY • CLOSED");
+
                 RemovePlanObjects();
+            }
+            else if (!allClosedOrAbsent)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.RecoveryRequired,
+                    "END OF DAY • CLOSE REJECTED");
+            }
+            else
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.ExitRequested,
+                    "END OF DAY • EXIT REQUESTED");
             }
         }
 
-        private void CancelAllOrders()
+
+                private void CancelAllOrders()
         {
+            bool allCancelledOrAbsent = true;
+
             foreach (PendingOrder order in PendingOrders)
             {
                 if (!IsManagedPendingOrder(order))
                     continue;
 
-                try
-                {
-                    CancelPendingOrder(order);
-                }
-                catch (Exception ex)
-                {
-                    Print(
-                        "CFIP CLEAN70 cancel failed: {0}",
-                        ex.Message);
-                }
+                if (!TryCancelPendingOrder(
+                        order,
+                        "PENDING CIRCUIT BREAKER"))
+                    allCancelledOrAbsent = false;
             }
 
             if (GetManagedPendingOrder() == null)
+            {
                 RemoveManagedPendingOrderObjects();
+            }
+            else if (!allCancelledOrAbsent)
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.RecoveryRequired,
+                    "PENDING CANCEL REJECTED");
+            }
         }
+
 
         private int FreshTriggerEvidence(
             Bars bars,
@@ -21558,7 +21856,7 @@ private Color AutoTradingPanelColor()
 
         
 
-        private void ProtectBrokerPositions(
+                private void ProtectBrokerPositions(
             int closedM5)
         {
             if (!AutoBrokerProtection &&
@@ -21603,101 +21901,126 @@ private Color AutoTradingPanelColor()
                     !byManagedLabel)
                     continue;
 
-                try
-                {
-                    int positionDirection =
-                        position.TradeType == TradeType.Buy
-                            ? 1
-                            : -1;
+                bool mutationRequired = false;
+                bool mutationSucceeded = true;
 
-                    if (IsValidStop(
+                int positionDirection =
+                    position.TradeType == TradeType.Buy
+                        ? 1
+                        : -1;
+
+                if (IsValidStop(
+                        positionDirection,
+                        position.EntryPrice,
+                        _plan.Stop))
+                {
+                    double normalizedStop =
+                        NormalizePrice(_plan.Stop);
+
+                    bool materiallyDifferent =
+                        !position.StopLoss.HasValue ||
+                        Math.Abs(
+                            position.StopLoss.Value -
+                            normalizedStop) >=
+                        Math.Max(
+                            Symbol.TickSize,
+                            Symbol.PipSize * 0.25);
+
+                    if (materiallyDifferent)
+                    {
+                        mutationRequired = true;
+                        mutationSucceeded =
+                            TryModifyStopLoss(
+                                position,
+                                normalizedStop,
+                                "LIVE PROTECTION • SL") &&
+                            mutationSucceeded;
+                    }
+                }
+
+                if (SyncBrokerTakeProfit)
+                {
+                    double target =
+                        AutoTarget(
+                            _plan,
+                            EffectiveAutoTpStage());
+
+                    if (IsValidTarget(
                             positionDirection,
                             position.EntryPrice,
-                            _plan.Stop))
+                            target))
                     {
-                        double normalizedStop =
-                            NormalizePrice(
-                                _plan.Stop);
+                        bool move = true;
+
+                        if (PreventBrokerTpBackwardMove &&
+                            position.TakeProfit.HasValue)
+                        {
+                            double current =
+                                position.TakeProfit.Value;
+
+                            move =
+                                positionDirection == 1
+                                    ? target >= current
+                                    : target <= current;
+                        }
+
+                        double normalizedTarget =
+                            NormalizePrice(target);
 
                         bool materiallyDifferent =
-                            !position.StopLoss.HasValue ||
-                            Math.Abs(
-                                position.StopLoss.Value -
-                                normalizedStop) >=
-                            Math.Max(
-                                Symbol.TickSize,
-                                Symbol.PipSize * 0.25);
+                            move &&
+                            (!position.TakeProfit.HasValue ||
+                             Math.Abs(
+                                 position.TakeProfit.Value -
+                                 normalizedTarget) >=
+                             Math.Max(
+                                 Symbol.TickSize,
+                                 Symbol.PipSize * 0.25));
 
                         if (materiallyDifferent)
                         {
-                            position.ModifyStopLossPrice(
-                                normalizedStop);
+                            mutationRequired = true;
+                            mutationSucceeded =
+                                TryModifyTakeProfit(
+                                    position,
+                                    normalizedTarget,
+                                    "LIVE PROTECTION • TP") &&
+                                mutationSucceeded;
                         }
                     }
-
-                    if (SyncBrokerTakeProfit)
-                    {
-                        double target =
-                            AutoTarget(
-                                _plan,
-                                EffectiveAutoTpStage());
-
-                        if (IsValidTarget(
-                                positionDirection,
-                                position.EntryPrice,
-                                target))
-                        {
-                            bool move =
-                                true;
-
-                            if (PreventBrokerTpBackwardMove &&
-                                position.TakeProfit.HasValue)
-                            {
-                                double current =
-                                    position.TakeProfit.Value;
-
-                                move =
-                                    positionDirection == 1
-                                        ? target >= current
-                                        : target <= current;
-                            }
-
-                            if (move)
-                            {
-                                double normalizedTarget =
-                                    NormalizePrice(target);
-
-                                bool materiallyDifferent =
-                                    !position.TakeProfit.HasValue ||
-                                    Math.Abs(
-                                        position.TakeProfit.Value -
-                                        normalizedTarget) >=
-                                    Math.Max(
-                                        Symbol.TickSize,
-                                        Symbol.PipSize * 0.25);
-
-                                if (materiallyDifferent)
-                                {
-                                    position.ModifyTakeProfitPrice(
-                                        normalizedTarget);
-                                }
-                            }
-                        }
-                    }
-
-                    _lastBrokerModifyUtc =
-                        DateTime.UtcNow;
-
-                    break;
                 }
-                catch (Exception ex)
+
+                if (mutationRequired &&
+                    !mutationSucceeded)
                 {
-                    Print(
-                        "CFIP CLEAN70 broker protection failed: {0}",
-                        ex.Message);
+                    _brokerProtectionRecoveryRequired = true;
+
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.RecoveryRequired,
+                        "BROKER PROTECTION MUTATION REJECTED");
+
+                    SendUnifiedAlert(
+                        "PROTECTION-SYNC-FAILED|" +
+                        position.Id,
+                        "CFIP CLEAN70 BROKER PROTECTION SYNC REJECTED | #" +
+                        position.Id,
+                        positionDirection,
+                        true);
                 }
+                else if (!_brokerProtectionRecoveryRequired)
+                {
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.LivePosition,
+                        "LIVE POSITION • BROKER STATE SYNCHRONIZED");
+                }
+
+                _lastBrokerModifyUtc =
+                    DateTime.UtcNow;
+
+                break;
             }
         }
+
 
         private void TryAggressiveAutoTrade(
             int closedM5)
@@ -21940,22 +22263,12 @@ private Color AutoTradingPanelColor()
 
                 if (AutoBrokerProtection)
                 {
-                    try
-                    {
-                        result.Position.ModifyStopLossPrice(
-                            NormalizePrice(
-                                stop));
-
-                        result.Position.ModifyTakeProfitPrice(
-                            NormalizePrice(
-                                target));
-                    }
-                    catch (Exception ex)
-                    {
-                        Print(
-                            "CFIP CLEAN70 aggressive protection failed: {0}",
-                            ex.Message);
-                    }
+                    EnsureBrokerProtectionForPosition(
+                        result.Position,
+                        stop,
+                        target,
+                        "AGGRESSIVE ENTRY",
+                        _reaction.Direction);
                 }
 
                 SendUnifiedAlert(
@@ -22388,7 +22701,7 @@ private Color AutoTradingPanelColor()
             };
         }
 
-        private void RecoverManagedLivePlan(int closedM5)
+                private void RecoverManagedLivePlan(int closedM5)
         {
             if (_plan != null &&
                 _plan.IsLivePosition)
@@ -22399,26 +22712,208 @@ private Color AutoTradingPanelColor()
                 if (!IsManagedPosition(position))
                     continue;
 
-                if (!position.StopLoss.HasValue ||
-                    !position.TakeProfit.HasValue)
+                int direction =
+                    position.TradeType == TradeType.Buy
+                        ? 1
+                        : -1;
+
+                double entry =
+                    position.EntryPrice;
+
+                double atr =
+                    _m5Bars == null
+                        ? 0
+                        : Atr(
+                            _m5Bars,
+                            Math.Max(
+                                1,
+                                closedM5));
+
+                if (!IsFinitePositive(atr))
+                {
+                    atr =
+                        Math.Max(
+                            Symbol.PipSize * 20,
+                            Math.Abs(
+                                Symbol.Ask -
+                                Symbol.Bid) *
+                        10);
+                }
+
+                double stop =
+                    position.StopLoss.HasValue &&
+                    IsValidStop(
+                        direction,
+                        entry,
+                        position.StopLoss.Value)
+                        ? NormalizePrice(
+                            position.StopLoss.Value)
+                        : 0;
+
+                double target =
+                    position.TakeProfit.HasValue &&
+                    IsValidTarget(
+                        direction,
+                        entry,
+                        position.TakeProfit.Value)
+                        ? NormalizePrice(
+                            position.TakeProfit.Value)
+                        : 0;
+
+                bool protectionMissing =
+                    !IsFinitePositive(stop) ||
+                    !IsFinitePositive(target);
+
+                if (!IsFinitePositive(stop))
+                {
+                    string stopSource;
+                    int stopQuality;
+
+                    stop =
+                        BuildStructuralStop(
+                            Math.Max(1, closedM5),
+                            direction,
+                            entry,
+                            atr,
+                            out stopSource,
+                            out stopQuality);
+
+                    if (!IsValidStop(
+                            direction,
+                            entry,
+                            stop))
+                    {
+                        double fallbackRisk =
+                            atr *
+                            Math.Max(
+                                0.10,
+                                FallbackSlAtr);
+
+                        stop =
+                            direction == 1
+                                ? entry - fallbackRisk
+                                : entry + fallbackRisk;
+
+                        stop =
+                            NormalizePrice(stop);
+                    }
+                }
+
+                if (!IsFinitePositive(target))
+                {
+                    target =
+                        SelectStructuralAutoTarget(
+                            Math.Max(1, closedM5),
+                            direction,
+                            entry,
+                            stop,
+                            atr,
+                            EffectiveAutoTpStage());
+
+                    if (!IsValidTarget(
+                            direction,
+                            entry,
+                            target))
+                    {
+                        double risk =
+                            Math.Max(
+                                Symbol.PipSize,
+                                Math.Abs(
+                                    entry -
+                                    stop));
+
+                        double distance =
+                            risk *
+                            Math.Max(
+                                1.0,
+                                MinimumRequiredRR());
+
+                        target =
+                            direction == 1
+                                ? entry + distance
+                                : entry - distance;
+
+                        target =
+                            NormalizePrice(target);
+                    }
+                }
+
+                if (!IsExecutionPlanConsistent(
+                        direction,
+                        entry,
+                        stop,
+                        target))
+                {
+                    _brokerProtectionRecoveryRequired = true;
+
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.RecoveryRequired,
+                        "STARTUP RECOVERY FAILED");
                     continue;
+                }
 
                 _plan =
                     CreateManagedPlanFromExecution(
-                        position.TradeType == TradeType.Buy ? 1 : -1,
-                        position.EntryPrice,
-                        position.StopLoss.Value,
-                        position.TakeProfit.Value,
+                        direction,
+                        entry,
+                        stop,
+                        target,
                         Math.Max(1, closedM5),
                         position.VolumeInUnits);
 
                 _plan.PositionId =
                     position.Id;
 
+                _activeBrokerStop =
+                    position.StopLoss.HasValue
+                        ? NormalizePrice(
+                            position.StopLoss.Value)
+                        : 0;
+
+                _activeBrokerTarget =
+                    position.TakeProfit.HasValue
+                        ? NormalizePrice(
+                            position.TakeProfit.Value)
+                        : 0;
+
+                _brokerProtectionRecoveryRequired =
+                    protectionMissing;
+
+                SetLifecycleState(
+                    protectionMissing
+                        ? CFIPClean70LifecycleState.RecoveryRequired
+                        : CFIPClean70LifecycleState.LivePosition,
+                    protectionMissing
+                        ? "STARTUP RECOVERY • BROKER PROTECTION MISSING"
+                        : "STARTUP RECOVERY • LIVE");
+
                 EnrichLivePlanTargets(closedM5);
 
+                if (AutoProtectBrokerPositions ||
+                    AutoBrokerProtection)
+                {
+                    bool protectionOk =
+                        EnsureBrokerProtectionForPosition(
+                            position,
+                            stop,
+                            target,
+                            "STARTUP RECOVERY",
+                            direction);
+
+                    if (protectionOk)
+                    {
+                        _activeBrokerStop = stop;
+                        _activeBrokerTarget = target;
+                        _brokerProtectionRecoveryRequired = false;
+
+                        SetLifecycleState(
+                            CFIPClean70LifecycleState.LivePosition,
+                            "STARTUP RECOVERY • PROTECTED");
+                    }
+                }
+
                 _lastMarket =
-                    position.TradeType == TradeType.Buy
+                    direction == 1
                         ? Symbol.Bid
                         : Symbol.Ask;
 
@@ -22428,6 +22923,7 @@ private Color AutoTradingPanelColor()
                 break;
             }
         }
+
 
         private void CheckAutoTradingDisabledReminder(int closedM5)
         {
@@ -22536,6 +23032,16 @@ private Color AutoTradingPanelColor()
         {
             _lastAutoOrderAttemptUtc =
                 DateTime.UtcNow;
+
+            if (AutomaticOrdersEnabled &&
+                DailyLossLimitHit(DateTime.UtcNow))
+            {
+                _autoOrdersBlockReason =
+                    "DAILY LOSS LIMIT";
+
+                CancelAllOrders();
+                return;
+            }
 
             if (!AutomaticOrdersEnabled)
             {
@@ -23402,7 +23908,7 @@ private Color AutoTradingPanelColor()
                 true);
         }
 
-        private void OnPositionClosed(PositionClosedEventArgs args)
+                private void OnPositionClosed(PositionClosedEventArgs args)
         {
             if (args == null ||
                 !IsManagedPosition(args.Position))
@@ -23413,6 +23919,31 @@ private Color AutoTradingPanelColor()
                     _lastExitM5,
                     _lastEvaluatedM5);
 
+            int direction =
+                args.Position.TradeType == TradeType.Buy
+                    ? 1
+                    : -1;
+
+            if (EnableOutcomeTelemetry &&
+                !_outcomeRegistered)
+            {
+                bool profitable =
+                    args.Position.NetProfit > 0;
+
+                RegisterOutcome(
+                    direction,
+                    profitable);
+
+                _outcomeRegistered = true;
+
+                if (profitable)
+                    _wins++;
+                else
+                    _losses++;
+            }
+
+            _brokerProtectionRecoveryRequired = false;
+
             if (_plan != null &&
                 _plan.IsLivePosition &&
                 _plan.PositionId ==
@@ -23421,11 +23952,20 @@ private Color AutoTradingPanelColor()
                 _plan = null;
                 _activeBrokerStop = 0;
                 _activeBrokerTarget = 0;
+                _executionModel = null;
+
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    args.Position.NetProfit > 0
+                        ? "POSITION CLOSED • PROFIT"
+                        : "POSITION CLOSED • LOSS");
+
                 RemovePlanObjects();
             }
         }
 
-        private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
+
+                private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
         {
             if (args == null ||
                 args.Position == null ||
@@ -23434,48 +23974,210 @@ private Color AutoTradingPanelColor()
 
             RemoveManagedPendingOrderObjects();
 
-            if (args.Position.StopLoss.HasValue &&
-                args.Position.TakeProfit.HasValue)
+            int direction =
+                args.Position.TradeType == TradeType.Buy
+                    ? 1
+                    : -1;
+
+            int closedM5 =
+                Math.Max(
+                    1,
+                    _lastEvaluatedM5);
+
+            double entry =
+                args.Position.EntryPrice;
+
+            double atr =
+                _m5Bars == null
+                    ? 0
+                    : Atr(
+                        _m5Bars,
+                        closedM5);
+
+            if (!IsFinitePositive(atr))
             {
-                int direction =
-                    args.Position.TradeType == TradeType.Buy
-                        ? 1
-                        : -1;
-
-                _plan =
-                    CreateManagedPlanFromExecution(
-                        direction,
-                        args.Position.EntryPrice,
-                        args.Position.StopLoss.Value,
-                        args.Position.TakeProfit.Value,
-                        Math.Max(
-                            1,
-                            _lastEvaluatedM5),
-                        args.Position.VolumeInUnits,
-                        args.PendingOrder.OrderType ==
-                            PendingOrderType.Stop
-                            ? CFIPClean70ExecutionMode.ContinuationStop
-                            : CFIPClean70ExecutionMode.ReversalLimit);
-
-                _plan.PositionId =
-                    args.Position.Id;
-
-                EnrichLivePlanTargets(
+                atr =
                     Math.Max(
-                        1,
-                        _lastEvaluatedM5));
+                        Symbol.PipSize * 20,
+                        Math.Abs(
+                            Symbol.Ask -
+                            Symbol.Bid) *
+                        10);
+            }
+
+            double stop =
+                args.Position.StopLoss.HasValue &&
+                IsValidStop(
+                    direction,
+                    entry,
+                    args.Position.StopLoss.Value)
+                    ? NormalizePrice(
+                        args.Position.StopLoss.Value)
+                    : 0;
+
+            double target =
+                args.Position.TakeProfit.HasValue &&
+                IsValidTarget(
+                    direction,
+                    entry,
+                    args.Position.TakeProfit.Value)
+                    ? NormalizePrice(
+                        args.Position.TakeProfit.Value)
+                    : 0;
+
+            bool protectionMissing =
+                !IsFinitePositive(stop) ||
+                !IsFinitePositive(target);
+
+            if (!IsFinitePositive(stop))
+            {
+                string stopSource;
+                int stopQuality;
+
+                stop =
+                    BuildStructuralStop(
+                        closedM5,
+                        direction,
+                        entry,
+                        atr,
+                        out stopSource,
+                        out stopQuality);
+
+                if (!IsValidStop(
+                        direction,
+                        entry,
+                        stop))
+                {
+                    double fallbackRisk =
+                        atr *
+                        Math.Max(
+                            0.10,
+                            FallbackSlAtr);
+
+                    stop =
+                        direction == 1
+                            ? entry - fallbackRisk
+                            : entry + fallbackRisk;
+
+                    stop =
+                        NormalizePrice(stop);
+                }
+            }
+
+            if (!IsFinitePositive(target))
+            {
+                target =
+                    SelectStructuralAutoTarget(
+                        closedM5,
+                        direction,
+                        entry,
+                        stop,
+                        atr,
+                        EffectiveAutoTpStage());
+
+                if (!IsValidTarget(
+                        direction,
+                        entry,
+                        target))
+                {
+                    double risk =
+                        Math.Max(
+                            Symbol.PipSize,
+                            Math.Abs(
+                                entry -
+                                stop));
+
+                    double fallbackDistance =
+                        risk *
+                        Math.Max(
+                            1.0,
+                            MinimumRequiredRR());
+
+                    target =
+                        direction == 1
+                            ? entry + fallbackDistance
+                            : entry - fallbackDistance;
+
+                    target =
+                        NormalizePrice(target);
+                }
+            }
+
+            _plan =
+                CreateManagedPlanFromExecution(
+                    direction,
+                    entry,
+                    stop,
+                    target,
+                    closedM5,
+                    args.Position.VolumeInUnits,
+                    args.PendingOrder.OrderType ==
+                        PendingOrderType.Stop
+                        ? CFIPClean70ExecutionMode.ContinuationStop
+                        : CFIPClean70ExecutionMode.ReversalLimit);
+
+            _plan.PositionId =
+                args.Position.Id;
+
+            _activeBrokerStop =
+                args.Position.StopLoss.HasValue
+                    ? NormalizePrice(
+                        args.Position.StopLoss.Value)
+                    : 0;
+
+            _activeBrokerTarget =
+                args.Position.TakeProfit.HasValue
+                    ? NormalizePrice(
+                        args.Position.TakeProfit.Value)
+                    : 0;
+
+            _brokerProtectionRecoveryRequired =
+                protectionMissing;
+
+            SetLifecycleState(
+                protectionMissing
+                    ? CFIPClean70LifecycleState.RecoveryRequired
+                    : CFIPClean70LifecycleState.LivePosition,
+                protectionMissing
+                    ? "PENDING FILL • BROKER PROTECTION MISSING"
+                    : "PENDING FILL • LIVE");
+
+            EnrichLivePlanTargets(closedM5);
+
+            if (AutoBrokerProtection)
+            {
+                bool protectedOk =
+                    EnsureBrokerProtectionForPosition(
+                        args.Position,
+                        stop,
+                        target,
+                        "PENDING FILL",
+                        direction);
+
+                if (protectedOk)
+                {
+                    _activeBrokerStop = stop;
+                    _activeBrokerTarget = target;
+                    _brokerProtectionRecoveryRequired = false;
+
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.LivePosition,
+                        "PENDING FILL • PROTECTED");
+                }
             }
 
             SendUnifiedAlert(
                 "PENDING-FILLED|" +
                 args.PendingOrder.Id,
                 "CFIP CLEAN70 PENDING FILLED | #" +
-                args.Position.Id,
-                args.Position.TradeType == TradeType.Buy
-                    ? 1
-                    : -1,
+                args.Position.Id +
+                (_brokerProtectionRecoveryRequired
+                    ? " | PROTECTION RECOVERY"
+                    : ""),
+                direction,
                 true);
         }
+
 
         private void CreateQuickExecutionControls()
         {
