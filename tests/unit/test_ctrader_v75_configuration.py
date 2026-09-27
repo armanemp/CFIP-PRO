@@ -25,10 +25,10 @@ def test_v75_preserves_complete_v73_parameter_surface() -> None:
     names73 = parameter_names(v73)
     names75 = parameter_names(v75)
 
-    assert len(names73) == 512
-    assert len(names75) == 512
+    assert len(names73) == 513
+    assert len(names75) == 513
     assert names75 == names73
-    assert len(set(names75)) == 512
+    assert len(set(names75)) == 513
 
 
 def test_v75_has_one_configuration_snapshot_and_runtime_authority() -> None:
