@@ -15331,7 +15331,42 @@ namespace cAlgo
                         ? TpLineColor
                         : SlLineColor,
                     true,
-                    contentWidth);
+                    contentWidth);                 Position managedPosition =
+                     GetManagedPosition();
+
+                 if (managedPosition != null)
+                 {
+                     AddPanelRow(
+                         ref slot,
+                         "POSITION  •  " +
+                         (managedPosition.TradeType ==
+                              TradeType.Buy
+                             ? "BUY"
+                             : "SELL") +
+                         "  #" +
+                         managedPosition.Id +
+                         "  •  VOL " +
+                         managedPosition.VolumeInUnits.ToString("F0") +
+                         "  •  P/L " +
+                         managedPosition.NetProfit.ToString("F2") +
+                         "  •  SL " +
+                         (managedPosition.StopLoss.HasValue
+                             ? Price(
+                                 managedPosition.StopLoss.Value)
+                             : "-") +
+                         "  •  TP " +
+                         (managedPosition.TakeProfit.HasValue
+                             ? Price(
+                                 managedPosition.TakeProfit.Value)
+                             : "-"),
+                         managedPosition.NetProfit >= 0
+                             ? TpLineColor
+                             : SlLineColor,
+                         true,
+                         contentWidth);
+                 }
+
+
 
                 AddPanelRow(
                     ref slot,
@@ -15475,7 +15510,43 @@ namespace cAlgo
                 GetAutoTradingPanelState(),
                 GetAutoTradingPanelColor(),
                 true,
-                contentWidth);
+                contentWidth);            PendingOrder managedPending =
+                GetManagedPendingOrder();
+
+            if (managedPending != null)
+            {
+                string pendingType =
+                    managedPending.OrderType ==
+                        PendingOrderType.Stop
+                        ? "STOP"
+                        : managedPending.OrderType ==
+                          PendingOrderType.Limit
+                            ? "LIMIT"
+                            : "PENDING";
+
+                AddPanelRow(
+                    ref slot,
+                    "AUTO ORDER  •  " +
+                    pendingType +
+                    "  •  ENTRY " +
+                    Price(
+                        managedPending.TargetPrice) +
+                    (managedPending.StopLoss.HasValue
+                        ? "  •  SL " +
+                          Price(
+                              managedPending.StopLoss.Value)
+                        : "") +
+                    (managedPending.TakeProfit.HasValue
+                        ? "  •  TP " +
+                          Price(
+                              managedPending.TakeProfit.Value)
+                        : ""),
+                    TriggerLineColor,
+                    true,
+                    contentWidth);
+            }
+
+
 
             AddPanelRow(
                 ref slot,
@@ -20432,21 +20503,36 @@ private Color AutoTradingPanelColor()
             }
         }
 
-        private void RenderManagedPendingOrder()
+        private Position GetManagedPosition()
         {
-            RemoveManagedPendingOrderObjects();
+            foreach (Position position in Positions)
+            {
+                if (IsManagedPosition(position) &&
+                    position.SymbolName == SymbolName)
+                    return position;
+            }
 
-            PendingOrder pending = null;
+            return null;
+        }
 
+        private PendingOrder GetManagedPendingOrder()
+        {
             foreach (PendingOrder order in PendingOrders)
             {
                 if (IsManagedPendingOrder(order) &&
                     order.SymbolName == SymbolName)
-                {
-                    pending = order;
-                    break;
-                }
+                    return order;
             }
+
+            return null;
+        }
+
+        private void RenderManagedPendingOrder()
+        {
+            RemoveManagedPendingOrderObjects();
+
+            PendingOrder pending =
+                GetManagedPendingOrder();
 
             if (pending == null ||
                 !IsFinitePositive(
