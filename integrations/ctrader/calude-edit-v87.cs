@@ -10621,10 +10621,25 @@ public sealed class CFIPClean87TradePlanBuilder :
                 }
             }
 
-            _actionKeys.Remove(
+            string prefix =
                 brokerPositionId +
                 "|" +
-                CFIPClean87PositionActionKind.RestoreProtection.ToString());
+                CFIPClean87PositionActionKind.RestoreProtection.ToString() +
+                "|";
+
+            var staleKeys =
+                new List<string>();
+
+            foreach (string key in _actionKeys)
+            {
+                if (key.StartsWith(
+                        prefix,
+                        StringComparison.Ordinal))
+                    staleKeys.Add(key);
+            }
+
+            for (int i = 0; i < staleKeys.Count; i++)
+                _actionKeys.Remove(staleKeys[i]);
         }
 
         private void Queue(CFIPClean87PositionAction action)
