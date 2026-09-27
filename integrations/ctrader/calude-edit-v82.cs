@@ -8012,6 +8012,18 @@ public sealed class CFIPClean82TradePlanBuilder :
             if (!runtime.SymbolTradingEnabled)
                 blocks.Add(CFIPClean82BlockReason.BrokerUnavailable);
 
+            if (configuration.Get("UseSessionFilter", false) &&
+                !IsWithinConfiguredSession(
+                    runtime.ServerUtc,
+                    configuration))
+                blocks.Add(CFIPClean82BlockReason.SessionBlocked);
+
+            if (configuration.Get("AvoidFridayLateEntry", false) &&
+                runtime.ServerUtc.DayOfWeek == DayOfWeek.Friday &&
+                runtime.ServerUtc.Hour >=
+                configuration.Get("FridayCutoffUtc", 18))
+                blocks.Add(CFIPClean82BlockReason.SessionBlocked);
+
             int exposureLimit =
                 Math.Max(1, configuration.Get("MaximumOpenPositions", 1));
 
@@ -8096,6 +8108,37 @@ public sealed class CFIPClean82TradePlanBuilder :
                 riskAmount,
                 estimatedMargin,
                 blocks);
+        }
+
+        private bool IsWithinConfiguredSession(
+            DateTime utc,
+            CFIPClean82ConfigSnapshot configuration)
+        {
+            int start =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        23,
+                        configuration.Get(
+                            "SessionStartUtc",
+                            6)));
+            int end =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        23,
+                        configuration.Get(
+                            "SessionEndUtc",
+                            20)));
+
+            int hour = utc.Hour;
+
+            if (start == end)
+                return true;
+
+            return start < end
+                ? hour >= start && hour < end
+                : hour >= start || hour < end;
         }
 
         private double ResolveRequestedPrice(CFIPClean82EntrySnapshot entry)
