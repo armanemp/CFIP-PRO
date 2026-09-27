@@ -202,3 +202,29 @@ def test_phase8_plan_is_persisted_downstream_of_entry():
     assert "Plan = null;" in s
     assert "_state.SetPlan(" in s
     assert s.index("_state.SetEntry(") < s.index("_state.SetPlan(")
+
+
+def test_phase8_target_candidates_must_progress_in_trade_direction():
+    e = phase8_engine(read(V81))
+    assert "progressesBeyondPrevious" in e
+    assert "x.Price > previousTarget + spacing" in e
+    assert "x.Price < previousTarget - spacing" in e
+
+
+def test_phase8_plan_and_signal_ids_are_distinct():
+    e = phase8_engine(read(V81))
+    assert "BuildPlanId(" in e
+    assert "BuildSignalId(" in e
+    assert '"CFIP81|PLAN|"' in e
+    assert '"CFIP81|SIGNAL|"' in e
+    assert "stop.Price" in e
+
+
+def test_phase8_valid_trade_plan_has_constructor_invariants():
+    s = read(V81)
+    plan = s[s.index("public sealed class CFIPClean81TradePlan"):
+               s.index("// ------------------------------------------------------------------------\n// Phase 8", s.index("public sealed class CFIPClean81TradePlan"))]
+    assert "A valid TradePlan must be directional." in plan
+    assert "TradePlan direction must match Entry direction." in plan
+    assert "TradePlan structural stop must protect the selected direction." in plan
+    assert "positive RR" in plan
