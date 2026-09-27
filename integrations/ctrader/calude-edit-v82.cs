@@ -10748,7 +10748,7 @@ public sealed class CFIPClean82TradePlanBuilder :
 
             double stopPips =
                 Math.Abs(
-                    plan.Entry.IdealEntry.Price -
+                    plan.ExecutionAnchor.Price -
                     plan.StructuralStop.Price) /
                 Symbol.PipSize;
 
