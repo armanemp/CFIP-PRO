@@ -3618,11 +3618,31 @@ namespace cAlgo
                     "Eligible decision cannot be WAIT or blocked.",
                     "decisionEligible");
 
+            if (Direction == CFIPClean79Direction.Wait &&
+                !normalizedBlocks.Contains(CFIPClean79BlockReason.NoDirection))
+                throw new ArgumentException(
+                    "WAIT decision requires a NoDirection block.",
+                    "decision");
+
+            if (Direction != CFIPClean79Direction.Wait &&
+                !DecisionEligible &&
+                normalizedBlocks.Count == 0)
+                throw new ArgumentException(
+                    "Blocked directional decision requires at least one block.",
+                    "decisionEligible");
+
             if (!DecisionEligible &&
                 (PolicyMode == CFIPClean79DecisionPolicyMode.Confirmed ||
                  PolicyMode == CFIPClean79DecisionPolicyMode.Aggressive))
                 throw new ArgumentException(
                     "Confirmed/Aggressive policy requires decision eligibility.",
+                    "policyMode");
+
+            if (DecisionEligible &&
+                PolicyMode != CFIPClean79DecisionPolicyMode.Confirmed &&
+                PolicyMode != CFIPClean79DecisionPolicyMode.Aggressive)
+                throw new ArgumentException(
+                    "Eligible decision requires Confirmed or Aggressive policy.",
                     "policyMode");
 
             if (PolicyMode == CFIPClean79DecisionPolicyMode.Pending &&
@@ -3785,10 +3805,12 @@ namespace cAlgo
                         ? e.BearLiquidity : 0;
 
             int confluenceQuality =
-                direction == CFIPClean79Direction.Buy
-                    ? e.BullConfluence
-                    : direction == CFIPClean79Direction.Sell
-                        ? e.BearConfluence : 0;
+                configuration.Get("UseAdvancedConfluence", true)
+                    ? direction == CFIPClean79Direction.Buy
+                        ? e.BullConfluence
+                        : direction == CFIPClean79Direction.Sell
+                            ? e.BearConfluence : 0
+                    : 0;
 
             int retestQuality =
                 direction == CFIPClean79Direction.Buy
