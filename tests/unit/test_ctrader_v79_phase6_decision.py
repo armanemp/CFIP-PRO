@@ -132,3 +132,22 @@ def test_phase6_collapses_structure_event_families():
     assert "bearStructureBreak" in s
     assert "bullDisplacement" in s
     assert "bearDisplacement" in s
+
+
+def test_phase6_cycle_reset_preserves_reference_gated_market_state():
+    s = read(V79)
+    block = re.search(
+        r"public void ResetCycleOutputs\(\)[\s\S]*?\n\s*\}",
+        s)
+    assert block
+    body = block.group(0)
+    assert "Market = null;" not in body
+    assert "Structure = null;" not in body
+    assert "Decision = null;" in body
+
+def test_phase6_reuses_persisted_market_structure_for_decision():
+    s = read(V79)
+    assert "if (mtf.IsPrimaryDecisionReady &&" in s
+    assert "_state.Market != null" in s
+    assert "_state.Structure != null" in s
+    assert "_state.SetDecision(" in s
