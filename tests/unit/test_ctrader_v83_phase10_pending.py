@@ -254,3 +254,34 @@ def test_phase10_no_manual_entry_controls_are_introduced():
     assert "ManualTradeEntryControlsSupported { get { return false; } }" in s
     assert "BuyButton" not in s
     assert "SellButton" not in s
+
+
+def test_phase10_pending_record_carries_filled_position_identity():
+    m = pending_manager(read(V83))
+    assert "BrokerPositionId" in m
+    assert "MarkFilled(" in m
+    assert "position.Id.ToString()" in m
+
+
+def test_phase10_restart_reconciliation_can_match_filled_position_by_plan_identity():
+    m = pending_manager(read(V83))
+    assert "ReconcileBrokerState(" in m
+    assert "FindMatchingPosition(" in m
+    assert "position.Comment" in m
+    assert "record.PlanId" in m
+    assert "record.MarkFilled(" in m
+
+
+def test_phase10_reconciliation_marks_unseen_pending_as_reconciled_when_no_position_matches():
+    m = pending_manager(read(V83))
+    start = m.index("public void ReconcileBrokerState")
+    end = m.index("public void Evaluate", start)
+    section = m[start:end]
+    assert "record.MarkReconciled()" in section
+    assert "activeOrderIds.Contains(record.BrokerOrderId)" in section
+
+
+def test_phase10_broker_position_snapshot_retains_comment_for_restart_identity():
+    s = read(V83)
+    assert "public string Comment" in s
+    assert "position.Comment" in s
