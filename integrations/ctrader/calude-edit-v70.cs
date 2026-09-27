@@ -8649,6 +8649,7 @@ namespace cAlgo
             _slHit = false;
             _outcomeRegistered = false;
             _outcomeTelemetryTimedOut = false;
+            _brokerProtectionRecoveryRequired = false;
             _lastStructuralStopUpdateM5 =
                 plan.CreatedM5;
             _lastTargetRepriceM5 =
@@ -8936,41 +8937,39 @@ namespace cAlgo
             if (hitSl &&
                 !_slHit)
             {
-                _slHit = true;
-                _lastExitM5 = closedM5;
-
-                if (EnableOutcomeTelemetry &&
-                    !_outcomeRegistered)
+                if (GetManagedLivePositionForPlan() == null)
                 {
-                    RegisterOutcome(
-                        _plan.Direction,
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.Closed,
+                        "SL LEVEL • POSITION ALREADY CLOSED");
+                    return;
+                }
+
+                if (RequestLivePlanExit(
+                        closedM5,
+                        "SL LEVEL HIT"))
+                {
+                    _slHit = true;
+
+                    if (EnableLevelHitAlerts &&
+                        AlertOnLevelHit &&
+                        AlertOnSl)
+                    {
+                        SendUnifiedAlert(
+                            "SL|" +
+                            _plan.CreatedM5,
+                            "CFIP CLEAN70 SL HIT • EXIT REQUESTED | " +
+                            Price(_plan.Stop),
+                            -1,
+                            true);
+                    }
+
+                    DrawOutcomeMarker(
+                        "SL HIT",
+                        _plan.Stop,
                         false);
-
-                    _outcomeRegistered = true;
                 }
 
-                _losses++;
-
-                if (EnableLevelHitAlerts &&
-                    AlertOnLevelHit &&
-                    AlertOnSl)
-                {
-                    SendUnifiedAlert(
-                        "SL|" +
-                        _plan.CreatedM5,
-                        "CFIP CLEAN70 SL HIT | " +
-                        Price(_plan.Stop),
-                        -1,
-                        true);
-                }
-
-                DrawOutcomeMarker(
-                    "SL HIT",
-                    _plan.Stop,
-                    false);
-
-                _plan = null;
-                RemovePlanObjects();
                 return;
             }
 
@@ -9048,41 +9047,31 @@ namespace cAlgo
             if (hitTp4 &&
                 _tp4Hit == 0)
             {
-                _tp4Hit = 1;
-                _lastExitM5 = closedM5;
-
-                if (EnableOutcomeTelemetry &&
-                    !_outcomeRegistered)
+                if (RequestLivePlanExit(
+                        closedM5,
+                        "TP4 LEVEL HIT"))
                 {
-                    RegisterOutcome(
-                        _plan.Direction,
-                        true);
+                    _tp4Hit = 1;
 
-                    _outcomeRegistered = true;
-                }
+                    if (EnableLevelHitAlerts &&
+                        AlertOnLevelHit &&
+                        AlertOnTp4)
+                    {
+                        SendUnifiedAlert(
+                            "TP4|" +
+                            _plan.CreatedM5,
+                            "CFIP CLEAN70 TP4 HIT • EXIT REQUESTED | " +
+                            Price(_plan.Tp4),
+                            _plan.Direction,
+                            true);
+                    }
 
-                _wins++;
-
-                if (EnableLevelHitAlerts &&
-                    AlertOnLevelHit &&
-                    AlertOnTp4)
-                {
-                    SendUnifiedAlert(
-                        "TP4|" +
-                        _plan.CreatedM5,
-                        "CFIP CLEAN70 TP4 HIT | " +
-                        Price(_plan.Tp4),
-                        _plan.Direction,
+                    DrawOutcomeMarker(
+                        "TP4 HIT",
+                        _plan.Tp4,
                         true);
                 }
 
-                DrawOutcomeMarker(
-                    "TP4 HIT",
-                    _plan.Tp4,
-                    true);
-
-                _plan = null;
-                RemovePlanObjects();
                 return;
             }
 
@@ -9147,20 +9136,10 @@ namespace cAlgo
                         1.0,
                         FalseSignalAdverseR))
                 {
-                    if (EnableOutcomeTelemetry &&
-                        !_outcomeRegistered)
-                    {
-                        RegisterOutcome(
-                            _plan.Direction,
-                            false);
+                    RequestLivePlanExit(
+                        closedM5,
+                        "FALSE SIGNAL INVALIDATION");
 
-                        _outcomeRegistered = true;
-                    }
-
-                    _losses++;
-                    _lastExitM5 = closedM5;
-                    _plan = null;
-                    RemovePlanObjects();
                     return;
                 }
             }
@@ -9196,7 +9175,7 @@ namespace cAlgo
             }
         }
 
-        private bool CheckProfitExhaustionExit(
+                private bool CheckProfitExhaustionExit(
             int closedM5,
             double market,
             double peakRR)
@@ -9242,9 +9221,13 @@ namespace cAlgo
             double currentRR =
                 _plan.Direction == 1
                     ? (market - _plan.Entry) /
-                      Math.Max(Symbol.PipSize, _plan.Risk)
+                      Math.Max(
+                          Symbol.PipSize,
+                          _plan.Risk)
                     : (_plan.Entry - market) /
-                      Math.Max(Symbol.PipSize, _plan.Risk);
+                      Math.Max(
+                          Symbol.PipSize,
+                          _plan.Risk);
 
             int pressure =
                 CalculateSmartExitPressure(
@@ -9296,75 +9279,35 @@ namespace cAlgo
             double protectedProfit =
                 position.NetProfit;
 
-            try
-            {
-                TradeResult closeResult =
-                    ClosePosition(position);
-
-                if (closeResult == null ||
-                    !closeResult.IsSuccessful)
-                {
-                    SetAutoTradingState(
-                        "ERROR",
-                        "EXHAUSTION CLOSE FAILED");
-
-                    return false;
-                }
-
-                if (EnableOutcomeTelemetry &&
-                    !_outcomeRegistered)
-                {
-                    RegisterOutcome(
-                        _plan.Direction,
-                        true);
-
-                    _outcomeRegistered =
-                        true;
-                }
-
-                _wins++;
-                _lastExitM5 =
-                    closedM5;
-
-                SendUnifiedAlert(
-                    "EXHAUSTION-CLOSE|" +
-                    position.Id,
-                    "CFIP CLEAN70 EXHAUSTION CLOSE | #" +
-                    position.Id +
-                    " | +" +
-                    protectedProfit.ToString("F2") +
-                    " | PEAK RR " +
-                    peakRR.ToString("F2") +
-                    " | RETRACE " +
-                    retracementPercent.ToString("F0") +
-                    "% | PRESSURE " +
-                    pressure,
-                    _plan.Direction,
-                    true);
-
-                SetAutoTradingState(
-                    "EXECUTED",
-                    "EXHAUSTION PROTECTION #" +
-                    position.Id);
-
-                _plan = null;
-                _executionModel = null;
-                RemovePlanObjects();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                SetAutoTradingState(
-                    "ERROR",
-                    "EXHAUSTION CLOSE: " +
-                    CompactText(
-                        ex.Message,
-                        80));
-
+            if (!RequestLivePlanExit(
+                    closedM5,
+                    "PROFIT EXHAUSTION"))
                 return false;
-            }
+
+            SendUnifiedAlert(
+                "EXHAUSTION-CLOSE|" +
+                position.Id,
+                "CFIP CLEAN70 EXHAUSTION EXIT REQUESTED | #" +
+                position.Id +
+                " | +" +
+                protectedProfit.ToString("F2") +
+                " | PEAK RR " +
+                peakRR.ToString("F2") +
+                " | RETRACE " +
+                retracementPercent.ToString("F0") +
+                "% | PRESSURE " +
+                pressure,
+                _plan.Direction,
+                true);
+
+            SetAutoTradingState(
+                "EXECUTED",
+                "EXHAUSTION EXIT REQUESTED #" +
+                position.Id);
+
+            return true;
         }
+
 
                 private bool CheckStructuralSetupInvalidation(
             int closedM5,
@@ -19167,6 +19110,61 @@ private Color AutoTradingPanelColor()
                     ? (enabled ? "NOT EVALUATED" : "DISABLED")
                     : reason;
             SyncQuickExecutionControls();
+        }
+
+        private bool RequestLivePlanExit(
+            int closedM5,
+            string reason)
+        {
+            if (_plan == null ||
+                !_plan.IsLivePosition)
+                return false;
+
+            Position position =
+                GetManagedLivePositionForPlan();
+
+            if (position == null)
+            {
+                _plan = null;
+                _activeBrokerStop = 0;
+                _activeBrokerTarget = 0;
+                _executionModel = null;
+
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.Closed,
+                    reason +
+                    " • POSITION ALREADY CLOSED");
+
+                RemovePlanObjects();
+                return true;
+            }
+
+            SetLifecycleState(
+                CFIPClean70LifecycleState.ExitRequested,
+                reason);
+
+            if (!TryClosePosition(
+                    position,
+                    reason))
+            {
+                SetLifecycleState(
+                    CFIPClean70LifecycleState.RecoveryRequired,
+                    reason +
+                    " • EXIT REJECTED");
+
+                _autoExecutionBlockReason =
+                    reason +
+                    " • EXIT REJECTED";
+
+                return false;
+            }
+
+            _lastExitM5 =
+                Math.Max(
+                    _lastExitM5,
+                    closedM5);
+
+            return true;
         }
 
         private void SetLifecycleState(
