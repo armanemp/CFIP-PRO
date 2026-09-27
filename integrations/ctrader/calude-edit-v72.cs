@@ -5839,14 +5839,16 @@ namespace cAlgo
                     _m5Bars,
                     closedM5,
                     direction,
-                    atr);
+                    atr,
+                    market);
 
             Zone m5Ob =
-                FindNearestOrderBlock(
+                FindNearestOrderBlockForExecution(
                     _m5Bars,
                     closedM5,
                     direction,
-                    atr);
+                    atr,
+                    market);
 
             Zone m15Fvg = null;
             Zone m15Ob = null;
@@ -5868,14 +5870,16 @@ namespace cAlgo
                         _m15Bars,
                         m15Index,
                         direction,
-                        m15Atr);
+                        m15Atr,
+                        market);
 
                 m15Ob =
-                    FindNearestOrderBlock(
+                    FindNearestOrderBlockForExecution(
                         _m15Bars,
                         m15Index,
                         direction,
-                        m15Atr);
+                        m15Atr,
+                        market);
             }
 
             double low = 0;
@@ -10794,7 +10798,8 @@ namespace cAlgo
             int index,
             int direction,
             double atr,
-            bool requireCurrentRetest = true)
+            bool requireCurrentRetest = true,
+            double selectionPrice = double.NaN)
         {
             if (!UseFvg ||
                 bars == null ||
@@ -10807,6 +10812,11 @@ namespace cAlgo
                     1,
                     index -
                     FvgLookback);
+
+            double nearestPrice =
+                IsFinitePositive(selectionPrice)
+                    ? selectionPrice
+                    : bars.ClosePrices[index];
 
             Zone best = null;
 
@@ -10828,7 +10838,7 @@ namespace cAlgo
                         {
                             best =
                                 SelectNearestFvg(
-                                    bars.ClosePrices[index],
+                                    nearestPrice,
                                     best,
                                     BuildManagedFvgZone(
                                         bars,
@@ -10855,7 +10865,7 @@ namespace cAlgo
                         {
                             best =
                                 SelectNearestFvg(
-                                    bars.ClosePrices[index],
+                                    nearestPrice,
                                     best,
                                     BuildManagedFvgZone(
                                         bars,
@@ -10884,7 +10894,7 @@ namespace cAlgo
                         {
                             best =
                                 SelectNearestFvg(
-                                    bars.ClosePrices[index],
+                                    nearestPrice,
                                     best,
                                     BuildManagedFvgZone(
                                         bars,
@@ -10911,7 +10921,7 @@ namespace cAlgo
                         {
                             best =
                                 SelectNearestFvg(
-                                    bars.ClosePrices[index],
+                                    nearestPrice,
                                     best,
                                     BuildManagedFvgZone(
                                         bars,
@@ -11181,7 +11191,8 @@ namespace cAlgo
             Bars bars,
             int index,
             int direction,
-            double atr)
+            double atr,
+            double selectionPrice = double.NaN)
         {
             if (!UseOrderBlock ||
                 bars == null ||
@@ -11200,7 +11211,9 @@ namespace cAlgo
                 double.MinValue;
 
             double market =
-                bars.ClosePrices[index];
+                IsFinitePositive(selectionPrice)
+                    ? selectionPrice
+                    : bars.ClosePrices[index];
 
             for (int i = index - 1;
                  i >= first;
@@ -11775,14 +11788,31 @@ namespace cAlgo
             Bars bars,
             int index,
             int direction,
-            double atr)
+            double atr,
+            double market)
         {
             return FindNearestFvg(
                 bars,
                 index,
                 direction,
                 atr,
-                false);
+                false,
+                market);
+        }
+
+        private Zone FindNearestOrderBlockForExecution(
+            Bars bars,
+            int index,
+            int direction,
+            double atr,
+            double market)
+        {
+            return FindNearestOrderBlock(
+                bars,
+                index,
+                direction,
+                atr,
+                market);
         }
 
         private Zone FindNearestOpposingZone(
