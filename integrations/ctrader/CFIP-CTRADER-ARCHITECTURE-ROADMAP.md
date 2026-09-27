@@ -1391,20 +1391,20 @@ Every execution path receives the same DecisionSnapshot.
 
 A structural-gate semantic defect was also found during deep audit: the prior deduplicated event counter could not reliably reach the default `MinimumStructuralConfirmations=4` for a single selected direction because it collapsed opposing and multi-timeframe confirmations into one global counter. v79 now preserves the v73 confirmation intent while deduplicating BOS/MSS/CHOCH within each timeframe and selecting only the chosen direction. `DecisionSnapshot` now also enforces policy/eligibility consistency at construction time.
 
-**Validation status:** source-level tests are committed, including order-independent aggregation, adaptive threshold, softmax, zero/tie safety, location-bias and HTF-penalty checks. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
+**Validation status:** source-level tests are committed, including order-independent aggregation, adaptive threshold, softmax, zero/tie safety, location-bias and HTF-penalty checks. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. The Phase-7 v80 consumer now receives the exact Phase-6 DecisionSnapshot; real cTrader compilation/runtime remains pending.
 
 **Remaining before Phase 6 completion:**
-1. v79 source audit currently shows no downstream execution/UI consumer that creates a competing final direction; keep this invariant enforced as Phase 7+ consumers are attached
-2. prove every downstream execution path consumes the same DecisionSnapshot instance/value — this becomes a mandatory Phase 7 integration gate
-3. continue reconciling remaining v73-v78 decision semantics; structural-confirmation semantics are now aligned with the old behavioral intent without reintroducing duplicate evidence
-4. run the complete applicable test/compile suite
-5. only then mark Phase 6 COMPLETE
+1. downstream-consumer audit is now structurally enforced: v80 Entry receives _state.Decision directly and does not recompute direction
+2. same-snapshot propagation is enforced by exact host wiring: one Decision evaluation feeds one Entry evaluation
+3. source-level v73-v78 semantic reconciliation for the audited Phase-6 areas is complete; no additional source-level Phase-6 gap is currently known
+4. run the complete applicable automated test suite; the new GitHub static-test workflow is configured, but its push-run result was not exposed by the available connector in this session
+5. real cTrader compilation/runtime validation remains mandatory; Phase 6 is therefore not marked COMPLETE
 
 ---
 
 ## PHASE 7 — Entry / Trigger / Retest / Breakout engine
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
 
 ### Objective
 
@@ -1448,6 +1448,54 @@ Retest Eligibility
 ### Acceptance
 
 The chart line, panel, plan and execution intent all agree on what Entry and Trigger mean.
+
+---
+
+## Phase 7 implementation record — 2026-09-27
+
+**Current implementation:** v80 (integrations/ctrader/calude-edit-v80.cs)
+
+**Phase document:** docs/ctrader/CFIP-V80-PHASE-07-ENTRY-TRIGGER.md
+
+**Commits:**
+
+- 3af7c78e5e6f6d185dde28ba7841a9329673ce8e — start v80 Phase 7 entry/trigger implementation
+- 27215d35e36d667224ec4bebb9994cbf949943da — harden stale-setup and precision-entry gates
+- 1681fb5bdb48d5398c55915de6f6c958739338c4 — add Phase 7 architecture tests
+- 14ee16b479e141187bf33993c1af8345d4bb910b — correct Phase 7 source assertions
+- 088d0f99aea1661760e9b9a660f1ee118a245ad8 — record Phase 7 architecture and validation
+- e4fac0af0add7d84a3999ac6edaa0cc84b2c4016 — add cTrader static-test workflow
+
+**Implemented:**
+
+- canonical EntrySnapshot carrying the exact Phase-6 DecisionSnapshot
+- one Entry/Trigger engine consuming the authoritative decision
+- retest-market path using structural FVG/OB zones
+- breakout-trigger path using recent M5 BOS/MSS/CHOCH/Displacement
+- explicit IdealEntry, EntryZone, Trigger, RequestedEntry separation
+- Trigger/RequestedEntry remain distinct from future broker ActualFill
+- M1/M5 confirmation gates
+- spread-aware entry blocking
+- retest quality/close/rejection gates
+- precision-entry quality/distance controls
+- stale setup / expiry protection
+- setup invalidation
+- continuation-stop and reversal-limit proposal modes without broker mutation
+- no UI/chart or broker authority
+
+**Validation added:**
+
+- exact v79/v80 parameter parity at 513/513
+- balanced braces, unique declarations and version isolation
+- exactly one Decision evaluation and one Entry evaluation
+- direct _state.Decision propagation
+- no Broker/UI mutation in the Entry engine
+- retest/breakout/trigger/stale/expiry/invalidation/spread/precision source checks
+- 19 dedicated Phase-7 source-level tests
+
+**Acceptance status:**
+
+Phase 7 is not accepted yet. Real cTrader compilation and controlled runtime/scenario validation remain mandatory gates.
 
 ---
 
@@ -2350,7 +2398,7 @@ At minimum record:
 
 **Current implementation reference:** v79
 
-**Current roadmap status:** Phase 6 in progress.
+**Current roadmap status:** Phase 6 semantically complete / runtime verification pending; v80 Phase-7 pre-acceptance implementation is present.
 
 **Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts. v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
@@ -2373,8 +2421,8 @@ Phase 2  ████████████████████  COMPLETE
 Phase 3  ████████████████████  COMPLETE
 Phase 4  ████████████████████  COMPLETE
 Phase 5  ████████████████████  COMPLETE
-Phase 6  ████████░░░░░░░░░░░░  IN PROGRESS
-Phase 7  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 6  ████████████████████  SEMANTICALLY COMPLETE / VERIFICATION PENDING
+Phase 7  ████░░░░░░░░░░░░░░░░  PRE-ACCEPTANCE IMPLEMENTATION
 Phase 8  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 9  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 10 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
