@@ -226,6 +226,18 @@ def test_phase12_broker_mutations_remain_gateway_owned():
         assert token not in after
 
 
+def test_phase12_protection_dedup_cleanup_removes_all_stage_keys():
+    s = read(V87)
+    lifecycle = section(
+        s,
+        "public sealed class CFIPClean87PositionLifecycleManager",
+        "// Presentation boundary",
+    )
+    assert "string prefix =" in lifecycle
+    assert "key.StartsWith(" in lifecycle
+    assert "RestoreProtection.ToString()" in lifecycle
+
+
 def test_phase12_disconnect_guard_prevents_live_management_during_broker_outage():
     s = read(V87)
     proc = section(s, "private void ProcessLivePositionManagement()", "private void ProcessPositionLifecycle()")
