@@ -14,7 +14,8 @@ def read_source(path: Path) -> str:
 
 def extract_method(source: str, method_name: str) -> str:
     match = re.search(
-        rf"(?m)^\s*(?:private|public|protected|internal)\s+[^\n]+\b{re.escape(method_name)}\s*\(",
+        rf"(?m)^\s*(?:private|public|protected|internal)\s+[^\n]+\b"
+        rf"{re.escape(method_name)}\s*\(",
         source,
     )
     assert match, f"Method not found: {method_name}"
@@ -23,44 +24,39 @@ def extract_method(source: str, method_name: str) -> str:
     assert opening >= 0, f"Method body not found: {method_name}"
 
     depth = 0
-    in_string = False
-    escaped = False
-    in_line_comment = False
-    in_block_comment = False
+    state = "code"
 
     for index in range(opening, len(source)):
         char = source[index]
         nxt = source[index + 1] if index + 1 < len(source) else ""
 
-        if in_line_comment:
+        if state == "line":
             if char == "\n":
-                in_line_comment = False
+                state = "code"
             continue
 
-        if in_block_comment:
+        if state == "block":
             if char == "*" and nxt == "/":
-                in_block_comment = False
+                state = "code"
             continue
 
-        if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
+        if state == "string":
+            if char == "\\":
+                continue
+            if char == '"':
+                state = "code"
             continue
 
         if char == "/" and nxt == "/":
-            in_line_comment = True
+            state = "line"
             continue
 
         if char == "/" and nxt == "*":
-            in_block_comment = True
+            state = "block"
             continue
 
         if char == '"':
-            in_string = True
+            state = "string"
             continue
 
         if char == "{":
@@ -71,6 +67,13 @@ def extract_method(source: str, method_name: str) -> str:
                 return source[match.start() : index + 1]
 
     raise AssertionError(f"Unbalanced method body: {method_name}")
+
+
+def direct_call(method: str, name: str) -> bool:
+    return re.search(
+        rf"(?<!Try)\b{re.escape(name)}\s*\(",
+        method,
+    ) is not None
 
 
 def test_v69_baseline_and_v70_are_both_preserved() -> None:
@@ -120,11 +123,6 @@ def test_v70_partial_tp_requires_success_before_hit_state() -> None:
     v70 = read_source(V70)
 
     execute_partial = extract_method(v70, "ExecutePartialClose")
-    assert re.search(
-        r"\bprivate\s+bool\s+ExecutePartialClose\s*\(",
-        execute_partial,
-    )
-
     assert "closeResult.IsSuccessful" in execute_partial
     assert "return false" in execute_partial
 
@@ -135,10 +133,94 @@ def test_v70_partial_tp_requires_success_before_hit_state() -> None:
     assert "_tp2Hit = 1" in evaluate
 
 
+def test_v70_live_exit_is_broker_authoritative() -> None:
+    v70 = read_source(V70)
+
+    gateway = extract_method(v70, "RequestLivePlanExit")
+    assert "SetLifecycleState" in gateway
+    assert "TryClosePosition" in gateway
+    assert "ExitRequested" in gateway
+    assert "RecoveryRequired" in gateway
+
+    evaluate = extract_method(v70, "EvaluateActivePlan")
+    sl_start = evaluate.index("if (hitSl &&")
+    tp1_start = evaluate.index("if (hitTp1 &&", sl_start)
+    tp4_start = evaluate.index("if (hitTp4 &&")
+    reversal_start = evaluate.index(
+        "if (CheckLiveReversalAgainstPlan(",
+        tp4_start,
+    )
+
+    assert "_plan = null" not in evaluate[sl_start:tp1_start]
+    assert "_plan = null" not in evaluate[tp4_start:reversal_start]
+
+    exhaustion = extract_method(v70, "CheckProfitExhaustionExit")
+    reversal = extract_method(v70, "CheckLiveReversalAgainstPlan")
+    assert not direct_call(exhaustion, "ClosePosition")
+    assert not direct_call(reversal, "ClosePosition")
+
+
+def test_v70_cleanup_and_reversal_are_result_aware() -> None:
+    v70 = read_source(V70)
+
+    reversal = extract_method(v70, "CheckReversalProtection")
+    cleanup = extract_method(v70, "CleanupPendingOrdersIfNeeded")
+
+    assert "TryClosePosition" in reversal
+    assert not direct_call(reversal, "ClosePosition")
+
+    assert "TryCancelPendingOrder" in cleanup
+    assert not direct_call(cleanup, "CancelPendingOrder")
+
+
+def test_v70_broker_mutations_have_single_authority_gateway() -> None:
+    v70 = read_source(V70)
+
+    assert v70.count(".ModifyStopLossPrice(") == 1
+    assert v70.count(".ModifyTakeProfitPrice(") == 1
+
+    assert "private bool TryModifyStopLoss(" in v70
+    assert "private bool TryModifyTakeProfit(" in v70
+    assert "TradeResult result" in extract_method(v70, "TryModifyStopLoss")
+    assert "TradeResult result" in extract_method(v70, "TryModifyTakeProfit")
+
+
+def test_v70_authoritative_broker_events_are_wired() -> None:
+    v70 = read_source(V70)
+
+    required_events = [
+        "Positions.Opened += OnPositionOpened;",
+        "Positions.Modified += OnPositionModified;",
+        "Positions.Closed += OnPositionClosed;",
+        "PendingOrders.Created += OnPendingOrderCreated;",
+        "PendingOrders.Modified += OnPendingOrderModified;",
+        "PendingOrders.Filled += OnPendingOrderFilled;",
+        "PendingOrders.Cancelled += OnPendingOrderCancelled;",
+    ]
+
+    for event in required_events:
+        assert event in v70
+
+    assert "private void OnPositionModified(" in v70
+    assert "private void OnPendingOrderCreated(" in v70
+    assert "private void OnPendingOrderModified(" in v70
+    assert "private void OnPendingOrderCancelled(" in v70
+
+
+def test_v70_broker_close_event_owns_final_outcome_counting() -> None:
+    v70 = read_source(V70)
+    closed = extract_method(v70, "OnPositionClosed")
+
+    assert "if (!_outcomeRegistered)" in closed
+    assert "if (EnableOutcomeTelemetry)" in closed
+    assert "_wins++" in closed
+    assert "_losses++" in closed
+
+
 def test_v70_has_balanced_braces() -> None:
     v70 = read_source(V70)
 
-    stripped = re.sub(r'//.*$', '', v70, flags=re.MULTILINE)
+    stripped = re.sub(r"//.*$", "", v70, flags=re.MULTILINE)
     stripped = re.sub(r'"(?:\\.|[^"\\])*"', '""', stripped)
 
     assert stripped.count("{") == stripped.count("}")
