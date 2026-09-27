@@ -3636,6 +3636,8 @@ namespace cAlgo
             public int BearLiquidity;
             public int BullConfluence;
             public int BearConfluence;
+            public int BullRetest;
+            public int BearRetest;
         }
 
         public CFIPClean79DecisionSnapshot Evaluate(
@@ -3709,14 +3711,24 @@ namespace cAlgo
                     : direction == CFIPClean79Direction.Sell
                         ? e.BearConfluence : 0;
 
+            int retestQuality =
+                direction == CFIPClean79Direction.Buy
+                    ? e.BullRetest
+                    : direction == CFIPClean79Direction.Sell
+                        ? e.BearRetest : 0;
+
+            // Weighted domains intentionally sum to 1.00. Structure, zone,
+            // liquidity and retest are not allowed to independently recreate
+            // the same directional indicator score.
             int quality = Clamp((int)Math.Round(
-                marketQuality * 0.30 +
-                mtfAgreement * 0.20 +
-                structureQuality * 0.20 +
+                marketQuality * 0.28 +
+                mtfAgreement * 0.18 +
+                structureQuality * 0.18 +
                 zoneQuality * 0.12 +
-                liquidityQuality * 0.08 +
+                liquidityQuality * 0.07 +
                 confluenceQuality * 0.05 +
-                regimeQuality * 0.05), 0, 100);
+                retestQuality * 0.06 +
+                regimeQuality * 0.06), 0, 100);
 
             int confidence = Clamp(
                 (int)Math.Round(quality * 0.70 + (50 + edge) * 0.30),
@@ -3803,15 +3815,14 @@ namespace cAlgo
                 blocks.Count == 0;
 
             CFIPClean79DecisionPolicyMode policy =
-                eligible &&
-                configuration.Get("EnableAggressiveAutoEntry", false) &&
-                confidence >= configuration.Get("AggressiveMinimumConfidence", 88) &&
-                e.Independent >= configuration.Get("AggressiveMinimumEvidence", 4) &&
-                quality >= configuration.Get("AggressiveMinimumSmartQuality", 78)
-                    ? CFIPClean79DecisionPolicyMode.Aggressive
-                    : eligible
-                        ? CFIPClean79DecisionPolicyMode.Confirmed
-                        : CFIPClean79DecisionPolicyMode.Soft;
+                ResolvePolicy(
+                    eligible,
+                    direction,
+                    confidence,
+                    quality,
+                    e.Independent,
+                    blocks,
+                    configuration);
 
             return new CFIPClean79DecisionSnapshot(
                 direction, confidence, quality, edge, mtfAgreement,
@@ -3880,6 +3891,8 @@ namespace cAlgo
                 {
                     e.Bull += z.Quality * 0.08;
                     e.BullZone = Math.Max(e.BullZone, z.Quality);
+                    if (z.Retested)
+                        e.BullRetest = Math.Max(e.BullRetest, z.Quality);
                     if (z.LiquidityConfluence || z.FvgConfluence)
                         e.BullConfluence = Math.Max(e.BullConfluence, z.Quality);
                 }
@@ -3887,6 +3900,8 @@ namespace cAlgo
                 {
                     e.Bear += z.Quality * 0.08;
                     e.BearZone = Math.Max(e.BearZone, z.Quality);
+                    if (z.Retested)
+                        e.BearRetest = Math.Max(e.BearRetest, z.Quality);
                     if (z.LiquidityConfluence || z.FvgConfluence)
                         e.BearConfluence = Math.Max(e.BearConfluence, z.Quality);
                 }
@@ -3985,6 +4000,38 @@ namespace cAlgo
                 quality < cfg.Get("SmartRegimeQualityFloor", 55);
 
             return weak && cfg.Get("BlockWeakRangeTransition", true);
+        }
+
+        private CFIPClean79DecisionPolicyMode ResolvePolicy(
+            bool eligible,
+            CFIPClean79Direction direction,
+            int confidence,
+            int quality,
+            int evidence,
+            IList<CFIPClean79BlockReason> blocks,
+            CFIPClean79ConfigSnapshot cfg)
+        {
+            if (eligible &&
+                cfg.Get("EnableAggressiveAutoEntry", false) &&
+                confidence >= cfg.Get("AggressiveMinimumConfidence", 88) &&
+                evidence >= cfg.Get("AggressiveMinimumEvidence", 4) &&
+                quality >= cfg.Get("AggressiveMinimumSmartQuality", 78))
+                return CFIPClean79DecisionPolicyMode.Aggressive;
+
+            if (eligible)
+                return CFIPClean79DecisionPolicyMode.Confirmed;
+
+            // Phase 6 owns only policy state. Trigger/retest execution remains
+            // Phase 7. Pending therefore means "directional setup exists but
+            // one or more policy gates are not yet satisfied".
+            if (direction != CFIPClean79Direction.Wait &&
+                cfg.Get("EnableSmartDecisionEngine", true) &&
+                blocks != null &&
+                blocks.Count > 0 &&
+                quality >= cfg.Get("NoTradeMinimumSmartQuality", 55))
+                return CFIPClean79DecisionPolicyMode.Pending;
+
+            return CFIPClean79DecisionPolicyMode.Soft;
         }
 
         private static List<CFIPClean79BlockReason> Distinct(
