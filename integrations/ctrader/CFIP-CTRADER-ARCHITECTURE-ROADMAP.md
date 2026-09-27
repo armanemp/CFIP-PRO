@@ -1009,7 +1009,7 @@ The time/MTF layer now provides a single coherent input boundary for the later S
 
 ## PHASE 4 — Market model: indicators, regime and confluence
 
-**Status: NOT STARTED**
+**Status: COMPLETE — 2026-09-27**
 
 ### Objective
 
@@ -1047,6 +1047,74 @@ Every feature has a clear:
 
 ---
 
+## Phase 4 completion record
+
+**Implementation version:** integrations/ctrader/calude-edit-v77.cs
+**Phase document:** docs/ctrader/CFIP-V77-PHASE-04-MARKET-MODEL.md
+**Test:** tests/unit/test_ctrader_v77_market_model.py
+
+### Completed
+
+- created one normalized CFIPClean77MarketModel;
+- added a cTrader-native indicator catalog for each MTF Bars series using EMA, ATR, RSI and Directional Movement System;
+- preserved v73 market-feature semantics for EMA trend/slope, RSI, ADX/DMI, ATR, two-bar momentum, rejection, volume expansion, EMA-difference MACD bias, rolling VWAP and healthy volatility;
+- converted regime from string semantics to typed CFIPClean77Regime;
+- separated BiasDirection from MarketQuality so market quality cannot manufacture a directional signal when bias is WAIT;
+- created one explicit feature-evidence record for Trend, Momentum, RSI, DMI, EMA Slope, Rejection, Volume Expansion, MACD, VWAP and Healthy Volatility;
+- preserved the v73 RSI exhaustion penalty;
+- made the regime threshold consume configured AdxMinimum rather than silently hard-coding 20;
+- normalized directional scores while keeping final trade direction ownership in the future Decision Engine;
+- kept Market Model strictly upstream of broker execution, lifecycle and presentation.
+
+### Important review correction
+
+An intermediate source-edit operation matched the prefix of CFIPClean77MarketModelBuilder while removing the old model, which temporarily removed the builder and structural classes. This was detected by type-count and source review before acceptance.
+
+The structural domain segment from v76 was then restored exactly after the version/namespace transformation, duplicate native indicator declarations were removed, and the final source was revalidated.
+
+### Trading integrity
+
+Phase 4 does not create a competing signal engine. The Market Model produces market evidence only. The upcoming Decision Engine remains the sole owner of final directional qualification, policy gates and signal state.
+
+The following capabilities remain preserved for later phases: complete MTF analysis; BOS/MSS/CHOCH and displacement; FVG/OB; liquidity pools/sweeps; smart Entry/Trigger; structural SL; unified TP ladder; automatic market trading; automatic pending orders; broker protection; live management and partials; reversal/exhaustion; outcome/calibration.
+
+### Validation
+
+Direct repository/source validation confirmed:
+- v76 parameter surface = 512;
+- v77 parameter surface = 512;
+- names and parameter order remain identical;
+- no duplicate public type declarations;
+- source braces are balanced;
+- exactly one Market Builder, Native indicator catalog/set and Structure/Zone/Liquidity domain set;
+- ten unique market features are registered;
+- closed MTF snapshot indices drive frame construction;
+- the market frame rejects the final potentially-forming bar;
+- the v76 structural domain segment was restored without content drift after version transformation;
+- no direct broker mutation or chart authority exists in v77;
+- no v76 legacy references remain in the v77 implementation.
+
+The repository contains a dedicated static test suite for these contracts. A direct pytest runner is not claimed here; final real cTrader compile/runtime validation remains the Phase 16 acceptance gate.
+
+### Current Phase 4 commits
+
+- 3b2242ca698edfcfa0cd0c59b418f796c0f556ec — initial v77 market model
+- cb69cecb7f5aec98cd5e4e860f1af5868e3ab1e1 — separate market quality from directional bias strength
+- 1c2095d4047236b532b523b9a8919d2bc9b8e70f — restore market builder and structural domain
+- aeaf0d50fdd38aeb013353db693a813872dc0650 — remove duplicate native catalog
+- 68547e2b84f43a6950637fcf63bc65d7c0413898 — preserve RSI exhaustion/configurable regime threshold
+- a66129dcb6e4aa2e3ae50182aa715a11d6819312 — market model test corrections
+- 1736adb04a0203930ff879a7c0f2c72bf318d986 — final test syntax/scope correction
+
+### Phase 4 acceptance decision
+
+COMPLETE at the architecture/market-model contract level.
+
+The v77 Market Model is now the single upstream analytical source for the next Signal/Decision phases.
+
+### Next phase
+
+Phase 5 — Structure, FVG, OB and Liquidity ledger
 ## PHASE 5 — Structure, FVG, OB and Liquidity ledger
 
 **Status: NOT STARTED**
@@ -2004,7 +2072,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 1 | Architecture foundation | COMPLETE | 2026-09-27 | v74 | static contract checks added |
 | 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 512/512 parity + static validation |
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
-| 4 | Market model | NOT STARTED | — | — | — |
+| 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
 | 5 | Structure/Zones/Liquidity | NOT STARTED | — | — | — |
 | 6 | Decision engine | NOT STARTED | — | — | — |
 | 7 | Entry/Trigger | NOT STARTED | — | — | — |
@@ -2093,13 +2161,13 @@ At minimum record:
 
 **Current implementation reference:** v73
 
-**Current roadmap status:** Phase 3 complete.
+**Current roadmap status:** Phase 4 complete.
 
-**Current implementation status:** v76 now contains the Phase 3 canonical time/MTF data pipeline. v75 remains the Phase 2 configuration line, v74 remains the Phase 1 contract foundation, and v73 remains the behavioral/reference baseline.
+**Current implementation status:** v77 now contains the Phase 4 normalized Market Model on top of the v76 time/MTF pipeline. v76 remains the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Next implementation target:** Phase 4 — Market model: indicators, regime and confluence.
+**Next implementation target:** Phase 5 — Structure, FVG, OB and Liquidity ledger.
 
-**Critical instruction for the next phase:** Start from the v76 MTF snapshot and v75 configuration snapshot. Build one normalized Market Model from the closed data, preserving every useful v73 feature while preventing duplicated evidence from being counted multiple times and keeping live execution data separate from closed analytical evidence.
+**Critical instruction for the next phase:** Start from the v77 Market Model and canonical v76 MTF snapshot. Build one authoritative Structure/Zone/Liquidity ledger so Entry, Stop and Target logic all consume the same BOS/MSS/CHOCH/FVG/OB/liquidity objects, with no independent rediscovery or contradictory BUY/SELL logic.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
