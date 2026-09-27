@@ -115,9 +115,10 @@ def test_phase6_deduplicates_market_evidence_across_timeframes():
     s = read(V79)
     assert "AddMarketEvidence(" in s
     assert "Dictionary<CFIPClean79MarketFeature, FeatureAggregate>" in s
-    assert "aggregate.Bull = Math.Max(aggregate.Bull, feature.Value)" in s
-    assert "aggregate.Bear = Math.Max(aggregate.Bear, feature.Value)" in s
-    assert "MTF copies of the same" in s
+    assert "feature.Value * Math.Max(0, feature.Weight)" in s
+    assert "aggregate.Score = feature.Value * Math.Max(0, feature.Weight)" not in s
+    assert "e.Bull += aggregate.Score" in s
+    assert "e.Bear += aggregate.Score" in s
     assert "AddMarket(e, market.FindFrame" not in s
 
 def test_phase6_does_not_add_confluence_as_directional_evidence():
@@ -161,3 +162,51 @@ def test_phase6_evidence_dedup_preserves_market_feature_weights():
     assert "e.Bear += aggregate.Score" in s
     assert "aggregate.Bull = Math.Max" not in s
     assert "aggregate.Bear = Math.Max" not in s
+
+
+def test_phase6_uses_decision_level_eligibility():
+    s = read(V79)
+    assert "DecisionEligible" in s
+    assert "EntryEligible" not in s
+    assert "Decision-level eligibility. Entry/Trigger eligibility belongs to Phase 7." in s
+
+
+def test_phase6_policy_snapshot_invariants_are_enforced():
+    s = read(V79)
+    assert "Eligible decision cannot be WAIT or blocked." in s
+    assert "Confirmed/Aggressive policy requires decision eligibility." in s
+    assert "Pending policy requires a directional blocked setup." in s
+    assert "CFIPClean79DecisionPolicyMode.Soft" in s
+
+
+def test_phase6_blocked_snapshot_is_not_marked_confirmed():
+    s = read(V79)
+    engine = s[s.index("public sealed class CFIPClean79DecisionEngine"):
+               s.index("// ------------------------------------------------------------------------
+    // Trade identity / idempotency")]
+    assert "CFIPClean79Direction.Wait" in engine
+    assert "CFIPClean79DecisionPolicyMode.Soft" in engine
+
+
+def test_phase6_has_single_decision_evaluation_authority():
+    s = read(V79)
+    assert s.count("_decisionEngine.Evaluate(") == 1
+    engine = s[s.index("public sealed class CFIPClean79DecisionEngine"):
+               s.index("// ------------------------------------------------------------------------
+    // Trade identity / idempotency")]
+    assert engine.count("new CFIPClean79DecisionSnapshot(") == 2
+
+
+def test_phase6_structural_confirmations_are_directional_and_family_deduplicated():
+    s = read(V79)
+    assert "BullStructuralConfirmations" in s
+    assert "BearStructuralConfirmations" in s
+    assert 'string.Equals(\n                    x.Timeframe, "M5", StringComparison.OrdinalIgnoreCase)' in s
+    assert 'string.Equals(\n                    x.Timeframe, "M15", StringComparison.OrdinalIgnoreCase)' in s
+    assert 'string.Equals(\n                    x.Timeframe, "H1", StringComparison.OrdinalIgnoreCase)' in s
+    assert 'string.Equals(\n                    x.Timeframe, "H4", StringComparison.OrdinalIgnoreCase)' in s
+    assert "e.Structural =" in s
+    assert "e.BullStructuralConfirmations" in s
+    assert "e.BearStructuralConfirmations" in s
+    assert "bullM5Break" in s and "bullM5Displacement" in s
+    assert "bearM5Break" in s and "bearM5Displacement" in s
