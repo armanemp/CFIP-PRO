@@ -134,3 +134,25 @@ def test_v71_has_balanced_braces() -> None:
     stripped = re.sub(r'"(?:\\.|[^"\\])*"', '""', stripped)
 
     assert stripped.count("{") == stripped.count("}")
+
+
+def test_v71_decision_trigger_is_closed_bar_only() -> None:
+    v71 = read_source(V71)
+
+    closed_trigger = extract_method(v71, "ClosedBarTriggerReady")
+    decision = extract_method(v71, "BuildDecision")
+    filters = extract_method(v71, "PassesDecisionFilters")
+
+    assert "TriggerReadyWithoutPrecisionGate" in closed_trigger
+    assert "BuildExecutionModel" not in closed_trigger
+    assert "ClosedBarTriggerReady" in decision
+    assert "ClosedBarTriggerReady" in filters
+
+
+def test_v71_live_execution_model_owns_current_market_price() -> None:
+    v71 = read_source(V71)
+    execution = extract_method(v71, "BuildExecutionModel")
+
+    assert "Symbol.Ask" in execution
+    assert "Symbol.Bid" in execution
+    assert "model.ActualEntry" in execution
