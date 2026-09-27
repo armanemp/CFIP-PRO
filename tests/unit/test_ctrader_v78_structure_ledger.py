@@ -21,10 +21,10 @@ def parameter_names(source: str) -> list[str]:
 def test_v78_preserves_all_v77_parameters() -> None:
     a = parameter_names(read(V77))
     b = parameter_names(read(V78))
-    assert len(a) == 512
-    assert len(b) == 512
+    assert len(a) == 513
+    assert len(b) == 513
     assert a == b
-    assert len(set(b)) == 512
+    assert len(set(b)) == 513
 
 
 def test_v78_has_one_canonical_structural_ledger() -> None:
