@@ -149,7 +149,7 @@ The Market Model is intentionally upstream of all of them.
 ## Validation
 
 Repository-side source validation confirmed:
-- v76/v77 parameter surface remains 512/512 in identical order;
+- v76/v77 parameter surface remains 513/513 in identical order;
 - native cTrader indicator access contracts are present;
 - ten unique market features are explicitly registered;
 - typed regime exists;
