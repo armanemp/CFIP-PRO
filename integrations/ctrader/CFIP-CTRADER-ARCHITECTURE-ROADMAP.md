@@ -1794,7 +1794,7 @@ Source-level structural checks cover the Phase-10 lifecycle, event wiring, recov
 
 ## PHASE 11 — Position lifecycle and broker protection
 
-**Status: IN PROGRESS — v85 HARDENED / RUNTIME VERIFICATION PENDING, 2026-09-27**
+**Status: IN PROGRESS — v86 LIFECYCLE COMPLETION / RUNTIME VERIFICATION PENDING, 2026-09-27**
 
 ### Objective
 
@@ -1870,6 +1870,31 @@ Never clear the internal live-plan owner while the broker still has a managed li
 - retained the no-manual-trade-entry-control invariant.
 
 **Validation boundary:** v85 static re-audit coverage is source-level. Actual cTrader compilation, broker-event scenarios and runtime recovery tests remain mandatory.
+
+### Phase 11 v86 lifecycle-completion record — 2026-09-27
+
+**Current implementation:** v86 (`integrations/ctrader/calude-edit-v86.cs`)
+
+**Documentation:** `docs/ctrader/CFIP-V86-PHASE-11-LIFECYCLE.md`
+
+**Tests:** `tests/unit/test_ctrader_v86_phase11_lifecycle.py`
+
+**Additional v86 corrections:**
+- Pending-order records now retain multiple resulting broker Position ids instead of overwriting the first fill identity.
+- A filled PendingOrder is no longer used as the target of Position protection recovery; Position lifecycle owns the mutation.
+- Expected protection is handed from Pending lifecycle to Position lifecycle after reconciliation, including restart/missed-event cases.
+- Position close is an explicit request/result state machine; broker acceptance does not mark the position closed.
+- Position protection failures and requested-close failures use deterministic bounded exponential backoff.
+- Broker state reconciliation and mutation processors are skipped while `Server.IsConnected` is false, preventing stale snapshots from causing reconciliation/mutation.
+- The clean v86 lifecycle path contains no `DateTime.Now` / `DateTime.UtcNow` calls.
+- cTrader's current documentation confirms `Server.IsConnected` and `Server.TimeInUtc` are available on the Algo server interface, and cTrader documents full and partial position close operations through `ClosePosition`. citeturn213547search0turn967588search2
+
+**CI correction discovered during re-audit:**
+- The cTrader architecture workflow previously invoked pytest without installing it.
+- The workflow now installs pytest explicitly and includes the v85/v86 test files.
+- Two pre-existing Python syntax defects in v79/v80 tests were corrected.
+
+**Acceptance boundary:** implementation is complete at the source/static-contract layer. Controlled real cTrader compilation, broker-event execution, rate-limit behavior, reconnect/recovery, partial-close execution, and runtime restart scenarios remain mandatory.
 
 ---### Acceptance
 
@@ -2535,7 +2560,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 8 | Risk/SL/Targets | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v81 | TradePlan / structural stop / target ladder; runtime verification pending |
 | 9 | Unified execution | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v82 | ExecutionPolicy / Intent / BrokerGateway; runtime verification pending |
 | 10 | Pending orders | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v83 | pending lifecycle / reconciliation; runtime verification pending |
-| 11 | Lifecycle/Broker | IN PROGRESS / HARDENED IN v85 | 2026-09-27 | v84-v85 | Position lifecycle + deep re-audit; runtime verification and remaining lifecycle semantics pending |
+| 11 | Lifecycle/Broker | IMPLEMENTED IN v86 / RUNTIME VERIFICATION PENDING | 2026-09-27 | v84-v86 | Position lifecycle, close/recovery ownership, pending-to-position handoff and disconnect safety; controlled runtime validation pending |
 | 12 | Live management | NOT STARTED | — | — | — |
 | 13 | Outcome/Calibration | NOT STARTED | — | — | — |
 | 14 | Presentation | NOT STARTED | — | — | — |
@@ -2645,7 +2670,7 @@ Phase 7  ████████████████████  IMPLEMENT
 Phase 8  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
 Phase 9  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
 Phase 10 ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 11 ████████████████████  HARDENED IN v85 / VERIFICATION PENDING
+Phase 11 ████████████████████  IMPLEMENTED IN v86 / RUNTIME VERIFICATION PENDING
 Phase 12 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 13 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 14 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
