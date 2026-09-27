@@ -18734,12 +18734,10 @@ private Color AutoTradingPanelColor()
         private bool TryPrepareExecutablePlan(
             int closedM5,
             double executionEntry,
-            out double stop,
-            out double target,
             out double stopPips,
             out double targetPips)
         {
-            stop = target = stopPips = targetPips = 0;
+            stopPips = targetPips = 0;
 
             if (_plan == null || _m5Bars == null || closedM5 < 20)
                 return false;
@@ -18752,11 +18750,19 @@ private Color AutoTradingPanelColor()
                     closedM5, _plan.Direction, executionEntry, atr))
                 return false;
 
-            stop = _plan.Stop;
-            target = AutoTarget(_plan, EffectiveAutoTpStage());
+            double stop =
+                _plan.Stop;
+
+            double target =
+                AutoTarget(
+                    _plan,
+                    EffectiveAutoTpStage());
 
             if (!IsExecutionPlanConsistent(
-                    _plan.Direction, executionEntry, stop, target))
+                    _plan.Direction,
+                    executionEntry,
+                    stop,
+                    target))
                 return false;
 
             stopPips = Math.Abs(executionEntry - stop) / Symbol.PipSize;
@@ -18970,16 +18976,12 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
-            double preparedStop;
-            double preparedTarget;
             double stopPips;
             double targetPips;
 
             if (!TryPrepareExecutablePlan(
                     closedM5,
                     entry,
-                    out preparedStop,
-                    out preparedTarget,
                     out stopPips,
                     out targetPips))
             {
