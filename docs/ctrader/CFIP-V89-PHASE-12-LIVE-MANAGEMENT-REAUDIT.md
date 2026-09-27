@@ -53,6 +53,40 @@ Accepted Position-close requests retain the `ExitRequested` state until broker C
 
 The retry interval after accepted submission is increased to 5 seconds to reduce repeated close mutation while broker state propagates.
 
+### 5. Live protection validation anchor
+
+Live Position protection mutation no longer reuses initial-entry validation semantics.
+
+- BUY SL is validated against the current Bid-side execution boundary;
+- SELL SL is validated against the current Ask-side execution boundary;
+- BUY TP is validated against the current Ask-side execution boundary;
+- SELL TP is validated against the current Bid-side execution boundary;
+- broker minimum stop/TP distances remain enforced.
+
+This removes the architectural contradiction where a valid break-even/risk-free/trailing stop above BUY entry (or below SELL entry) could be rejected by the gateway.
+
+### 6. Restart adoption of unprotected managed Positions
+
+Managed Positions with a missing broker SL are no longer discarded from the LivePositionManager solely because their reconstructed initial risk is zero.
+
+A zero-risk reconstruction remains explicitly represented so matching current plans can still restore protection and lifecycle reconciliation can observe the broker object.
+
+### 7. Broker-gateway ownership hardening
+
+Position and pending-order mutation methods now independently require:
+
+- managed strategy label;
+- current symbol;
+- CFIP89 identity marker.
+
+This defense-in-depth check prevents accidental mutation of an unrelated broker object even if an invalid broker identifier reaches the gateway.
+
+### 8. Initialization ordering
+
+Engine state and lifecycle authority are now initialized before broker event subscriptions and existing-position adoption.
+
+This removes a transient null-authority window during initialization.
+
 ## Invariants preserved
 
 - No manual BUY/SELL/STOP/LIMIT entry controls.
@@ -74,7 +108,10 @@ Source-level checks performed on v89:
 - Protection queue replacement synchronization: PASS.
 - Plan-owned missing-protection restoration path: PASS.
 - Partial-close timeout/retry path: PASS.
-- Gateway final protection validation: 4 validation call sites detected.
+- Gateway final protection validation: initial/pending/live protection validation paths present.
+- Live protection validation uses current market-side anchors: PASS.
+- Managed broker-object ownership guards: PASS.
+- Initialization ordering: PASS.
 - Manual entry surface scan: PASS.
 
 No claim of real cTrader compilation or live broker execution is made here.
