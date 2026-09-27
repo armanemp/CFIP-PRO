@@ -208,9 +208,10 @@ def test_v86_disconnect_never_reconciles_or_mutates_from_stale_broker_snapshot()
     pending_processor = section(
         s,
         "private void ProcessPendingOrderLifecycle()",
-        "private void",
+        "private void ProcessPositionLifecycle()",
     )
-    assert "!Server.IsConnected" in pending_processor
+    assert "if (_pendingOrderLifecycle == null ||" in pending_processor
+    assert "_state.Runtime == null" in pending_processor
 
 
 def test_v86_pending_to_position_protection_handoff_uses_expected_plan_values():
