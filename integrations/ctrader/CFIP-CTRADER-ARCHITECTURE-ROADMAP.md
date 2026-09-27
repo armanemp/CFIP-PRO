@@ -1313,6 +1313,8 @@ Every execution path receives the same DecisionSnapshot.
 - a2232aa1f50d4fd32ffe983cf1a85e007ed5cb6b — harden DecisionSnapshot invariants and advanced-confluence policy
 - 01cc3d28de9abf452f38ff1adfbbea5d7cd6e0c7 — validate decision-state invariants and confluence switch
 - 485d1aea2070186bfc00daaef5e311037ced01fb — clarify Phase 6 parameter ownership boundaries
+- 1dab6fb870f2a666926b81d230278c56ed9c01b1 — clarify Decision-quality ownership of legacy Entry filter
+- 7f11fc037e5faa5685d642a2705c417349d1af0b — validate final Decision ownership boundaries
 - c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
 
 **Implemented:**
@@ -1335,6 +1337,7 @@ Every execution path receives the same DecisionSnapshot.
 - HigherTfPenalty is preserved as a confidence-risk penalty for H1/H4/D1 opposition, separate from directional evidence
 - `UseAdvancedConfluence` now explicitly controls the confluence contribution to Decision quality
 - DecisionSnapshot now enforces WAIT/block/eligibility/policy consistency at construction time
+- legacy `UseSmartEntryQualityFilter` is explicitly treated as a Decision-quality floor in Phase 6, not as Entry/Trigger eligibility
 - legacy Trigger/Entry parameters are explicitly retained for preset parity but not interpreted by the Phase 6 decision owner; Phase 7 owns those semantics
 - legacy `AdaptiveRegimeWeighting` is explicitly superseded by deduplicated evidence plus regime-adaptive policy to avoid a second directional weighting layer
 - Feature aggregation now keeps strongest BUY and SELL observations separately; exact ties contribute no directional evidence, eliminating timeframe-order bias
@@ -1360,6 +1363,7 @@ Every execution path receives the same DecisionSnapshot.
 - snapshot-state invariant checks
 - advanced-confluence switch checks
 - explicit parameter-ownership/disposition checks for deferred Trigger/Entry controls
+- final Decision Engine boundary check: exactly one final direction assignment and no broker/UI mutation
 
 **Latest findings/fixes:** a compile-critical missing internal type was found: v79 referenced `FeatureAggregate` without defining it. This is now fixed. A second decision-integrity defect was also found: equal-strength opposing observations of one market feature could inherit the answer from timeframe loop order. The aggregator now resolves BUY/SELL strengths symmetrically and treats exact ties as neutral.
 
