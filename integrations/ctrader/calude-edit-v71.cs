@@ -7,6 +7,10 @@
 // actual-entry structural repricing, and chart/broker execution consistency.
 //
 // Decision and execution are separate:
+// Server clock contract:
+// Runtime/session/trading timestamps use cTrader server UTC (TimeInUtc), not
+// the Windows process clock. User-facing local time is derived from the
+// platform's configured user offset.
 // v71 MTF contract: all decision frames use bars fully closed at one UTC
 // reference. Chart-level confluence is mapped to the last fully closed chart
 // bar; live price remains reserved for execution/protection management.
@@ -2722,7 +2726,7 @@ namespace cAlgo
                                 restrictionMessage;
 
                             _lastRestrictionAlertUtc =
-                                DateTime.UtcNow;
+                                TimeInUtc;
 
                             _lastRestrictionM5 =
                                 closedM5;
@@ -2867,7 +2871,7 @@ namespace cAlgo
                 closedM5);
 
             CheckEndOfDayAlert(
-                DateTime.UtcNow);
+                TimeInUtc);
 
             CheckReversalProtection();
 
@@ -4717,14 +4721,14 @@ namespace cAlgo
             }
 
             if (!SessionAllowed(
-                    DateTime.UtcNow))
+                    TimeInUtc))
             {
                 reason = "SESSION";
                 return false;
             }
 
             if (!FridayAllowed(
-                    DateTime.UtcNow))
+                    TimeInUtc))
             {
                 reason = "FRIDAY";
                 return false;
@@ -4750,7 +4754,7 @@ namespace cAlgo
 
             if (UseNewsEventGuard &&
                 NewsBlocked(
-                    DateTime.UtcNow,
+                    TimeInUtc,
                     out reason))
                 return false;
 
@@ -15935,7 +15939,7 @@ namespace cAlgo
             int idx =
                 ClosedIndex(
                     _d1Bars,
-                    DateTime.UtcNow);
+                    TimeInUtc);
 
             if (idx <= 0)
                 return "UNAVAILABLE";
@@ -16083,7 +16087,7 @@ namespace cAlgo
                 "  •  " +
                 Bars.TimeFrame +
                 "  •  " +
-                DateTime.UtcNow.ToString(
+                TimeInUtc.ToString(
                     "HH:mm:ss") +
                 " UTC",
                 PanelMutedTextColor,
@@ -17264,7 +17268,7 @@ namespace cAlgo
                 candidate = "WAITING";
 
             DateTime now =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             bool authoritative =
                 _plan != null ||
@@ -17606,7 +17610,7 @@ namespace cAlgo
                     ShowPopupCloseButton;
 
             _popupUntilUtc =
-                DateTime.UtcNow.AddSeconds(
+                TimeInUtc.AddSeconds(
                     Math.Max(
                         1,
                         PopupDurationSeconds));
@@ -17621,7 +17625,7 @@ namespace cAlgo
                 return;
 
             if (_popupUntilUtc >
-                DateTime.UtcNow)
+                TimeInUtc)
                 return;
 
             RemovePopup();
@@ -17665,7 +17669,7 @@ namespace cAlgo
                 return;
 
             DateTime now =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             if (direction == 0)
                 direction =
@@ -18358,7 +18362,7 @@ private bool ExecutePartialClose(
                 return 0;
             }
 
-            DateTime nowUtc = DateTime.UtcNow;
+            DateTime nowUtc = TimeInUtc;
             int score = 50;
 
             bool inSession =
@@ -18543,7 +18547,7 @@ private bool ExecutePartialClose(
             int direction,
             bool force)
         {
-            DateTime nowUtc = DateTime.UtcNow;
+            DateTime nowUtc = TimeInUtc;
 
             int throttleSeconds =
                 Math.Max(1, SuitabilityRecalculationSeconds);
@@ -19703,7 +19707,7 @@ private Color AutoTradingPanelColor()
             int closedM5)
         {
             _lastAutoTradeAttemptUtc =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             if (!AutoTradingEnabled)
             {
@@ -19730,7 +19734,7 @@ private Color AutoTradingPanelColor()
             }
 
             if (DailyLossLimitHit(
-                    DateTime.UtcNow))
+                    TimeInUtc))
             {
                 _autoExecutionBlockReason =
                     "DAILY LOSS LIMIT";
@@ -21996,7 +22000,7 @@ private Color AutoTradingPanelColor()
                     CFIPClean71LifecycleState.ExitRequested)
                 return;
 
-            if ((DateTime.UtcNow -
+            if ((TimeInUtc -
                  _lastBrokerModifyUtc).TotalMilliseconds <
                 Math.Max(
                     100,
@@ -22144,7 +22148,7 @@ private Color AutoTradingPanelColor()
                 }
 
                 _lastBrokerModifyUtc =
-                    DateTime.UtcNow;
+                    TimeInUtc;
 
                 break;
             }
@@ -22172,7 +22176,7 @@ private Color AutoTradingPanelColor()
             }
 
             if (DailyLossLimitHit(
-                    DateTime.UtcNow))
+                    TimeInUtc))
                 return;
 
             if (OneOrderPerSignal &&
@@ -22544,7 +22548,7 @@ private Color AutoTradingPanelColor()
             }
 
             DateTime nowUtc =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             if ((nowUtc -
                  _lastTradingPermissionRequestUtc).TotalSeconds < 3)
@@ -23166,10 +23170,10 @@ private Color AutoTradingPanelColor()
         private void TrySmartPendingOrders(int closedM5)
         {
             _lastAutoOrderAttemptUtc =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             if (AutomaticOrdersEnabled &&
-                DailyLossLimitHit(DateTime.UtcNow))
+                DailyLossLimitHit(TimeInUtc))
             {
                 _autoOrdersBlockReason =
                     "DAILY LOSS LIMIT";
@@ -23227,7 +23231,7 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
-            if (DailyLossLimitHit(DateTime.UtcNow))
+            if (DailyLossLimitHit(TimeInUtc))
             {
                 _autoOrdersBlockReason =
                     "DAILY LOSS LIMIT";
@@ -23821,7 +23825,7 @@ private Color AutoTradingPanelColor()
                 bool stale =
                     order.ExpirationTime.HasValue &&
                     order.ExpirationTime.Value <=
-                    DateTime.UtcNow;
+                    TimeInUtc;
 
                 int expectedDirection =
                     _decision != null
@@ -24682,10 +24686,11 @@ private Color AutoTradingPanelColor()
         private string GetSessionPanelText()
         {
             DateTime utc =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             DateTime local =
-                DateTime.Now;
+                TimeInUtc +
+                Application.UserTimeOffset;
 
             int start =
                 ClampInt(
@@ -24733,7 +24738,7 @@ private Color AutoTradingPanelColor()
         private Color GetSessionPanelColor()
         {
             DateTime utc =
-                DateTime.UtcNow;
+                TimeInUtc;
 
             int now =
                 utc.Hour * 60 +
