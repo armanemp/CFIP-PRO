@@ -2426,6 +2426,7 @@ namespace cAlgo
             }
         }
 
+        protected override void Initialize()
         {
             _native.Clear();
             _historicalDrawn.Clear();
