@@ -10398,6 +10398,12 @@ public sealed class CFIPClean87TradePlanBuilder :
         public bool Tp1Consumed;
         public bool Tp2Consumed;
         public bool PartialPending;
+        public bool ProtectionPending;
+        public double? PendingStopLoss;
+        public double? PendingTakeProfit;
+        public CFIPClean87TargetStage PendingProtectionStage;
+        public DateTime PendingProtectionRequestedUtc;
+        public DateTime LastTargetRepriceReferenceUtc;
         public CFIPClean87TargetStage PendingPartialStage;
         public double PendingPartialRequestedVolume;
         public double PendingPartialExpectedRemainingVolume;
@@ -10463,12 +10469,16 @@ public sealed class CFIPClean87TradePlanBuilder :
             CFIPClean87TargetStage stage =
                 CFIPClean87TargetStage.TP1;
 
-            if (plan != null &&
+            bool belongsToPlan =
+                plan != null &&
                 plan.Identity != null &&
-                string.Equals(
-                    plan.Direction.ToString(),
-                    direction.ToString(),
-                    StringComparison.Ordinal))
+                position.Comment != null &&
+                position.Comment.IndexOf(
+                    plan.Identity.PlanId,
+                    StringComparison.Ordinal) >= 0 &&
+                plan.Direction == direction;
+
+            if (belongsToPlan)
             {
                 planId = plan.Identity.PlanId;
 
@@ -10508,6 +10518,15 @@ public sealed class CFIPClean87TradePlanBuilder :
                     Tp1Consumed = false,
                     Tp2Consumed = false,
                     PartialPending = false,
+                    ProtectionPending = false,
+                    PendingStopLoss = null,
+                    PendingTakeProfit = null,
+                    PendingProtectionStage =
+                        stage,
+                    PendingProtectionRequestedUtc =
+                        DateTime.MinValue,
+                    LastTargetRepriceReferenceUtc =
+                        DateTime.MinValue,
                     PendingPartialStage = CFIPClean87TargetStage.TP1,
                     PendingPartialRequestedVolume = 0,
                     PendingPartialExpectedRemainingVolume = 0,
@@ -10610,6 +10629,28 @@ public sealed class CFIPClean87TradePlanBuilder :
         {
             if (position != null)
                 _contexts.Remove(position.Id.ToString());
+        }
+
+        public void HandleProtectionRequested(
+            CFIPClean87LivePositionAction action,
+            DateTime utc)
+        {
+            if (action == null ||
+                action.Kind !=
+                    CFIPClean87LivePositionActionKind.ProtectionUpdate)
+                return;
+
+            CFIPClean87LivePositionContext context;
+            if (!_contexts.TryGetValue(
+                    action.BrokerPositionId,
+                    out context))
+                return;
+
+            context.ProtectionPending = true;
+            context.PendingStopLoss = action.StopLoss;
+            context.PendingTakeProfit = action.TakeProfit;
+            context.PendingProtectionStage = action.TargetStage;
+            context.PendingProtectionRequestedUtc = utc;
         }
 
         public void HandlePartialResult(
