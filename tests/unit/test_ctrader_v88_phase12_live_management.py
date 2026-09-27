@@ -94,8 +94,8 @@ def test_v88_preserves_v87_parameter_surface():
 
     # Version-isolated type names are expected to differ; the public
     # parameter labels and property names must remain identical.
-    assert [(label, name) for label, _type, name in p87] == [
-        (label, name) for label, _type, name in p88
+    assert [(label, name) for label, name in p87] == [
+        (label, name) for label, name in p88
     ]
 
 
@@ -210,8 +210,13 @@ def test_phase12_partial_result_is_confirmation_based_and_retry_safe():
     assert "PartialRejectAttempts++" in m
     assert "RetryDelay(" in m
     assert "PendingPartialExpectedRemainingVolume" in m
-    assert "ConfirmPartialProgress(" in m
     assert "HandlePartialResult(" in m
+    evaluate = section(
+        read(V88),
+        "public IReadOnlyList<CFIPClean88LivePositionAction> Evaluate(",
+        "private CFIPClean88LivePositionAction EvaluateForcedExit(",
+    )
+    assert "ConfirmPartialProgress(" in evaluate
 
 
 def test_phase12_protection_requests_are_deduplicated_until_broker_confirmation():
