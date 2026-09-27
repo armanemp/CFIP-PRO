@@ -182,8 +182,8 @@ def test_phase10_filled_position_missing_protection_is_queued_for_recovery():
 
 def test_phase10_pending_protection_mutation_stays_inside_gateway():
     g = gateway(read(V83))
-    assert "ModifyStopLossPrice" in g
-    assert "ModifyTakeProfitPrice" in g
+    assert "ModifyPendingProtection(" in g
+    assert "_host.ModifyPendingOrder(" in g
     assert "PENDING_PROTECTION_MODIFIED" in g
 
 
@@ -260,7 +260,8 @@ def test_phase10_pending_record_carries_filled_position_identity():
     m = pending_manager(read(V83))
     assert "BrokerPositionId" in m
     assert "MarkFilled(" in m
-    assert "position.Id.ToString()" in m
+    assert "args.Position" in m
+    assert "BrokerPositionId =" in m
 
 
 def test_phase10_restart_reconciliation_can_match_filled_position_by_plan_identity():
