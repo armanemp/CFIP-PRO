@@ -5360,6 +5360,9 @@ namespace cAlgo
                 if (!IsUsableZone(zone, direction))
                     continue;
 
+                if (m5.ClosedBarTimeUtc < zone.CreatedUtc)
+                    continue;
+
                 if (zone.AgeBars >
                     Math.Max(
                         1,
@@ -5558,6 +5561,7 @@ namespace cAlgo
 
                 if (item.Direction != direction ||
                     item.TimeUtc < cutoff ||
+                    item.TimeUtc > referenceUtc ||
                     !string.Equals(
                         item.Timeframe,
                         "M5",
