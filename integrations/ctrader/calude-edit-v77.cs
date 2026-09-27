@@ -1485,6 +1485,1120 @@ namespace cAlgo
         }
     }
 
+    public sealed class CFIPClean77NativeIndicatorSet
+    {
+        public Bars Bars { get; private set; }
+        public ExponentialMovingAverage Fast { get; private set; }
+        public ExponentialMovingAverage Slow { get; private set; }
+        public AverageTrueRange Atr { get; private set; }
+        public RelativeStrengthIndex Rsi { get; private set; }
+        public DirectionalMovementSystem Dms { get; private set; }
+        public ExponentialMovingAverage MacdFast { get; private set; }
+        public ExponentialMovingAverage MacdSlow { get; private set; }
+
+        public CFIPClean77NativeIndicatorSet(
+            Bars bars,
+            ExponentialMovingAverage fast,
+            ExponentialMovingAverage slow,
+            AverageTrueRange atr,
+            RelativeStrengthIndex rsi,
+            DirectionalMovementSystem dms,
+            ExponentialMovingAverage macdFast,
+            ExponentialMovingAverage macdSlow)
+        {
+            Bars = bars;
+            Fast = fast;
+            Slow = slow;
+            Atr = atr;
+            Rsi = rsi;
+            Dms = dms;
+            MacdFast = macdFast;
+            MacdSlow = macdSlow;
+        }
+    }
+
+    public sealed class CFIPClean77NativeIndicatorCatalog
+    {
+        private readonly IIndicatorsAccessor _indicators;
+        private readonly List<CFIPClean77NativeIndicatorSet> _sets =
+            new List<CFIPClean77NativeIndicatorSet>();
+
+        public CFIPClean77NativeIndicatorCatalog(
+            IIndicatorsAccessor indicators)
+        {
+            _indicators =
+                indicators ??
+                throw new ArgumentNullException("indicators");
+        }
+
+        public CFIPClean77NativeIndicatorSet GetOrCreate(
+            Bars bars,
+            CFIPClean77ConfigSnapshot configuration)
+        {
+            if (bars == null)
+                return null;
+
+            for (int i = 0; i < _sets.Count; i++)
+            {
+                if (ReferenceEquals(_sets[i].Bars, bars))
+                    return _sets[i];
+            }
+
+            int fastPeriod = Math.Max(2, configuration.Get("FastEma", 21));
+            int slowPeriod = Math.Max(fastPeriod + 1, configuration.Get("SlowEma", 55));
+            int atrPeriod = Math.Max(2, configuration.Get("AtrPeriod", 14));
+            int rsiPeriod = Math.Max(2, configuration.Get("RsiPeriod", 14));
+            int adxPeriod = Math.Max(2, configuration.Get("AdxPeriod", 14));
+            int macdFastPeriod = Math.Max(2, configuration.Get("MacdFastPeriod", 12));
+            int macdSlowPeriod = Math.Max(macdFastPeriod + 1, configuration.Get("MacdSlowPeriod", 26));
+
+            try
+            {
+                var set = new CFIPClean77NativeIndicatorSet(
+                    bars,
+                    _indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        fastPeriod),
+                    _indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        slowPeriod),
+                    _indicators.AverageTrueRange(
+                        bars,
+                        atrPeriod,
+                        MovingAverageType.WilderSmoothing),
+                    _indicators.RelativeStrengthIndex(
+                        bars.ClosePrices,
+                        rsiPeriod),
+                    _indicators.DirectionalMovementSystem(
+                        bars,
+                        adxPeriod,
+                        MovingAverageType.WilderSmoothing),
+                    _indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        macdFastPeriod),
+                    _indicators.ExponentialMovingAverage(
+                        bars.ClosePrices,
+                        macdSlowPeriod));
+
+                _sets.Add(set);
+                return set;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    public sealed class CFIPClean77MarketModelBuilder
+    {
+        private const int MinimumClosedIndex = 30;
+        private readonly CFIPClean77NativeIndicatorCatalog _catalog;
+
+        public CFIPClean77MarketModelBuilder(IIndicatorsAccessor indicators)
+        {
+            _catalog = new CFIPClean77NativeIndicatorCatalog(indicators);
+        }
+
+        public CFIPClean77MarketModel Build(
+            CFIPClean77RuntimeSnapshot runtime,
+            CFIPClean77MtfSnapshot mtf,
+            CFIPClean77ConfigSnapshot configuration,
+            Bars chartBars,
+            Bars m1Bars,
+            Bars m5Bars,
+            Bars m15Bars,
+            Bars m30Bars,
+            Bars h1Bars,
+            Bars h4Bars,
+            Bars d1Bars,
+            Bars w1Bars)
+        {
+            if (mtf == null)
+                throw new ArgumentNullException("mtf");
+
+            var frames = new List<CFIPClean77MarketFrame>();
+
+            if (!mtf.IsReferenceValid)
+                return new CFIPClean77MarketModel(
+                    DateTime.MinValue,
+                    false,
+                    false,
+                    mtf.DataStatus.ToString(),
+                    frames);
+
+            bool coherent =
+                CFIPClean77MtfSnapshotBuilder.IsCoherent(mtf);
+
+            AddFrame(frames, "CHART", chartBars, mtf.Chart, configuration);
+            AddFrame(frames, "M1", m1Bars, mtf.M1, configuration);
+            AddFrame(frames, "M5", m5Bars, mtf.M5, configuration);
+            AddFrame(frames, "M15", m15Bars, mtf.M15, configuration);
+            AddFrame(frames, "M30", m30Bars, mtf.M30, configuration);
+            AddFrame(frames, "H1", h1Bars, mtf.H1, configuration);
+            AddFrame(frames, "H4", h4Bars, mtf.H4, configuration);
+            AddFrame(frames, "D1", d1Bars, mtf.D1, configuration);
+            AddFrame(frames, "W1", w1Bars, mtf.W1, configuration);
+
+            return new CFIPClean77MarketModel(
+                mtf.ReferenceUtc,
+                coherent,
+                mtf.IsPrimaryDecisionReady,
+                mtf.DataStatus.ToString(),
+                frames);
+        }
+
+        private void AddFrame(
+            IList<CFIPClean77MarketFrame> frames,
+            string timeframe,
+            Bars bars,
+            CFIPClean77MtfBarSnapshot snapshot,
+            CFIPClean77ConfigSnapshot configuration)
+        {
+            if (frames == null ||
+                snapshot == null ||
+                !snapshot.IsAvailable ||
+                !snapshot.IsFullyClosedAtReference ||
+                snapshot.ClosedIndex < MinimumClosedIndex ||
+                bars == null)
+                return;
+
+            CFIPClean77MarketFrame frame =
+                BuildFrame(
+                    timeframe,
+                    bars,
+                    snapshot,
+                    configuration);
+
+            if (frame != null)
+                frames.Add(frame);
+        }
+
+        private CFIPClean77MarketFrame BuildFrame(
+            string timeframe,
+            Bars bars,
+            CFIPClean77MtfBarSnapshot snapshot,
+            CFIPClean77ConfigSnapshot configuration)
+        {
+            int index = snapshot.ClosedIndex;
+
+            if (index < MinimumClosedIndex ||
+                index >= bars.Count - 1)
+                return null;
+
+            CFIPClean77NativeIndicatorSet native =
+                _catalog.GetOrCreate(
+                    bars,
+                    configuration);
+
+            if (native == null)
+                return null;
+
+            double atr =
+                Read(
+                    native.Atr == null
+                        ? null
+                        : native.Atr.Result,
+                    index);
+
+            double previousAtr =
+                Read(
+                    native.Atr == null
+                        ? null
+                        : native.Atr.Result,
+                    Math.Max(5, index - 10));
+
+            if (atr <= 0 || previousAtr <= 0)
+                return null;
+
+            double open = bars.OpenPrices[index];
+            double high = bars.HighPrices[index];
+            double low = bars.LowPrices[index];
+            double close = bars.ClosePrices[index];
+
+            double fast =
+                Read(
+                    native.Fast == null
+                        ? null
+                        : native.Fast.Result,
+                    index);
+
+            double slow =
+                Read(
+                    native.Slow == null
+                        ? null
+                        : native.Slow.Result,
+                    index);
+
+            double previousFast =
+                Read(
+                    native.Fast == null
+                        ? null
+                        : native.Fast.Result,
+                    Math.Max(0, index - 2));
+
+            double rsi =
+                Read(
+                    native.Rsi == null
+                        ? null
+                        : native.Rsi.Result,
+                    index,
+                    50);
+
+            double adx =
+                Read(
+                    native.Dms == null
+                        ? null
+                        : native.Dms.ADX,
+                    index);
+
+            double dmiPlus =
+                Read(
+                    native.Dms == null
+                        ? null
+                        : native.Dms.DIPlus,
+                    index);
+
+            double dmiMinus =
+                Read(
+                    native.Dms == null
+                        ? null
+                        : native.Dms.DIMinus,
+                    index);
+
+            double dmiBias = NormalizeDmi(dmiPlus, dmiMinus);
+            double emaSpread = fast - slow;
+            double emaSpreadAtr = emaSpread / atr;
+            double emaSlopeAtr = (fast - previousFast) / atr;
+
+            double momentumAtr =
+                (close -
+                 bars.ClosePrices[Math.Max(0, index - 2)]) /
+                atr;
+
+            double macdHistogram =
+                Read(
+                    native.MacdFast == null
+                        ? null
+                        : native.MacdFast.Result,
+                    index) -
+                Read(
+                    native.MacdSlow == null
+                        ? null
+                        : native.MacdSlow.Result,
+                    index);
+
+            double previousMacd =
+                Read(
+                    native.MacdFast == null
+                        ? null
+                        : native.MacdFast.Result,
+                    Math.Max(0, index - 2)) -
+                Read(
+                    native.MacdSlow == null
+                        ? null
+                        : native.MacdSlow.Result,
+                    Math.Max(0, index - 2));
+
+            double vwap =
+                RollingVwap(
+                    bars,
+                    index,
+                    Math.Max(
+                        10,
+                        configuration.Get(
+                            "VwapLookbackBars",
+                            48)));
+
+            double averageVolume =
+                AverageTickVolume(
+                    bars,
+                    index,
+                    20);
+
+            double volumeRatio =
+                averageVolume > 0
+                    ? Math.Max(
+                        0,
+                        bars.TickVolumes[index]) /
+                      averageVolume
+                    : 0;
+
+            double range =
+                Math.Max(
+                    0.0000001,
+                    high - low);
+
+            double body =
+                Math.Abs(
+                    close - open);
+
+            double bodyAtr = body / atr;
+            double rangeAtr = range / atr;
+            double atrRatio = atr / previousAtr;
+
+            int adxMinimum =
+                Math.Max(
+                    0,
+                    configuration.Get(
+                        "AdxMinimum",
+                        20));
+
+            bool useSlope =
+                configuration.Get(
+                    "UseEmaSlope",
+                    true);
+
+            bool trendBull = fast > slow && close > fast;
+            bool trendBear = fast < slow && close < fast;
+            bool momentumBull = momentumAtr > 0.15;
+            bool momentumBear = momentumAtr < -0.15;
+            bool rsiBull = rsi > 50;
+            bool rsiBear = rsi < 50;
+            bool dmiBull = adx >= adxMinimum && dmiBias > 0;
+            bool dmiBear = adx >= adxMinimum && dmiBias < 0;
+            bool slopeBull = useSlope && emaSlopeAtr > 0;
+            bool slopeBear = useSlope && emaSlopeAtr < 0;
+
+            bool rejectionBull =
+                IsBullishRejection(open, high, low, close);
+            bool rejectionBear =
+                IsBearishRejection(open, high, low, close);
+
+            bool volumeEnabled =
+                configuration.Get(
+                    "UseVolumeExpansion",
+                    false);
+
+            double volumeThreshold =
+                Math.Max(
+                    1.0,
+                    configuration.Get(
+                        "VolumeExpansionRatio",
+                        1.15));
+
+            bool volumeBull =
+                volumeEnabled &&
+                close > open &&
+                volumeRatio >= volumeThreshold;
+
+            bool volumeBear =
+                volumeEnabled &&
+                close < open &&
+                volumeRatio >= volumeThreshold;
+
+            bool macdEnabled =
+                configuration.Get(
+                    "UseMacdBias",
+                    false);
+
+            bool macdBull =
+                macdEnabled &&
+                macdHistogram > 0 &&
+                macdHistogram >= previousMacd;
+
+            bool macdBear =
+                macdEnabled &&
+                macdHistogram < 0 &&
+                macdHistogram <= previousMacd;
+
+            bool vwapEnabled =
+                configuration.Get(
+                    "UseVwapBias",
+                    false);
+
+            bool vwapBull =
+                vwapEnabled &&
+                close > vwap;
+
+            bool vwapBear =
+                vwapEnabled &&
+                close < vwap;
+
+            bool healthyEnabled =
+                configuration.Get(
+                    "UseHealthyVolatility",
+                    false);
+
+            double minHealthyRatio =
+                Math.Max(
+                    0.50,
+                    configuration.Get(
+                        "HealthyAtrMinimumRatio",
+                        0.85));
+
+            double maxHealthyRatio =
+                Math.Max(
+                    minHealthyRatio,
+                    configuration.Get(
+                        "HealthyAtrMaximumRatio",
+                        1.80));
+
+            double minBodyAtr =
+                Math.Max(
+                    0,
+                    configuration.Get(
+                        "MinimumTriggerBodyAtr",
+                        0.35));
+
+            bool healthyVolatility =
+                healthyEnabled &&
+                atrRatio >= minHealthyRatio &&
+                atrRatio <= maxHealthyRatio &&
+                bodyAtr >= minBodyAtr;
+
+            bool qualityVolatility =
+                healthyEnabled
+                    ? healthyVolatility
+                    : atrRatio >= 0.50 &&
+                      atrRatio <= 2.50;
+
+            bool volumeEvidence =
+                configuration.Get(
+                    "UseVolumeExpansionEvidence",
+                    true);
+
+            bool macdEvidence =
+                configuration.Get(
+                    "UseMacdEvidence",
+                    true);
+
+            bool vwapEvidence =
+                configuration.Get(
+                    "UseVwapEvidence",
+                    true);
+
+            bool healthyEvidence =
+                configuration.Get(
+                    "UseHealthyVolatilityEvidence",
+                    true);
+
+            var features =
+                new List<CFIPClean77FeatureEvidence>();
+
+            int bullScore = 0;
+            int bearScore = 0;
+            int independentEvidence = 0;
+            int enabledFeatures = 0;
+
+            AddFeature(features, CFIPClean77MarketFeature.Trend,
+                trendBull, trendBear, 10, true, true, true,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.Momentum,
+                momentumBull, momentumBear, 8, true, true, true,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.Rsi,
+                rsiBull, rsiBear, 3, true, false, true,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.Dmi,
+                dmiBull, dmiBear, 4,
+                adx >= adxMinimum,
+                true, true,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.EmaSlope,
+                slopeBull, slopeBear, 3,
+                useSlope, false, useSlope,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.Rejection,
+                rejectionBull, rejectionBear, 6, true, false, true,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.VolumeExpansion,
+                volumeBull, volumeBear, 3,
+                volumeEvidence, false, volumeEnabled,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.MacdBias,
+                macdBull, macdBear, 3,
+                macdEvidence, false, macdEnabled,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.VwapBias,
+                vwapBull, vwapBear, 2,
+                vwapEvidence, false, vwapEnabled,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            AddFeature(features, CFIPClean77MarketFeature.HealthyVolatility,
+                healthyVolatility && close > open,
+                healthyVolatility && close < open,
+                2,
+                healthyEvidence, false, healthyEnabled,
+                ref bullScore, ref bearScore,
+                ref independentEvidence, ref enabledFeatures);
+
+            int possibleScore =
+                SumEnabledWeights(
+                    useSlope,
+                    volumeEvidence && volumeEnabled,
+                    macdEvidence && macdEnabled,
+                    vwapEvidence && vwapEnabled,
+                    healthyEvidence && healthyEnabled);
+
+            int bullNormalized =
+                NormalizeScore(bullScore, possibleScore);
+
+            int bearNormalized =
+                NormalizeScore(bearScore, possibleScore);
+
+            CFIPClean77Direction bias =
+                ResolveBias(
+                    bullNormalized,
+                    bearNormalized);
+
+            int biasStrength =
+                bias == CFIPClean77Direction.Buy
+                    ? bullNormalized
+                    : bias == CFIPClean77Direction.Sell
+                        ? bearNormalized
+                        : 0;
+
+            CFIPClean77Regime regime =
+                DetectRegime(
+                    atr,
+                    previousAtr,
+                    adx,
+                    Math.Abs(
+                        emaSpread));
+
+            bool choppy =
+                configuration.Get(
+                    "UseHistoricalChoppinessGuard",
+                    true) &&
+                adx < adxMinimum &&
+                Math.Abs(emaSpread) < atr * 0.35;
+
+            int regimeQuality =
+                CalculateRegimeQuality(
+                    regime,
+                    adx,
+                    atrRatio,
+                    emaSpreadAtr);
+
+            int marketQuality =
+                CalculateMarketQuality(
+                    bullNormalized,
+                    bearNormalized,
+                    adx,
+                    independentEvidence,
+                    choppy,
+                    regimeQuality,
+                    qualityVolatility);
+
+            return new CFIPClean77MarketFrame(
+                timeframe,
+                snapshot.BarOpenUtc,
+                open,
+                high,
+                low,
+                close,
+                atr,
+                atrRatio,
+                rsi,
+                adx,
+                dmiBias,
+                fast,
+                slow,
+                emaSpreadAtr,
+                emaSlopeAtr,
+                momentumAtr,
+                macdHistogram,
+                vwap,
+                volumeRatio,
+                bodyAtr,
+                rangeAtr,
+                bias,
+                biasStrength,
+                marketQuality,
+                bullScore,
+                bearScore,
+                bullNormalized,
+                bearNormalized,
+                independentEvidence,
+                enabledFeatures,
+                regime,
+                regimeQuality,
+                choppy,
+                qualityVolatility,
+                true,
+                features);
+        }
+
+        private static void AddFeature(
+            IList<CFIPClean77FeatureEvidence> features,
+            CFIPClean77MarketFeature feature,
+            bool bull,
+            bool bear,
+            int weight,
+            bool countsAsEvidence,
+            bool countsAsGate,
+            bool enabled,
+            ref int bullScore,
+            ref int bearScore,
+            ref int independentEvidence,
+            ref int enabledFeatures)
+        {
+            if (!enabled)
+                return;
+
+            enabledFeatures++;
+
+            CFIPClean77Direction direction =
+                bull && !bear
+                    ? CFIPClean77Direction.Buy
+                    : bear && !bull
+                        ? CFIPClean77Direction.Sell
+                        : CFIPClean77Direction.Wait;
+
+            features.Add(
+                new CFIPClean77FeatureEvidence(
+                    feature,
+                    direction,
+                    direction == CFIPClean77Direction.Wait ? 0 : 1,
+                    weight,
+                    direction != CFIPClean77Direction.Wait,
+                    countsAsEvidence,
+                    countsAsGate,
+                    CFIPClean77Provenance.Direct(
+                        "MARKET_MODEL",
+                        feature.ToString())));
+
+            if (direction == CFIPClean77Direction.Buy)
+            {
+                bullScore += weight;
+                if (countsAsEvidence)
+                    independentEvidence++;
+            }
+            else if (direction == CFIPClean77Direction.Sell)
+            {
+                bearScore += weight;
+                if (countsAsEvidence)
+                    independentEvidence++;
+            }
+        }
+
+        private static int SumEnabledWeights(
+            bool slope,
+            bool volume,
+            bool macd,
+            bool vwap,
+            bool healthy)
+        {
+            int weight = 10 + 8 + 3 + 4 + 6;
+
+            if (slope) weight += 3;
+            if (volume) weight += 3;
+            if (macd) weight += 3;
+            if (vwap) weight += 2;
+            if (healthy) weight += 2;
+
+            return Math.Max(1, weight);
+        }
+
+        private static int NormalizeScore(int score, int maximum)
+        {
+            return ClampInt(
+                (int)Math.Round(
+                    100.0 *
+                    Math.Max(0, score) /
+                    Math.Max(1, maximum)),
+                0,
+                100);
+        }
+
+        private static CFIPClean77Direction ResolveBias(int bull, int bear)
+        {
+            if (bull >= 55 && bull >= bear + 12)
+                return CFIPClean77Direction.Buy;
+
+            if (bear >= 55 && bear >= bull + 12)
+                return CFIPClean77Direction.Sell;
+
+            return CFIPClean77Direction.Wait;
+        }
+
+        private static CFIPClean77Regime DetectRegime(
+            double atr,
+            double previousAtr,
+            double adx,
+            double emaSpread)
+        {
+            if (atr <= 0 || previousAtr <= 0)
+                return CFIPClean77Regime.Unknown;
+
+            double ratio = atr / previousAtr;
+
+            if (ratio >= 1.30)
+                return CFIPClean77Regime.Expansion;
+
+            if (ratio <= 0.80)
+                return CFIPClean77Regime.Compression;
+
+            if (adx < 20)
+                return CFIPClean77Regime.Range;
+
+            if (emaSpread <= atr * 0.10)
+                return CFIPClean77Regime.Transition;
+
+            return CFIPClean77Regime.Trend;
+        }
+
+        private static int CalculateRegimeQuality(
+            CFIPClean77Regime regime,
+            double adx,
+            double atrRatio,
+            double emaSpreadAtr)
+        {
+            double adxQuality = Math.Min(100, adx * 1.5);
+
+            double volatilityQuality =
+                Math.Max(
+                    0,
+                    100 -
+                    Math.Abs(
+                        Math.Log(
+                            Math.Max(
+                                0.01,
+                                atrRatio)) *
+                        70));
+
+            double separationQuality =
+                Math.Min(
+                    100,
+                    Math.Abs(
+                        emaSpreadAtr) *
+                    100);
+
+            double bonus =
+                regime ==
+                    CFIPClean77Regime.Trend ||
+                regime ==
+                    CFIPClean77Regime.Expansion
+                    ? 100
+                    : regime ==
+                        CFIPClean77Regime.Transition
+                        ? 55
+                        : 35;
+
+            return ClampInt(
+                (int)Math.Round(
+                    adxQuality * 0.45 +
+                    volatilityQuality * 0.25 +
+                    separationQuality * 0.15 +
+                    bonus * 0.15),
+                0,
+                100);
+        }
+
+        private static int CalculateMarketQuality(
+            int bull,
+            int bear,
+            double adx,
+            int evidence,
+            bool choppy,
+            int regimeQuality,
+            bool healthyVolatility)
+        {
+            double dominance = Math.Max(bull, bear);
+            double evidenceQuality = Math.Min(100, evidence * 12.5);
+
+            double quality =
+                dominance * 0.45 +
+                Math.Min(100, adx * 1.5) * 0.15 +
+                evidenceQuality * 0.20 +
+                regimeQuality * 0.10 +
+                (healthyVolatility ? 100 : 60) * 0.05 +
+                (choppy ? 0 : 100) * 0.05;
+
+            return ClampInt(
+                (int)Math.Round(quality),
+                0,
+                100);
+        }
+
+        private static bool IsBullishRejection(
+            double open,
+            double high,
+            double low,
+            double close)
+        {
+            double range = Math.Max(0.0000001, high - low);
+            double body = Math.Abs(close - open);
+            double wick = Math.Min(open, close) - low;
+
+            return wick > body * 1.25 &&
+                   wick / range > 0.20;
+        }
+
+        private static bool IsBearishRejection(
+            double open,
+            double high,
+            double low,
+            double close)
+        {
+            double range = Math.Max(0.0000001, high - low);
+            double body = Math.Abs(close - open);
+            double wick = high - Math.Max(open, close);
+
+            return wick > body * 1.25 &&
+                   wick / range > 0.20;
+        }
+
+        private static double RollingVwap(
+            Bars bars,
+            int index,
+            int lookback)
+        {
+            int first =
+                Math.Max(
+                    0,
+                    index -
+                    Math.Max(
+                        10,
+                        lookback - 1));
+
+            double priceVolume = 0;
+            double volume = 0;
+
+            for (int i = first; i <= index; i++)
+            {
+                double typical =
+                    (bars.HighPrices[i] +
+                     bars.LowPrices[i] +
+                     bars.ClosePrices[i]) /
+                    3.0;
+
+                double v =
+                    Math.Max(
+                        1.0,
+                        bars.TickVolumes[i]);
+
+                priceVolume += typical * v;
+                volume += v;
+            }
+
+            return volume > 0
+                ? priceVolume / volume
+                : bars.ClosePrices[index];
+        }
+
+        private static double AverageTickVolume(
+            Bars bars,
+            int index,
+            int lookback)
+        {
+            int first =
+                Math.Max(
+                    0,
+                    index -
+                    Math.Max(
+                        1,
+                        lookback));
+
+            double total = 0;
+            int count = 0;
+
+            for (int i = first; i < index; i++)
+            {
+                total += Math.Max(0, bars.TickVolumes[i]);
+                count++;
+            }
+
+            return count > 0
+                ? total / count
+                : 0;
+        }
+
+        private static double NormalizeDmi(
+            double plus,
+            double minus)
+        {
+            double total =
+                Math.Max(0, plus) +
+                Math.Max(0, minus);
+
+            if (total <= 0)
+                return 0;
+
+            return Math.Max(
+                -1,
+                Math.Min(
+                    1,
+                    (plus - minus) /
+                    total));
+        }
+
+        private static double Read(
+            IndicatorDataSeries series,
+            int index,
+            double fallback = 0)
+        {
+            if (series == null ||
+                index < 0 ||
+                index >= series.Count)
+                return fallback;
+
+            double value = series[index];
+
+            return
+                double.IsNaN(value) ||
+                double.IsInfinity(value)
+                    ? fallback
+                    : value;
+        }
+
+        private static int ClampInt(
+            int value,
+            int min,
+            int max)
+        {
+            return Math.Max(
+                min,
+                Math.Min(
+                    max,
+                    value));
+        }
+    }
+
+    public sealed class CFIPClean77StructureEvent
+    {
+        public string EventType { get; private set; }
+        public CFIPClean77Direction Direction { get; private set; }
+        public string Timeframe { get; private set; }
+        public DateTime TimeUtc { get; private set; }
+        public double Price { get; private set; }
+        public int Quality { get; private set; }
+        public CFIPClean77Provenance Provenance { get; private set; }
+
+        public CFIPClean77StructureEvent(
+            string eventType,
+            CFIPClean77Direction direction,
+            string timeframe,
+            DateTime timeUtc,
+            double price,
+            int quality,
+            CFIPClean77Provenance provenance)
+        {
+            EventType = eventType ?? string.Empty;
+            Direction = direction;
+            Timeframe = timeframe ?? string.Empty;
+            TimeUtc = timeUtc;
+            Price = price;
+            Quality = Math.Max(0, Math.Min(100, quality));
+            Provenance =
+                provenance ??
+                CFIPClean77Provenance.Direct(
+                    "UNKNOWN",
+                    "UNSPECIFIED");
+        }
+    }
+
+    public sealed class CFIPClean77ZoneSnapshot
+    {
+        public string Id { get; private set; }
+        public string Type { get; private set; }
+        public CFIPClean77Direction Direction { get; private set; }
+        public string Timeframe { get; private set; }
+        public double OriginalLower { get; private set; }
+        public double OriginalUpper { get; private set; }
+        public double CurrentLower { get; private set; }
+        public double CurrentUpper { get; private set; }
+        public DateTime CreatedUtc { get; private set; }
+        public bool Mitigated { get; private set; }
+        public bool Retested { get; private set; }
+        public bool Invalidated { get; private set; }
+        public int Quality { get; private set; }
+        public CFIPClean77Provenance Provenance { get; private set; }
+
+        public CFIPClean77ZoneSnapshot(
+            string id,
+            string type,
+            CFIPClean77Direction direction,
+            string timeframe,
+            double originalLower,
+            double originalUpper,
+            double currentLower,
+            double currentUpper,
+            DateTime createdUtc,
+            bool mitigated,
+            bool retested,
+            bool invalidated,
+            int quality,
+            CFIPClean77Provenance provenance)
+        {
+            Id = id ?? string.Empty;
+            Type = type ?? string.Empty;
+            Direction = direction;
+            Timeframe = timeframe ?? string.Empty;
+            OriginalLower = originalLower;
+            OriginalUpper = originalUpper;
+            CurrentLower = currentLower;
+            CurrentUpper = currentUpper;
+            CreatedUtc = createdUtc;
+            Mitigated = mitigated;
+            Retested = retested;
+            Invalidated = invalidated;
+            Quality = Math.Max(0, Math.Min(100, quality));
+            Provenance =
+                provenance ??
+                CFIPClean77Provenance.Direct(
+                    "UNKNOWN",
+                    "UNSPECIFIED");
+        }
+    }
+
+    public sealed class CFIPClean77LiquiditySnapshot
+    {
+        public string Id { get; private set; }
+        public string Type { get; private set; }
+        public CFIPClean77Direction SweepDirection { get; private set; }
+        public string Timeframe { get; private set; }
+        public double Price { get; private set; }
+        public double Distance { get; private set; }
+        public bool Swept { get; private set; }
+        public int Quality { get; private set; }
+        public CFIPClean77Provenance Provenance { get; private set; }
+
+        public CFIPClean77LiquiditySnapshot(
+            string id,
+            string type,
+            CFIPClean77Direction sweepDirection,
+            string timeframe,
+            double price,
+            double distance,
+            bool swept,
+            int quality,
+            CFIPClean77Provenance provenance)
+        {
+            Id = id ?? string.Empty;
+            Type = type ?? string.Empty;
+            SweepDirection = sweepDirection;
+            Timeframe = timeframe ?? string.Empty;
+            Price = price;
+            Distance = Math.Max(0, distance);
+            Swept = swept;
+            Quality = Math.Max(0, Math.Min(100, quality));
+            Provenance =
+                provenance ??
+                CFIPClean77Provenance.Direct(
+                    "UNKNOWN",
+                    "UNSPECIFIED");
+        }
+    }
+
     // ------------------------------------------------------------------------
     // Decision
     // ------------------------------------------------------------------------
