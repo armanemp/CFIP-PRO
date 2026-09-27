@@ -11265,7 +11265,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                     Math.Max(
                         0.20,
                         configuration.Get(
-                            "SL Reprice Breathing ATR",
+                            "SlRepriceBreathingAtr",
                             0.85) -
                         tighten);
 
@@ -11508,7 +11508,7 @@ if (active != null &&
                 Math.Max(
                     0.20,
                     configuration.Get(
-                        "SL Reprice Breathing ATR",
+                        "SlRepriceBreathingAtr",
                         0.85));
 
             return
@@ -12667,7 +12667,7 @@ if (active != null &&
 [Parameter("SL Reprice Start RR", Group = "10 · Live Management", DefaultValue = 1.00, MinValue = 0.5, MaxValue = 10)]
         public double SlRepriceStartRR { get; set; }
 
-[Parameter("SL Reprice Breathing ATR", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
+[Parameter("SlRepriceBreathingAtr", Group = "10 · Live Management", DefaultValue = 0.85, MinValue = 0.2, MaxValue = 5)]
         public double SlRepriceBreathingAtr { get; set; }
 
 [Parameter("SL Reprice Step ATR", Group = "10 · Live Management", DefaultValue = 0.08, MinValue = 0.01, MaxValue = 1)]
