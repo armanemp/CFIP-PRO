@@ -249,3 +249,27 @@ def test_phase6_uses_adaptive_smart_quality_and_edge_gates():
     assert "edge < adaptiveEdgeThreshold" in s
     assert "quality < adaptiveQualityThreshold" in s
     assert 'Math.Max(\n                        configuration.Get("SmartConsensusThreshold", 57),\n                        adaptiveShareThreshold)' in s
+
+
+def test_phase6_reconciles_legacy_location_and_htf_confidence_semantics():
+    s = read(V79)
+    assert "CollectEvidence(" in s
+    assert "UsePremiumDiscount" in s
+    assert "structure.PremiumDiscount.IsDiscount" in s
+    assert "structure.PremiumDiscount.IsPremium" in s
+    assert "e.Bull += 6.0" in s
+    assert "e.Bear += 6.0" in s
+    assert "ApplyHigherTimeframePenalty(" in s
+    assert 'cfg.Get("HigherTfPenalty", 7)' in s
+    assert "market.FindFrame("H1")" in s
+    assert "market.FindFrame("H4")" in s
+    assert "market.FindFrame("D1")" in s
+
+
+def test_phase6_softmax_share_calculation_is_temperature_controlled():
+    s = read(V79)
+    assert "double safeTemperature = Math.Max(1.0, temperature);" in s
+    assert "double centered = (bull - bear) / safeTemperature;" in s
+    assert "Math.Exp(" in s
+    assert "bullShare = Clamp(" in s
+    assert "bearShare = 100 - bullShare;" in s
