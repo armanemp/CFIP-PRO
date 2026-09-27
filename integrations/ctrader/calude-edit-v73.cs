@@ -3072,7 +3072,9 @@ namespace cAlgo
 
                 EnsureSignalPlan(
                     closedM5,
-                    !ConfirmedSignalsOnly);
+                    ConfirmedSignalsOnly
+                        ? CFIPClean73DecisionPolicyMode.Confirmed
+                        : CFIPClean73DecisionPolicyMode.Soft);
             }
 
             if (_decision != null &&
@@ -13492,9 +13494,9 @@ namespace cAlgo
             return false;
         }
 
-        private void EnsureSignalPlan(
+                private void EnsureSignalPlan(
             int closedM5,
-            bool allowUnconfirmedAutoPlan)
+            CFIPClean73DecisionPolicyMode policy)
         {
             if (_plan != null ||
                 _decision == null ||
@@ -13503,7 +13505,7 @@ namespace cAlgo
 
             if (!ShouldCreatePlan(
                     closedM5,
-                    allowUnconfirmedAutoPlan))
+                    policy))
                 return;
 
             Plan plan =
@@ -13526,8 +13528,7 @@ namespace cAlgo
             _lastAutoPlanAttemptM5 =
                 closedM5;
 
-            ActivatePlan(
-                plan);
+            ActivatePlan(plan);
         }
 
 
@@ -13575,9 +13576,9 @@ namespace cAlgo
             }
         }
 
-        private bool ShouldCreatePlan(
+                private bool ShouldCreatePlan(
             int closedM5,
-            bool allowUnconfirmedAutoPlan)
+            CFIPClean73DecisionPolicyMode policy)
         {
             if (BlockNewSignalWhileActive &&
                 _plan != null)
@@ -13587,19 +13588,27 @@ namespace cAlgo
                 _decision.Direction == 0)
                 return false;
 
-            if (!_decision.EntryAllowed)
+            if (policy ==
+                    CFIPClean73DecisionPolicyMode.Confirmed)
             {
-                bool softPlanEligible =
-                    allowUnconfirmedAutoPlan &&
-                    !IsHardDecisionBlockReason(
-                        _decision.BlockReason) &&
-                    _decision.Confidence >=
-                        MinimumAutoConfidence &&
-                    _decision.SmartQuality >=
-                        MinimumAutoSmartQuality;
-
-                if (!softPlanEligible)
+                if (!_decision.EntryAllowed)
                     return false;
+            }
+            else
+            {
+                if (!_decision.EntryAllowed)
+                {
+                    bool softEligible =
+                        !IsHardDecisionBlockReason(
+                            _decision.BlockReason) &&
+                        _decision.Confidence >=
+                            MinimumAutoConfidence &&
+                        _decision.SmartQuality >=
+                            MinimumAutoSmartQuality;
+
+                    if (!softEligible)
+                        return false;
+                }
             }
 
             if (BlockSameBarReentryAfterExit &&
@@ -24103,6 +24112,36 @@ private Color AutoTradingPanelColor()
                 return false;
             }
 
+            ExecutionIntent pendingIntent =
+                BuildExecutionIntent(
+                    direction,
+                    CFIPClean73DecisionPolicyMode.Pending,
+                    CFIPClean73ExecutionIntentKind.Stop,
+                    trigger,
+                    trigger,
+                    0,
+                    0,
+                    stop,
+                    target,
+                    volume,
+                    closedM5,
+                    "CONTINUATION STOP");
+
+            string intentReason;
+
+            if (!ValidateExecutionIntent(
+                    pendingIntent,
+                    direction == 1
+                        ? Symbol.Ask
+                        : Symbol.Bid,
+                    out intentReason))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • " +
+                    intentReason;
+                return false;
+            }
+
             string reason;
 
             if (!PassesAutoTradeSafetyGuards(
@@ -24135,8 +24174,8 @@ private Color AutoTradingPanelColor()
                         volume,
                         trigger,
                         PendingOrderLabel(),
-                        stopPips,
-                        targetPips,
+                        pendingIntent.StopPips,
+                        pendingIntent.TargetPips,
                         ProtectionType.Relative,
                         expiration,
                         "CFIP SMART73",
@@ -24321,6 +24360,36 @@ private Color AutoTradingPanelColor()
                 return false;
             }
 
+            ExecutionIntent pendingIntent =
+                BuildExecutionIntent(
+                    direction,
+                    CFIPClean73DecisionPolicyMode.Pending,
+                    CFIPClean73ExecutionIntentKind.Limit,
+                    targetEntry,
+                    0,
+                    targetEntry,
+                    targetEntry,
+                    stop,
+                    target,
+                    volume,
+                    closedM5,
+                    "REVERSAL LIMIT");
+
+            string intentReason;
+
+            if (!ValidateExecutionIntent(
+                    pendingIntent,
+                    direction == 1
+                        ? Symbol.Bid
+                        : Symbol.Ask,
+                    out intentReason))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING LIMIT • " +
+                    intentReason;
+                return false;
+            }
+
             string reason;
 
             if (!PassesAutoTradeSafetyGuards(
@@ -24353,8 +24422,8 @@ private Color AutoTradingPanelColor()
                         volume,
                         targetEntry,
                         PendingOrderLabel(),
-                        stopPips,
-                        targetPips,
+                        pendingIntent.StopPips,
+                        pendingIntent.TargetPips,
                         ProtectionType.Relative,
                         expiration,
                         "CFIP SMART73",
