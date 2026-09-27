@@ -3839,45 +3839,75 @@ namespace cAlgo
         {
             var e = new Evidence();
 
-            AddMarket(e, market.FindFrame("M5"), 1.00);
-            AddMarket(e, market.FindFrame("M15"), 0.95);
-            AddMarket(e, market.FindFrame("M30"), 0.75);
-            AddMarket(e, market.FindFrame("H1"), 0.55);
-            AddMarket(e, market.FindFrame("H4"), 0.45);
-            AddMarket(e, market.FindFrame("D1"), 0.35);
-            AddMarket(e, market.FindFrame("W1"), 0.25);
+            // Directional market evidence is deduplicated by feature family
+            // across timeframes. MTF agreement is a separate semantic domain.
+            AddMarketEvidence(
+                e,
+                market.FindFrame("M5"),
+                market.FindFrame("M15"),
+                market.FindFrame("M30"),
+                market.FindFrame("H1"),
+                market.FindFrame("H4"),
+                market.FindFrame("D1"),
+                market.FindFrame("W1"));
 
-            CFIPClean79MarketFrame m5 = market.FindFrame("M5");
-            if (m5 != null)
-                for (int i = 0; i < m5.Features.Count; i++)
-                {
-                    CFIPClean79FeatureEvidence f = m5.Features[i];
-                    if (f != null && f.Triggered && f.CountsAsEvidence &&
-                        f.Direction != CFIPClean79Direction.Wait)
-                        e.Independent++;
-                }
+            bool bullStructureBreak = false;
+            bool bearStructureBreak = false;
+            int bullDisplacement = 0;
+            int bearDisplacement = 0;
 
             for (int i = 0; i < structure.Events.Count; i++)
             {
                 CFIPClean79StructureEventRecord x = structure.Events[i];
-                if (x == null || x.Direction == CFIPClean79Direction.Wait) continue;
+                if (x == null || x.Direction == CFIPClean79Direction.Wait)
+                    continue;
 
-                if (x.Kind == CFIPClean79StructureEventKind.BreakOfStructure ||
+                bool isStructureBreak =
+                    x.Kind == CFIPClean79StructureEventKind.BreakOfStructure ||
                     x.Kind == CFIPClean79StructureEventKind.MarketStructureShift ||
-                    x.Kind == CFIPClean79StructureEventKind.ChangeOfCharacter ||
-                    x.Kind == CFIPClean79StructureEventKind.Displacement)
-                    e.Structural++;
+                    x.Kind == CFIPClean79StructureEventKind.ChangeOfCharacter;
 
                 if (x.Direction == CFIPClean79Direction.Buy)
                 {
-                    e.Bull += x.Quality * 0.10;
-                    e.BullStructure = Math.Max(e.BullStructure, x.Quality);
+                    if (isStructureBreak)
+                    {
+                        bullStructureBreak = true;
+                        e.BullStructure = Math.Max(e.BullStructure, x.Quality);
+                    }
+                    else if (x.Kind == CFIPClean79StructureEventKind.Displacement)
+                        bullDisplacement = Math.Max(bullDisplacement, x.Quality);
                 }
                 else
                 {
-                    e.Bear += x.Quality * 0.10;
-                    e.BearStructure = Math.Max(e.BearStructure, x.Quality);
+                    if (isStructureBreak)
+                    {
+                        bearStructureBreak = true;
+                        e.BearStructure = Math.Max(e.BearStructure, x.Quality);
+                    }
+                    else if (x.Kind == CFIPClean79StructureEventKind.Displacement)
+                        bearDisplacement = Math.Max(bearDisplacement, x.Quality);
                 }
+            }
+
+            if (bullStructureBreak)
+            {
+                e.Structural++;
+                e.Bull += e.BullStructure * 0.10;
+            }
+            if (bearStructureBreak)
+            {
+                e.Structural++;
+                e.Bear += e.BearStructure * 0.10;
+            }
+            if (bullDisplacement > 0)
+            {
+                e.Structural++;
+                e.Bull += bullDisplacement * 0.10;
+            }
+            if (bearDisplacement > 0)
+            {
+                e.Structural++;
+                e.Bear += bearDisplacement * 0.10;
             }
 
             for (int i = 0; i < structure.Zones.Count; i++)
@@ -3926,16 +3956,65 @@ namespace cAlgo
                 }
             }
 
-            e.Bull += e.BullConfluence * 0.04;
-            e.Bear += e.BearConfluence * 0.04;
+            // Confluence is a quality modifier, not another directional evidence
+            // source. It is consumed only by the weighted quality domain.
             return e;
         }
 
-        private void AddMarket(Evidence e, CFIPClean79MarketFrame frame, double scale)
+        private void AddMarketEvidence(
+            Evidence e,
+            params CFIPClean79MarketFrame[] frames)
         {
-            if (frame == null || !frame.DataValid) return;
-            e.Bull += frame.BullScoreNormalized * scale;
-            e.Bear += frame.BearScoreNormalized * scale;
+            if (e == null || frames == null)
+                return;
+
+            var families =
+                new Dictionary<CFIPClean79MarketFeature, FeatureAggregate>();
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                CFIPClean79MarketFrame frame = frames[i];
+                if (frame == null || !frame.DataValid)
+                    continue;
+
+                for (int j = 0; j < frame.Features.Count; j++)
+                {
+                    CFIPClean79FeatureEvidence feature = frame.Features[j];
+                    if (feature == null ||
+                        !feature.Triggered ||
+                        !feature.CountsAsEvidence ||
+                        feature.Direction == CFIPClean79Direction.Wait)
+                        continue;
+
+                    FeatureAggregate aggregate;
+                    if (!families.TryGetValue(feature.Feature, out aggregate))
+                    {
+                        aggregate = new FeatureAggregate();
+                        families.Add(feature.Feature, aggregate);
+                    }
+
+                    aggregate.Seen = true;
+
+                    if (feature.Direction == CFIPClean79Direction.Buy)
+                        aggregate.Bull = Math.Max(aggregate.Bull, feature.Value);
+                    else
+                        aggregate.Bear = Math.Max(aggregate.Bear, feature.Value);
+                }
+            }
+
+            foreach (KeyValuePair<CFIPClean79MarketFeature, FeatureAggregate> pair in families)
+            {
+                FeatureAggregate aggregate = pair.Value;
+                if (aggregate == null || !aggregate.Seen)
+                    continue;
+
+                // One feature family contributes only its strongest observation
+                // across timeframes. This prevents MTF copies of the same
+                // phenomenon from inflating directional evidence.
+                e.Bull += aggregate.Bull * 10.0;
+                e.Bear += aggregate.Bear * 10.0;
+                e.Independent++;
+            }
         }
 
         private int CalculateMtfAgreement(
@@ -5086,6 +5165,11 @@ namespace cAlgo
         public void SetStructure(CFIPClean79StructureSnapshot value)
         {
             Structure = value;
+        }
+
+        public void SetDecision(CFIPClean79DecisionSnapshot value)
+        {
+            Decision = value;
         }
 
         // The cycle state is a downstream data carrier. Later phases extend
