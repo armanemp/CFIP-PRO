@@ -3650,6 +3650,13 @@ namespace cAlgo
 
     public sealed class CFIPClean79DecisionEngine : ICFIPClean79DecisionEngine
     {
+        private sealed class FeatureAggregate
+        {
+            public bool Seen;
+            public double BullScore;
+            public double BearScore;
+        }
+
         private sealed class Evidence
         {
             public double Bull;
@@ -4078,37 +4085,43 @@ namespace cAlgo
                     aggregate.Seen = true;
 
                     // Feature.Value is normalized to [0,1], while Weight is
-                    // the market-model semantic weight. Keep that weighting,
-                    // but select only the strongest directional observation
-                    // for the family across all timeframes.
+                    // the market-model semantic weight. Keep that weighting
+                    // and independently retain the strongest BUY and SELL
+                    // observation for the feature family across timeframes.
                     double score = feature.Value * Math.Max(0, feature.Weight);
 
-                    if (score > aggregate.Score)
-                    {
-                        aggregate.Score = score;
-                        aggregate.Direction = feature.Direction;
-                    }
+                    if (feature.Direction == CFIPClean79Direction.Buy)
+                        aggregate.BullScore = Math.Max(
+                            aggregate.BullScore,
+                            score);
+                    else if (feature.Direction == CFIPClean79Direction.Sell)
+                        aggregate.BearScore = Math.Max(
+                            aggregate.BearScore,
+                            score);
                 }
             }
 
             foreach (KeyValuePair<CFIPClean79MarketFeature, FeatureAggregate> pair in families)
             {
                 FeatureAggregate aggregate = pair.Value;
-                if (aggregate == null ||
-                    !aggregate.Seen ||
-                    aggregate.Score <= 0 ||
-                    aggregate.Direction == CFIPClean79Direction.Wait)
+                if (aggregate == null || !aggregate.Seen)
                     continue;
 
-                // A market feature family contributes once. This prevents
-                // MTF copies and opposing observations of the same phenomenon
-                // from inflating or cancelling directional evidence.
-                if (aggregate.Direction == CFIPClean79Direction.Buy)
-                    e.Bull += aggregate.Score;
-                else
-                    e.Bear += aggregate.Score;
-
-                e.Independent++;
+                // A market feature family contributes once. Keep the stronger
+                // directional observation; an exact tie is neutral rather than
+                // inheriting the answer from timeframe iteration order.
+                if (aggregate.BullScore > aggregate.BearScore &&
+                    aggregate.BullScore > 0)
+                {
+                    e.Bull += aggregate.BullScore;
+                    e.Independent++;
+                }
+                else if (aggregate.BearScore > aggregate.BullScore &&
+                         aggregate.BearScore > 0)
+                {
+                    e.Bear += aggregate.BearScore;
+                    e.Independent++;
+                }
             }
         }
 
