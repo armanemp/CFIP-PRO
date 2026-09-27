@@ -120,6 +120,20 @@ Repository-side validation confirmed:
 
 These are repository/source-level checks. A real cTrader compile/runtime session is still required by Phase 16 and is not claimed here.
 
+
+### Final review corrections
+
+Two edge cases were corrected before Phase 3 acceptance:
+
+1. `ResolveClosedBar()` now explicitly rejects a reference earlier than the first available bar, preventing an invalid historical fallback.
+2. `IsCoherent()` now requires the primary decision timeframes to be ready/coherent, while treating unavailable optional D1/W1 history as missing data rather than temporal leakage.
+
+The v76 source was re-fetched after these corrections and the parameter surface, source balance, timeframe coverage, closed-bar guards, UTC/local time separation, and absence of broker/UI side effects were rechecked.
+
+### Test-run limitation
+
+The repository test file was created and source-validated, but the execution sandbox could not resolve `raw.githubusercontent.com`; therefore an external `pytest` run could not be completed in this environment. This is an environment limitation, not a claim that the Python test runner passed.
+
 ## Phase 3 acceptance
 
 **COMPLETE at the architecture/data-contract level.**
