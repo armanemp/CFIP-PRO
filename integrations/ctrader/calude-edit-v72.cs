@@ -11565,7 +11565,8 @@ namespace cAlgo
                 HasOrderBlockLiquiditySweep(
                     bars,
                     createdIndex,
-                    direction);
+                    direction,
+                    atr);
 
             bool fvgConfluence =
                 HasOrderBlockFvgConfluence(
@@ -11662,13 +11663,15 @@ namespace cAlgo
             };
         }
 
-        private bool HasOrderBlockLiquiditySweep(
+                private bool HasOrderBlockLiquiditySweep(
             Bars bars,
             int index,
-            int direction)
+            int direction,
+            double atr)
         {
             if (bars == null ||
-                index < 5)
+                index < 5 ||
+                atr <= 0)
                 return false;
 
             int start =
@@ -11681,6 +11684,12 @@ namespace cAlgo
                             LiquidityLookback,
                             20)));
 
+            double minimumDepth =
+                Math.Max(
+                    Symbol.PipSize * 2,
+                    atr *
+                    LiquiditySweepMinimumDepthAtr);
+
             if (direction == 1)
             {
                 double priorLow =
@@ -11690,8 +11699,10 @@ namespace cAlgo
                         index - 1);
 
                 return
-                    bars.LowPrices[index] <
-                    priorLow;
+                    priorLow > 0 &&
+                    priorLow -
+                    bars.LowPrices[index] >=
+                    minimumDepth;
             }
 
             double priorHigh =
@@ -11701,11 +11712,14 @@ namespace cAlgo
                     index - 1);
 
             return
-                bars.HighPrices[index] >
-                priorHigh;
+                priorHigh > 0 &&
+                bars.HighPrices[index] -
+                priorHigh >=
+                minimumDepth;
         }
 
-        private bool HasOrderBlockFvgConfluence(
+
+                private bool HasOrderBlockFvgConfluence(
             Bars bars,
             int startIndex,
             int endIndex,
@@ -11717,8 +11731,7 @@ namespace cAlgo
             if (!UseFvg ||
                 bars == null ||
                 atr <= 0 ||
-                startIndex >=
-                endIndex)
+                startIndex >= endIndex)
                 return false;
 
             int first =
@@ -11730,58 +11743,102 @@ namespace cAlgo
                  i <= endIndex;
                  i++)
             {
-                double fvgLow =
-                    0;
+                double gap =
+                    direction == 1
+                        ? bars.LowPrices[i] -
+                          bars.HighPrices[i - 2]
+                        : bars.LowPrices[i - 2] -
+                          bars.HighPrices[i];
 
-                double fvgHigh =
-                    0;
+                if (gap <
+                    atr *
+                    MinimumFvgAtr)
+                    continue;
 
-                if (direction == 1)
-                {
-                    double gap =
-                        bars.LowPrices[i] -
-                        bars.HighPrices[i - 2];
+                double low =
+                    direction == 1
+                        ? bars.HighPrices[i - 2]
+                        : bars.HighPrices[i];
 
-                    if (gap <
-                        atr *
-                        MinimumFvgAtr)
-                        continue;
+                double high =
+                    direction == 1
+                        ? bars.LowPrices[i]
+                        : bars.LowPrices[i - 2];
 
-                    fvgLow =
-                        bars.HighPrices[i - 2];
+                Zone managed =
+                    BuildManagedFvgZone(
+                        bars,
+                        i,
+                        endIndex,
+                        direction,
+                        low,
+                        high,
+                        gap,
+                        false,
+                        atr);
 
-                    fvgHigh =
-                        bars.LowPrices[i];
-                }
-                else
-                {
-                    double gap =
-                        bars.LowPrices[i - 2] -
-                        bars.HighPrices[i];
+                if (managed == null)
+                    continue;
 
-                    if (gap <
-                        atr *
-                        MinimumFvgAtr)
-                        continue;
-
-                    fvgLow =
-                        bars.HighPrices[i];
-
-                    fvgHigh =
-                        bars.LowPrices[i - 2];
-                }
-
-                if (fvgHigh >=
-                    zoneLow -
-                    atr * 0.05 &&
-                    fvgLow <=
-                    zoneHigh +
-                    atr * 0.05)
+                if (managed.High >=
+                        zoneLow -
+                        atr * 0.05 &&
+                    managed.Low <=
+                        zoneHigh +
+                        atr * 0.05)
                     return true;
+
+                if (UseTwoBarImbalanceFvg &&
+                    i >= startIndex + 2)
+                {
+                    double twoBarGap =
+                        direction == 1
+                            ? bars.LowPrices[i] -
+                              bars.HighPrices[i - 1]
+                            : bars.LowPrices[i - 1] -
+                              bars.HighPrices[i];
+
+                    if (twoBarGap >=
+                        atr *
+                        MinimumFvgAtr)
+                    {
+                        double twoLow =
+                            direction == 1
+                                ? bars.HighPrices[i - 1]
+                                : bars.HighPrices[i];
+
+                        double twoHigh =
+                            direction == 1
+                                ? bars.LowPrices[i]
+                                : bars.LowPrices[i - 1];
+
+                        Zone managedTwoBar =
+                            BuildManagedFvgZone(
+                                bars,
+                                i,
+                                endIndex,
+                                direction,
+                                twoLow,
+                                twoHigh,
+                                twoBarGap,
+                                true,
+                                atr);
+
+                        if (managedTwoBar != null &&
+                            managedTwoBar.High >=
+                                zoneLow -
+                                atr * 0.05 &&
+                            managedTwoBar.Low <=
+                                zoneHigh +
+                                atr * 0.05)
+                            return true;
+                    }
+                }
             }
 
             return false;
         }
+
 
         // Internal FVG engine: standard 3-candle FVG plus optional 2-bar imbalance, with body/wick-aware partial mitigation. No chart objects are created here.
         private Zone FindNearestFvgForExecution(
