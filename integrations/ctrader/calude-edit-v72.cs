@@ -188,15 +188,14 @@
 //    staying left-anchored so the text does not sit across the line.
 // ============================================================================
 
-// v72 changes (Phase 1 · lifecycle/runtime hardening):
-//  - Preserves v69 behavior while separating runtime quick-control state from
-//    public cTrader configuration parameters.
-//  - Live telemetry timeout can no longer terminate a still-open managed
-//    position.
-//  - Partial take-profit mutations now require broker success before their
-//    hit-state is consumed, allowing transient failures to retry.
-//  - Adds explicit telemetry-timeout state without taking ownership away from
-//    the broker lifecycle.
+// v72 changes (Phase 5 · Structure / FVG / OB / Liquidity integrity):
+//  - Adds one central closed-candle index contract for structure, pivots,
+//    liquidity sweeps, FVGs, order blocks and equal-high/low detection.
+//  - Direct callers cannot silently analyze the forming candle.
+//  - FVG and order-block mitigation endpoints must be fully closed bars.
+//  - BUY/SELL structure, displacement and liquidity logic remain symmetric.
+//  - Legacy v70 broker-runtime hardening is inherited from v71; v72 focuses
+//    only on structural/zone integrity and index authority.
 // ============================================================================
 
 // v66 changes (Phase 5 · runtime/UI authority + full execution/chart sync):
@@ -20351,7 +20350,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         targetPips,
-                        "CFIP SMART70",
+                        "CFIP SMART72",
                         false);
 
                 if (result == null)
@@ -22676,7 +22675,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         tpPips,
-                        "CFIP SMART70",
+                        "CFIP SMART72",
                         false);
 
                 if (result == null ||
@@ -23832,7 +23831,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -23850,7 +23849,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART70",
+                        "CFIP SMART72",
                         false);
 
                 if (result == null ||
@@ -24050,7 +24049,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -24068,7 +24067,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART70",
+                        "CFIP SMART72",
                         false);
 
                 if (result == null ||
