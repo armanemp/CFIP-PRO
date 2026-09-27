@@ -1747,6 +1747,7 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - 6cc4c2ac9daf4e666d82d29fa6936473c4750f60 — restart-safe pending broker reconciliation
 - ba12020d5b07805ef65f4d6b51e75fbb6af7eb34 — restart reconciliation static tests
 - 96b6741f11aac1c91c689248f57f34e681eef33d — restart reconciliation documentation
+- 460c0115f9fc0e86a4033ca21ea649e4b00af20e — canonical execution-configuration key coverage test
 
 **Implemented:**
 - first-class pending-order lifecycle record/state
@@ -1766,6 +1767,7 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - explicit filled Position identity in the pending lifecycle record
 - registration of accepted pending orders with expected plan protection/expiry
 - explicit distinction between lifecycle observation and broker mutation
+- canonical configuration-key coverage confirms all 101 execution/lifecycle configuration reads are present on the 513-parameter surface
 
 **Deep-audit rule:**
 A pending-order event never becomes an independent trading authority. Events only update/reconcile lifecycle state or enqueue an action. Broker-changing actions flow through the single Phase-9 gateway.
