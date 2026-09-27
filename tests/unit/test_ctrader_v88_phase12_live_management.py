@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-V87 = ROOT / "integrations/ctrader/calude-edit-v86.cs"
+V87 = ROOT / "integrations/ctrader/calude-edit-v87.cs"
 V88 = ROOT / "integrations/ctrader/calude-edit-v88.cs"
 
 
@@ -83,27 +83,27 @@ def balanced(source: str) -> bool:
     return depth == 0 and not in_string and not in_char and not in_block
 
 
-def test_v88_preserves_v86_parameter_surface():
-    s86 = read(V87)
-    s87 = read(V88)
-    p86 = parameters(s86)
+def test_v88_preserves_v87_parameter_surface():
+    s87 = read(V87)
+    s88 = read(V88)
     p87 = parameters(s87)
+    p88 = parameters(s88)
 
-    assert len(p86) == 513
     assert len(p87) == 513
+    assert len(p88) == 513
 
     # Version-isolated type names are expected to differ; the public
     # parameter labels and property names must remain identical.
-    assert [(label, name) for label, _type, name in p86] == [
-        (label, name) for label, _type, name in p87
+    assert [(label, name) for label, _type, name in p87] == [
+        (label, name) for label, _type, name in p88
     ]
 
 
 def test_v88_is_version_isolated():
     s = read(V88)
     for token in (
-        "CFIPClean87", "CFIPClean85", "CFIPClean84", "CFIPClean83",
-        "CFIPClean82", "CFIPClean81", "CFIP87|", "CFIP85|",
+        "CFIPClean87", "CFIPClean86", "CFIPClean85", "CFIPClean84", "CFIPClean83",
+        "CFIPClean82", "CFIPClean81", "CFIP87|", "CFIP86|", "CFIP85|",
         "CFIP84|", "CFIP83|", "CFIP82|", "CFIP81|",
         "CFIP-SMART-CLEAN87",
     ):
