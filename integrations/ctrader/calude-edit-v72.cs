@@ -85,8 +85,9 @@
 //  - ENHANCEMENT: BullLiquiditySweep/BearLiquiditySweep used to count ANY
 //    penetration beyond the prior extreme as a valid sweep, even a
 //    single-tick wick indistinguishable from noise or spread. Added a
+//  - ENHANCEMENT: BullLiquiditySweep/BearLiquiditySweep require a
 //    minimum penetration depth (new "Liquidity Sweep Minimum Depth ATR"
-//    parameter, default 0.05x ATR, floored by the live spread) so only
+////    parameter, default 0.05x ATR, floored by the live spread) so only
 //    genuine stop-hunt wicks count — fewer false liquidity-sweep signals.
 //  - Reviewed Order Block quality scoring (displacement, structure break,
 //    liquidity sweep, FVG confluence, remaining ratio, body/impulse ratio,
@@ -10572,13 +10573,15 @@ namespace cAlgo
                 DisplacementAtr;
         }
 
-        private bool BullLiquiditySweep(
+                private bool BullLiquiditySweep(
             Bars bars,
             int index,
             double atr)
         {
             if (!UseLiquiditySweep ||
-                index < 5)
+                bars == null ||
+                index < 5 ||
+                atr <= 0)
                 return false;
 
             double prior =
@@ -10595,9 +10598,13 @@ namespace cAlgo
                     atr *
                     LiquiditySweepMinimumDepthAtr);
 
-            return
-                bars.LowPrices[index] <
+            double penetration =
                 prior -
+                bars.LowPrices[index];
+
+            return
+                prior > 0 &&
+                penetration >=
                 minimumDepth &&
                 bars.ClosePrices[index] >
                 prior &&
@@ -10605,13 +10612,16 @@ namespace cAlgo
                 bars.OpenPrices[index];
         }
 
-        private bool BearLiquiditySweep(
+
+                private bool BearLiquiditySweep(
             Bars bars,
             int index,
             double atr)
         {
             if (!UseLiquiditySweep ||
-                index < 5)
+                bars == null ||
+                index < 5 ||
+                atr <= 0)
                 return false;
 
             double prior =
@@ -10628,15 +10638,20 @@ namespace cAlgo
                     atr *
                     LiquiditySweepMinimumDepthAtr);
 
+            double penetration =
+                bars.HighPrices[index] -
+                prior;
+
             return
-                bars.HighPrices[index] >
-                prior +
+                prior > 0 &&
+                penetration >=
                 minimumDepth &&
                 bars.ClosePrices[index] <
                 prior &&
                 bars.ClosePrices[index] <
                 bars.OpenPrices[index];
         }
+
 
         private bool Momentum(
             Bars bars,
