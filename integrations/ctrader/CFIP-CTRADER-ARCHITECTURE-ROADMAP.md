@@ -1744,6 +1744,9 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - ce5f643a1508bc3500aa91515451a46916c1df00 — Phase 10 static tests
 - dc8b9e4314f792a2477db66ac02e4b066ff9355b — Phase 10 documentation
 - ca93c91b8e44f524c7bbc2c905c1cf041f157420 — CI coverage for Phase 10 tests
+- 6cc4c2ac9daf4e666d82d29fa6936473c4750f60 — restart-safe pending broker reconciliation
+- ba12020d5b07805ef65f4d6b51e75fbb6af7eb34 — restart reconciliation static tests
+- 96b6741f11aac1c91c689248f57f34e681eef33d — restart reconciliation documentation
 
 **Implemented:**
 - first-class pending-order lifecycle record/state
@@ -1759,6 +1762,8 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - broker mutation only through the unified gateway
 - pending protection mutation through price-based PendingOrder methods
 - deterministic cancellation reconciliation against actual broker state
+- restart-safe pending->filled reconstruction through Position comment / PlanId
+- explicit filled Position identity in the pending lifecycle record
 - registration of accepted pending orders with expected plan protection/expiry
 - explicit distinction between lifecycle observation and broker mutation
 
