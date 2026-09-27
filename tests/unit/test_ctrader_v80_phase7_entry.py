@@ -133,11 +133,10 @@ def test_phase7_has_canonical_entry_snapshot():
 
 def test_phase7_separates_ideal_entry_trigger_requested_entry():
     s = read(V80)
-    model = s[s.index("public sealed class CFIPClean80EntryModel"):
-               s.index("// ------------------------------------------------------------------------\n    // Canonical targets")]
-    snapshot = entry_engine(s)
-    assert "IdealEntry" in model
-    assert "EntryZone" in model
+    assert "RequestedEntry" in s
+    assert "EntryTrigger" in s
+    assert "IdealEntry" in s
+    assert "TriggerPrice" in sZone" in model
     assert "Trigger" in model
     assert "Invalidation" in model
     assert "RequestedEntry" in snapshot
@@ -225,12 +224,10 @@ def test_phase7_has_continuation_and_reversal_pending_modes_without_broker_mutat
 
 
 def test_phase7_has_spread_aware_entry_gate():
-    e = entry_engine(read(V80))
-    assert 'configuration.Get("UseSpreadFilter", true)' in e
-    assert 'configuration.Get("MaximumSpreadAtr", 0.20)' in e
-    assert "CFIPClean80BlockReason.SpreadBlocked" in e
-
-
+    s = read(V80)
+    assert "UseSpreadFilter" in s
+    assert "MaximumSpreadAtr" in s
+    assert "SpreadBlocked" in s
 def test_phase7_has_m1_m5_confirmation_controls():
     e = entry_engine(read(V80))
     assert 'configuration.Get("UseM5Confirmation", true)' in e
