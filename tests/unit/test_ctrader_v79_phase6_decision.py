@@ -85,3 +85,22 @@ def test_decision_snapshot_contract_matches_engine():
         "CFIPClean79ConfigSnapshot configuration"
     ]:
         assert token in block
+
+def test_phase6_has_retest_quality_and_pending_policy():
+    s = read(V79)
+    assert "Retested" in s
+    assert "BullRetest" in s and "BearRetest" in s
+    assert "CFIPClean79DecisionPolicyMode.Pending" in s
+    assert "ResolvePolicy(" in s
+
+def test_phase6_weighted_quality_domains_sum_to_one():
+    s = read(V79)
+    assert "marketQuality * 0.28" in s
+    assert "mtfAgreement * 0.18" in s
+    assert "structureQuality * 0.18" in s
+    assert "zoneQuality * 0.12" in s
+    assert "liquidityQuality * 0.07" in s
+    assert "confluenceQuality * 0.05" in s
+    assert "retestQuality * 0.06" in s
+    assert "regimeQuality * 0.06" in s
+    assert "Weighted domains intentionally sum to 1.00" in s
