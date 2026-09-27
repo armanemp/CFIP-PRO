@@ -57,11 +57,10 @@ def test_v89_preserves_public_parameter_surface():
 
 def test_v89_main_dependencies_are_declared():
     source = read(V89)
-    main = section(
-        source,
+    start = source.index(
         "public class CFIP_MTF_LiveEntryEngine_Clean_v89",
-        "\n}\n}",
     )
+    main = source[start:]
     names = set(re.findall(r"\b_[A-Za-z][A-Za-z0-9_]*\b", main))
     declared = set(
         re.findall(
@@ -81,7 +80,7 @@ def test_v89_protection_request_replacement_clears_queued_state():
     lifecycle = section(
         read(V89),
         "public sealed class CFIPClean89PositionLifecycleManager",
-        "public sealed class CFIPClean89PendingOrderLifecycleManager",
+        "// Phase 12 — first-class Live Position Management",
     )
     assert "ResetProtectionActionQueue()" in record
     assert "private bool RemoveQueuedProtectionAction(" in lifecycle
@@ -94,7 +93,7 @@ def test_v89_protection_queue_reports_actual_enqueue_result():
     lifecycle = section(
         read(V89),
         "public sealed class CFIPClean89PositionLifecycleManager",
-        "public sealed class CFIPClean89PendingOrderLifecycleManager",
+        "// Phase 12 — first-class Live Position Management",
     )
     assert "private bool QueueProtectionIfDue(" in lifecycle
     assert "return false;" in lifecycle
@@ -130,7 +129,7 @@ def test_v89_close_confirmation_remains_confirmation_based():
     lifecycle = section(
         read(V89),
         "public sealed class CFIPClean89PositionLifecycleManager",
-        "public sealed class CFIPClean89PendingOrderLifecycleManager",
+        "// Phase 12 — first-class Live Position Management",
     )
     assert "State = CFIPClean89PositionLifecycleState.ExitRequested;" in lifecycle
     assert "record.MarkCloseActionAccepted(utc)" in lifecycle
