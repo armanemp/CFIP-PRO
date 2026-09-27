@@ -5926,7 +5926,8 @@ namespace cAlgo
                     40,
                     MinimumEntryQuality);
 
-            if (triggerReached)
+            if (triggerReached &&
+                AllowPrecisionBreakoutEntry)
             {
                 model.Mode =
                     CFIPClean69ExecutionMode.BreakoutMarket;
