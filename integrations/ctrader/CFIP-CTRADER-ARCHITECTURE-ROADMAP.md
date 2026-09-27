@@ -2011,9 +2011,17 @@ All management actions are idempotent and retry-safe.
 - restored missing SL/TP from the matching Position-owned/current Plan when the broker snapshot has lost protection;
 - made accepted partial-close requests leave the permanently-latched pending state and enter bounded retry/recovery after the confirmation window;
 - relaxed close retry pacing after accepted submission to reduce repeated mutations while broker confirmation propagates;
+- corrected live Position protection validation so BE/risk-free/structural trailing SLs are validated against the current executable market side rather than the historical entry price;
+- kept managed positions without a current SL eligible for lifecycle/live-manager registration after restart instead of silently dropping them from management;
+- hardened broker-gateway mutation ownership so position/order mutation is rejected unless label, symbol and CFIP89 identity all match the managed strategy;
+- initialized engine state and lifecycle authority before broker event subscriptions and existing-position adoption;
 - preserved all v88 authority boundaries: live-manager intent, Position lifecycle ownership, and broker-gateway mutation.
 
-**Static re-audit result:** PASS for brace balance, version isolation, main dependency declarations, v88 parameter-surface parity, multi-position fill storage, protection queue replacement, plan-owned protection restoration, partial-close retry, gateway validation, and absence of manual entry controls.
+**Static re-audit result:** PASS for brace balance, version isolation, main dependency declarations, v88 parameter-surface parity, multi-position fill storage, protection queue replacement, plan-owned protection restoration, partial-close retry, live protection validation, managed-object gateway ownership, initialization ordering, and absence of manual entry controls.
+
+**Latest implementation commits:**
+- `cef82c36e8415532be4f5b8b5614dd1f7d486ef6` — harden v89 live protection/restart adoption;
+- `c35f60c4e181f565ba99576434ab102059d53ae1` — enforce managed broker ownership in v89 gateway.
 
 **Runtime boundary:** real cTrader compilation and broker execution/recovery scenarios remain mandatory.
 
@@ -2631,7 +2639,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 9 | Unified execution | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v82 | ExecutionPolicy / Intent / BrokerGateway; runtime verification pending |
 | 10 | Pending orders | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v83 | pending lifecycle / reconciliation; runtime verification pending |
 | 11 | Lifecycle/Broker | IMPLEMENTED / RUNTIME VERIFICATION PENDING | 2026-09-27 | v84-v87 | Position lifecycle, close/recovery ownership, multi-position pending handoff, retry/backoff, broker confirmation grace, disconnect safety and no-manual-entry surface; real runtime validation pending |
-| 12 | Live management | IMPLEMENTED / STATIC RE-AUDIT PASS / RUNTIME ACCEPTANCE PENDING | 2026-09-27 | v88-v89 | Position-owned live-plan snapshot, BE/risk-free, structural SL repricing, dynamic TP, partial TP, reversal/exhaustion/invalidation/EOD management, protection-queue synchronization and partial-close retry hardening; real cTrader runtime acceptance pending |
+| 12 | Live management | IMPLEMENTED / STATIC RE-AUDIT PASS / RUNTIME ACCEPTANCE PENDING | 2026-09-27 | v88-v89 | Position-owned live-plan snapshot, BE/risk-free, structural SL repricing, dynamic TP, partial TP, reversal/exhaustion/invalidation/EOD management, protection-queue synchronization, live-position validation and managed-gateway ownership hardening; real cTrader runtime acceptance pending |
 | 13 | Outcome/Calibration | NOT STARTED | — | — | — |
 | 14 | Presentation | NOT STARTED | — | — | — |
 | 15 | Cleanup/Performance | NOT STARTED | — | — | — |
