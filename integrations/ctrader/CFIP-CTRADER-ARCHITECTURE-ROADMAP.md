@@ -1322,6 +1322,7 @@ Every execution path receives the same DecisionSnapshot.
 - 6a5ff5b7576b4226efffc1bc268a23a95245ac23 — separate zone quality from confluence modifier
 - 781ee452795b562e55eb949cf29f9b997b22be9c — correct v79 parameter surface documentation
 - cbccfd240b9e62555a4d0dd8c35618ec2ec5190c — validate zone/confluence separation
+- 9f40efaf86c56b47ea476b8c73b9f653c1e17450 — enforce deferred entry/execution filter ownership
 - 453dc0ca63e44b730d25571514b21e3312d71f56 — keep neutral decision block reasons exact
 - 986a48698b25ffc1a0c748e47ab4aa569f1991f4 — validate neutral block-reason isolation
 - c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
@@ -1348,6 +1349,7 @@ Every execution path receives the same DecisionSnapshot.
 - liquidity evidence is family-deduplicated per direction by liquidity-pool kind, preserving distinct pool categories without repeated-timeframe inflation
 - v79 structure/liquidity record identities are version-isolated (`CFIP79|`); no v78 identity prefix remains
 - ZoneQuality no longer includes FVG/liquidity confluence bonuses; confluence is represented through typed flags and consumed by Decision quality once
+- legacy Entry Location, Structural Sequence and Proxy Expected Value filters remain deferred to their Phase 7/8 owners and cannot re-enter Phase 6 Decision logic
 - when directional consensus is WAIT, only the root `NoDirection` gate is emitted; confidence/MTF/structure/quality directional gates remain inactive until a direction exists
 - `UseAdvancedConfluence` now explicitly controls the confluence contribution to Decision quality
 - DecisionSnapshot now enforces WAIT/block/eligibility/policy consistency at construction time
@@ -1383,6 +1385,7 @@ Every execution path receives the same DecisionSnapshot.
 - version-isolated structure/liquidity identity checks
 - independent ZoneQuality/Confluence checks
 - corrected parameter-surface baseline checks (513)
+- deferred Entry/Execution filter ownership checks
 
 **Latest findings/fixes:** a compile-critical missing internal type was found: v79 referenced `FeatureAggregate` without defining it. This is now fixed. A second decision-integrity defect was also found: equal-strength opposing observations of one market feature could inherit the answer from timeframe loop order. The aggregator now resolves BUY/SELL strengths symmetrically and treats exact ties as neutral.
 
