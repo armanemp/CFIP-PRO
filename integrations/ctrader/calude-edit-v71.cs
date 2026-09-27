@@ -311,6 +311,8 @@ namespace cAlgo
     }
 
     [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+    public class CFIP_MTF_LiveEntryEngine_Clean_v71 : Indicator
+    {
     private sealed class MtfClosedContext
     {
         public DateTime Reference { get; }
@@ -359,8 +361,7 @@ namespace cAlgo
         }
     }
 
-    public class CFIP_MTF_LiveEntryEngine_Clean_v71 : Indicator
-    {
+
         #region Parameters · Decision
         // ============================================================
 
