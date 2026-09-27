@@ -4097,10 +4097,13 @@ namespace cAlgo
                 evidence++;
         }
 
-                private int TimeframeAgreement(
+                        private int TimeframeAgreement(
             int direction,
             DateTime reference)
         {
+            if (direction == 0)
+                return 0;
+
             Frame[] frames =
             {
                 _m5Frame,
@@ -4125,13 +4128,13 @@ namespace cAlgo
 
             double[] weights =
             {
-                M5Weight,
-                M15Weight,
-                M30Weight,
-                H1Weight,
-                H4Weight,
-                D1Weight,
-                W1Weight
+                Math.Max(0, M5Weight),
+                Math.Max(0, M15Weight),
+                Math.Max(0, M30Weight),
+                Math.Max(0, H1Weight),
+                Math.Max(0, H4Weight),
+                Math.Max(0, D1Weight),
+                Math.Max(0, W1Weight)
             };
 
             bool[] enabled =
@@ -4146,8 +4149,8 @@ namespace cAlgo
                 W1Weight > 0
             };
 
-            int total = 0;
-            int aligned = 0;
+            double totalWeight = 0;
+            double alignedWeight = 0;
 
             for (int i = 0;
                  i < frames.Length;
@@ -4165,27 +4168,35 @@ namespace cAlgo
                         bars[i],
                         reference);
 
-                // Agreement may use a timeframe only when the frame was
-                // calculated for the same fully-closed bar as this decision.
                 if (closedIndex < 0 ||
                     frames[i].Index != closedIndex)
                     continue;
 
-                total++;
+                // A neutral timeframe is not evidence against the selected
+                // direction; it contributes no alignment weight.
+                if (frames[i].Direction == 0)
+                    continue;
+
+                totalWeight +=
+                    weights[i];
 
                 if (frames[i].Direction == direction)
-                    aligned++;
+                    alignedWeight +=
+                        weights[i];
             }
 
             return
-                total == 0
+                totalWeight <= 0
                     ? 0
                     : ClampInt(
                         (int)Math.Round(
-                            100.0 * aligned / total),
+                            100.0 *
+                            alignedWeight /
+                            totalWeight),
                         0,
                         100);
         }
+
 
 
         private int IndependentEvidence(
@@ -24743,12 +24754,13 @@ private Color AutoTradingPanelColor()
         #region Index Math and Cleanup
         // ============================================================
 
-        private int ClosedIndex(
+                private int ClosedIndex(
             Bars bars,
             DateTime reference)
         {
             if (bars == null ||
-                bars.Count < 2)
+                bars.Count < 2 ||
+                reference < bars.OpenTimes[0])
                 return -1;
 
             int probe =
@@ -24796,6 +24808,7 @@ private Color AutoTradingPanelColor()
 
             return -1;
         }
+
 
         private double Highest(
             Bars bars,
