@@ -1,9 +1,9 @@
 // ============================================================================
 // CFIP-PRO cTrader — v83 Clean Architecture Foundation
-// Phase: 9 · Unified Execution Policy / Broker Gateway
+// Phase: 10 · Pending Order Lifecycle
 //
-// v83 carries the clean Phase-7/8 contracts forward and adds the unified
-// pre-broker execution authority. It does NOT copy the v73 monolith.
+// v83 carries the clean Phase-6/7/8/9 contracts forward and adds the first-class
+// pending-order lifecycle. It does NOT copy the v73 monolith.
 // v73 remains the frozen behavioral/reference baseline.
     // v83 parent/reference: v79 Phase-6 Decision engine.
 // v83 extends the type/ownership boundaries through the normalized execution
@@ -7180,6 +7180,7 @@ public sealed class CFIPClean83TradePlanBuilder :
         public double? StopLoss { get; private set; }
         public double? TakeProfit { get; private set; }
         public double NetProfit { get; private set; }
+        public string Comment { get; private set; }
         public bool IsOpen { get; private set; }
 
         public CFIPClean83BrokerPositionSnapshot(
@@ -7192,6 +7193,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             double? stopLoss,
             double? takeProfit,
             double netProfit,
+            string comment,
             bool isOpen)
         {
             BrokerPositionId = brokerPositionId ?? string.Empty;
@@ -7203,6 +7205,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             StopLoss = stopLoss;
             TakeProfit = takeProfit;
             NetProfit = netProfit;
+            Comment = comment ?? string.Empty;
             IsOpen = isOpen;
         }
     }
@@ -8642,6 +8645,7 @@ public sealed class CFIPClean83TradePlanBuilder :
                         position.StopLoss,
                         position.TakeProfit,
                         position.NetProfit,
+                        position.Comment,
                         true));
             }
 
@@ -8750,9 +8754,14 @@ public sealed class CFIPClean83TradePlanBuilder :
                 CFIPClean83PendingOrderLifecycleState.ProtectionRecoveryRequired;
         }
 
-        public void MarkFilled(DateTime utc)
+        public string BrokerPositionId { get; private set; }
+
+        public void MarkFilled(
+            DateTime utc,
+            string brokerPositionId)
         {
             FilledUtc = utc;
+            BrokerPositionId = brokerPositionId ?? string.Empty;
             State = CFIPClean83PendingOrderLifecycleState.Filled;
         }
 
@@ -8806,6 +8815,62 @@ public sealed class CFIPClean83TradePlanBuilder :
             string managedLabel)
         {
             _managedLabel = managedLabel ?? string.Empty;
+        }
+
+        public void ReconcileBrokerState(
+            IReadOnlyList<CFIPClean83BrokerPendingOrderSnapshot> activeOrders,
+            IReadOnlyList<CFIPClean83BrokerPositionSnapshot> activePositions,
+            DateTime utc)
+        {
+            var activeOrderIds =
+                new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0;
+                 activeOrders != null && i < activeOrders.Count;
+                 i++)
+            {
+                if (activeOrders[i] != null)
+                    activeOrderIds.Add(
+                        activeOrders[i].BrokerOrderId);
+            }
+
+            var snapshot =
+                new List<CFIPClean83PendingOrderRecord>(
+                    _records.Values);
+
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                CFIPClean83PendingOrderRecord record =
+                    snapshot[i];
+
+                if (record.State ==
+                    CFIPClean83PendingOrderLifecycleState.Cancelled ||
+                    record.State ==
+                    CFIPClean83PendingOrderLifecycleState.Reconciled)
+                    continue;
+
+                if (activeOrderIds.Contains(record.BrokerOrderId))
+                    continue;
+
+                CFIPClean83BrokerPositionSnapshot matchedPosition =
+                    FindMatchingPosition(
+                        record,
+                        activePositions);
+
+                if (matchedPosition != null)
+                {
+                    record.MarkFilled(
+                        utc,
+                        matchedPosition.BrokerPositionId);
+
+                    if (!matchedPosition.StopLoss.HasValue ||
+                        !matchedPosition.TakeProfit.HasValue)
+                        QueueProtectionRecoveryForRecord(record);
+                }
+                else
+                {
+                    record.MarkReconciled();
+                }
+            }
         }
 
         public IReadOnlyList<CFIPClean83PendingOrderRecord> Records
@@ -8942,6 +9007,34 @@ public sealed class CFIPClean83TradePlanBuilder :
                     order.Id.ToString(),
                     out record))
                 record.MarkCancelled(utc);
+        }
+
+        private CFIPClean83BrokerPositionSnapshot FindMatchingPosition(
+            CFIPClean83PendingOrderRecord record,
+            IReadOnlyList<CFIPClean83BrokerPositionSnapshot> activePositions)
+        {
+            if (record == null ||
+                activePositions == null ||
+                string.IsNullOrWhiteSpace(record.PlanId))
+                return null;
+
+            for (int i = 0; i < activePositions.Count; i++)
+            {
+                CFIPClean83BrokerPositionSnapshot position =
+                    activePositions[i];
+
+                if (position == null ||
+                    !position.IsOpen)
+                    continue;
+
+                if (position.Comment != null &&
+                    position.Comment.IndexOf(
+                        record.PlanId,
+                        StringComparison.Ordinal) >= 0)
+                    return position;
+            }
+
+            return null;
         }
 
         public void Evaluate(
@@ -11684,6 +11777,12 @@ public sealed class CFIPClean83TradePlanBuilder :
                 _brokerStateReader.ReadManagedState(
                     SymbolName,
                     _configuration.StrategyId);
+
+            if (_pendingOrderLifecycle != null)
+                _pendingOrderLifecycle.ReconcileBrokerState(
+                    _state.Broker.PendingOrders,
+                    _state.Broker.Positions,
+                    _state.Runtime.ServerUtc);
 
             if (_state.Broker.Positions.Count > 0)
             {
