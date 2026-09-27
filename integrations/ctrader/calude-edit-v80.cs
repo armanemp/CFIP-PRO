@@ -4909,7 +4909,7 @@ namespace cAlgo
                         "RETEST_SETUP_EXPIRED");
 
                 double idealPrice =
-                    retest.Zone.Midpoint;
+                    ZoneMidpoint(retest.Zone);
 
                 double invalidation =
                     direction == CFIPClean80Direction.Buy
@@ -5137,7 +5137,7 @@ namespace cAlgo
                 new CFIPClean80EntryModel(
                     direction,
                     new CFIPClean80PriceLevel(
-                        breakoutZone.Zone.Midpoint,
+                        ZoneMidpoint(breakoutZone.Zone),
                         "IDEAL_ENTRY",
                         CFIPClean80Provenance.Direct(
                             "ENTRY_ENGINE",
@@ -5594,6 +5594,17 @@ namespace cAlgo
             }
 
             return true;
+        }
+
+        private double ZoneMidpoint(
+            CFIPClean80ZoneRecord zone)
+        {
+            if (zone == null)
+                return 0;
+
+            return
+                (zone.CurrentLower + zone.CurrentUpper) /
+                2.0;
         }
 
         private bool IsTriggerEvent(
