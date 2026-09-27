@@ -106,7 +106,7 @@ The live execution path may use current bid/ask, but only as a separate executio
 ## Validation performed
 
 Repository-side validation confirmed:
-- v75 and v76 parameter surfaces remain 512/512 and identical;
+- v75 and v76 parameter surfaces remain 513/513 and identical;
 - v76 contains a single explicit MTF snapshot builder in the calculation cycle;
 - all eight MTF series are present;
 - the resolver rejects the final potentially-forming bar;
