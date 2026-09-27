@@ -3700,18 +3700,44 @@ namespace cAlgo
                     CFIPClean79BlockReason.DataIncomplete,
                     "SNAPSHOT_NOT_READY");
 
+            CFIPClean79MarketFrame m5 = market.FindFrame("M5");
+            string regime =
+                m5 == null
+                    ? "UNKNOWN"
+                    : m5.Regime.ToString();
+
+            int adaptiveQualityThreshold;
+            int adaptiveShareThreshold;
+            int adaptiveEdgeThreshold;
+
+            GetAdaptiveSmartThresholds(
+                regime,
+                configuration,
+                out adaptiveQualityThreshold,
+                out adaptiveShareThreshold,
+                out adaptiveEdgeThreshold);
+
             Evidence e = CollectEvidence(market, structure);
 
-            CFIPClean79Direction direction =
-                e.Bull > e.Bear
-                    ? CFIPClean79Direction.Buy
-                    : e.Bear > e.Bull
-                        ? CFIPClean79Direction.Sell
-                        : CFIPClean79Direction.Wait;
+            int bullShare;
+            int bearShare;
 
-            double total = Math.Max(0.0001, e.Bull + e.Bear);
-            int bullShare = Clamp((int)Math.Round(100.0 * e.Bull / total), 0, 100);
-            int bearShare = Clamp((int)Math.Round(100.0 * e.Bear / total), 0, 100);
+            CalculateDirectionalShares(
+                e.Bull,
+                e.Bear,
+                configuration.Get("SmartScoreTemperature", 12.0),
+                out bullShare,
+                out bearShare);
+
+            int strongestShare = Math.Max(bullShare, bearShare);
+
+            CFIPClean79Direction direction =
+                strongestShare >= adaptiveShareThreshold
+                    ? (bullShare >= bearShare
+                        ? CFIPClean79Direction.Buy
+                        : CFIPClean79Direction.Sell)
+                    : CFIPClean79Direction.Wait;
+
             int edge = Math.Abs(bullShare - bearShare);
 
             int mtfAgreement =
@@ -3720,7 +3746,6 @@ namespace cAlgo
                     market,
                     configuration);
 
-            CFIPClean79MarketFrame m5 = market.FindFrame("M5");
             int marketQuality = m5 == null ? 0 : m5.MarketQuality;
             int regimeQuality = m5 == null ? 0 : m5.RegimeQuality;
 
@@ -3780,18 +3805,16 @@ namespace cAlgo
                 (int)Math.Round(quality * 0.70 + (50 + edge) * 0.30),
                 0, 100);
 
-            string regime = m5 == null ? "UNKNOWN" : m5.Regime.ToString();
-
             if (direction == CFIPClean79Direction.Wait)
                 blocks.Add(CFIPClean79BlockReason.NoDirection);
 
             if (confidence < configuration.Get("MinimumConfidence", 72))
                 blocks.Add(CFIPClean79BlockReason.ConfidenceTooLow);
 
-            if (edge < configuration.Get("MinimumEdge", 15))
+            if (edge < adaptiveEdgeThreshold)
                 blocks.Add(CFIPClean79BlockReason.EvidenceInsufficient);
 
-            if (quality < configuration.Get("MinimumSmartQuality", 70))
+            if (quality < adaptiveQualityThreshold)
                 blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
 
             if (mtfAgreement < configuration.Get("MinimumTimeframeAgreement", 72) &&
@@ -3816,10 +3839,11 @@ namespace cAlgo
 
             if (configuration.Get("EnableSmartDecisionEngine", true))
             {
-                int strongest = Math.Max(bullShare, bearShare);
-
                 if (configuration.Get("RequireSmartConsensus", true) &&
-                    strongest < configuration.Get("SmartConsensusThreshold", 57))
+                    strongestShare <
+                    Math.Max(
+                        configuration.Get("SmartConsensusThreshold", 57),
+                        adaptiveShareThreshold))
                 {
                     bool soft =
                         configuration.Get("AllowSmartSoftGate", true) &&
@@ -3839,7 +3863,11 @@ namespace cAlgo
             if (configuration.Get("UseSmartEntryQualityFilter", true) &&
                 quality < Math.Max(
                     configuration.Get("SmartQualityThreshold", 70),
-                    configuration.Get("NoTradeMinimumSmartQuality", 55)))
+                    Math.Max(
+                        adaptiveQualityThreshold,
+                        configuration.Get("EnableSmartDecisionEngine", true)
+                            ? SmartMinimumConsensusFloor(configuration)
+                            : 0)))
                 blocks.Add(CFIPClean79BlockReason.PolicyBlocked);
 
             if (configuration.Get("UseRegimeNoTradeGuard", true) &&
@@ -4123,6 +4151,139 @@ namespace cAlgo
                     e.Independent++;
                 }
             }
+        }
+
+        private void CalculateDirectionalShares(
+            double bull,
+            double bear,
+            double temperature,
+            out int bullShare,
+            out int bearShare)
+        {
+            double safeTemperature = Math.Max(1.0, temperature);
+            double centered = (bull - bear) / safeTemperature;
+
+            double expBull = Math.Exp(
+                Clamp(
+                    centered,
+                    -12,
+                    12));
+
+            double expBear = Math.Exp(
+                Clamp(
+                    -centered,
+                    -12,
+                    12));
+
+            double total =
+                Math.Max(
+                    1e-9,
+                    expBull + expBear);
+
+            bullShare = Clamp(
+                (int)Math.Round(
+                    100.0 * expBull / total),
+                0,
+                100);
+
+            bearShare = 100 - bullShare;
+        }
+
+        private void GetAdaptiveSmartThresholds(
+            string regime,
+            CFIPClean79ConfigSnapshot cfg,
+            out int qualityThreshold,
+            out int shareThreshold,
+            out int edgeThreshold)
+        {
+            qualityThreshold = Math.Max(
+                40,
+                Math.Min(
+                    95,
+                    cfg.Get("MinimumSmartQuality", 70)));
+
+            shareThreshold = Math.Max(
+                50,
+                Math.Min(
+                    90,
+                    cfg.Get("MinimumSmartDirectionShare", 57)));
+
+            edgeThreshold = Math.Max(
+                4,
+                Math.Min(
+                    30,
+                    cfg.Get("MinimumEdge", 15)));
+
+            if (!cfg.Get("AdaptiveSmartThresholds", true))
+                return;
+
+            int buffer = Math.Max(
+                0,
+                cfg.Get("SmartRegimeBuffer", 6));
+
+            switch (regime ?? "UNKNOWN")
+            {
+                case "TREND":
+                case "Trend":
+                case "EXPANSION":
+                case "Expansion":
+                    qualityThreshold -= buffer;
+                    shareThreshold -= Math.Max(1, buffer / 3);
+                    edgeThreshold -= Math.Max(1, buffer / 3);
+                    break;
+
+                case "REVERSAL":
+                case "Reversal":
+                    qualityThreshold -= Math.Max(1, buffer / 2);
+                    break;
+
+                case "RANGE":
+                case "Range":
+                    qualityThreshold += Math.Max(1, buffer / 2);
+                    shareThreshold += Math.Max(1, buffer / 3);
+                    edgeThreshold += Math.Max(1, buffer / 3);
+                    break;
+
+                case "TRANSITION":
+                case "Transition":
+                    qualityThreshold += Math.Max(1, buffer / 2);
+                    shareThreshold += Math.Max(1, buffer / 3);
+                    edgeThreshold += Math.Max(1, buffer / 3);
+                    break;
+
+                case "COMPRESSION":
+                case "Compression":
+                    qualityThreshold += buffer;
+                    shareThreshold += Math.Max(1, buffer / 2);
+                    edgeThreshold += Math.Max(1, buffer / 2);
+                    break;
+            }
+
+            qualityThreshold = Math.Max(
+                40,
+                Math.Min(
+                    95,
+                    qualityThreshold));
+
+            shareThreshold = Math.Max(
+                50,
+                Math.Min(
+                    90,
+                    shareThreshold));
+
+            edgeThreshold = Math.Max(
+                4,
+                Math.Min(
+                    30,
+                    edgeThreshold));
+        }
+
+        private int SmartMinimumConsensusFloor(
+            CFIPClean79ConfigSnapshot cfg)
+        {
+            return Math.Max(
+                40,
+                cfg.Get("SmartConsensusThreshold", 57) - 12);
         }
 
         private int CalculateMtfAgreement(
