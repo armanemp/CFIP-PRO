@@ -5176,9 +5176,9 @@ namespace cAlgo
         // this with immutable cycle snapshots and explicit orchestration.
         public void ResetCycleOutputs()
         {
-            Mtf = null;
-            Market = null;
-            Structure = null;
+            // MTF is rebuilt on every Calculate cycle. Market and Structure
+            // snapshots are intentionally retained until the closed-bar
+            // reference changes, because their builders are reference-gated.
             Decision = null;
             Plan = null;
             Intent = null;
