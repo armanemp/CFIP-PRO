@@ -304,3 +304,57 @@ def test_phase9_planner_interface_matches_implementation():
     ):
         assert token in section
         assert token in impl
+
+
+def test_phase9_runtime_snapshot_carries_pip_size_and_account_margin_inputs():
+    s = read(V82)
+    assert "double PipSize" in s
+    assert "double Balance" in s
+    assert "double Margin" in s
+    assert "double MarginLevel" in s
+    assert "TradingDayStartUtc" in s
+    assert "Math.Max(0, Symbol.PipSize)" in host(s)
+
+
+def test_phase9_broker_constraints_cover_sl_tp_and_volume():
+    e = phase9(read(V82))
+    assert "MinStopDistancePips" in e
+    assert "MinTakeProfitDistancePips" in e
+    assert "MinVolumeInUnits" in e
+    assert "VolumeStepInUnits" in e
+    assert "BrokerConstraintsBlocked" in e
+
+
+def test_phase9_session_and_friday_guards_are_policy_owned():
+    e = phase9(read(V82))
+    assert '"UseSessionFilter"' in e
+    assert '"SessionStartUtc"' in e
+    assert '"SessionEndUtc"' in e
+    assert '"AvoidFridayLateEntry"' in e
+    assert '"FridayCutoffUtc"' in e
+    assert "IsWithinConfiguredSession" in e
+    assert "SessionBlocked" in e
+
+
+def test_phase9_daily_history_uses_label_symbol_scoped_find_all():
+    h = host(read(V82))
+    assert "History.FindAll(" in h
+    assert '"OneOrderPerSignal"' in h
+    assert '"AutoTradeLabel"' in h
+
+
+def test_phase9_pending_stop_and_limit_both_persist_identity_comment():
+    g = gateway(read(V82))
+    assert g.count("ProtectionType.Relative") >= 2
+    assert g.count("intent.ExpiryUtc") >= 2
+    assert g.count("comment") >= 3
+
+
+def test_phase9_requested_tp_stage_is_not_silently_replaced():
+    s = read(V82)
+    planner = s[s.index("public sealed class CFIPClean82ExecutionPlanner"):
+                 s.index("public sealed class CFIPClean82CTraderBrokerGateway")]
+    assert 'configuration.Get(' in planner
+    assert "AutoTpStage" in planner
+    assert "if (target == null)" in planner
+    assert "Execution intent requires TP1." in planner
