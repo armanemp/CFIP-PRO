@@ -5373,9 +5373,9 @@ namespace cAlgo
                 double upper =
                     zone.CurrentUpper + tolerance;
 
-                if (executablePrice < lower ||
-                    executablePrice > upper)
-                    continue;
+                bool priceInsideExpandedZone =
+                    executablePrice >= lower &&
+                    executablePrice <= upper;
 
                 if (zone.Kind ==
                         CFIPClean80ZoneKind.FairValueGap &&
@@ -5394,9 +5394,14 @@ namespace cAlgo
                     continue;
 
                 bool touched =
-                    direction == CFIPClean80Direction.Buy
-                        ? m5.Low <= upper
-                        : m5.High >= lower;
+                    priceInsideExpandedZone ||
+                    (
+                        direction == CFIPClean80Direction.Buy
+                            ? m5.Low <= upper
+                            : m5.High >= lower);
+
+                if (!touched)
+                    continue;
 
                 bool closeConfirmed =
                     direction == CFIPClean80Direction.Buy
@@ -5542,10 +5547,9 @@ namespace cAlgo
                             "RetestLookbackBars",
                             8)));
 
-            var kinds =
-                new HashSet<CFIPClean80StructureEventKind>();
-
-            int freshEvidence = 0;
+            bool structuralBreakPresent = false;
+            bool displacementPresent = false;
+            bool liquiditySweepPresent = false;
 
             for (int i = 0; i < structure.Events.Count; i++)
             {
@@ -5557,43 +5561,111 @@ namespace cAlgo
                     !string.Equals(
                         item.Timeframe,
                         "M5",
-                        StringComparison.OrdinalIgnoreCase) ||
-                    !IsTriggerEvent(item.Kind))
+                        StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                freshEvidence++;
-                kinds.Add(item.Kind);
+                if (IsTriggerEvent(item.Kind))
+                {
+                    if (latest == null ||
+                        item.TimeUtc > latest.TimeUtc)
+                        latest = item;
+                }
 
-                if (latest == null ||
-                    item.TimeUtc > latest.TimeUtc)
-                    latest = item;
+                if (item.Kind ==
+                        CFIPClean80StructureEventKind.BreakOfStructure ||
+                    item.Kind ==
+                        CFIPClean80StructureEventKind.MarketStructureShift ||
+                    item.Kind ==
+                        CFIPClean80StructureEventKind.ChangeOfCharacter)
+                    structuralBreakPresent = true;
+
+                if (item.Kind ==
+                        CFIPClean80StructureEventKind.Displacement)
+                    displacementPresent = true;
+
+                if (item.Kind ==
+                        CFIPClean80StructureEventKind.LiquiditySweep)
+                    liquiditySweepPresent = true;
             }
 
             if (latest == null)
                 return false;
 
-            if (cfg.Get("RequireFreshM5Trigger", true))
-            {
-                freshEvidence +=
+            if (!cfg.Get("RequireFreshM5Trigger", true))
+                return true;
+
+            int triggerEvidence = 0;
+
+            // BOS/MSS/CHOCH are one structural-break family.
+            if (structuralBreakPresent)
+                triggerEvidence += 2;
+
+            if (displacementPresent)
+                triggerEvidence += 1;
+
+            if (liquiditySweepPresent)
+                triggerEvidence += 1;
+
+            double candleRange =
+                Math.Max(0, m5.High - m5.Low);
+
+            double candleBody =
+                Math.Abs(m5.Close - m5.Open);
+
+            double bodyAtr =
+                candleRange <= 0
+                    ? 0
+                    : candleBody / Math.Max(m5.Atr, 1e-12);
+
+            double rangeAtr =
+                candleRange <= 0
+                    ? 0
+                    : candleRange / Math.Max(m5.Atr, 1e-12);
+
+            double closeLocation =
+                candleRange <= 0
+                    ? 0.5
+                    : direction == CFIPClean80Direction.Buy
+                        ? (m5.Close - m5.Low) / candleRange
+                        : (m5.High - m5.Close) / candleRange;
+
+            if (bodyAtr >=
+                Math.Max(
+                    0,
+                    cfg.Get(
+                        "MinimumTriggerBodyAtr",
+                        0.12)))
+                triggerEvidence += 1;
+
+            if (closeLocation >=
+                Math.Max(
+                    0.50,
                     Math.Min(
-                        2,
-                        Math.Max(
-                            0,
-                            m5.IndependentEvidence));
-
-                int required =
-                    Math.Max(
-                        1,
+                        0.95,
                         cfg.Get(
-                            "MinimumFreshTriggerEvidence",
-                            3));
+                            "MinimumCloseLocation",
+                            0.65))))
+                triggerEvidence += 1;
 
-                if (Math.Max(freshEvidence, kinds.Count) <
-                    required)
-                    return false;
-            }
+            double maximumRange =
+                Math.Max(
+                    0,
+                    cfg.Get(
+                        "MaximumTriggerRangeAtr",
+                        2.5));
 
-            return true;
+            if (maximumRange > 0 &&
+                rangeAtr > maximumRange)
+                return false;
+
+            int required =
+                Math.Max(
+                    1,
+                    cfg.Get(
+                        "MinimumFreshTriggerEvidence",
+                        3));
+
+            return triggerEvidence >= required;
         }
 
         private double ZoneMidpoint(
