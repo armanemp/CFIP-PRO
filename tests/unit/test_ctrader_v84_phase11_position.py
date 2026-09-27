@@ -182,7 +182,7 @@ def test_phase11_protection_drift_is_recovery_state():
 
 def test_phase11_position_mutation_remains_gateway_owned():
     g = gateway(read(V84))
-    assert "ModifyPositionProtection(" in g
+    assert "ModifyProtection(" in g
     assert "_host.ModifyPosition(" in g
     h = host(read(V84))
     callbacks = h[h.index("private void Positions_Opened"):
