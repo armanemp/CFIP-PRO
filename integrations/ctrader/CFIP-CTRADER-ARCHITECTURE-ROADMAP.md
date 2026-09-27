@@ -1794,7 +1794,7 @@ Source-level structural checks cover the Phase-10 lifecycle, event wiring, recov
 
 ## PHASE 11 — Position lifecycle and broker protection
 
-**Status: IN PROGRESS — v86 LIFECYCLE COMPLETION / RUNTIME VERIFICATION PENDING, 2026-09-27**
+**Status: IMPLEMENTED / RUNTIME VERIFICATION PENDING — v87 HARDENING, 2026-09-27**
 
 ### Objective
 
@@ -1896,6 +1896,30 @@ Never clear the internal live-plan owner while the broker still has a managed li
 
 **Acceptance boundary:** implementation is complete at the source/static-contract layer. Controlled real cTrader compilation, broker-event execution, rate-limit behavior, reconnect/recovery, partial-close execution, and runtime restart scenarios remain mandatory.
 
+### Phase 11 v87 hardening / re-audit continuation — 2026-09-27
+
+**Current hardening:** v87 (`integrations/ctrader/calude-edit-v87.cs`)
+
+**Static tests:** `tests/unit/test_ctrader_v87_phase11_hardening.py`
+
+**Implemented corrections carried forward from the v84-v86 audit:**
+- repaired the missing multi-position broker-id backing state on pending orders;
+- added explicit pending Cancel/Protection action state with result feedback and bounded retry/backoff;
+- prevented immediate pending-order reconciliation from treating broker-event visibility lag as cancellation;
+- made Position protection verification drift-aware for both Stop Loss and Take Profit;
+- moved final Stop/Target direction and broker-distance validation into the broker gateway mutation boundary for initial execution and later mutations;
+- changed exposure gating to account for managed Positions and Pending Orders together;
+- required complete SignalId/PlanId execution identity before broker execution;
+- allowed deterministic lifecycle adoption of broker-existing Pending Orders / live Positions during restart/recovery;
+- added broker-confirmation grace to prevent a just-accepted order from being falsely interpreted as absent/closed;
+- made event handlers runtime-null-safe;
+- removed the obsolete `Show Trade Action Buttons` compatibility parameter; manual BUY/SELL/order-placement UI remains disabled while safety controls remain classified separately;
+- removed system-clock dependencies from lifecycle logic; platform-provided runtime time remains the source of truth.
+
+**Validation:** CI workflow run `36322249439` completed successfully with **206 passed** tests.
+
+**Remaining acceptance boundary:** real cTrader compilation, controlled broker execution, partial-fill/reconnect/restart scenarios, rate-limit behavior and live broker event validation remain mandatory.
+
 ---### Acceptance
 
 Simulated and real broker event sequences cannot create impossible internal states.
@@ -1904,7 +1928,7 @@ Simulated and real broker event sequences cannot create impossible internal stat
 
 ## PHASE 12 — Live management: SL, TP, partials, reversal, exhaustion
 
-**Status: NOT STARTED**
+**Status: IMPLEMENTED / STATIC VERIFICATION COMPLETE / RUNTIME ACCEPTANCE PENDING — v88, 2026-09-27**
 
 ### Objective
 
@@ -1948,6 +1972,30 @@ A failed mutation does not silently consume the state.
 All management actions are idempotent and retry-safe.
 
 ---
+
+### Phase 12 v88 implementation / re-audit continuation — 2026-09-27
+
+**Current implementation:** v88 (`integrations/ctrader/calude-edit-v88.cs`)
+
+**Static tests:** `tests/unit/test_ctrader_v88_phase12_live_management.py`
+
+**Implemented corrections:**
+- established a Position-owned `LivePlanSnapshot` containing the original plan identity, direction, execution anchor, structural stop, invalidation and TP1-TP4 targets;
+- made live Target/Partial management fall back to the Position-owned plan snapshot when the current market signal/plan has rolled over;
+- preserved direction + PlanId matching for plan ownership;
+- kept dynamic target advancement, break-even/risk-free protection, partial TP, reversal protection, profit-exhaustion protection, structural invalidation and end-of-day behavior inside the Live Position Manager;
+- kept broker mutations behind the unified broker gateway and retained broker-result confirmation semantics;
+- retained idempotent protection/partial/close state transitions and retry-aware handling;
+- removed system-clock calls from the new Phase 12 path.
+
+**Important remaining items before Phase 12 acceptance:**
+- durable persistence of Position-owned live-plan snapshots across a full indicator restart when the broker comment cannot reconstruct the complete target ladder;
+- controlled runtime verification of partial-close volume normalization, broker rejection/retry and reconnect scenarios;
+- explicit scenario coverage for reversal, exhaustion, EOD and protection-conflict precedence;
+- final real cTrader compile and broker execution validation.
+
+**Current CI:** workflow run `36322249439` completed successfully with **206 passed** tests.
+
 
 ## PHASE 13 — Outcome, telemetry, calibration and feedback
 
@@ -2560,8 +2608,8 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 8 | Risk/SL/Targets | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v81 | TradePlan / structural stop / target ladder; runtime verification pending |
 | 9 | Unified execution | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v82 | ExecutionPolicy / Intent / BrokerGateway; runtime verification pending |
 | 10 | Pending orders | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v83 | pending lifecycle / reconciliation; runtime verification pending |
-| 11 | Lifecycle/Broker | IMPLEMENTED IN v86 / RUNTIME VERIFICATION PENDING | 2026-09-27 | v84-v86 | Position lifecycle, close/recovery ownership, pending-to-position handoff and disconnect safety; controlled runtime validation pending |
-| 12 | Live management | NOT STARTED | — | — | — |
+| 11 | Lifecycle/Broker | IMPLEMENTED / RUNTIME VERIFICATION PENDING | 2026-09-27 | v84-v87 | Position lifecycle, close/recovery ownership, multi-position pending handoff, retry/backoff, broker confirmation grace, disconnect safety and no-manual-entry surface; real runtime validation pending |
+| 12 | Live management | IMPLEMENTED / STATIC VERIFICATION COMPLETE / RUNTIME ACCEPTANCE PENDING | 2026-09-27 | v88 | Position-owned live-plan snapshot, BE/risk-free, structural SL repricing, dynamic TP, partial TP, reversal/exhaustion/invalidation/EOD management; durable restart snapshot + runtime broker scenarios pending |
 | 13 | Outcome/Calibration | NOT STARTED | — | — | — |
 | 14 | Presentation | NOT STARTED | — | — | — |
 | 15 | Cleanup/Performance | NOT STARTED | — | — | — |
@@ -2640,11 +2688,13 @@ At minimum record:
 
 # 18. Current position
 
-**Current implementation reference:** v79
+**Current implementation reference:** v88
 
-**Current roadmap status:** Phase 6 semantically complete / runtime verification pending; v80 Phase-7 pre-acceptance implementation is present.
+**Current authoritative continuation:** v87 is the Phase 11 hardening line; v88 is the Phase 12 live-management line. v84-v86 remain historical Phase 11 implementation lines and are not the current continuation target.
 
-**Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts. v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
+**Current roadmap status:** Phases 6-12 have implementation lines present through v88; source/static CI is green, while real cTrader compile/runtime acceptance remains pending for execution/lifecycle/live-management behavior.
+
+**Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts; v80-v83 provide Entry/Risk/Execution/Pending implementation lines; v84-v87 complete the Lifecycle/Broker hardening line; v88 adds Position-owned Live Management.  v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
 **Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until the source-level single-authority audit remains clean, downstream DecisionSnapshot consumption is contractually enforced, full applicable tests/compile checks are complete, and the remaining v73-v78 semantic reconciliation is complete.
 
@@ -2665,13 +2715,13 @@ Phase 2  ████████████████████  COMPLETE
 Phase 3  ████████████████████  COMPLETE
 Phase 4  ████████████████████  COMPLETE
 Phase 5  ████████████████████  COMPLETE
-Phase 6  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 7  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 8  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 9  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 10 ████████████████████  IMPLEMENTED / VERIFICATION PENDING
-Phase 11 ████████████████████  IMPLEMENTED IN v86 / RUNTIME VERIFICATION PENDING
-Phase 12 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 6  ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
+Phase 7  ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
+Phase 8  ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
+Phase 9  ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
+Phase 10 ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
+Phase 11 ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING (v87)
+Phase 12 ████████████████████  IMPLEMENTED / STATIC GREEN / RUNTIME ACCEPTANCE PENDING (v88)
 Phase 13 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 14 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 15 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
