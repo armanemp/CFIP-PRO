@@ -354,3 +354,11 @@ def test_phase6_neutral_direction_does_not_accumulate_directional_gate_blocks():
         "StructureInvalid", "PolicyBlocked", "VolatilityBlocked"
     ]:
         assert token not in else_body
+
+
+def test_phase6_structure_and_liquidity_identities_are_version_isolated():
+    s = read(V79)
+    assert '"CFIP79|" + timeframe + "|" + kind + "|" + index' in s
+    assert "CFIP78|" not in s
+    assert "CFIPClean78" not in s
+    assert "Clean_v78" not in s
