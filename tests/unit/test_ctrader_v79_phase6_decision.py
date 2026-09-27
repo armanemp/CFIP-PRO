@@ -385,3 +385,21 @@ def test_phase6_parameter_surface_is_documented_as_513():
     s = read(V79)
     assert "Migrated Configuration Surface (513 parameters)" in s
     assert "Migrated Configuration Surface (512 parameters)" not in s
+
+
+def test_phase6_does_not_reintroduce_deferred_entry_or_execution_filters():
+    s = read(V79)
+    a = s.index("public sealed class CFIPClean79DecisionEngine")
+    b = s.index("// ------------------------------------------------------------------------\n    // Trade identity / idempotency", a)
+    engine = s[a:b]
+    for token in [
+        "UseM1Trigger", "UseM5Confirmation",
+        "AllowStrongTriggerOverride",
+        "MinimumEntryLocationQuality",
+        "RequireEntryLocationConfluence",
+        "MinimumStructuralSequence",
+        "UseStructuralSequenceGate",
+        "MinimumProxyExpectedValue",
+        "UseProxyExpectedValueGate",
+    ]:
+        assert token not in engine
