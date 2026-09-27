@@ -18495,6 +18495,20 @@ private Color AutoTradingPanelColor()
                     result.Position,
                     closedM5);
 
+                target =
+                    AutoTarget(
+                        _plan,
+                        EffectiveAutoTpStage());
+
+                if (!IsValidTarget(
+                        _plan.Direction,
+                        result.Position.EntryPrice,
+                        target))
+                {
+                    target =
+                        _plan.Tp1;
+                }
+
                 if (AutoBrokerProtection)
                 {
                     try
@@ -20711,7 +20725,7 @@ private Color AutoTradingPanelColor()
         // ============================================================
         #endregion
 
-        #region v62 Runtime Execution Controls
+        #region v63 Runtime Execution Controls
         // ============================================================
 
         private bool HasTradingPermission()
