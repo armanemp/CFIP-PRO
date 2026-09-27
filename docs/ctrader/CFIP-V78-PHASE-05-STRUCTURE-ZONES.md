@@ -13,7 +13,7 @@ v78 replaces repeated structural rediscovery with one canonical structural ledge
 
 - BOS, MSS, CHOCH and confirmed swing events
 - displacement
-- FVG creation, retest, partial mitigation, expiry and non-resurrection after full consumption
+- FVG creation (three-candle and optional two-bar imbalance), retest, configurable partial mitigation, expiry and non-resurrection after full consumption
 - Order Block discovery, displacement requirement, body/full-range mode, retest, breach and expiry
 - equal-high/equal-low liquidity
 - liquidity sweeps with explicit ATR penetration depth
