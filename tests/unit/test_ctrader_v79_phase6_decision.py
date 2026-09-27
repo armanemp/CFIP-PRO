@@ -273,3 +273,17 @@ def test_phase6_softmax_share_calculation_is_temperature_controlled():
     assert "Math.Exp(" in s
     assert "bullShare = Clamp(" in s
     assert "bearShare = 100 - bullShare;" in s
+
+
+def test_phase6_snapshot_requires_coherent_wait_and_eligibility_states():
+    s = read(V79)
+    assert "WAIT decision requires a NoDirection block." in s
+    assert "Blocked directional decision requires at least one block." in s
+    assert "Eligible decision requires Confirmed or Aggressive policy." in s
+
+
+def test_phase6_advanced_confluence_is_a_quality_switch():
+    s = read(V79)
+    assert 'configuration.Get("UseAdvancedConfluence", true)' in s
+    assert "confluenceQuality" in s
+    assert "e.BullConfluence" in s and "e.BearConfluence" in s
