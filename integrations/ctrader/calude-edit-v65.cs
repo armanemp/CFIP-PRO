@@ -15501,7 +15501,7 @@ namespace cAlgo
 
             AddPanelRow(
                 ref slot,
-                "CFIP SMART CLEAN64  •  " +
+                "CFIP SMART CLEAN65  •  " +
                 stableState,
                 PanelDirectionColor(
                     stateDirection),
@@ -17186,7 +17186,7 @@ namespace cAlgo
                     Notifications.SendEmail(
                         SenderEmail,
                         ReceiverEmail,
-                        "CFIP SMART CLEAN64 " +
+                        "CFIP SMART CLEAN65 " +
                         SymbolName,
                         message);
                 }
@@ -18860,7 +18860,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         targetPips,
-                        "CFIP SMART64",
+                        "CFIP SMART65",
                         false);
 
                 if (result == null)
@@ -21044,7 +21044,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         tpPips,
-                        "CFIP SMART64",
+                        "CFIP SMART65",
                         false);
 
                 if (result == null ||
@@ -21975,7 +21975,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART64",
+                        "CFIP SMART65",
                         false);
 
                 if (result == null ||
@@ -22177,7 +22177,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART64",
+                        "CFIP SMART65",
                         false);
 
                 if (result == null ||
