@@ -5400,8 +5400,8 @@ namespace cAlgo
 
                 bool closeConfirmed =
                     direction == CFIPClean80Direction.Buy
-                        ? m5.Close >= zone.Midpoint
-                        : m5.Close <= zone.Midpoint;
+                        ? m5.Close >= ZoneMidpoint(zone)
+                        : m5.Close <= ZoneMidpoint(zone);
 
                 if (cfg.Get(
                         "RequireRetestCloseConfirmation",
@@ -5452,7 +5452,7 @@ namespace cAlgo
                 double distance =
                     Math.Abs(
                         executablePrice -
-                        zone.Midpoint);
+                        ZoneMidpoint(zone));
 
                 if (candidate == null ||
                     quality > candidate.Quality ||
