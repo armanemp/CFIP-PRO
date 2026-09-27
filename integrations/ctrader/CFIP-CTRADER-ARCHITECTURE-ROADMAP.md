@@ -1997,6 +1997,28 @@ All management actions are idempotent and retry-safe.
 **Current CI:** workflow run `36322249439` completed successfully with **206 passed** tests.
 
 
+### Phase 12 v89 re-audit / hardening continuation — 2026-09-27
+
+**Current implementation:** v89 (`integrations/ctrader/calude-edit-v89.cs`)
+
+**Re-audit document:** `docs/ctrader/CFIP-V89-PHASE-12-LIVE-MANAGEMENT-REAUDIT.md`
+
+**Static tests:** `tests/unit/test_ctrader_v89_phase12_reaudit.py`
+
+**Implemented corrections:**
+- synchronized replacement of queued Position protection mutations by explicitly clearing the stale pending-action flag;
+- made the Position protection queue report whether a broker mutation was actually enqueued;
+- restored missing SL/TP from the matching Position-owned/current Plan when the broker snapshot has lost protection;
+- made accepted partial-close requests leave the permanently-latched pending state and enter bounded retry/recovery after the confirmation window;
+- relaxed close retry pacing after accepted submission to reduce repeated mutations while broker confirmation propagates;
+- preserved all v88 authority boundaries: live-manager intent, Position lifecycle ownership, and broker-gateway mutation.
+
+**Static re-audit result:** PASS for brace balance, version isolation, main dependency declarations, v88 parameter-surface parity, multi-position fill storage, protection queue replacement, plan-owned protection restoration, partial-close retry, gateway validation, and absence of manual entry controls.
+
+**Runtime boundary:** real cTrader compilation and broker execution/recovery scenarios remain mandatory.
+
+**Next step:** close Phase 12 runtime acceptance; only then begin Phase 13 outcome/telemetry/calibration implementation.
+
 ## PHASE 13 — Outcome, telemetry, calibration and feedback
 
 **Status: NOT STARTED**
@@ -2609,7 +2631,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 9 | Unified execution | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v82 | ExecutionPolicy / Intent / BrokerGateway; runtime verification pending |
 | 10 | Pending orders | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v83 | pending lifecycle / reconciliation; runtime verification pending |
 | 11 | Lifecycle/Broker | IMPLEMENTED / RUNTIME VERIFICATION PENDING | 2026-09-27 | v84-v87 | Position lifecycle, close/recovery ownership, multi-position pending handoff, retry/backoff, broker confirmation grace, disconnect safety and no-manual-entry surface; real runtime validation pending |
-| 12 | Live management | IMPLEMENTED / STATIC VERIFICATION COMPLETE / RUNTIME ACCEPTANCE PENDING | 2026-09-27 | v88 | Position-owned live-plan snapshot, BE/risk-free, structural SL repricing, dynamic TP, partial TP, reversal/exhaustion/invalidation/EOD management; durable restart snapshot + runtime broker scenarios pending |
+| 12 | Live management | IMPLEMENTED / STATIC RE-AUDIT PASS / RUNTIME ACCEPTANCE PENDING | 2026-09-27 | v88-v89 | Position-owned live-plan snapshot, BE/risk-free, structural SL repricing, dynamic TP, partial TP, reversal/exhaustion/invalidation/EOD management, protection-queue synchronization and partial-close retry hardening; real cTrader runtime acceptance pending |
 | 13 | Outcome/Calibration | NOT STARTED | — | — | — |
 | 14 | Presentation | NOT STARTED | — | — | — |
 | 15 | Cleanup/Performance | NOT STARTED | — | — | — |
@@ -2688,17 +2710,17 @@ At minimum record:
 
 # 18. Current position
 
-**Current implementation reference:** v88
+**Current implementation reference:** v89
 
-**Current authoritative continuation:** v87 is the Phase 11 hardening line; v88 is the Phase 12 live-management line. v84-v86 remain historical Phase 11 implementation lines and are not the current continuation target.
+**Current authoritative continuation:** v87 is the Phase 11 hardening line; v88 is the Phase 12 live-management line; v89 is the Phase 12 re-audit/hardening line. v84-v86 remain historical Phase 11 implementation lines and are not the current continuation target.
 
-**Current roadmap status:** Phases 6-12 have implementation lines present through v88; source/static CI is green, while real cTrader compile/runtime acceptance remains pending for execution/lifecycle/live-management behavior.
+**Current roadmap status:** Phases 6-12 have implementation lines present through v89; source/static/static re-audit gates are covered, while real cTrader compile/runtime acceptance remains pending for execution/lifecycle/live-management behavior.
 
-**Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts; v80-v83 provide Entry/Risk/Execution/Pending implementation lines; v84-v87 complete the Lifecycle/Broker hardening line; v88 adds Position-owned Live Management.  v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
+**Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts; v80-v83 provide Entry/Risk/Execution/Pending implementation lines; v84-v87 complete the Lifecycle/Broker hardening line; v88 adds Position-owned Live Management; v89 hardens Phase 12 protection-queue replacement, plan-owned protection restoration, partial-close retry and close-confirmation pacing. v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until the source-level single-authority audit remains clean, downstream DecisionSnapshot consumption is contractually enforced, full applicable tests/compile checks are complete, and the remaining v73-v78 semantic reconciliation is complete.
+**Current implementation target:** Phase 12 runtime acceptance for the v89 live-management line. Do not start Phase 13 implementation until the remaining Phase 12 acceptance gates are closed: real cTrader compilation, controlled broker execution, restart/reconnect behavior, partial-close confirmation/retry, and reversal/exhaustion/invalidation/EOD precedence scenarios.
 
-**Critical instruction for the next phase:** Start from the v78 StructureSnapshot, v77 MarketModel and v76 MTF snapshot. Build one authoritative Decision engine that consumes the existing evidence exactly once, separates Evidence -> Score -> Quality -> Eligibility -> Policy, and becomes the sole source for Signal, Auto Trade and Auto Order eligibility.
+**Critical instruction for the next phase:** Treat v89 as the current Phase 12 source of truth for runtime acceptance. Preserve the architectural authority chain `Decision -> Entry -> TradePlan -> ExecutionPolicy -> BrokerGateway -> Pending/Position Lifecycle -> LivePositionManager`, and do not bypass lifecycle/gateway ownership while resolving runtime failures.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
@@ -2721,7 +2743,7 @@ Phase 8  ████████████████████  IMPLEMENT
 Phase 9  ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
 Phase 10 ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING
 Phase 11 ████████████████████  IMPLEMENTED / RUNTIME VERIFICATION PENDING (v87)
-Phase 12 ████████████████████  IMPLEMENTED / STATIC GREEN / RUNTIME ACCEPTANCE PENDING (v88)
+Phase 12 ████████████████████  IMPLEMENTED / STATIC RE-AUDIT PASS / RUNTIME ACCEPTANCE PENDING (v89)
 Phase 13 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 14 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 15 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
