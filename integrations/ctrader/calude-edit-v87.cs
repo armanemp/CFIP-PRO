@@ -13841,11 +13841,6 @@ public sealed class CFIPClean87TradePlanBuilder :
 [Parameter("Show Trade Plan Panel", Group = "21 · Complete Intelligence", DefaultValue = true)]
         public bool ShowTradePlanPanel { get; set; }
 
-// Compatibility parameter retained for preset visibility only.
-        // The clean architecture has no manual BUY/SELL/order-placement authority.
-        [Parameter("Show Trade Action Buttons", Group = "13 · AUTO TRADING", DefaultValue = true)]
-        public bool ShowTradeActionButtons { get; set; }
-
 [Parameter("Always Show Safety Buttons", Group = "13 · AUTO TRADING", DefaultValue = true)]
         public bool AlwaysShowSafetyButtons { get; set; }
 
