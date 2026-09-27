@@ -14693,6 +14693,11 @@ namespace cAlgo
 
             AddPanelRow(
                 ref slot,
+                GetSessionPanelText(),
+                GetSessionPanelColor(),
+                true,
+                contentWidth);
+
             if (UseDailyPivots)
             {
                 AddPanelRow(
@@ -14702,11 +14707,6 @@ namespace cAlgo
                     false,
                     contentWidth);
             }
-
-                GetSessionPanelText(),
-                GetSessionPanelColor(),
-                true,
-                contentWidth);
 
             bool tradingPermission =
                 HasTradingPermission();
