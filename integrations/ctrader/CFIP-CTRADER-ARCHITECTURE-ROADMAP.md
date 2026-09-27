@@ -1294,6 +1294,8 @@ Every execution path receives the same DecisionSnapshot.
 **Commits:**
 - eb9aae213a34995374e9b8489de5ed147ae2569f — fix Phase 6 decision evidence deduplication and missing Decision state setter
 - c5ccefebb50b5abdc1180d0fa827aa1887f0c7bb — extend Phase 6 source-level validation
+- 307ac7adb48d6e36fbd337e5d72b73089920dccf — preserve reference-gated market/structure state across Calculate cycles
+- 32617129ed375067b269f4048c352371c39bf7ae — validate cycle-state retention and decision reuse
 
 **Implemented:**
 - authoritative CFIPClean79DecisionEngine
@@ -1319,7 +1321,7 @@ Every execution path receives the same DecisionSnapshot.
 - weighted quality-domain checks
 - brace/type/version isolation checks
 
-**Validation status:** source-level tests are committed, but they have not yet been executed in a local/CI environment from this turn. Phase 6 therefore remains **IN PROGRESS**.
+**Validation status:** source-level tests are committed. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
 
 **Remaining before Phase 6 completion:**
 1. trace every existing signal/decision consumer and prove no parallel BUY/SELL authority remains
