@@ -204,6 +204,9 @@ def test_phase7_has_breakout_trigger_path():
     e = entry_engine(read(V80))
     assert "TryFindFreshBreakoutEvent(" in e
     assert "PrecisionBreakoutBufferAtr" in e
+    assert "breakoutAnchor" in e
+    assert "breakoutZone.Zone.CurrentUpper" in e
+    assert "breakoutZone.Zone.CurrentLower" in e
     assert "CFIPClean80EntryMode.BreakoutMarket" in e
     assert "CFIPClean80EntryTriggerState.WaitingBreakout" in e
     assert "triggerReached" in e
