@@ -311,6 +311,54 @@ namespace cAlgo
     }
 
     [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+    private sealed class MtfClosedContext
+    {
+        public DateTime Reference { get; }
+        public int M5 { get; }
+        public int M1 { get; }
+        public int M15 { get; }
+        public int M30 { get; }
+        public int H1 { get; }
+        public int H4 { get; }
+        public int D1 { get; }
+        public int W1 { get; }
+
+        public MtfClosedContext(
+            DateTime reference,
+            int m5,
+            int m1,
+            int m15,
+            int m30,
+            int h1,
+            int h4,
+            int d1,
+            int w1)
+        {
+            Reference = reference;
+            M5 = m5;
+            M1 = m1;
+            M15 = m15;
+            M30 = m30;
+            H1 = h1;
+            H4 = h4;
+            D1 = d1;
+            W1 = w1;
+        }
+
+        public bool HasPrimaryDecisionHistory
+        {
+            get
+            {
+                return
+                    M5 >= 30 &&
+                    M15 >= 30 &&
+                    M30 >= 30 &&
+                    H1 >= 30 &&
+                    H4 >= 30;
+            }
+        }
+    }
+
     public class CFIP_MTF_LiveEntryEngine_Clean_v71 : Indicator
     {
         #region Parameters · Decision
@@ -2506,6 +2554,33 @@ namespace cAlgo
             base.OnDestroy();
         }
 
+        private MtfClosedContext BuildMtfClosedContext(
+            DateTime reference)
+        {
+            if (_m5Bars == null)
+                return new MtfClosedContext(
+                    reference,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1);
+
+            return new MtfClosedContext(
+                reference,
+                ClosedIndex(_m5Bars, reference),
+                ClosedIndex(_m1Bars, reference),
+                ClosedIndex(_m15Bars, reference),
+                ClosedIndex(_m30Bars, reference),
+                ClosedIndex(_h1Bars, reference),
+                ClosedIndex(_h4Bars, reference),
+                ClosedIndex(_d1Bars, reference),
+                ClosedIndex(_w1Bars, reference));
+        }
+
         public override void Calculate(int index)
         {
             if (!IsLastBar ||
@@ -2525,12 +2600,14 @@ namespace cAlgo
                 _m5Bars.OpenTimes[
                     _m5Bars.Count - 1];
 
-            int closedM5 =
-                ClosedIndex(
-                    _m5Bars,
+            MtfClosedContext mtf =
+                BuildMtfClosedContext(
                     reference);
 
-            if (closedM5 < 30)
+            int closedM5 =
+                mtf.M5;
+
+            if (!mtf.HasPrimaryDecisionHistory)
             {
                 _status =
                     "WAITING FOR CLOSED M5";
@@ -2546,40 +2623,19 @@ namespace cAlgo
             // closed M5 bar. Live price management remains tick responsive.
             if (newClosedBar)
             {
-                int m1Index =
-                    ClosedIndex(
-                        _m1Bars,
-                        reference);
+                int m1Index = mtf.M1;
 
-                int m15Index =
-                    ClosedIndex(
-                        _m15Bars,
-                        reference);
+                int m15Index = mtf.M15;
 
-                int m30Index =
-                    ClosedIndex(
-                        _m30Bars,
-                        reference);
+                int m30Index = mtf.M30;
 
-                int h1Index =
-                    ClosedIndex(
-                        _h1Bars,
-                        reference);
+                int h1Index = mtf.H1;
 
-                int h4Index =
-                    ClosedIndex(
-                        _h4Bars,
-                        reference);
+                int h4Index = mtf.H4;
 
-                int d1Index =
-                    ClosedIndex(
-                        _d1Bars,
-                        reference);
+                int d1Index = mtf.D1;
 
-                int w1Index =
-                    ClosedIndex(
-                        _w1Bars,
-                        reference);
+                int w1Index = mtf.W1;
 
                 if (m15Index < 30 ||
                     m30Index < 30 ||
