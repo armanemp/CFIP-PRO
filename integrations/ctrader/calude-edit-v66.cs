@@ -2330,10 +2330,35 @@ namespace cAlgo
 
         private void EnsureExecutionRuntimeState()
         {
-            if (_executionRuntimeInitialized)
+            if (!_executionRuntimeInitialized)
+            {
+                InitializeExecutionRuntimeState();
                 return;
+            }
 
-            InitializeExecutionRuntimeState();
+            // Parameters can be changed from cTrader's settings surface while
+            // the Indicator instance is alive. Treat the public parameters and
+            // runtime flags as a bidirectional pair rather than allowing the
+            // panel to become a separate source of truth.
+            if (EnableAutoTrading != _autoTradingEnabledRuntime)
+            {
+                _autoTradingEnabledRuntime = EnableAutoTrading;
+                _autoExecutionBlockReason =
+                    EnableAutoTrading
+                        ? "AWAITING EXECUTION"
+                        : "DISABLED";
+            }
+
+            if (EnableAutomaticOrders !=
+                _automaticOrdersEnabledRuntime)
+            {
+                _automaticOrdersEnabledRuntime =
+                    EnableAutomaticOrders;
+                _autoOrdersBlockReason =
+                    EnableAutomaticOrders
+                        ? "AWAITING ORDER SETUP"
+                        : "DISABLED";
+            }
         }
 
         protected override void Initialize()
@@ -22799,34 +22824,22 @@ private Color AutoTradingPanelColor()
                 args.ToggleButton == null)
                 return;
 
-            _autoTradingEnabledRuntime =
-
-
+            bool enabled =
                 args.ToggleButton.IsChecked;
 
-
-
-            EnableAutoTrading =
-
-
-                _autoTradingEnabledRuntime;
-
-
-
-            _autoExecutionBlockReason =
-                _autoTradingEnabledRuntime
+            SetAutoTradingRuntimeState(
+                enabled,
+                enabled
                     ? "AWAITING EXECUTION"
-                    : "DISABLED";
+                    : "DISABLED");
 
             SetAutoTradingState(
-                _autoTradingEnabledRuntime
+                enabled
                     ? "ARMED"
                     : "OFF",
-                _autoTradingEnabledRuntime
+                enabled
                     ? "QUICK ENABLED"
                     : "QUICK DISABLED");
-
-            SyncQuickExecutionControls();
         }
 
         private void OnAutomaticOrdersQuickToggleClicked(
@@ -22837,26 +22850,14 @@ private Color AutoTradingPanelColor()
                 args.ToggleButton == null)
                 return;
 
-            _automaticOrdersEnabledRuntime =
-
-
+            bool enabled =
                 args.ToggleButton.IsChecked;
 
-
-
-            EnableAutomaticOrders =
-
-
-                _automaticOrdersEnabledRuntime;
-
-
-
-            _autoOrdersBlockReason =
-                _automaticOrdersEnabledRuntime
+            SetAutomaticOrdersRuntimeState(
+                enabled,
+                enabled
                     ? "AWAITING ORDER SETUP"
-                    : "DISABLED";
-
-            SyncQuickExecutionControls();
+                    : "DISABLED");
         }
 
         private void SyncQuickExecutionControls()
