@@ -11192,7 +11192,8 @@ namespace cAlgo
             int index,
             int direction,
             double atr,
-            double selectionPrice = double.NaN)
+            double selectionPrice = double.NaN,
+            bool requireHistoricalRetest = true)
         {
             if (!UseOrderBlock ||
                 bars == null ||
@@ -11244,7 +11245,8 @@ namespace cAlgo
                         ObMinimumQuality))
                     continue;
 
-                if (RequireObRetest &&
+                if (requireHistoricalRetest &&
+                    RequireObRetest &&
                     !HasZoneRetest(
                         bars,
                         i,
@@ -11869,7 +11871,8 @@ namespace cAlgo
                 index,
                 direction,
                 atr,
-                market);
+                market,
+                false);
         }
 
         private Zone FindNearestOpposingZone(
