@@ -1310,6 +1310,8 @@ Every execution path receives the same DecisionSnapshot.
 - fa30d58c95f0bf1798555f1a534276bdf7a353fe — reconcile Premium/Discount location bias and HTF confidence penalty
 - 6f3cb428cac9bc04a26d6bccb01c6f1249b30c9a — validate adaptive Phase 6 semantics
 - 19bc33ce80b3328cc31b7b20362a5cbb031ca4b2 — validate legacy decision semantics reconciliation
+- a2232aa1f50d4fd32ffe983cf1a85e007ed5cb6b — harden DecisionSnapshot invariants and advanced-confluence policy
+- 01cc3d28de9abf452f38ff1adfbbea5d7cd6e0c7 — validate decision-state invariants and confluence switch
 - c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
 
 **Implemented:**
@@ -1330,6 +1332,8 @@ Every execution path receives the same DecisionSnapshot.
 - directional shares use the configured SmartScoreTemperature softmax and exact zero/tie evidence remains WAIT
 - Premium/Discount is preserved as location bias only and does not increment independent evidence
 - HigherTfPenalty is preserved as a confidence-risk penalty for H1/H4/D1 opposition, separate from directional evidence
+- `UseAdvancedConfluence` now explicitly controls the confluence contribution to Decision quality
+- DecisionSnapshot now enforces WAIT/block/eligibility/policy consistency at construction time
 - Feature aggregation now keeps strongest BUY and SELL observations separately; exact ties contribute no directional evidence, eliminating timeframe-order bias
 - added the missing internal `FeatureAggregate` type required by the deduplication implementation
 - confluence retained as a quality modifier rather than a second directional evidence source
@@ -1350,6 +1354,8 @@ Every execution path receives the same DecisionSnapshot.
 - adaptive threshold and softmax checks
 - zero/tie direction safety checks
 - legacy location-bias and HTF-penalty checks
+- snapshot-state invariant checks
+- advanced-confluence switch checks
 
 **Latest findings/fixes:** a compile-critical missing internal type was found: v79 referenced `FeatureAggregate` without defining it. This is now fixed. A second decision-integrity defect was also found: equal-strength opposing observations of one market feature could inherit the answer from timeframe loop order. The aggregator now resolves BUY/SELL strengths symmetrically and treats exact ties as neutral.
 
