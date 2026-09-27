@@ -4,6 +4,7 @@
 //
 // This version intentionally does NOT copy the v73 monolith.
 // v73 remains the frozen behavioral/reference baseline.
+    // v80 parent/reference: v79 Phase-6 Decision engine.
 // v80 now extends the type/ownership boundaries with the first normalized market model.
 //
 // Architectural invariants:
@@ -4898,6 +4899,15 @@ namespace cAlgo
                 out retest,
                 out retestExpiry))
             {
+                if (configuration.Get("AvoidLateEntry", true) &&
+                    retestExpiry.HasValue &&
+                    runtime.ServerUtc > retestExpiry.Value)
+                    return Blocked(
+                        decision,
+                        CFIPClean80BlockReason.EntryInvalid,
+                        CFIPClean80EntryTriggerState.Expired,
+                        "RETEST_SETUP_EXPIRED");
+
                 double idealPrice =
                     retest.Zone.Midpoint;
 
@@ -4975,6 +4985,19 @@ namespace cAlgo
                         CFIPClean80Provenance.Direct(
                             "ENTRY_ENGINE",
                             "RETEST_INVALIDATED"));
+
+                int minimumEntryQuality =
+                    configuration.Get(
+                        "MinimumEntryQuality",
+                        64);
+
+                if (configuration.Get("RequirePrecisionEntry", false) &&
+                    retest.Quality < minimumEntryQuality)
+                    return Blocked(
+                        decision,
+                        CFIPClean80BlockReason.EntryInvalid,
+                        CFIPClean80EntryTriggerState.WaitingRetest,
+                        "RETEST_PRECISION_QUALITY");
 
                 if (!WithinMaximumEntryDistance(
                     executablePrice,
@@ -5136,6 +5159,55 @@ namespace cAlgo
                     m5,
                     configuration);
 
+            if (configuration.Get("RequirePrecisionEntry", false) &&
+                breakoutZone.Quality <
+                configuration.Get(
+                    "MinimumEntryQuality",
+                    64))
+                return new CFIPClean80EntrySnapshot(
+                    decision,
+                    direction,
+                    CFIPClean80EntryMode.BreakoutMarket,
+                    CFIPClean80EntryTriggerState.WaitingBreakout,
+                    breakoutModel,
+                    null,
+                    false,
+                    false,
+                    breakoutZone.Quality,
+                    mtf.ReferenceUtc,
+                    runtime.ServerUtc,
+                    expiry,
+                    new List<CFIPClean80BlockReason>
+                    {
+                        CFIPClean80BlockReason.EntryInvalid
+                    },
+                    CFIPClean80Provenance.Direct(
+                        "ENTRY_ENGINE",
+                        "BREAKOUT_PRECISION_QUALITY"));
+
+            if (configuration.Get("AvoidLateEntry", true) &&
+                runtime.ServerUtc > expiry)
+                return new CFIPClean80EntrySnapshot(
+                    decision,
+                    direction,
+                    CFIPClean80EntryMode.BreakoutMarket,
+                    CFIPClean80EntryTriggerState.Expired,
+                    breakoutModel,
+                    null,
+                    false,
+                    false,
+                    breakoutZone.Quality,
+                    mtf.ReferenceUtc,
+                    runtime.ServerUtc,
+                    expiry,
+                    new List<CFIPClean80BlockReason>
+                    {
+                        CFIPClean80BlockReason.EntryInvalid
+                    },
+                    CFIPClean80Provenance.Direct(
+                        "ENTRY_ENGINE",
+                        "BREAKOUT_SETUP_EXPIRED"));
+
             if (configuration.Get("EnableSetupInvalidation", true) &&
                 IsInvalidated(
                     direction,
@@ -5168,31 +5240,6 @@ namespace cAlgo
                     ResolvePendingEntryMode(
                         triggerEvent.Kind,
                         configuration);
-
-                if (configuration.Get(
-                        "AvoidLateEntry",
-                        true) &&
-                    DateTime.UtcNow > expiry)
-                    return new CFIPClean80EntrySnapshot(
-                        decision,
-                        direction,
-                        waitingMode,
-                        CFIPClean80EntryTriggerState.Expired,
-                        breakoutModel,
-                        null,
-                        false,
-                        false,
-                        breakoutZone.Quality,
-                        mtf.ReferenceUtc,
-                        runtime.ServerUtc,
-                        expiry,
-                        new List<CFIPClean80BlockReason>
-                        {
-                            CFIPClean80BlockReason.EntryInvalid
-                        },
-                        CFIPClean80Provenance.Direct(
-                            "ENTRY_ENGINE",
-                            "BREAKOUT_SETUP_EXPIRED"));
 
                 return new CFIPClean80EntrySnapshot(
                     decision,
