@@ -477,6 +477,7 @@ namespace cAlgo
         public string Symbol { get; private set; }
         public double Bid { get; private set; }
         public double Ask { get; private set; }
+        public double PipSize { get; private set; }
         public double SpreadPips { get; private set; }
         public bool SymbolTradingEnabled { get; private set; }
         public double Equity { get; private set; }
@@ -495,6 +496,7 @@ namespace cAlgo
             string symbol,
             double bid,
             double ask,
+            double pipSize,
             double spreadPips,
             bool symbolTradingEnabled,
             double equity,
@@ -515,6 +517,7 @@ namespace cAlgo
             Symbol = symbol ?? string.Empty;
             Bid = bid;
             Ask = ask;
+            PipSize = Math.Max(0, pipSize);
             SpreadPips = Math.Max(0, spreadPips);
             SymbolTradingEnabled = symbolTradingEnabled;
             Equity = Math.Max(0, equity);
@@ -7941,6 +7944,71 @@ public sealed class CFIPClean82TradePlanBuilder :
                 configuration.Get("MinimumAutoLevelQuality", 72))
                 blocks.Add(CFIPClean82BlockReason.EntryInvalid);
 
+            double requestedPrice =
+                ResolveRequestedPrice(entry);
+
+            CFIPClean82TargetLevel target =
+                plan.TargetLadder.Find(
+                    configuration.Get(
+                        "AutoTpStage",
+                        CFIPClean82TargetStage.TP1));
+
+            if (target == null)
+                target =
+                    plan.TargetLadder.Find(
+                        CFIPClean82TargetStage.TP1);
+
+            if (runtime.PipSize <= 0 ||
+                requestedPrice <= 0 ||
+                target == null)
+            {
+                blocks.Add(CFIPClean82BlockReason.BrokerConstraintsBlocked);
+            }
+            else
+            {
+                double stopDistancePips =
+                    Math.Abs(
+                        requestedPrice -
+                        plan.StructuralStop.Price) /
+                    runtime.PipSize;
+                double targetDistancePips =
+                    Math.Abs(
+                        target.Level.Price -
+                        requestedPrice) /
+                    runtime.PipSize;
+
+                if (runtime.BrokerConstraints.MinStopDistancePips > 0 &&
+                    stopDistancePips + 0.000001 <
+                    runtime.BrokerConstraints.MinStopDistancePips)
+                    blocks.Add(
+                        CFIPClean82BlockReason.BrokerConstraintsBlocked);
+
+                if (runtime.BrokerConstraints.MinTakeProfitDistancePips > 0 &&
+                    targetDistancePips + 0.000001 <
+                    runtime.BrokerConstraints.MinTakeProfitDistancePips)
+                    blocks.Add(
+                        CFIPClean82BlockReason.BrokerConstraintsBlocked);
+            }
+
+            if (runtime.BrokerConstraints.MinVolumeInUnits > 0 &&
+                volumeInUnits + 0.000001 <
+                runtime.BrokerConstraints.MinVolumeInUnits)
+                blocks.Add(CFIPClean82BlockReason.BrokerConstraintsBlocked);
+
+            if (runtime.BrokerConstraints.VolumeStepInUnits > 0 &&
+                volumeInUnits > 0)
+            {
+                double steps =
+                    volumeInUnits /
+                    runtime.BrokerConstraints.VolumeStepInUnits;
+                double nearest =
+                    Math.Round(steps);
+
+                if (Math.Abs(steps - nearest) > 0.000001)
+                    blocks.Add(
+                        CFIPClean82BlockReason.BrokerConstraintsBlocked);
+            }
+
             if (!runtime.SymbolTradingEnabled)
                 blocks.Add(CFIPClean82BlockReason.BrokerUnavailable);
 
@@ -10386,6 +10454,7 @@ public sealed class CFIPClean82TradePlanBuilder :
                     SymbolName,
                     Math.Max(0, Symbol.Bid),
                     Math.Max(0, Symbol.Ask),
+                    Math.Max(0, Symbol.PipSize),
                     Symbol.PipSize > 0
                         ? Math.Max(
                             0,
@@ -10666,14 +10735,20 @@ public sealed class CFIPClean82TradePlanBuilder :
 
             if (_configuration.Get("OneOrderPerSignal", true))
             {
-                foreach (var trade in History)
+                HistoricalTrade[] trades =
+                    History.FindAll(
+                        label,
+                        SymbolName);
+
+                if (trades != null)
                 {
-                    if (string.Equals(trade.Label, label, StringComparison.Ordinal) &&
-                        string.Equals(trade.SymbolName, SymbolName, StringComparison.Ordinal) &&
-                        (trade.Comment ?? string.Empty).IndexOf(
-                            signal,
-                            StringComparison.Ordinal) >= 0)
-                        return true;
+                    for (int i = 0; i < trades.Length; i++)
+                    {
+                        if ((trades[i].Comment ?? string.Empty).IndexOf(
+                                signal,
+                                StringComparison.Ordinal) >= 0)
+                            return true;
+                    }
                 }
             }
 
@@ -10823,11 +10898,17 @@ public sealed class CFIPClean82TradePlanBuilder :
                     "CFIP-SMART-CLEAN82");
 
             double total = 0;
-            foreach (var trade in History)
+            HistoricalTrade[] trades =
+                History.FindAll(
+                    label,
+                    SymbolName);
+
+            if (trades == null)
+                return 0;
+
+            for (int i = 0; i < trades.Length; i++)
             {
-                if (!string.Equals(trade.Label, label, StringComparison.Ordinal) ||
-                    !string.Equals(trade.SymbolName, SymbolName, StringComparison.Ordinal))
-                    continue;
+                HistoricalTrade trade = trades[i];
 
                 if (trade.ClosingTime >= dayStartUtc &&
                     trade.ClosingTime < dayStartUtc.AddDays(1))
