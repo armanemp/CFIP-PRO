@@ -10625,8 +10625,7 @@ public sealed class CFIPClean87TradePlanBuilder :
             string prefix =
                 brokerPositionId +
                 "|" +
-                CFIPClean87PositionActionKind.RestoreProtection.ToString() +
-                "|";
+                CFIPClean87PositionActionKind.RestoreProtection.ToString();
 
             var staleKeys =
                 new List<string>();
@@ -11761,7 +11760,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                         structure);
 
                 if (targetRepriceAllowed &&
-if (active != null &&
+                    active != null &&
                     next != null &&
                     currentRR >=
                         configuration.Get(
