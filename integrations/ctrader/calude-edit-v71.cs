@@ -3182,9 +3182,11 @@ namespace cAlgo
                     Index = index
                 };
 
+            // AnalyzeFrame is a closed-candle contract. A forming
+            // bar must never enter MTF decision/structure scoring.
             if (bars == null ||
                 index < 30 ||
-                index >= bars.Count)
+                index >= bars.Count - 1)
                 return f;
 
             f.Atr = Atr(bars, index);
@@ -14461,7 +14463,11 @@ namespace cAlgo
 
             if (closed >= 0 &&
                 closed < Bars.Count - 1)
-                return closed;
+                return Math.Max(
+                    0,
+                    Math.Min(
+                        Bars.Count - 2,
+                        closed));
 
             return Math.Max(
                 0,
