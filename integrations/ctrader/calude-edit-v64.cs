@@ -22392,21 +22392,6 @@ private Color AutoTradingPanelColor()
             SyncQuickExecutionControls();
         }
 
-      "QUICK ENABLED");
-            }
-            else
-            {
-                _autoExecutionBlockReason =
-                    "TRADING PERMISSION";
-
-                SetAutoTradingState(
-                    "BLOCKED",
-                    "TRADING PERMISSION REQUIRED");
-            }
-
-            SyncQuickExecutionControls();
-        }
-
         private void OnAutoTradingQuickToggleUnchecked(
             ToggleButtonEventArgs args)
         {
@@ -22433,17 +22418,6 @@ private Color AutoTradingPanelColor()
             EnableAutomaticOrders = true;
             _autoOrdersBlockReason =
                 "AWAITING ORDER SETUP";
-
-            SyncQuickExecutionControls();
-        }
-
-DER SETUP";
-            }
-            else
-            {
-                _autoOrdersBlockReason =
-                    "TRADING PERMISSION";
-            }
 
             SyncQuickExecutionControls();
         }
