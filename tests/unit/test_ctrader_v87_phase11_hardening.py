@@ -219,7 +219,7 @@ def test_v87_position_protection_detects_drift_not_only_missing_values():
     lifecycle = section(
         s,
         "public sealed class CFIPClean87PositionLifecycleManager",
-        "public sealed class CFIPClean87PositionAction",
+        "public sealed class CFIPClean87LivePositionAction",
     )
     assert "stopDrift" in lifecycle
     assert "targetDrift" in lifecycle
@@ -244,7 +244,7 @@ def test_v87_protection_queue_cleanup_uses_the_exact_dedup_key_prefix():
     lifecycle = section(
         s,
         "public sealed class CFIPClean87PositionLifecycleManager",
-        "public sealed class CFIPClean87PositionAction",
+        "public sealed class CFIPClean87LivePositionAction",
     )
     assert "string prefix =" in lifecycle
     assert "RestoreProtection.ToString()" in lifecycle
