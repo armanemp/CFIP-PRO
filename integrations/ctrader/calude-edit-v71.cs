@@ -23584,7 +23584,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -23802,7 +23802,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
