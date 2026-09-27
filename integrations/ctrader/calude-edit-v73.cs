@@ -5307,14 +5307,16 @@ namespace cAlgo
         #region Entry Trigger
         // ============================================================
 
-        private bool TriggerReadyWithoutPrecisionGate(
+                private bool TriggerReadyWithoutPrecisionGate(
             Bars bars,
             int index,
             int direction)
         {
             if (bars == null ||
                 index < 20 ||
-                index >= bars.Count)
+                index >= bars.Count ||
+                (direction != 1 &&
+                 direction != -1))
                 return false;
 
             double atr =
@@ -5335,8 +5337,12 @@ namespace cAlgo
                     bars.OpenPrices[index]);
 
             if (range <= 0 ||
-                body < atr * MinimumTriggerBodyAtr ||
-                range > atr * MaximumTriggerRangeAtr)
+                body <
+                atr *
+                MinimumTriggerBodyAtr ||
+                range >
+                atr *
+                MaximumTriggerRangeAtr)
                 return false;
 
             double location =
@@ -5348,7 +5354,8 @@ namespace cAlgo
                        bars.ClosePrices[index]) /
                       range;
 
-            if (location < MinimumCloseLocation)
+            if (location <
+                MinimumCloseLocation)
                 return false;
 
             int trigger =
@@ -5367,27 +5374,20 @@ namespace cAlgo
                         PrecisionTriggerScore)
                     : LiveTriggerScore;
 
-            bool breakReady =
+            double breakLevel =
                 direction == 1
-                    ? bars.ClosePrices[index] >
-                      Highest(
-                          bars,
-                          Math.Max(
-                              0,
-                              index - 6),
-                          index - 1)
-                    : bars.ClosePrices[index] <
-                      Lowest(
-                          bars,
-                          Math.Max(
-                              0,
-                              index - 6),
-                          index - 1);
-
-            double market =
-                direction == 1
-                    ? Symbol.Ask
-                    : Symbol.Bid;
+                    ? Highest(
+                        bars,
+                        Math.Max(
+                            0,
+                            index - 6),
+                        index - 1)
+                    : Lowest(
+                        bars,
+                        Math.Max(
+                            0,
+                            index - 6),
+                        index - 1);
 
             double buffer =
                 atr *
@@ -5395,21 +5395,14 @@ namespace cAlgo
                     0,
                     EntryBufferAtr);
 
-            bool bufferPassed =
+            bool breakReady =
                 direction == 1
-                    ? market >=
-                      bars.ClosePrices[index] +
+                    ? bars.ClosePrices[index] >
+                      breakLevel +
                       buffer
-                    : market <=
-                      bars.ClosePrices[index] -
+                    : bars.ClosePrices[index] <
+                      breakLevel -
                       buffer;
-
-            bool extensionOk =
-                Math.Abs(
-                    market -
-                    bars.ClosePrices[index]) <=
-                atr *
-                MaximumEntryExtensionAtr;
 
             if (RequireFreshM5Trigger &&
                 FreshTriggerEvidence(
@@ -5441,17 +5434,13 @@ namespace cAlgo
             }
 
             return
-                ((trigger >=
-                  Math.Max(
-                      4,
-                      requiredTrigger) &&
-                  breakReady &&
-                  bufferPassed) ||
-                 (trigger >= 5 &&
-                  breakReady &&
-                  extensionOk &&
-                  bufferPassed));
+                trigger >=
+                Math.Max(
+                    4,
+                    requiredTrigger) &&
+                breakReady;
         }
+
 
                 // closed-bar structure trigger = signal confirmation.
 // Live price/zone eligibility is evaluated separately by BuildExecutionModel
@@ -5468,32 +5457,18 @@ namespace cAlgo
                     direction);
         }
 
-        private bool EntryTriggerReady(
+                private bool EntryTriggerReady(
             Bars bars,
             int index,
             int direction)
         {
-            if (RequirePrecisionEntry &&
-                ReferenceEquals(
-                    bars,
-                    _m5Bars))
-            {
-                ExecutionModel model =
-                    BuildExecutionModel(
-                        index,
-                        direction);
-
-                if (model != null &&
-                    model.Ready)
-                    return true;
-            }
-
             return
-                TriggerReadyWithoutPrecisionGate(
+                ClosedBarTriggerReady(
                     bars,
                     index,
                     direction);
         }
+
 
         private int BullTriggerScore(
             Bars bars,
@@ -23770,7 +23745,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -23988,7 +23963,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    Server.Time.AddMinutes(
+                    TimeInUtc.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
