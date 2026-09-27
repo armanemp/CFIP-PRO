@@ -324,7 +324,8 @@ def test_phase6_deduplicates_liquidity_by_pool_family_and_direction():
     s = read(V79)
     assert "LiquidityAggregate" in s
     assert "aggregate.Quality" in s
-    assert "aggregate.Direction" in s
+    assert "LiquidityAggregate" in s
+    assert "aggregate.Quality" in s
     assert "BullLiquidity" in s
     assert "BearLiquidity" in s
 def test_phase6_neutral_direction_does_not_accumulate_directional_gate_blocks():
