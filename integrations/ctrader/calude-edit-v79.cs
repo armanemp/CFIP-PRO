@@ -3307,9 +3307,9 @@ namespace cAlgo
                            HasOverlap(zones, z, CFIPClean79ZoneKind.FairValueGap);
                 bool liq = enabled && HasNearbyLiquidity(liquidity, z);
 
-                int q = Clamp(z.Quality +
-                              (fvg ? 8 : 0) +
-                              (liq ? cfg.Get("SmartLiquidityPoolBonus", 12) : 0));
+                // Keep base zone quality independent. Confluence is carried
+                // explicitly by typed flags and consumed once by Decision quality.
+                int q = Clamp(z.Quality);
 
                 zones[i] = new CFIPClean79ZoneRecord(
                     z.Id, z.Kind, z.Direction, z.Timeframe, z.CreatedIndex, z.CreatedUtc,
