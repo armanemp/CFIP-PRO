@@ -6002,6 +6002,37 @@ namespace cAlgo
             RiskRewardToFinalTarget = Math.Max(0, riskRewardToFinalTarget);
             LevelQuality = Math.Max(0, Math.Min(100, levelQuality));
             IsValid = isValid;
+
+            if (IsValid)
+            {
+                if (!CFIPClean81DirectionRules.IsDirectional(Direction))
+                    throw new ArgumentException(
+                        "A valid TradePlan must be directional.",
+                        "direction");
+
+                if (Entry.Direction != Direction)
+                    throw new ArgumentException(
+                        "TradePlan direction must match Entry direction.",
+                        "entry");
+
+                if (!CFIPClean81DirectionRules.IsProtectivePrice(
+                    Direction,
+                    Entry.RequestedEntry != null
+                        ? Entry.RequestedEntry.Price
+                        : Entry.IdealEntry.Price,
+                    StructuralStop.Price))
+                    throw new ArgumentException(
+                        "TradePlan structural stop must protect the selected direction.",
+                        "structuralStop");
+
+                if (!TargetLadder.ValidateForDirection(Direction) ||
+                    TargetLadder.Find(CFIPClean81TargetStage.TP1) == null ||
+                    RiskRewardToTp1 <= 0)
+                    throw new ArgumentException(
+                        "A valid TradePlan requires an ordered TP ladder with TP1 and positive RR.",
+                        "targetLadder");
+            }
+
             CreatedUtc = createdUtc;
             ReferenceBarIndex = referenceBarIndex;
             Provenance =
