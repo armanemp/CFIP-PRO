@@ -156,3 +156,40 @@ def test_v71_live_execution_model_owns_current_market_price() -> None:
     assert "Symbol.Ask" in execution
     assert "Symbol.Bid" in execution
     assert "model.ActualEntry" in execution
+
+
+def test_v71_soft_plan_cannot_bypass_hard_safety_blocks() -> None:
+    v71 = read_source(V71)
+    helper = extract_method(v71, "IsHardDecisionBlockReason")
+    should_plan = extract_method(v71, "ShouldCreatePlan")
+
+    for reason in (
+        "SESSION",
+        "FRIDAY",
+        "SPREAD",
+        "VOLATILITY GUARD",
+        "REGIME NO-TRADE",
+        "NEWS",
+        "COOLDOWN",
+        "DIRECTION FLIP",
+        "CHOP",
+        "M1 MISALIGNMENT",
+    ):
+        assert f'case "{reason}":' in helper
+
+    assert "IsHardDecisionBlockReason" in should_plan
+
+
+def test_v71_normal_auto_execution_allows_only_live_gate_bypass() -> None:
+    v71 = read_source(V71)
+    helper = extract_method(v71, "IsLiveExecutionGateReason")
+    auto_trade = extract_method(v71, "TryAutoTrade")
+
+    for reason in (
+        "TRIGGER",
+        "M5 TRIGGER",
+        "ENTRY LOCATION",
+    ):
+        assert f'case "{reason}":' in helper
+
+    assert "IsLiveExecutionGateReason" in auto_trade
