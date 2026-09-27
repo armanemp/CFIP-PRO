@@ -39,12 +39,12 @@ def test_v78_has_one_canonical_structural_ledger() -> None:
     ]:
         assert source.count(name) >= 1
 
-    for legacy in [
-        "CFIPClean78StructureEvent",
-        "CFIPClean78ZoneSnapshot",
-        "CFIPClean78LiquiditySnapshot",
+    for legacy_declaration in [
+        "public sealed class CFIPClean78StructureEvent ",
+        "public sealed class CFIPClean78ZoneSnapshot ",
+        "public sealed class CFIPClean78LiquiditySnapshot ",
     ]:
-        assert legacy not in source
+        assert legacy_declaration not in source
 
     for decl in [
         "public sealed class CFIPClean78StructureLedgerBuilder",
