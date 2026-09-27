@@ -14,9 +14,9 @@ def params(s):
 
 def test_v79_preserves_v78_parameters():
     a, b = params(read(V78)), params(read(V79))
-    assert len(a) == 512
+    assert len(a) == 513
     assert b == a
-    assert len(set(b)) == 512
+    assert len(set(b)) == 513
 
 def test_phase6_has_authoritative_decision_engine():
     s = read(V79)
@@ -362,3 +362,12 @@ def test_phase6_structure_and_liquidity_identities_are_version_isolated():
     assert "CFIP78|" not in s
     assert "CFIPClean78" not in s
     assert "Clean_v78" not in s
+
+
+def test_v79_parameter_surface_is_exactly_513_and_unique():
+    a, b = params(read(V78)), params(read(V79))
+    assert len(a) == 513
+    assert len(b) == 513
+    assert len(set(a)) == 513
+    assert len(set(b)) == 513
+    assert a == b
