@@ -171,6 +171,17 @@ def test_v87_execution_policy_requires_complete_trade_identity():
     assert "DataIncomplete" in policy
 
 
+
+
+def test_v87_has_no_manual_trade_entry_control_surface():
+    s = read(V87)
+    assert "ShowTradeActionButtons" not in s
+    assert "ManualTradeEntryControlsSupported" in s
+    assert "get { return false; }" in s
+    assert "ExecuteMarketOrder(" in s
+    assert "PlaceStopOrder(" in s
+    assert "PlaceLimitOrder(" in s
+
 def test_v87_broker_confirmation_grace_prevents_false_close_race():
     s = read(V87)
     main = section(
