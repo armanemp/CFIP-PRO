@@ -10776,11 +10776,25 @@ public sealed class CFIPClean88TradePlanBuilder :
         }
     }
 
+    internal sealed class CFIPClean88LivePlanSnapshot
+    {
+        public string PlanId;
+        public CFIPClean88Direction Direction;
+        public double EntryPrice;
+        public double StructuralStopPrice;
+        public double InvalidationPrice;
+        public double? Tp1Price;
+        public double? Tp2Price;
+        public double? Tp3Price;
+        public double? Tp4Price;
+    }
+
     internal sealed class CFIPClean88LivePositionContext
     {
         public string BrokerPositionId;
         public string PlanId;
         public CFIPClean88Direction Direction;
+        public CFIPClean88LivePlanSnapshot PlanSnapshot;
         public double InitialEntryPrice;
         public double InitialRiskPrice;
         public double InitialVolumeInUnits;
@@ -10843,12 +10857,30 @@ public sealed class CFIPClean88TradePlanBuilder :
 
             CFIPClean88LivePositionContext existing;
             if (_contexts.TryGetValue(id, out existing))
+            {
+                if (existing.PlanSnapshot == null &&
+                    plan != null &&
+                    plan.Identity != null &&
+                    position.Comment != null &&
+                    position.Comment.IndexOf(
+                        plan.Identity.PlanId,
+                        StringComparison.Ordinal) >= 0 &&
+                    plan.Direction ==
+                        (position.TradeType == TradeType.Buy
+                            ? CFIPClean88Direction.Buy
+                            : CFIPClean88Direction.Sell))
+                    existing.PlanSnapshot =
+                        BuildPlanSnapshot(plan);
+
                 return;
+            }
 
             CFIPClean88Direction direction =
                 position.TradeType == TradeType.Buy
                     ? CFIPClean88Direction.Buy
                     : CFIPClean88Direction.Sell;
+
+            CFIPClean88LivePlanSnapshot planSnapshot = null;
 
             double risk =
                 position.StopLoss.HasValue
@@ -10874,6 +10906,7 @@ public sealed class CFIPClean88TradePlanBuilder :
             if (belongsToPlan)
             {
                 planId = plan.Identity.PlanId;
+                planSnapshot = BuildPlanSnapshot(plan);
 
                 if (plan.StructuralStop != null)
                     risk =
@@ -10901,6 +10934,7 @@ public sealed class CFIPClean88TradePlanBuilder :
                     BrokerPositionId = id,
                     PlanId = planId,
                     Direction = direction,
+                    PlanSnapshot = planSnapshot,
                     InitialEntryPrice = position.EntryPrice,
                     InitialRiskPrice = risk,
                     InitialVolumeInUnits = position.VolumeInUnits,
@@ -10945,7 +10979,15 @@ public sealed class CFIPClean88TradePlanBuilder :
                     out existing))
                 return;
 
-            string planId = string.Empty;
+            string signalId;
+            string parsedPlanId;
+            ParseIdentity(
+                snapshot.Comment,
+                out signalId,
+                out parsedPlanId);
+
+            string planId = parsedPlanId ?? string.Empty;
+            CFIPClean88LivePlanSnapshot planSnapshot = null;
             bool belongsToPlan =
                 plan != null &&
                 plan.Identity != null &&
@@ -10955,7 +10997,10 @@ public sealed class CFIPClean88TradePlanBuilder :
                     StringComparison.Ordinal) >= 0;
 
             if (belongsToPlan)
+            {
                 planId = plan.Identity.PlanId;
+                planSnapshot = BuildPlanSnapshot(plan);
+            }
 
             double risk =
                 snapshot.StopLoss.HasValue
@@ -10983,6 +11028,7 @@ public sealed class CFIPClean88TradePlanBuilder :
                         snapshot.BrokerPositionId,
                     PlanId = planId,
                     Direction = snapshot.Direction,
+                    PlanSnapshot = planSnapshot,
                     InitialEntryPrice =
                         snapshot.EntryPrice,
                     InitialRiskPrice = risk,
@@ -11472,12 +11518,14 @@ public sealed class CFIPClean88TradePlanBuilder :
             double percent = 0;
 
             double? tp1 =
-                GetTargetPrice(
+                GetManagedTargetPrice(
+                    context,
                     plan,
                     CFIPClean88TargetStage.TP1);
 
             double? tp2 =
-                GetTargetPrice(
+                GetManagedTargetPrice(
+                    context,
                     plan,
                     CFIPClean88TargetStage.TP2);
 
@@ -11733,18 +11781,23 @@ public sealed class CFIPClean88TradePlanBuilder :
                     true) &&
                 configuration.Get(
                     "UpdateUnhitTargets",
-                    true) &&
-                plan != null &&
-                plan.TargetLadder != null)
+                    true))
             {
-                CFIPClean88TargetLevel active =
-                    plan.TargetLadder.Find(
-                        context.ActiveTargetStage);
-
-                CFIPClean88TargetLevel next =
-                    NextTarget(
+                double? activePrice =
+                    GetManagedTargetPrice(
+                        context,
                         plan,
                         context.ActiveTargetStage);
+
+                CFIPClean88TargetStage nextStage =
+                    NextTargetStage(
+                        context.ActiveTargetStage);
+
+                double? nextPrice =
+                    GetManagedTargetPrice(
+                        context,
+                        plan,
+                        nextStage);
 
                 bool targetRepriceAllowed =
                     !configuration.Get(
@@ -11760,16 +11813,16 @@ public sealed class CFIPClean88TradePlanBuilder :
                         structure);
 
                 if (targetRepriceAllowed &&
-                    active != null &&
-                    next != null &&
+                    activePrice.HasValue &&
+                    nextPrice.HasValue &&
                     currentRR >=
                         configuration.Get(
                             "TargetUpdateTriggerRR",
                             1.20) &&
                     atr > 0 &&
                     Math.Abs(
-                        next.Level.Price -
-                        active.Level.Price) >=
+                        nextPrice.Value -
+                        activePrice.Value) >=
                         atr *
                         Math.Max(
                             0.05,
@@ -11779,7 +11832,7 @@ public sealed class CFIPClean88TradePlanBuilder :
                     IsNearTarget(
                         context,
                         runtime,
-                        active.Level.Price,
+                        activePrice.Value,
                         configuration.Get(
                             "TpAdvanceProximityPercent",
                             72)))
@@ -11788,37 +11841,36 @@ public sealed class CFIPClean88TradePlanBuilder :
                         BetterTarget(
                             context.Direction,
                             desiredTarget,
-                            next.Level.Price);
+                            nextPrice.Value);
 
                     context.PendingProtectionStage =
-                        next.Stage;
+                        nextStage;
                 }
             }
 
             // Partial TP requires the broker TP to be no earlier than TP2.
-            // Otherwise the full Position may close before TP1 partial execution.
             if (configuration.Get(
                     "EnablePartialTakeProfit",
-                    false) &&
-                plan != null &&
-                plan.TargetLadder != null)
+                    false))
             {
-                CFIPClean88TargetLevel tp2 =
-                    plan.TargetLadder.Find(
+                double? tp2Price =
+                    GetManagedTargetPrice(
+                        context,
+                        plan,
                         CFIPClean88TargetStage.TP2);
 
-                if (tp2 != null &&
+                if (tp2Price.HasValue &&
                     (!desiredTarget.HasValue ||
                      IsTargetBehind(
                          context.Direction,
                          desiredTarget.Value,
-                         tp2.Level.Price)))
+                         tp2Price.Value)))
                 {
                     desiredTarget =
                         BetterTarget(
                             context.Direction,
                             desiredTarget,
-                            tp2.Level.Price);
+                            tp2Price.Value);
 
                     context.PendingProtectionStage =
                         CFIPClean88TargetStage.TP2;
@@ -12052,6 +12104,116 @@ public sealed class CFIPClean88TradePlanBuilder :
 
             return favorable /
                    context.InitialRiskPrice;
+        }
+
+        private CFIPClean88LivePlanSnapshot BuildPlanSnapshot(
+            CFIPClean88TradePlan plan)
+        {
+            if (plan == null ||
+                plan.Identity == null ||
+                plan.TargetLadder == null)
+                return null;
+
+            return new CFIPClean88LivePlanSnapshot
+            {
+                PlanId = plan.Identity.PlanId,
+                Direction = plan.Direction,
+                EntryPrice =
+                    plan.ExecutionAnchor != null
+                        ? plan.ExecutionAnchor.Price
+                        : 0,
+                StructuralStopPrice =
+                    plan.StructuralStop != null
+                        ? plan.StructuralStop.Price
+                        : 0,
+                InvalidationPrice =
+                    plan.Entry != null &&
+                    plan.Entry.Invalidation != null
+                        ? plan.Entry.Invalidation.Price
+                        : 0,
+                Tp1Price = StoredPlanTarget(
+                    plan,
+                    CFIPClean88TargetStage.TP1),
+                Tp2Price = StoredPlanTarget(
+                    plan,
+                    CFIPClean88TargetStage.TP2),
+                Tp3Price = StoredPlanTarget(
+                    plan,
+                    CFIPClean88TargetStage.TP3),
+                Tp4Price = StoredPlanTarget(
+                    plan,
+                    CFIPClean88TargetStage.TP4)
+            };
+        }
+
+        private double? StoredPlanTarget(
+            CFIPClean88TradePlan plan,
+            CFIPClean88TargetStage stage)
+        {
+            if (plan == null ||
+                plan.TargetLadder == null)
+                return null;
+
+            CFIPClean88TargetLevel level =
+                plan.TargetLadder.Find(stage);
+
+            return level != null &&
+                   level.Level != null
+                ? (double?)level.Level.Price
+                : null;
+        }
+
+        private double? GetManagedTargetPrice(
+            CFIPClean88LivePositionContext context,
+            CFIPClean88TradePlan plan,
+            CFIPClean88TargetStage stage)
+        {
+            if (context == null)
+                return null;
+
+            if (plan != null &&
+                plan.Identity != null &&
+                context.PlanSnapshot != null &&
+                string.Equals(
+                    context.PlanId,
+                    plan.Identity.PlanId,
+                    StringComparison.Ordinal))
+            {
+                double? current =
+                    GetTargetPrice(
+                        plan,
+                        stage);
+
+                if (current.HasValue)
+                    return current;
+            }
+
+            if (context.PlanSnapshot == null)
+                return null;
+
+            switch (stage)
+            {
+                case CFIPClean88TargetStage.TP1:
+                    return context.PlanSnapshot.Tp1Price;
+                case CFIPClean88TargetStage.TP2:
+                    return context.PlanSnapshot.Tp2Price;
+                case CFIPClean88TargetStage.TP3:
+                    return context.PlanSnapshot.Tp3Price;
+                case CFIPClean88TargetStage.TP4:
+                    return context.PlanSnapshot.Tp4Price;
+                default:
+                    return null;
+            }
+        }
+
+        private CFIPClean88TargetStage NextTargetStage(
+            CFIPClean88TargetStage stage)
+        {
+            int next = (int)stage + 1;
+            return
+                next > (int)CFIPClean88TargetStage.TP4
+                    ? stage
+                    : (CFIPClean88TargetStage)next;
         }
 
         private double? GetTargetPrice(
@@ -12435,10 +12597,12 @@ public sealed class CFIPClean88TradePlanBuilder :
                 string.IsNullOrWhiteSpace(context.PlanId))
                 return false;
 
-            return string.Equals(
-                context.PlanId,
-                plan.Identity.PlanId,
-                StringComparison.Ordinal);
+            return
+                plan.Direction == context.Direction &&
+                string.Equals(
+                    context.PlanId,
+                    plan.Identity.PlanId,
+                    StringComparison.Ordinal);
         }
 
         private CFIPClean88LivePositionAction NewClose(
