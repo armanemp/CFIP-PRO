@@ -6219,12 +6219,26 @@ namespace cAlgo
                     candidates))
                 return null;
 
-            if (RequireHtfRewardForTp2Plus &&
-                (tp2 <= 0 ||
-                 !IsHtfSourceForReward(
-                     selected,
-                     tp2)))
-                return null;
+            if (RequireHtfRewardForTp2Plus)
+            {
+                if (tp2 > 0 &&
+                    !IsHtfSourceForReward(
+                        selected,
+                        tp2))
+                    return null;
+
+                if (tp3 > 0 &&
+                    !IsHtfSourceForReward(
+                        selected,
+                        tp3))
+                    return null;
+
+                if (tp4 > 0 &&
+                    !IsHtfSourceForReward(
+                        selected,
+                        tp4))
+                    return null;
+            }
 
             if (RequireHtfRewardForTp1 &&
                 !IsHtfSourceForReward(
