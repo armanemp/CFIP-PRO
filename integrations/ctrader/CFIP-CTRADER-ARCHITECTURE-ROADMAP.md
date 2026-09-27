@@ -829,7 +829,7 @@ Every parameter is ACTIVE/DEPRECATED/REMOVED and all effective values can be tra
 
 ### Completed
 
-- preserved all **512/512** v73 public parameters in v75 in the same order, with no duplicate public parameter property names;
+- preserved all **513/513** v73 public parameters in v75 in the same order, with no duplicate public parameter property names;
 - established `CFIPClean75ConfigSnapshot` as the single effective configuration carrier for the complete parameter surface;
 - grouped configuration into explicit canonical domains: Decision, MTF, Structure, Zones, Liquidity, Indicators, Entry, Risk/Targets, Live Management, Filters, Alerts, Automation, Smart Execution, Display, Intelligence, Confluence and Safety/Precision;
 - separated configured Auto Trading / Automatic Orders values from `CFIPClean75RuntimeAuthority`;
@@ -859,8 +859,8 @@ This preserves the higher-level intelligence and allows later phases to make the
 
 Repository-side source validation confirmed:
 
-- v73 parameter count = 512;
-- v75 parameter count = 512;
+- v73 parameter count = 513;
+- v75 parameter count = 513;
 - parameter names and order are identical;
 - no duplicate v75 parameter names;
 - braces are balanced;
@@ -868,7 +868,7 @@ Repository-side source validation confirmed:
 - runtime authority is separate from configuration;
 - no direct cTrader broker mutation calls exist in the v75 shell;
 - manual-entry authority is explicitly unsupported;
-- manifest contains 512 parameter records.
+- manifest contains 513 parameter records.
 
 ### Commits
 
@@ -977,7 +977,7 @@ No forming-bar value may become evidence simply because a downstream helper has 
 ### Validation
 
 Direct repository/source validation confirmed:
-- v75/v76 parameter parity remains 512/512 in identical order;
+- v75/v76 parameter parity remains 513/513 in identical order;
 - v76 source braces are balanced;
 - required M1/M5/M15/M30/H1/H4/D1/W1 contracts exist;
 - a single MTF builder is used from the host calculation cycle;
@@ -1083,8 +1083,8 @@ The following capabilities remain preserved for later phases: complete MTF analy
 ### Validation
 
 Direct repository/source validation confirmed:
-- v76 parameter surface = 512;
-- v77 parameter surface = 512;
+- v76 parameter surface = 513;
+- v77 parameter surface = 513;
 - names and parameter order remain identical;
 - no duplicate public type declarations;
 - source braces are balanced;
@@ -1201,7 +1201,7 @@ No downstream phase should rediscover FVG/OB/liquidity independently.
 ### Validation
 
 Repository/source validation confirms:
-- v77/v78 parameter surface = 512/512 with identical names and order;
+- v77/v78 parameter surface = 513/513 with identical names and order;
 - braces are balanced;
 - no duplicate public type declarations;
 - exactly one canonical StructureLedgerBuilder, StructureSnapshot, StructureEventRecord, ZoneRecord and LiquidityRecord;
@@ -2246,7 +2246,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 |---|---|---|---|---|---|
 | 0 | Continuity & baseline freeze | COMPLETE | 2026-09-27 | v69-v73 + this roadmap | Repository/document review |
 | 1 | Architecture foundation | COMPLETE | 2026-09-27 | v74 | static contract checks added |
-| 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 512/512 parity + static validation |
+| 2 | Configuration/parameters | COMPLETE | 2026-09-27 | v75 | 513/513 parity + static validation |
 | 3 | Time/MTF/data | COMPLETE | 2026-09-27 | v76 | source-level MTF/time validation |
 | 4 | Market model | COMPLETE | 2026-09-27 | v77 | source-level market model validation |
 | 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
