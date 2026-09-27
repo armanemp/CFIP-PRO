@@ -25,10 +25,10 @@ def test_v77_preserves_complete_v76_parameter_surface() -> None:
     names76 = parameter_names(v76)
     names77 = parameter_names(v77)
 
-    assert len(names76) == 512
-    assert len(names77) == 512
+    assert len(names76) == 513
+    assert len(names77) == 513
     assert names77 == names76
-    assert len(set(names77)) == 512
+    assert len(set(names77)) == 513
 
 
 def test_v77_has_one_normalized_market_model() -> None:
