@@ -8629,7 +8629,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             string label =
                 _host.Configuration.Get(
                     "AutoTradeLabel",
-                    "CFIP-SMART-CLEAN82");
+                    "CFIP-SMART-CLEAN83");
 
             var positions = new List<CFIPClean83BrokerPositionSnapshot>();
             foreach (var position in _host.Positions)
@@ -11473,7 +11473,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             string label =
                 _configuration.Get(
                     "AutoTradeLabel",
-                    "CFIP-SMART-CLEAN82");
+                    "CFIP-SMART-CLEAN83");
             string signal =
                 plan.Identity.SignalId ?? string.Empty;
 
@@ -11634,7 +11634,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             string label =
                 _configuration.Get(
                     "AutoTradeLabel",
-                    "CFIP-SMART-CLEAN82");
+                    "CFIP-SMART-CLEAN83");
 
             int count = 0;
             foreach (var position in Positions)
@@ -11652,7 +11652,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             string label =
                 _configuration.Get(
                     "AutoTradeLabel",
-                    "CFIP-SMART-CLEAN82");
+                    "CFIP-SMART-CLEAN83");
 
             int count = 0;
             foreach (var order in PendingOrders)
@@ -11670,7 +11670,7 @@ public sealed class CFIPClean83TradePlanBuilder :
             string label =
                 _configuration.Get(
                     "AutoTradeLabel",
-                    "CFIP-SMART-CLEAN82");
+                    "CFIP-SMART-CLEAN83");
 
             double total = 0;
             HistoricalTrade[] trades =
