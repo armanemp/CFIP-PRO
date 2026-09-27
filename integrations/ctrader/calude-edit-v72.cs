@@ -5834,7 +5834,7 @@ namespace cAlgo
                         : Symbol.Bid);
 
             Zone m5Fvg =
-                FindNearestFvg(
+                FindNearestFvgForExecution(
                     _m5Bars,
                     closedM5,
                     direction,
@@ -5863,7 +5863,7 @@ namespace cAlgo
             if (m15Index >= 10 && m15Atr > 0)
             {
                 m15Fvg =
-                    FindNearestFvg(
+                    FindNearestFvgForExecution(
                         _m15Bars,
                         m15Index,
                         direction,
@@ -10778,7 +10778,8 @@ namespace cAlgo
             Bars bars,
             int index,
             int direction,
-            double atr)
+            double atr,
+            bool requireCurrentRetest = true)
         {
             if (!UseFvg ||
                 bars == null ||
@@ -10917,7 +10918,8 @@ namespace cAlgo
                 MaximumZoneAgeBars)
                 return null;
 
-            if (RequireFvgRetest)
+            if (requireCurrentRetest &&
+                RequireFvgRetest)
             {
                 double price =
                     bars.ClosePrices[index];
@@ -11754,6 +11756,20 @@ namespace cAlgo
         }
 
         // Internal FVG engine: standard 3-candle FVG plus optional 2-bar imbalance, with body/wick-aware partial mitigation. No chart objects are created here.
+        private Zone FindNearestFvgForExecution(
+            Bars bars,
+            int index,
+            int direction,
+            double atr)
+        {
+            return FindNearestFvg(
+                bars,
+                index,
+                direction,
+                atr,
+                false);
+        }
+
         private Zone FindNearestOpposingZone(
             Bars bars,
             int index,
