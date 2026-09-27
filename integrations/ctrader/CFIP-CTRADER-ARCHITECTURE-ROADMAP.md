@@ -1315,6 +1315,8 @@ Every execution path receives the same DecisionSnapshot.
 - 485d1aea2070186bfc00daaef5e311037ced01fb — clarify Phase 6 parameter ownership boundaries
 - 1dab6fb870f2a666926b81d230278c56ed9c01b1 — clarify Decision-quality ownership of legacy Entry filter
 - 7f11fc037e5faa5685d642a2705c417349d1af0b — validate final Decision ownership boundaries
+- c6e371ce02fa5bf041cc52ba2d7bd8d503104299 — deduplicate structural zone and liquidity evidence
+- 8d1004063c8d1b26fa15ad811f71df9b1fd97790 — validate zone/liquidity evidence deduplication
 - c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
 
 **Implemented:**
@@ -1335,6 +1337,8 @@ Every execution path receives the same DecisionSnapshot.
 - directional shares use the configured SmartScoreTemperature softmax and exact zero/tie evidence remains WAIT
 - Premium/Discount is preserved as location bias only and does not increment independent evidence
 - HigherTfPenalty is preserved as a confidence-risk penalty for H1/H4/D1 opposition, separate from directional evidence
+- structural Zone evidence is family-deduplicated per direction (FVG/OB), preventing record-count inflation
+- liquidity evidence is family-deduplicated per direction by liquidity-pool kind, preserving distinct pool categories without repeated-timeframe inflation
 - `UseAdvancedConfluence` now explicitly controls the confluence contribution to Decision quality
 - DecisionSnapshot now enforces WAIT/block/eligibility/policy consistency at construction time
 - legacy `UseSmartEntryQualityFilter` is explicitly treated as a Decision-quality floor in Phase 6, not as Entry/Trigger eligibility
@@ -1364,6 +1368,7 @@ Every execution path receives the same DecisionSnapshot.
 - advanced-confluence switch checks
 - explicit parameter-ownership/disposition checks for deferred Trigger/Entry controls
 - final Decision Engine boundary check: exactly one final direction assignment and no broker/UI mutation
+- zone-family and liquidity-pool-family evidence deduplication checks
 
 **Latest findings/fixes:** a compile-critical missing internal type was found: v79 referenced `FeatureAggregate` without defining it. This is now fixed. A second decision-integrity defect was also found: equal-strength opposing observations of one market feature could inherit the answer from timeframe loop order. The aggregator now resolves BUY/SELL strengths symmetrically and treats exact ties as neutral.
 
