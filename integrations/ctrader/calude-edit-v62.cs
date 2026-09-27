@@ -159,19 +159,19 @@
 //    auto-entry path has no Plan/TP ladder to scale out of, so it is
 //    unaffected and keeps its existing single-target behavior.
 // ============================================================================
-// v62 changes (Phase 2 · smart execution + compile/runtime integrity):
-//  - Fixed both CS0120 errors: Parameter DefaultValue now uses a static enum.
-//  - Added Market Suitability scoring for session, spread, volatility,
-//    trend/MTF, ADX, chop, daily pivot, event/news and evidence.
+// v62 changes (Phase 2 · smart execution + runtime integrity):
+//  - Fixed both CS0120 errors: Parameter DefaultValue uses static enum constants.
+//  - Added Market Suitability scoring for session, spread, volatility, trend/MTF,
+//    ADX, chop, daily pivot, event/news and evidence context.
 //  - Auto Trading and Automatic Orders remain independent and both use the
 //    same execution-quality suitability gate.
-//  - Risk sizing scales downward from configured risk based on confidence,
-//    suitability and choppy-regime conditions; margin guard remains active.
-//  - Market/pending execution paths retain explicit hasTrailingStop=false.
-//  - Close/Cancel controls use the authoritative managed-position/pending-order
-//    identity, including the -PENDING suffix.
+//  - Risk sizing scales downward from configured risk; margin protection remains
+//    authoritative and generic cTrader trailing remains explicitly disabled.
+//  - Close/Cancel controls use the same managed identity as the execution engine
+//    and do not erase state when the broker rejects/retains the object.
 //  - Managed Position Label is honored consistently.
-//  - v61 remains unchanged; v62 is a new independent file.
+//  - Suitability runtime recalculation is throttled for responsiveness/performance.
+//  - v61 remains unchanged; v62 is the independent continuation.
 // ============================================================================
 
 using System;
@@ -14586,6 +14586,7 @@ namespace cAlgo
                     border * 2);
 
             bool showSafetyButtons =
+                ShowTradeActionButtons ||
                 AlwaysShowSafetyButtons;
 
             bool showButtonRow =
@@ -17342,7 +17343,7 @@ private void ExecutePartialClose(
                 RefreshMarketSuitability(
                     closedM5,
                     direction,
-                    true);
+                    false);
 
             reason = _marketSuitabilityReason;
 
@@ -17582,7 +17583,10 @@ private void ExecutePartialClose(
                 "  •  " +
                 (HasTradingPermission() ? "PERM OK" : "PERM OFF") +
                 "  •  " +
-                (EnableAutomaticOrders ? "ORDERS ON" : "ORDERS OFF");
+                (EnableAutomaticOrders ? "ORDERS ON" : "ORDERS OFF") +
+                "  •  SMART EXEC " +
+                _marketSuitabilityScore +
+                "/100";
         }
 
 private Color AutoTradingPanelColor()
@@ -18373,9 +18377,12 @@ private Color AutoTradingPanelColor()
                 }
             }
 
-            _plan = null;
-            _executionModel = null;
-            RemovePlanObjects();
+            if (GetManagedPosition() == null)
+            {
+                _plan = null;
+                _executionModel = null;
+                RemovePlanObjects();
+            }
         }
 
         private void CancelAllOrders()
@@ -18397,7 +18404,8 @@ private Color AutoTradingPanelColor()
                 }
             }
 
-            RemoveManagedPendingOrderObjects();
+            if (GetManagedPendingOrder() == null)
+                RemoveManagedPendingOrderObjects();
         }
 
         private int FreshTriggerEvidence(
