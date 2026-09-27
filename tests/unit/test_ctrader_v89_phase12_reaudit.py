@@ -180,3 +180,60 @@ def test_v89_pending_order_still_supports_multi_position_fill_ownership():
     assert "private readonly List<string> _brokerPositionIds" in pending
     assert "public IReadOnlyList<string> BrokerPositionIds" in pending
     assert "_brokerPositionIds.Contains(id)" in pending
+
+
+def test_v89_live_position_protection_uses_current_market_side():
+    gateway = section(
+        read(V89),
+        "public sealed class CFIPClean89CTraderBrokerGateway",
+        "public sealed class CFIPClean89CTraderBrokerStateReader",
+    )
+    assert "ValidateLivePositionProtection(" in gateway
+    assert "double stopAnchor =" in gateway
+    assert "double targetAnchor =" in gateway
+    assert "position.EntryPrice" not in section(
+        gateway,
+        "public CFIPClean89ExecutionResult ModifyProtection(",
+        "public CFIPClean89ExecutionResult PartialClosePosition(",
+    )
+
+
+def test_v89_unprotected_managed_positions_are_not_dropped_from_live_context():
+    live = section(
+        read(V89),
+        "public sealed class CFIPClean89LivePositionManager",
+        "public class CFIP_MTF_LiveEntryEngine_Clean_v89",
+    )
+    assert "InitialRiskPrice = risk" in live
+    assert "ManagementRecoveryRequired =" in live
+    assert "if (risk <= 0)\n                return;" not in live
+
+
+def test_v89_gateway_enforces_managed_object_ownership_before_mutation():
+    gateway = section(
+        read(V89),
+        "public sealed class CFIPClean89CTraderBrokerGateway",
+        "public sealed class CFIPClean89CTraderBrokerStateReader",
+    )
+    assert "private bool IsManagedPosition(" in gateway
+    assert "private bool IsManagedPendingOrder(" in gateway
+    assert gateway.count("POSITION_NOT_MANAGED") >= 3
+    assert gateway.count("PENDING_ORDER_NOT_MANAGED") >= 2
+
+
+def test_v89_initializes_state_and_lifecycle_before_broker_events():
+    source = read(V89)
+    state_pos = source.index(
+        "_state = new CFIPClean89EngineState();",
+        source.index("protected override void Initialize()"),
+    )
+    lifecycle_pos = source.index(
+        "_lifecycle = new CFIPClean89LifecycleManager();",
+        source.index("protected override void Initialize()"),
+    )
+    event_pos = source.index(
+        "PendingOrders.Created += PendingOrders_Created;",
+        source.index("protected override void Initialize()"),
+    )
+    assert state_pos < event_pos
+    assert lifecycle_pos < event_pos
