@@ -8504,29 +8504,34 @@ public sealed class CFIPClean83TradePlanBuilder :
                 if (order == null)
                     return Failure("PENDING_ORDER_NOT_FOUND");
 
-                if (stopLoss.HasValue)
-                {
-                    TradeResult stopResult =
-                        order.ModifyStopLossPrice(stopLoss.Value);
+                double? effectiveStop =
+                    stopLoss.HasValue
+                        ? stopLoss
+                        : order.StopLoss;
 
-                    if (!stopResult.IsSuccessful)
-                        return Failure(
-                            stopResult.Error != null
-                                ? stopResult.Error.ToString()
-                                : "PENDING_STOP_MODIFICATION_REJECTED");
-                }
+                double? effectiveTarget =
+                    takeProfit.HasValue
+                        ? takeProfit
+                        : order.TakeProfit;
 
-                if (takeProfit.HasValue)
-                {
-                    TradeResult targetResult =
-                        order.ModifyTakeProfitPrice(takeProfit.Value);
+                if (!effectiveStop.HasValue ||
+                    !effectiveTarget.HasValue)
+                    return Failure("PENDING_PROTECTION_INCOMPLETE");
 
-                    if (!targetResult.IsSuccessful)
-                        return Failure(
-                            targetResult.Error != null
-                                ? targetResult.Error.ToString()
-                                : "PENDING_TARGET_MODIFICATION_REJECTED");
-                }
+                TradeResult result =
+                    _host.ModifyPendingOrder(
+                        order,
+                        order.TargetPrice,
+                        effectiveStop,
+                        effectiveTarget,
+                        ProtectionType.Absolute,
+                        order.ExpirationTime);
+
+                if (!result.IsSuccessful)
+                    return Failure(
+                        result.Error != null
+                            ? result.Error.ToString()
+                            : "PENDING_PROTECTION_MODIFICATION_REJECTED");
 
                 return Success(
                     "PENDING_PROTECTION_MODIFIED",
