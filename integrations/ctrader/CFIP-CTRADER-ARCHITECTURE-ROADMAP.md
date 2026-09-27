@@ -1470,6 +1470,9 @@ The chart line, panel, plan and execution intent all agree on what Entry and Tri
 - 958de27e84c398333c6582cf95ad6a82eea3e285 — eliminate remaining invalid zone midpoint references
 - 35f78e12b36375c1cf166af8320fa4691c4449f9 — remove inconsistent entry timestamp handling
 - 0cada1be318bd1a2919a7f256637e38aab73ffd0 — enforce typed trigger evidence and retest touch semantics
+- ffd3ec8683e3b39b22a241f979c568b98049634a — validate Phase-7 chronology guards
+- 97e2aae5e87537d8bbffa91cdf06af7331abae34 — align order-block retest parameter key
+- 99c1549e4b4af49324ca46b5ba55f68cb7e63f7d — validate canonical order-block retest key
 - e4fac0af0add7d84a3999ac6edaa0cc84b2c4016 — add cTrader static-test workflow
 
 **Implemented:**
@@ -1500,7 +1503,9 @@ The chart line, panel, plan and execution intent all agree on what Entry and Tri
 - retest/breakout/trigger/stale/expiry/invalidation/spread/precision source checks
 - trigger evidence is isolated from generic market IndependentEvidence
 - breakout trigger candle-body/range/close-location gates are wired
-- 21 dedicated Phase-7 source-level tests
+- chronological guards prevent retroactive retests and future trigger events
+- all Phase-7 configuration keys used by Entry resolve to the canonical 513-parameter surface
+- 24 dedicated Phase-7 source-level tests
 
 **Acceptance status:**
 
