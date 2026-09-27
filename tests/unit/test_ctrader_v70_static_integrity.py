@@ -318,3 +318,55 @@ def test_v71_decision_policy_is_explicit_and_named() -> None:
     assert "allowUnconfirmedAutoPlan" not in v71
     assert "private bool ShouldCreatePlan(" in v71
     assert "CFIPClean71DecisionPolicyMode policy" in v71
+
+
+
+def test_v72_structure_zone_contracts_are_present() -> None:
+    v72 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v72.cs"
+    )
+
+    assert "private bool IsClosedAnalysisIndex(" in v72
+
+    guarded_methods = [
+        "BullStructure",
+        "BearStructure",
+        "BullMss",
+        "BearMss",
+        "BullChoch",
+        "BearChoch",
+        "BullDisplacement",
+        "BearDisplacement",
+        "BullLiquiditySweep",
+        "BearLiquiditySweep",
+        "FindSwingHigh",
+        "FindSwingLow",
+        "FindNearestFvg",
+        "FindNearestOrderBlock",
+        "FindEqualHigh",
+        "FindEqualLow",
+        "BuildManagedFvgZone",
+        "BuildOrderBlockCandidate",
+        "HasZoneRetest",
+        "IsZoneFullyMitigated",
+        "HasOrderBlockLiquiditySweep",
+        "HasOrderBlockFvgConfluence",
+    ]
+
+    for method_name in guarded_methods:
+        assert "IsClosedAnalysisIndex(" in extract_method(
+            v72,
+            method_name,
+        )
+
+
+def test_v72_does_not_reintroduce_host_clock_or_old_execution_label() -> None:
+    v72 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v72.cs"
+    )
+
+    assert "Server.Time" not in v72
+    assert "DateTime.Now" not in v72
+    assert "DateTime.UtcNow" not in v72
+    assert "CFIP SMART70" not in v72
+    assert "SMART70" not in v72
