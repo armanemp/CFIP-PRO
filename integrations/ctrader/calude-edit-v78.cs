@@ -2626,7 +2626,10 @@ namespace cAlgo
             AddPriorDayWeekLiquidity(liquidity, mtf, d1Bars, w1Bars, configuration);
             AddSessionLiquidity(liquidity, mtf, m5Bars, configuration);
             AddDailyPivots(liquidity, mtf, d1Bars, configuration);
-            MarkForecastLiquidity(liquidity, market.M5);
+            MarkForecastLiquidity(
+                liquidity,
+                market.M5,
+                configuration);
             MarkConfluence(zones, liquidity, configuration);
 
             var direction = ResolveDirection(events);
@@ -2778,7 +2781,8 @@ namespace cAlgo
                 {
                     zones.Add(BuildFvg(
                         bars, i, index, timeframe, CFIPClean78Direction.Buy,
-                        bars.HighPrices[i - 2], bars.LowPrices[i], bullGap, atr, maxAge, cfg));
+                        bars.HighPrices[i - 2], bars.LowPrices[i],
+                        bullGap, atr, maxAge, cfg, "three-candle imbalance FVG"));
                     count++;
                 }
 
@@ -2787,8 +2791,42 @@ namespace cAlgo
                 {
                     zones.Add(BuildFvg(
                         bars, i, index, timeframe, CFIPClean78Direction.Sell,
-                        bars.HighPrices[i], bars.LowPrices[i - 2], bearGap, atr, maxAge, cfg));
+                        bars.HighPrices[i], bars.LowPrices[i - 2],
+                        bearGap, atr, maxAge, cfg, "three-candle imbalance FVG"));
                     count++;
+                }
+
+                if (cfg.Get("UseTwoBarImbalanceFvg", false) &&
+                    count < 24 &&
+                    i >= 1)
+                {
+                    double twoBarBull =
+                        bars.LowPrices[i] -
+                        bars.HighPrices[i - 1];
+
+                    if (twoBarBull >= atr * minGap)
+                    {
+                        zones.Add(BuildFvg(
+                            bars, i, index, timeframe, CFIPClean78Direction.Buy,
+                            bars.HighPrices[i - 1], bars.LowPrices[i],
+                            twoBarBull, atr, maxAge, cfg,
+                            "two-bar imbalance FVG"));
+                        count++;
+                    }
+
+                    double twoBarBear =
+                        bars.LowPrices[i - 1] -
+                        bars.HighPrices[i];
+
+                    if (twoBarBear >= atr * minGap && count < 24)
+                    {
+                        zones.Add(BuildFvg(
+                            bars, i, index, timeframe, CFIPClean78Direction.Sell,
+                            bars.HighPrices[i], bars.LowPrices[i - 1],
+                            twoBarBear, atr, maxAge, cfg,
+                            "two-bar imbalance FVG"));
+                        count++;
+                    }
                 }
             }
         }
@@ -2796,9 +2834,15 @@ namespace cAlgo
         private CFIPClean78ZoneRecord BuildFvg(
             Bars bars, int created, int current, string timeframe,
             CFIPClean78Direction direction, double lower, double upper,
-            double gap, double atr, int maxAge, CFIPClean78ConfigSnapshot cfg)
+            double gap, double atr, int maxAge,
+            CFIPClean78ConfigSnapshot cfg,
+            string rule)
         {
             bool retested = false, partial = false, consumed = false;
+            bool partialEnabled =
+                cfg.Get(
+                    "EnableFvgPartialMitigation",
+                    true);
             double currentLower = lower, currentUpper = upper;
             bool breakByWicks = cfg.Get("FvgBreakByWicks", true);
 
@@ -2813,19 +2857,47 @@ namespace cAlgo
 
                 if (direction == CFIPClean78Direction.Buy)
                 {
-                    if (bars.LowPrices[i] > lower) partial = true;
-                    currentLower = Math.Max(lower, Math.Min(upper, bars.LowPrices[i]));
+                    if (partialEnabled &&
+                        bars.LowPrices[i] > lower)
+                    {
+                        partial = true;
+                        currentLower =
+                            Math.Max(
+                                lower,
+                                Math.Min(
+                                    upper,
+                                    bars.LowPrices[i]));
+                    }
+
                     if ((breakByWicks && bars.LowPrices[i] <= lower) ||
                         (!breakByWicks && bars.ClosePrices[i] <= lower))
-                    { consumed = true; break; }
+                    {
+                        // Full consumption is a safety invariant; it cannot
+                        // be disabled by a presentation/configuration toggle.
+                        consumed = true;
+                        break;
+                    }
                 }
                 else
                 {
-                    if (bars.HighPrices[i] < upper) partial = true;
-                    currentUpper = Math.Min(upper, Math.Max(lower, bars.HighPrices[i]));
+                    if (partialEnabled &&
+                        bars.HighPrices[i] < upper)
+                    {
+                        partial = true;
+                        currentUpper =
+                            Math.Min(
+                                upper,
+                                Math.Max(
+                                    lower,
+                                    bars.HighPrices[i]));
+                    }
+
                     if ((breakByWicks && bars.HighPrices[i] >= upper) ||
                         (!breakByWicks && bars.ClosePrices[i] >= upper))
-                    { consumed = true; break; }
+                    {
+                        consumed = true;
+                        break;
+                    }
                 }
             }
 
@@ -2858,7 +2930,7 @@ namespace cAlgo
                 age, retested, partial, consumed, consumed, eligible,
                 quality, gap / Math.Max(0.0000001, atr),
                 false, false, lifecycle,
-                CFIPClean78Provenance.Direct(timeframe, "three-candle imbalance FVG"));
+                CFIPClean78Provenance.Direct(timeframe, rule ?? "FVG"));
         }
 
         private void BuildObZones(
@@ -3176,9 +3248,11 @@ namespace cAlgo
 
         private void MarkForecastLiquidity(
             IList<CFIPClean78LiquidityRecord> liquidity,
-            CFIPClean78MarketFrame m5)
+            CFIPClean78MarketFrame m5,
+            CFIPClean78ConfigSnapshot cfg)
         {
-            if (m5 == null ||
+            if (!cfg.Get("UseLiquidityForecast", true) ||
+                m5 == null ||
                 !m5.DataValid)
                 return;
 
@@ -3202,7 +3276,7 @@ namespace cAlgo
                 liquidity[i] =
                     new CFIPClean78LiquidityRecord(
                         item.Id,
-                        CFIPClean78LiquidityKind.Forecast,
+                        item.Kind,
                         item.Side,
                         item.SweepDirection,
                         item.Timeframe,
