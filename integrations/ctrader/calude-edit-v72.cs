@@ -76,7 +76,10 @@
 //    consumed — so a gap price had already traded straight through could
 //    be reported as a fresh, full-size zone to live entry/SL/TP selection.
 //    It now collapses to zero width on a full breach in both modes, so the
-//    existing post-loop guard excludes it correctly either way. Verified
+//    existing post-loop guard excludes it correctly either way. The legacy
+//    parameter remains preset-compatible but full-breach invalidation is now
+//    always safety-enforced; a consumed FVG is never resurrected. Verified
+//    equivalent Order Block logic does not revive fully mitigated zones.rified
 //    the equivalent Order Block zone builder did not have this bug.
 // ============================================================================
 // v53 changes (Phase 2 continued — liquidity & order-block review):
@@ -1701,7 +1704,10 @@ namespace cAlgo
         [Parameter("Require Order Block Retest", Group = "22 · Safety & Precision", DefaultValue = false)]
         public bool RequireObRetest { get; set; }
 
-        [Parameter("FVG Invalidate On Full Fill", Group = "22 · Safety & Precision", DefaultValue = true)]
+        // Full FVG breaches are safety-enforced after v72 mitigation hardening.
+// The bool is retained for preset compatibility; a fully consumed FVG can
+// never be resurrected as an active zone.
+[Parameter("FVG Invalidate On Full Fill (Safety-Enforced)", Group = "22 · Safety & Precision", DefaultValue = true)]
         public bool FvgInvalidateOnFullFill { get; set; }
 
         [Parameter("FVG Partial Mitigation", Group = "22 · Safety & Precision", DefaultValue = true)]
