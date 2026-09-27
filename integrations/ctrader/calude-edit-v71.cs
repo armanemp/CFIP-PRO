@@ -3937,7 +3937,8 @@ namespace cAlgo
 
             d.TimeframeAgreement =
                 TimeframeAgreement(
-                    d.Direction);
+                    d.Direction,
+                    reference);
 
             d.IndependentEvidence =
                 IndependentEvidence(
@@ -4095,7 +4096,9 @@ namespace cAlgo
                 evidence++;
         }
 
-        private int TimeframeAgreement(int direction)
+                private int TimeframeAgreement(
+            int direction,
+            DateTime reference)
         {
             Frame[] frames =
             {
@@ -4108,13 +4111,63 @@ namespace cAlgo
                 _w1Frame
             };
 
+            Bars[] bars =
+            {
+                _m5Bars,
+                _m15Bars,
+                _m30Bars,
+                _h1Bars,
+                _h4Bars,
+                _d1Bars,
+                _w1Bars
+            };
+
+            double[] weights =
+            {
+                M5Weight,
+                M15Weight,
+                M30Weight,
+                H1Weight,
+                H4Weight,
+                D1Weight,
+                W1Weight
+            };
+
+            bool[] enabled =
+            {
+                true,
+                true,
+                M30Weight > 0,
+                H1Weight > 0,
+                H4Weight > 0,
+                D1Weight > 0,
+                SmartWeeklyContext &&
+                W1Weight > 0
+            };
+
             int total = 0;
             int aligned = 0;
 
-            for (int i = 0; i < frames.Length; i++)
+            for (int i = 0;
+                 i < frames.Length;
+                 i++)
             {
-                if (frames[i] == null ||
+                if (!enabled[i] ||
+                    weights[i] <= 0 ||
+                    frames[i] == null ||
+                    bars[i] == null ||
                     frames[i].Quality <= 0)
+                    continue;
+
+                int closedIndex =
+                    ClosedIndex(
+                        bars[i],
+                        reference);
+
+                // Agreement may use a timeframe only when the frame was
+                // calculated for the same fully-closed bar as this decision.
+                if (closedIndex < 0 ||
+                    frames[i].Index != closedIndex)
                     continue;
 
                 total++;
@@ -4132,6 +4185,7 @@ namespace cAlgo
                         0,
                         100);
         }
+
 
         private int IndependentEvidence(
             int direction)
