@@ -26,7 +26,8 @@ on:
       - "tests/unit/test_ctrader_v84_phase11_position.py"
       - "tests/unit/test_ctrader_v85_phase11_reaudit.py"
       - "tests/unit/test_ctrader_v86_phase11_lifecycle.py"
-      - "tests/unit/test_ctrader_v87_phase12_live_management.py"
+      - "tests/unit/test_ctrader_v87_phase11_hardening.py"
+      - "tests/unit/test_ctrader_v88_phase12_live_management.py"
       - ".github/workflows/ctrader-static.yml"
 
 jobs:
