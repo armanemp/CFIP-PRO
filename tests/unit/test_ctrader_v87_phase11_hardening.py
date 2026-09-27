@@ -201,7 +201,7 @@ def test_v87_pending_actions_feed_results_back_into_lifecycle():
     pending = section(
         s,
         "public sealed class CFIPClean87PendingOrderLifecycleManager",
-        "public sealed class CFIPClean87PositionAction",
+        "public sealed class CFIPClean87LivePositionAction",
     )
     main = section(
         s,
