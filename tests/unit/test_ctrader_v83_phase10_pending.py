@@ -300,3 +300,21 @@ def test_phase10_execution_configuration_keys_exist_on_canonical_parameter_surfa
     assert len(properties) == 513
     assert keys <= properties
     assert len(keys) >= 100
+
+
+def test_phase10_gateway_persists_parseable_cfip83_identity_comment():
+    s = read(V83)
+    assert '"CFIP83|SIGNAL|" +' in s
+    assert '"|PLAN|" +' in s
+    assert '"CFIP-SMART-CLEAN83"' in s
+    assert '"CFIP-SMART-CLEAN82"' not in s
+
+
+def test_phase10_identity_parser_returns_values_not_marker_prefixes():
+    m = pending_manager(read(V83))
+    start = m.index("private void ParseIdentity")
+    end = m.index("private bool IsManaged", start)
+    section = m[start:end]
+    assert "signalStart + signalMarker.Length" in section
+    assert "planStart + planMarker.Length" in section
+    assert ".Trim('|')" in section
