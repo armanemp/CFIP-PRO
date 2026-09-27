@@ -8538,11 +8538,8 @@ public sealed class CFIPClean89TradePlanBuilder :
                         : position.TakeProfit;
 
                 string protectionError;
-                if (!ValidateProtectionLevels(
-                        position.TradeType == TradeType.Buy
-                            ? CFIPClean89Direction.Buy
-                            : CFIPClean89Direction.Sell,
-                        position.EntryPrice,
+                if (!ValidateLivePositionProtection(
+                        position,
                         effectiveStop,
                         effectiveTarget,
                         out protectionError))
@@ -8760,6 +8757,100 @@ public sealed class CFIPClean89TradePlanBuilder :
             {
                 return Failure(ex.Message);
             }
+        }
+
+        private bool ValidateLivePositionProtection(
+            Position position,
+            double? stopLoss,
+            double? takeProfit,
+            out string error)
+        {
+            error = string.Empty;
+
+            if (position == null ||
+                _host.Symbol.PipSize <= 0)
+            {
+                error = "POSITION_PROTECTION_CONTEXT_INVALID";
+                return false;
+            }
+
+            CFIPClean89Direction direction =
+                position.TradeType == TradeType.Buy
+                    ? CFIPClean89Direction.Buy
+                    : CFIPClean89Direction.Sell;
+
+            double stopAnchor =
+                direction == CFIPClean89Direction.Buy
+                    ? _host.Symbol.Bid
+                    : _host.Symbol.Ask;
+
+            double targetAnchor =
+                direction == CFIPClean89Direction.Buy
+                    ? _host.Symbol.Ask
+                    : _host.Symbol.Bid;
+
+            if (stopLoss.HasValue)
+            {
+                bool validStop =
+                    direction == CFIPClean89Direction.Buy
+                        ? stopLoss.Value < stopAnchor
+                        : stopLoss.Value > stopAnchor;
+
+                if (!validStop)
+                {
+                    error = "LIVE_STOP_DIRECTION_INVALID";
+                    return false;
+                }
+
+                double minStopPips =
+                    MinimumDistancePips(
+                        _host.Symbol.MinStopLossDistance);
+
+                if (minStopPips > 0 &&
+                    Math.Abs(stopAnchor - stopLoss.Value) /
+                    _host.Symbol.PipSize + 0.000001 <
+                    minStopPips)
+                {
+                    error = "BROKER_STOP_DISTANCE_INVALID";
+                    return false;
+                }
+            }
+
+            if (takeProfit.HasValue)
+            {
+                bool validTarget =
+                    direction == CFIPClean89Direction.Buy
+                        ? takeProfit.Value > targetAnchor
+                        : takeProfit.Value < targetAnchor;
+
+                if (!validTarget)
+                {
+                    error = "LIVE_TARGET_DIRECTION_INVALID";
+                    return false;
+                }
+
+                double minTargetPips =
+                    MinimumDistancePips(
+                        _host.Symbol.MinTakeProfitDistance);
+
+                if (minTargetPips > 0 &&
+                    Math.Abs(takeProfit.Value - targetAnchor) /
+                    _host.Symbol.PipSize + 0.000001 <
+                    minTargetPips)
+                {
+                    error = "BROKER_TARGET_DISTANCE_INVALID";
+                    return false;
+                }
+            }
+
+            if (!stopLoss.HasValue &&
+                !takeProfit.HasValue)
+            {
+                error = "PROTECTION_INCOMPLETE";
+                return false;
+            }
+
+            return true;
         }
 
         private bool ValidateProtectionLevels(
@@ -10946,9 +11037,6 @@ public sealed class CFIPClean89TradePlanBuilder :
                         position.TakeProfit);
             }
 
-            if (risk <= 0)
-                return;
-
             _contexts[id] =
                 new CFIPClean89LivePositionContext
                 {
@@ -11038,9 +11126,6 @@ public sealed class CFIPClean89TradePlanBuilder :
                         snapshot.EntryPrice -
                         plan.StructuralStop.Price);
             }
-
-            if (risk <= 0)
-                return;
 
             _contexts[snapshot.BrokerPositionId] =
                 new CFIPClean89LivePositionContext
@@ -14603,6 +14688,9 @@ public sealed class CFIPClean89TradePlanBuilder :
             _livePositionManager =
                 new CFIPClean89LivePositionManager();
 
+            _state = new CFIPClean89EngineState();
+            _lifecycle = new CFIPClean89LifecycleManager();
+
             PendingOrders.Created += PendingOrders_Created;
             PendingOrders.Modified += PendingOrders_Modified;
             PendingOrders.Filled += PendingOrders_Filled;
@@ -14629,8 +14717,6 @@ public sealed class CFIPClean89TradePlanBuilder :
                     order,
                     DateTime.MinValue);
 
-            _state = new CFIPClean89EngineState();
-            _lifecycle = new CFIPClean89LifecycleManager();
         }
 
         public override void Calculate(int index)
