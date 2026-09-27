@@ -257,11 +257,14 @@ def test_phase10_no_manual_entry_controls_are_introduced():
 
 
 def test_phase10_pending_record_carries_filled_position_identity():
-    m = pending_manager(read(V83))
+    s = read(V83)
+    m = pending_manager(s)
     assert "BrokerPositionId" in m
     assert "MarkFilled(" in m
-    assert "args.Position" in m
     assert "BrokerPositionId =" in m
+    host = s[s.index("public class CFIP_MTF_LiveEntryEngine_Clean_v83"):]
+    assert "args.Position" in host
+    assert "HandleFilled(" in host
 
 
 def test_phase10_restart_reconciliation_can_match_filled_position_by_plan_identity():
