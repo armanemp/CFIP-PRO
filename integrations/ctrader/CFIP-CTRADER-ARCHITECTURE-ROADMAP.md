@@ -660,7 +660,7 @@ Complete when the repository has a recoverable baseline and a documented roadmap
 
 ## PHASE 1 — Architecture foundation and canonical contracts
 
-**Status: NOT STARTED**
+**Status: COMPLETE — 2026-09-27**
 
 ### Objective
 
@@ -702,6 +702,72 @@ Build the new internal architecture before changing behavior.
 - no circular dependency between analysis/execution/UI
 
 ---
+
+## Phase 1 completion record
+
+**Implementation version:** `integrations/ctrader/calude-edit-v74.cs`  
+**Phase document:** `docs/ctrader/CFIP-V74-PHASE-01-ARCHITECTURE.md`
+
+### Files added
+
+- `integrations/ctrader/calude-edit-v74.cs`
+- `docs/ctrader/CFIP-V74-PHASE-01-ARCHITECTURE.md`
+- `tests/unit/test_ctrader_v74_architecture.py`
+
+### Commits
+
+- `dda8d524417cd448ccb99abf29ed540e59e6407d` — v74 foundation
+- `5a73d5817ada0e2df29e6ba09e4c7f21aaebfdd5` — explicit cTrader API namespace / compile-safety correction
+- `a130dceb1f33307389d22e4ccdcb55441c9c9c2b` — Phase 1 architecture document
+- `4828c005fa5026eadc73856ebbd8f26d31fee465` — architecture contract tests
+
+### Completed architectural work
+
+- canonical BUY/SELL/WAIT direction contract
+- separate IdealEntry / EntryZone / Trigger / RequestedEntry / ActualFill / Invalidation semantics
+- separate Decision / TradePlan / ExecutionIntent / ExecutionResult / BrokerState contracts
+- explicit lifecycle authority and transition graph
+- explicit trade identity and mandatory execution idempotency key
+- single directional TargetLadder contract with TP ordering validation
+- separate execution envelope limits for chase, broker slippage, breakout-fill deviation and plan rebasing
+- configuration snapshot separated from runtime snapshot
+- explicit provenance/fallback model
+- broker mutation boundary introduced as `ICFIPClean74BrokerGateway`
+- presentation boundary introduced without granting presentation any trading authority
+- v74 host reduced to a compile-safe orchestration shell; no manual entry UI and no direct broker mutations
+
+### Defects/risks found during Phase 1
+
+- The first v74 foundation draft omitted the explicit `cAlgo.API` namespace import. This was corrected before marking the phase complete.
+- Full real cTrader runtime compilation is intentionally not claimed as completed in this phase.
+
+### Validation
+
+Source-level contract checks were added for:
+
+- canonical direction
+- entry terminology
+- plan/intent/result/broker separation
+- lifecycle authority
+- idempotency
+- target ordering
+- execution-envelope separation
+- broker gateway boundary
+- absence of chart/trading side effects
+- service boundaries
+- v74 host shape
+- balanced source braces
+- absence of manual entry controls
+
+### Phase 1 acceptance decision
+
+**COMPLETE at the architecture-contract level.**
+
+The foundation is ready for behavior migration. No v73 file was overwritten.
+
+### Next phase
+
+**Phase 2 — Configuration and parameter architecture**
 
 ## PHASE 2 — Configuration and parameter architecture
 
@@ -1791,7 +1857,7 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | Phase | Name | Status | Completion date | Reference/version | Validation |
 |---|---|---|---|---|---|
 | 0 | Continuity & baseline freeze | COMPLETE | 2026-09-27 | v69-v73 + this roadmap | Repository/document review |
-| 1 | Architecture foundation | NOT STARTED | — | next clean architecture line | — |
+| 1 | Architecture foundation | COMPLETE | 2026-09-27 | v74 | static contract checks added |
 | 2 | Configuration/parameters | NOT STARTED | — | — | — |
 | 3 | Time/MTF/data | NOT STARTED | — | — | — |
 | 4 | Market model | NOT STARTED | — | — | — |
@@ -1883,13 +1949,13 @@ At minimum record:
 
 **Current implementation reference:** v73
 
-**Current roadmap status:** Phase 0 complete.
+**Current roadmap status:** Phase 1 complete.
 
-**Current implementation status:** The clean architecture has not yet been implemented. v73 is the behavioral/reference baseline.
+**Current implementation status:** v74 now contains the Phase 1 clean architecture foundation. v73 remains the behavioral/reference baseline.
 
-**Next implementation target:** Phase 1 — Architecture foundation and canonical contracts.
+**Next implementation target:** Phase 2 — Configuration and parameter architecture.
 
-**Critical instruction for the next phase:** Do not start by patching individual v73 symptoms. First establish the canonical model/ownership/lifecycle contracts and then migrate behavior into those contracts.
+**Critical instruction for the next phase:** Do not patch individual v73 symptoms. Start from the v74 contracts and migrate v73 behavior into one effective configuration model, preserving the established ownership boundaries.
 
 **Continuity rule:** When this project is resumed in another chat, this document must be read first and the phase ledger above must be treated as authoritative.
 
@@ -1901,7 +1967,7 @@ At minimum record:
 CFIP cTrader Clean Architecture
 
 Phase 0  ████████████████████  COMPLETE
-Phase 1  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 1  ████████████████████  COMPLETE
 Phase 2  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 3  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 4  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
