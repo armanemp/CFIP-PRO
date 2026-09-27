@@ -6,6 +6,8 @@ on:
       - "integrations/ctrader/**"
       - "tests/unit/test_ctrader_v79_phase6_decision.py"
       - "tests/unit/test_ctrader_v80_phase7_entry.py"
+      - "tests/unit/test_ctrader_v81_phase8_risk_targets.py"
+      - "tests/unit/test_ctrader_v82_phase9_execution.py"
       - ".github/workflows/ctrader-static.yml"
   pull_request:
     paths:
@@ -23,4 +25,4 @@ jobs:
         with:
           python-version: "3.14"
       - name: Run cTrader architecture tests
-        run: python -m pytest tests/unit/test_ctrader_v79_phase6_decision.py tests/unit/test_ctrader_v80_phase7_entry.py -q
+        run: python -m pytest tests/unit/test_ctrader_v79_phase6_decision.py tests/unit/test_ctrader_v80_phase7_entry.py tests/unit/test_ctrader_v81_phase8_risk_targets.py tests/unit/test_ctrader_v82_phase9_execution.py -q
