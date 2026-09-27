@@ -2021,7 +2021,10 @@ All management actions are idempotent and retry-safe.
 
 **Latest implementation commits:**
 - `cef82c36e8415532be4f5b8b5614dd1f7d486ef6` — harden v89 live protection/restart adoption;
-- `c35f60c4e181f565ba99576434ab102059d53ae1` — enforce managed broker ownership in v89 gateway.
+- `c35f60c4e181f565ba99576434ab102059d53ae1` — enforce managed broker ownership in v89 gateway;
+- `24c9478e957039bf1ce9bd2ce0c19fd53b14b99e` — correct v89 static-test section boundaries so lifecycle suites resolve source sections in declaration order.
+
+**CI note:** the test-boundary correction is recorded here specifically to trigger the cTrader static workflow again on the corrected test suite.
 
 **Runtime boundary:** real cTrader compilation and broker execution/recovery scenarios remain mandatory.
 
