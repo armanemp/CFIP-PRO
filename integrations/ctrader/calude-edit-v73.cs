@@ -20264,7 +20264,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         targetPips,
-                        "CFIP SMART70",
+                        "CFIP SMART73",
                         false);
 
                 if (result == null)
@@ -20283,24 +20283,6 @@ private Color AutoTradingPanelColor()
                         result.Error.HasValue
                             ? result.Error.Value.ToString()
                             : "TRADE REJECTED");
-                    return;
-                }
-
-                string fillExecutionReason;
-
-                if (!IsExecutableFillPrice(
-                        _plan,
-                        result.Position.EntryPrice,
-                        out fillExecutionReason))
-                {
-                    _autoExecutionBlockReason =
-                        fillExecutionReason;
-                    SetAutoTradingState(
-                        "ERROR",
-                        fillExecutionReason);
-                    Print(
-                        "CFIP CLEAN73 fill/execution mismatch: {0}",
-                        fillExecutionReason);
                     return;
                 }
 
@@ -20323,6 +20305,50 @@ private Color AutoTradingPanelColor()
                 ReconcileLivePlanToActualFill(
                     result.Position,
                     closedM5);
+
+                string fillExecutionReason;
+
+                if (!IsExecutableFillPrice(
+                        _plan,
+                        result.Position.EntryPrice,
+                        out fillExecutionReason))
+                {
+                    SetLifecycleState(
+                        CFIPClean73LifecycleState.ExitRequested,
+                        "MARKET FILL MISMATCH");
+
+                    _autoExecutionBlockReason =
+                        "FILL MISMATCH • " +
+                        fillExecutionReason;
+
+                    SetAutoTradingState(
+                        "ERROR",
+                        fillExecutionReason);
+
+                    bool closed =
+                        TryClosePosition(
+                            result.Position,
+                            "MARKET FILL MISMATCH");
+
+                    if (!closed)
+                    {
+                        SetLifecycleState(
+                            CFIPClean73LifecycleState.RecoveryRequired,
+                            "MARKET FILL MISMATCH • CLOSE REJECTED");
+                    }
+
+                    SendUnifiedAlert(
+                        "FILL-MISMATCH|" +
+                        result.Position.Id,
+                        "CFIP CLEAN73 ACCEPTED BROKER FILL OUTSIDE EXECUTION ENVELOPE | #" +
+                        result.Position.Id +
+                        " | " +
+                        fillExecutionReason,
+                        _plan.Direction,
+                        true);
+
+                    return;
+                }
 
                 double structuralTarget =
                     AutoTarget(
@@ -20365,6 +20391,16 @@ private Color AutoTradingPanelColor()
                     SetAutoTradingState(
                         "ERROR",
                         "POSITION OPENED • NO VALID TARGET");
+
+                    if (!RequestLivePlanExit(
+                            closedM5,
+                            "POST-FILL TARGET INVALID"))
+                    {
+                        SetLifecycleState(
+                            CFIPClean73LifecycleState.RecoveryRequired,
+                            "POST-FILL TARGET INVALID • CLOSE REJECTED");
+                    }
+
                     return;
                 }
 
@@ -22589,7 +22625,7 @@ private Color AutoTradingPanelColor()
                         NormalizeLabel(),
                         stopPips,
                         tpPips,
-                        "CFIP SMART70",
+                        "CFIP SMART73",
                         false);
 
                 if (result == null ||
@@ -22629,6 +22665,54 @@ private Color AutoTradingPanelColor()
                 SetLifecycleState(
                     CFIPClean73LifecycleState.LivePosition,
                     "AGGRESSIVE ENTRY • FILLED");
+
+                ReconcileLivePlanToActualFill(
+                    result.Position,
+                    closedM5);
+
+                double maximumFillDistance =
+                    Math.Max(
+                        Symbol.TickSize * 2,
+                        Math.Max(
+                            Symbol.PipSize * 0.5,
+                            Math.Max(
+                                (Symbol.Ask - Symbol.Bid) * 2,
+                                atr *
+                                Math.Max(
+                                    0.10,
+                                    MaximumEntryExtensionAtr))));
+
+                if (Math.Abs(
+                        result.Position.EntryPrice -
+                        entry) >
+                    maximumFillDistance)
+                {
+                    SetLifecycleState(
+                        CFIPClean73LifecycleState.ExitRequested,
+                        "AGGRESSIVE FILL MISMATCH");
+
+                    bool closed =
+                        TryClosePosition(
+                            result.Position,
+                            "AGGRESSIVE FILL MISMATCH");
+
+                    if (!closed)
+                    {
+                        SetLifecycleState(
+                            CFIPClean73LifecycleState.RecoveryRequired,
+                            "AGGRESSIVE FILL MISMATCH • CLOSE REJECTED");
+                    }
+
+                    SendUnifiedAlert(
+                        "FILL-MISMATCH|" +
+                        result.Position.Id,
+                        "CFIP CLEAN73 AGGRESSIVE FILL OUTSIDE EXECUTION ENVELOPE | #" +
+                        result.Position.Id,
+                        _reaction.Direction,
+                        true);
+
+                    return;
+                }
 
                 EnrichLivePlanTargets(closedM5);
 
@@ -23763,7 +23847,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART70",
+                        "CFIP SMART73",
                         false);
 
                 if (result == null ||
@@ -23981,7 +24065,7 @@ private Color AutoTradingPanelColor()
                         targetPips,
                         ProtectionType.Relative,
                         expiration,
-                        "CFIP SMART70",
+                        "CFIP SMART73",
                         false);
 
                 if (result == null ||
