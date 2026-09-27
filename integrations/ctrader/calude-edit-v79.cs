@@ -3896,6 +3896,9 @@ namespace cAlgo
                     blocks.Add(CFIPClean79BlockReason.MtfDisagreement);
             }
 
+            // Legacy name retained for preset parity. In Phase 6 this is
+            // only a Decision-quality policy floor; actual Entry/Trigger eligibility
+            // remains exclusively owned by Phase 7.
             if (configuration.Get("UseSmartEntryQualityFilter", true) &&
                 quality < Math.Max(
                     configuration.Get("SmartQualityThreshold", 70),
