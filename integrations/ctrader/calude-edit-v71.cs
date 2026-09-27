@@ -304,7 +304,7 @@ namespace cAlgo
     }
 
     [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
-    public class CFIP_MTF_LiveEntryEngine_Clean_v70 : Indicator
+    public class CFIP_MTF_LiveEntryEngine_Clean_v71 : Indicator
     {
         #region Parameters · Decision
         // ============================================================
