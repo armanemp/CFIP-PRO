@@ -9389,7 +9389,8 @@ public sealed class CFIPClean88TradePlanBuilder :
                     record.ExpectedTakeProfit))
                 QueueProtectionRecoveryIfRequired(
                     order,
-                    record);
+                    record,
+                    utc);
         }
 
         public void HandleFilled(
@@ -9510,7 +9511,8 @@ public sealed class CFIPClean88TradePlanBuilder :
         }
 
         public void InvalidateSupersededPlan(
-            string activePlanId)
+            string activePlanId,
+            DateTime utc)
         {
             if (string.IsNullOrWhiteSpace(activePlanId))
                 return;
@@ -9542,7 +9544,7 @@ public sealed class CFIPClean88TradePlanBuilder :
                 QueueCancelIfDue(
                     record,
                     "PLAN_SUPERSEDED",
-                    DateTime.UtcNow);
+                    utc);
             }
         }
 
@@ -9588,7 +9590,9 @@ public sealed class CFIPClean88TradePlanBuilder :
 
                 if (record.State ==
                     CFIPClean88PendingOrderLifecycleState.ProtectionRecoveryRequired)
-                    QueueProtectionRecoveryForRecord(record);
+                    QueueProtectionRecoveryForRecord(
+                        record,
+                        utc);
             }
         }
 
@@ -9604,10 +9608,11 @@ public sealed class CFIPClean88TradePlanBuilder :
         }
 
         private void QueueProtectionRecoveryForRecord(
-            CFIPClean88PendingOrderRecord record)
+            CFIPClean88PendingOrderRecord record,
+            DateTime utc)
         {
             if (record == null ||
-                !record.IsProtectionRetryDue(DateTime.UtcNow))
+                !record.IsProtectionRetryDue(utc))
                 return;
 
             if (!record.ExpectedStopLoss.HasValue &&
@@ -9631,7 +9636,8 @@ public sealed class CFIPClean88TradePlanBuilder :
 
         private void QueueProtectionRecoveryIfRequired(
             PendingOrder order,
-            CFIPClean88PendingOrderRecord record)
+            CFIPClean88PendingOrderRecord record,
+            DateTime utc)
         {
             if (order.StopLoss.HasValue &&
                 order.TakeProfit.HasValue)
@@ -9644,7 +9650,9 @@ public sealed class CFIPClean88TradePlanBuilder :
                 return;
             }
 
-            QueueProtectionRecoveryForRecord(record);
+            QueueProtectionRecoveryForRecord(
+                record,
+                utc);
         }
 
         private void QueueCancelIfDue(
@@ -14752,7 +14760,8 @@ public sealed class CFIPClean88TradePlanBuilder :
 
             if (_pendingOrderLifecycle != null)
                 _pendingOrderLifecycle.InvalidateSupersededPlan(
-                    _state.Plan.Identity.PlanId);
+                    _state.Plan.Identity.PlanId,
+                    _state.Runtime.ServerUtc);
 
             if (IsExecutionDuplicate(_state.Plan))
                 return;
