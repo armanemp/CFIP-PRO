@@ -9038,6 +9038,46 @@ public sealed class CFIPClean83TradePlanBuilder :
             return null;
         }
 
+        public void InvalidateSupersededPlan(
+            string activePlanId)
+        {
+            if (string.IsNullOrWhiteSpace(activePlanId))
+                return;
+
+            var snapshot =
+                new List<CFIPClean83PendingOrderRecord>(
+                    _records.Values);
+
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                CFIPClean83PendingOrderRecord record =
+                    snapshot[i];
+
+                if (record.State ==
+                    CFIPClean83PendingOrderLifecycleState.Filled ||
+                    record.State ==
+                    CFIPClean83PendingOrderLifecycleState.Cancelled ||
+                    record.State ==
+                    CFIPClean83PendingOrderLifecycleState.Reconciled)
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(record.PlanId) ||
+                    string.Equals(
+                        record.PlanId,
+                        activePlanId,
+                        StringComparison.Ordinal))
+                    continue;
+
+                Queue(
+                    new CFIPClean83PendingOrderAction(
+                        record.BrokerOrderId,
+                        CFIPClean83PendingOrderActionKind.Cancel,
+                        null,
+                        null,
+                        "PLAN_SUPERSEDED"));
+            }
+        }
+
         public void Evaluate(
             DateTime utc,
             bool dailyLossBreached)
@@ -11283,9 +11323,16 @@ public sealed class CFIPClean83TradePlanBuilder :
         {
             if (_state.Plan == null ||
                 !_state.Plan.IsValid ||
+                _state.Plan.Identity == null ||
                 _state.Decision == null ||
-                _state.Entry == null ||
-                IsExecutionDuplicate(_state.Plan))
+                _state.Entry == null)
+                return;
+
+            if (_pendingOrderLifecycle != null)
+                _pendingOrderLifecycle.InvalidateSupersededPlan(
+                    _state.Plan.Identity.PlanId);
+
+            if (IsExecutionDuplicate(_state.Plan))
                 return;
 
             double volume =
