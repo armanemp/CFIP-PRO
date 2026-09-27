@@ -62,6 +62,9 @@ def test_v78_has_typed_structure_and_zone_lifecycle() -> None:
         "Consumed",
         "Invalidated",
         "Expired",
+        "CFIPClean78ZoneLifecycle.PartiallyMitigated",
+        "CFIPClean78ZoneLifecycle.Consumed",
+        "CFIPClean78ZoneLifecycle.Expired",
     ]:
         assert token in source
 
@@ -94,7 +97,7 @@ def test_v78_preserves_ob_mitigation_controls() -> None:
     assert "CFIPClean78ZoneLifecycle.Consumed" in block
 
 
-def test_v78_has_equal_liquidity_and_sweep_depth() -> None:
+def test_v78_has_equal_liquidity_sweep_depth_and_forecast_state() -> None:
     source = read(V78)
     for token in [
         "EqualHigh",
@@ -102,6 +105,9 @@ def test_v78_has_equal_liquidity_and_sweep_depth() -> None:
         "LiquiditySweepMinimumDepthAtr",
         "lowPen",
         "highPen",
+        "Forecast",
+        "ForecastCandidate",
+        "MarkForecastLiquidity",
     ]:
         assert token in source
 
