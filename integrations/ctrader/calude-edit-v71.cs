@@ -295,6 +295,14 @@ namespace cAlgo
         ReversalLimit = 5
     }
 
+    public enum CFIPClean71DecisionPolicyMode
+    {
+        Confirmed = 0,
+        Soft = 1,
+        Aggressive = 2,
+        Pending = 3
+    }
+
     public enum CFIPClean71LifecycleState
     {
         Flat = 0,
@@ -2819,15 +2827,13 @@ namespace cAlgo
                     }
                 }
 
-                bool allowUnconfirmedAutoPlan =
-                    AutoTradingEnabled &&
-                    !ConfirmedSignalsOnly;
-
-                ReconcilePreTradePlanDirection(closedM5);
+                ReconcilePreTradePlanDirection(
+                    closedM5);
 
                 EnsureSignalPlan(
                     closedM5,
-                    allowUnconfirmedAutoPlan);
+                    ResolveDecisionPolicy(
+                        AutoTradingEnabled));
 
                 _lastEvaluatedM5 =
                     closedM5;
@@ -2881,7 +2887,8 @@ namespace cAlgo
 
                 EnsureSignalPlan(
                     closedM5,
-                    !ConfirmedSignalsOnly);
+                    ResolveDecisionPolicy(
+                        true));
             }
 
             if (_decision != null &&
@@ -13167,9 +13174,9 @@ namespace cAlgo
             return false;
         }
 
-        private void EnsureSignalPlan(
+                private void EnsureSignalPlan(
             int closedM5,
-            bool allowUnconfirmedAutoPlan)
+            CFIPClean71DecisionPolicyMode policy)
         {
             if (_plan != null ||
                 _decision == null ||
@@ -13178,7 +13185,7 @@ namespace cAlgo
 
             if (!ShouldCreatePlan(
                     closedM5,
-                    allowUnconfirmedAutoPlan))
+                    policy))
                 return;
 
             Plan plan =
@@ -13204,6 +13211,7 @@ namespace cAlgo
             ActivatePlan(
                 plan);
         }
+
 
 
 
@@ -13250,9 +13258,20 @@ namespace cAlgo
             }
         }
 
-        private bool ShouldCreatePlan(
+        private CFIPClean71DecisionPolicyMode ResolveDecisionPolicy(
+            bool autoExecutionContext)
+        {
+            if (!autoExecutionContext ||
+                ConfirmedSignalsOnly)
+                return CFIPClean71DecisionPolicyMode.Confirmed;
+
+            return
+                CFIPClean71DecisionPolicyMode.Soft;
+        }
+
+                private bool ShouldCreatePlan(
             int closedM5,
-            bool allowUnconfirmedAutoPlan)
+            CFIPClean71DecisionPolicyMode policy)
         {
             if (BlockNewSignalWhileActive &&
                 _plan != null)
@@ -13262,18 +13281,32 @@ namespace cAlgo
                 _decision.Direction == 0)
                 return false;
 
-            if (!_decision.EntryAllowed)
+            switch (policy)
             {
-                bool softPlanEligible =
-                    allowUnconfirmedAutoPlan &&
-                    !IsHardDecisionBlockReason(
-                        _decision.BlockReason) &&
-                    _decision.Confidence >=
-                        MinimumAutoConfidence &&
-                    _decision.SmartQuality >=
-                        MinimumAutoSmartQuality;
+                case CFIPClean71DecisionPolicyMode.Confirmed:
+                    if (!_decision.EntryAllowed)
+                        return false;
+                    break;
 
-                if (!softPlanEligible)
+                case CFIPClean71DecisionPolicyMode.Soft:
+                case CFIPClean71DecisionPolicyMode.Aggressive:
+                case CFIPClean71DecisionPolicyMode.Pending:
+                    if (!_decision.EntryAllowed)
+                    {
+                        bool softPlanEligible =
+                            !IsHardDecisionBlockReason(
+                                _decision.BlockReason) &&
+                            _decision.Confidence >=
+                                MinimumAutoConfidence &&
+                            _decision.SmartQuality >=
+                                MinimumAutoSmartQuality;
+
+                        if (!softPlanEligible)
+                            return false;
+                    }
+                    break;
+
+                default:
                     return false;
             }
 
@@ -13292,6 +13325,7 @@ namespace cAlgo
 
             return _lastSignalM5 != closedM5;
         }
+
 
         private bool HasAnyHtfTargetLevel(
             List<Level> candidates)
