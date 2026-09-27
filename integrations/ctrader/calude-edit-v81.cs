@@ -6308,11 +6308,11 @@ public sealed class CFIPClean81TradePlanBuilder :
                 BuildPlanId(
                     mtf.ReferenceUtc,
                     decision.Direction,
-                    entryPrice),
-                BuildPlanId(
+                    entryPrice,
+                    stop.Price),
+                BuildSignalId(
                     mtf.ReferenceUtc,
-                    decision.Direction,
-                    entryPrice));
+                    decision.Direction));
 
         return new CFIPClean81TradePlan(
             identity,
@@ -6680,7 +6680,12 @@ public sealed class CFIPClean81TradePlanBuilder :
                 distance > maximumDistance)
                 continue;
 
-            if (Math.Abs(x.Price - previousTarget) < spacing)
+            bool progressesBeyondPrevious =
+                direction == CFIPClean81Direction.Buy
+                    ? x.Price > previousTarget + spacing
+                    : x.Price < previousTarget - spacing;
+
+            if (!progressesBeyondPrevious)
                 continue;
 
             if (Math.Abs(x.Price - entryPrice) < clearance)
@@ -6804,15 +6809,29 @@ public sealed class CFIPClean81TradePlanBuilder :
     private string BuildPlanId(
         DateTime referenceUtc,
         CFIPClean81Direction direction,
-        double entryPrice)
+        double entryPrice,
+        double stopPrice)
     {
         return
-            "CFIP81|" +
+            "CFIP81|PLAN|" +
             referenceUtc.Ticks.ToString() +
             "|" +
             direction.ToString() +
             "|" +
-            entryPrice.ToString("R");
+            entryPrice.ToString("R") +
+            "|" +
+            stopPrice.ToString("R");
+    }
+
+    private string BuildSignalId(
+        DateTime referenceUtc,
+        CFIPClean81Direction direction)
+    {
+        return
+            "CFIP81|SIGNAL|" +
+            referenceUtc.Ticks.ToString() +
+            "|" +
+            direction.ToString();
     }
 
     private CFIPClean81TradePlan InvalidPlan(
