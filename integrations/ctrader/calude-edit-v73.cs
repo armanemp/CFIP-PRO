@@ -299,6 +299,21 @@ namespace cAlgo
         ReversalLimit = 5
     }
 
+    public enum CFIPClean73DecisionPolicyMode
+    {
+        Confirmed = 0,
+        Soft = 1,
+        Aggressive = 2,
+        Pending = 3
+    }
+
+    public enum CFIPClean73ExecutionIntentKind
+    {
+        Market = 0,
+        Stop = 1,
+        Limit = 2
+    }
+
     public enum CFIPClean73LifecycleState
     {
         Flat = 0,
@@ -2127,7 +2142,25 @@ namespace cAlgo
         [Parameter("Aggressive Require Smart Agreement", Group = "13 · AUTO TRADING", DefaultValue = true)]
         public bool AggressiveRequireSmartAgreement { get; set; }
 
-        private sealed class ExecutionModel
+        private sealed class ExecutionIntent
+    {
+        public int Direction;
+        public CFIPClean73DecisionPolicyMode Policy;
+        public CFIPClean73ExecutionIntentKind Kind;
+        public double RequestedEntry;
+        public double Trigger;
+        public double ZoneLow;
+        public double ZoneHigh;
+        public double Stop;
+        public double Target;
+        public double StopPips;
+        public double TargetPips;
+        public double Volume;
+        public int CreatedM5;
+        public string Source;
+    }
+
+    private sealed class ExecutionModel
         {
             public int Direction;
             public CFIPClean73ExecutionMode Mode;
@@ -2142,7 +2175,158 @@ namespace cAlgo
             public string Source;
         }
 
-        private sealed class Prediction
+            private ExecutionIntent BuildExecutionIntent(
+            int direction,
+            CFIPClean73DecisionPolicyMode policy,
+            CFIPClean73ExecutionIntentKind kind,
+            double entry,
+            double trigger,
+            double zoneLow,
+            double zoneHigh,
+            double stop,
+            double target,
+            double volume,
+            int closedM5,
+            string source)
+        {
+            entry = NormalizePrice(entry);
+            stop = NormalizePrice(stop);
+            target = NormalizePrice(target);
+
+            return new ExecutionIntent
+            {
+                Direction = direction,
+                Policy = policy,
+                Kind = kind,
+                RequestedEntry = entry,
+                Trigger = NormalizePrice(trigger),
+                ZoneLow = NormalizePrice(zoneLow),
+                ZoneHigh = NormalizePrice(zoneHigh),
+                Stop = stop,
+                Target = target,
+                StopPips =
+                    IsFinitePositive(entry) &&
+                    IsFinitePositive(stop)
+                        ? Math.Abs(entry - stop) /
+                          Symbol.PipSize
+                        : 0,
+                TargetPips =
+                    IsFinitePositive(entry) &&
+                    IsFinitePositive(target)
+                        ? Math.Abs(target - entry) /
+                          Symbol.PipSize
+                        : 0,
+                Volume = volume,
+                CreatedM5 = closedM5,
+                Source = source
+            };
+        }
+
+        private bool ValidateExecutionIntent(
+            ExecutionIntent intent,
+            double liveQuote,
+            out string reason)
+        {
+            reason = "OK";
+
+            if (intent == null ||
+                (intent.Direction != 1 &&
+                 intent.Direction != -1))
+            {
+                reason = "INVALID EXECUTION INTENT";
+                return false;
+            }
+
+            if (!IsExecutionPlanConsistent(
+                    intent.Direction,
+                    intent.RequestedEntry,
+                    intent.Stop,
+                    intent.Target))
+            {
+                reason = "INCONSISTENT EXECUTION INTENT";
+                return false;
+            }
+
+            if (!IsFinitePositive(intent.Volume) ||
+                intent.StopPips <= 0 ||
+                intent.TargetPips <= 0)
+            {
+                reason = "INCOMPLETE EXECUTION INTENT";
+                return false;
+            }
+
+            if (intent.Kind ==
+                CFIPClean73ExecutionIntentKind.Market)
+            {
+                if (!IsFinitePositive(liveQuote))
+                {
+                    reason = "INVALID MARKET QUOTE";
+                    return false;
+                }
+            }
+            else if (intent.Kind ==
+                        CFIPClean73ExecutionIntentKind.Stop)
+            {
+                if (!SamePrice(
+                        intent.RequestedEntry,
+                        intent.Trigger) ||
+                    !IsValidPendingEntry(
+                        intent.Direction,
+                        intent.RequestedEntry,
+                        true))
+                {
+                    reason = "INVALID STOP INTENT";
+                    return false;
+                }
+            }
+            else if (intent.Kind ==
+                        CFIPClean73ExecutionIntentKind.Limit)
+            {
+                if (!IsValidPendingEntry(
+                        intent.Direction,
+                        intent.RequestedEntry,
+                        false))
+                {
+                    reason = "INVALID LIMIT INTENT";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool ValidateActualMarketFill(
+            ExecutionIntent intent,
+            double actualFill,
+            double atr,
+            out string reason)
+        {
+            reason = "OK";
+
+            if (intent == null ||
+                !IsFinitePositive(actualFill) ||
+                atr <= 0)
+            {
+                reason = "INVALID ACTUAL FILL";
+                return false;
+            }
+
+            if (Math.Abs(
+                    actualFill -
+                    intent.RequestedEntry) >
+                atr *
+                Math.Max(
+                    0.10,
+                    MaximumEntryExtensionAtr))
+            {
+                reason = "BROKER FILL FAR FROM INTENT";
+                return false;
+            }
+
+            return true;
+        }
+
+    private sealed class Prediction
         {
             public int Direction;
             public CFIPClean73ExecutionMode Mode;
@@ -20236,6 +20420,38 @@ private Color AutoTradingPanelColor()
                     return;
                 }
 
+                ExecutionIntent marketIntent =
+                    BuildExecutionIntent(
+                        _plan.Direction,
+                        ConfirmedSignalsOnly
+                            ? CFIPClean73DecisionPolicyMode.Confirmed
+                            : CFIPClean73DecisionPolicyMode.Soft,
+                        CFIPClean73ExecutionIntentKind.Market,
+                        entry,
+                        _plan.EntryTrigger,
+                        _plan.EntryZoneLow,
+                        _plan.EntryZoneHigh,
+                        _plan.Stop,
+                        target,
+                        volume,
+                        closedM5,
+                        "NORMAL MARKET");
+
+                string intentReason;
+
+                if (!ValidateExecutionIntent(
+                        marketIntent,
+                        entry,
+                        out intentReason))
+                {
+                    _autoExecutionBlockReason =
+                        intentReason;
+                    SetAutoTradingState(
+                        "BLOCKED",
+                        intentReason);
+                    return;
+                }
+
                 TradeResult result =
                     ExecuteMarketOrder(
                         type,
@@ -22597,6 +22813,34 @@ private Color AutoTradingPanelColor()
                     return;
                 }
 
+                ExecutionIntent aggressiveIntent =
+                    BuildExecutionIntent(
+                        _reaction.Direction,
+                        CFIPClean73DecisionPolicyMode.Aggressive,
+                        CFIPClean73ExecutionIntentKind.Market,
+                        entry,
+                        0,
+                        0,
+                        0,
+                        stop,
+                        target,
+                        volume,
+                        closedM5,
+                        "AGGRESSIVE MARKET");
+
+                string aggressiveIntentReason;
+
+                if (!ValidateExecutionIntent(
+                        aggressiveIntent,
+                        entry,
+                        out aggressiveIntentReason))
+                {
+                    SetAutoTradingState(
+                        "BLOCKED",
+                        aggressiveIntentReason);
+                    return;
+                }
+
                 TradeResult result =
                     ExecuteMarketOrder(
                         type,
@@ -22621,6 +22865,74 @@ private Color AutoTradingPanelColor()
                     SetAutoTradingState(
                         "ERROR",
                         _autoExecutionBlockReason);
+                    return;
+                }
+
+                double actualFill =
+                    NormalizePrice(
+                        result.Position.EntryPrice);
+
+                string aggressiveFillReason;
+
+                if (!ValidateActualMarketFill(
+                        aggressiveIntent,
+                        actualFill,
+                        atr,
+                        out aggressiveFillReason))
+                {
+                    SetLifecycleState(
+                        CFIPClean73LifecycleState.RecoveryRequired,
+                        "AGGRESSIVE FILL MISMATCH");
+
+                    _plan =
+                        CreateManagedPlanFromExecution(
+                            _reaction.Direction,
+                            actualFill,
+                            stop,
+                            target,
+                            closedM5,
+                            result.Position.VolumeInUnits);
+
+                    _plan.PositionId =
+                        result.Position.Id;
+
+                    ReconcileLivePlanToActualFill(
+                        result.Position,
+                        closedM5);
+
+                    return;
+                }
+
+                string actualStopSource;
+                int actualStopQuality;
+
+                double actualStop =
+                    BuildStructuralStop(
+                        closedM5,
+                        _reaction.Direction,
+                        actualFill,
+                        atr,
+                        out actualStopSource,
+                        out actualStopQuality);
+
+                double actualTarget =
+                    SelectStructuralAutoTarget(
+                        closedM5,
+                        _reaction.Direction,
+                        actualFill,
+                        actualStop,
+                        atr,
+                        AggressiveTpStage);
+
+                if (!IsExecutionPlanConsistent(
+                        _reaction.Direction,
+                        actualFill,
+                        actualStop,
+                        actualTarget))
+                {
+                    SetLifecycleState(
+                        CFIPClean73LifecycleState.RecoveryRequired,
+                        "AGGRESSIVE POST-FILL REBUILD FAILED");
                     return;
                 }
 
@@ -22700,8 +23012,8 @@ private Color AutoTradingPanelColor()
                 {
                     EnsureBrokerProtectionForPosition(
                         result.Position,
-                        stop,
-                        target,
+                        actualStop,
+                        actualTarget,
                         "AGGRESSIVE ENTRY",
                         _reaction.Direction);
                 }
@@ -22719,9 +23031,9 @@ private Color AutoTradingPanelColor()
                     Price(
                         result.Position.EntryPrice) +
                     " | SL " +
-                    Price(stop) +
+                    Price(actualStop) +
                     " | TP " +
-                    Price(target),
+                    Price(actualTarget),
                     _reaction.Direction,
                     true);
             }
