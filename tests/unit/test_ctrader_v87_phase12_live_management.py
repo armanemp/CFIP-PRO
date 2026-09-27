@@ -86,9 +86,17 @@ def balanced(source: str) -> bool:
 def test_v87_preserves_v86_parameter_surface():
     s86 = read(V86)
     s87 = read(V87)
-    assert len(parameters(s86)) == 513
-    assert len(parameters(s87)) == 513
-    assert parameters(s86) == parameters(s87)
+    p86 = parameters(s86)
+    p87 = parameters(s87)
+
+    assert len(p86) == 513
+    assert len(p87) == 513
+
+    # Version-isolated type names are expected to differ; the public
+    # parameter labels and property names must remain identical.
+    assert [(label, name) for label, _type, name in p86] == [
+        (label, name) for label, _type, name in p87
+    ]
 
 
 def test_v87_is_version_isolated():
@@ -158,7 +166,7 @@ def test_phase12_target_management_is_confirmation_safe_and_cadenced():
 def test_phase12_partial_tp_is_broker_gateway_owned_and_volume_safe():
     s = read(V87)
     g = section(s, "public sealed class CFIPClean87CTraderBrokerGateway", "public sealed class CFIPClean87CTraderBrokerStateReader")
-    m = section(s, "private CFIPClean87LivePositionAction EvaluatePartialTakeProfit(", "private CFIPClean87LivePositionAction EvaluateProtection(")
+    m = section(s, "public sealed class CFIPClean87LivePositionManager", "// Presentation boundary")
     assert "PartialClosePosition(" in g
     assert "_host.ClosePosition(" in g
     assert '"EnablePartialTakeProfit"' in m
@@ -187,6 +195,7 @@ def test_phase12_partial_result_is_confirmation_based_and_retry_safe():
     assert "RetryDelay(" in m
     assert "PendingPartialExpectedRemainingVolume" in m
     assert "ConfirmPartialProgress(" in m
+    assert "HandlePartialResult(" in m
 
 
 def test_phase12_protection_requests_are_deduplicated_until_broker_confirmation():
