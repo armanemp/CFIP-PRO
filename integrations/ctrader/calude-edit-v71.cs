@@ -4957,7 +4957,9 @@ namespace cAlgo
             int direction)
         {
             if (Bars == null ||
-                Bars.Count < 10)
+                Bars.Count < 10 ||
+                chartIndex < 0 ||
+                chartIndex >= Bars.Count - 1)
                 return 0;
 
             int i =
@@ -5302,151 +5304,7 @@ namespace cAlgo
         #region Entry Trigger
         // ============================================================
 
-        private bool TriggerReadyWithoutPrecisionGate(
-            Bars bars,
-            int index,
-            int direction)
-        {
-            if (bars == null ||
-                index < 20 ||
-                index >= bars.Count)
-                return false;
-
-            double atr =
-                Atr(
-                    bars,
-                    index);
-
-            if (atr <= 0)
-                return false;
-
-            double range =
-                bars.HighPrices[index] -
-                bars.LowPrices[index];
-
-            double body =
-                Math.Abs(
-                    bars.ClosePrices[index] -
-                    bars.OpenPrices[index]);
-
-            if (range <= 0 ||
-                body < atr * MinimumTriggerBodyAtr ||
-                range > atr * MaximumTriggerRangeAtr)
-                return false;
-
-            double location =
-                direction == 1
-                    ? (bars.ClosePrices[index] -
-                       bars.LowPrices[index]) /
-                      range
-                    : (bars.HighPrices[index] -
-                       bars.ClosePrices[index]) /
-                      range;
-
-            if (location < MinimumCloseLocation)
-                return false;
-
-            int trigger =
-                direction == 1
-                    ? BullTriggerScore(
-                        bars,
-                        index)
-                    : BearTriggerScore(
-                        bars,
-                        index);
-
-            int requiredTrigger =
-                UsePrecisionExecutionModel
-                    ? Math.Max(
-                        LiveTriggerScore,
-                        PrecisionTriggerScore)
-                    : LiveTriggerScore;
-
-            bool breakReady =
-                direction == 1
-                    ? bars.ClosePrices[index] >
-                      Highest(
-                          bars,
-                          Math.Max(
-                              0,
-                              index - 6),
-                          index - 1)
-                    : bars.ClosePrices[index] <
-                      Lowest(
-                          bars,
-                          Math.Max(
-                              0,
-                              index - 6),
-                          index - 1);
-
-            double market =
-                direction == 1
-                    ? Symbol.Ask
-                    : Symbol.Bid;
-
-            double buffer =
-                atr *
-                Math.Max(
-                    0,
-                    EntryBufferAtr);
-
-            bool bufferPassed =
-                direction == 1
-                    ? market >=
-                      bars.ClosePrices[index] +
-                      buffer
-                    : market <=
-                      bars.ClosePrices[index] -
-                      buffer;
-
-            bool extensionOk =
-                Math.Abs(
-                    market -
-                    bars.ClosePrices[index]) <=
-                atr *
-                MaximumEntryExtensionAtr;
-
-            if (RequireFreshM5Trigger &&
-                FreshTriggerEvidence(
-                    bars,
-                    index,
-                    direction) <
-                MinimumFreshTriggerEvidence)
-            {
-                bool overrideOk =
-                    AllowDirectDisplacementOverride &&
-                    UseDisplacement &&
-                    trigger >=
-                    ClampInt(
-                        DirectDisplacementOverrideScore,
-                        1,
-                        6) &&
-                    (direction == 1
-                        ? BullDisplacement(
-                            bars,
-                            index,
-                            atr)
-                        : BearDisplacement(
-                            bars,
-                            index,
-                            atr));
-
-                if (!overrideOk)
-                    return false;
-            }
-
-            return
-                ((trigger >=
-                  Math.Max(
-                      4,
-                      requiredTrigger) &&
-                  breakReady &&
-                  bufferPassed) ||
-                 (trigger >= 5 &&
-                  breakReady &&
-                  extensionOk &&
-                  bufferPassed));
-        }
+        
 
                 // closed-bar structure trigger = signal confirmation.
 // Live price/zone eligibility is evaluated separately by BuildExecutionModel
@@ -5569,35 +5427,7 @@ namespace cAlgo
                 breakReady;
         }
 
-        private bool EntryTriggerReady(
-            Bars bars,
-            int index,
-            int direction)
-        {
-            if (bars != null &&
-                index >= 0 &&
-                index < bars.Count - 1 &&
-                RequirePrecisionEntry &&
-                ReferenceEquals(
-                    bars,
-                    _m5Bars))
-            {
-                ExecutionModel model =
-                    BuildExecutionModel(
-                        index,
-                        direction);
-
-                if (model != null &&
-                    model.Ready)
-                    return true;
-            }
-
-            return
-                TriggerReadyWithoutPrecisionGate(
-                    bars,
-                    index,
-                    direction);
-        }
+        
 
         private int BullTriggerScore(
             Bars bars,
