@@ -10744,6 +10744,57 @@ public sealed class CFIPClean87TradePlanBuilder :
                 context.LastObservedVolumeInUnits =
                     snapshot.VolumeInUnits;
 
+                CFIPClean87TradePlan planForPosition =
+                    PlanMatches(
+                        context,
+                        currentPlan)
+                        ? currentPlan
+                        : null;
+
+                if (context.ProtectionPending &&
+                    ProtectionObserved(
+                        context,
+                        snapshot))
+                {
+                    context.ProtectionPending = false;
+
+                    if ((int)context.PendingProtectionStage >
+                        (int)context.ActiveTargetStage)
+                        context.ActiveTargetStage =
+                            context.PendingProtectionStage;
+
+                    context.PendingStopLoss = null;
+                    context.PendingTakeProfit = null;
+                    context.PendingProtectionRequestedUtc =
+                        DateTime.MinValue;
+                }
+                else if (context.ProtectionPending &&
+                         context.PendingProtectionRequestedUtc !=
+                            DateTime.MinValue &&
+                         context.PendingProtectionRequestedUtc.AddSeconds(30) <
+                            runtime.ServerUtc)
+                {
+                    context.ProtectionPending = false;
+                    context.PendingStopLoss = null;
+                    context.PendingTakeProfit = null;
+                    context.PendingProtectionRequestedUtc =
+                        DateTime.MinValue;
+                }
+
+                if (planForPosition != null &&
+                    snapshot.TakeProfit.HasValue)
+                {
+                    CFIPClean87TargetStage observedStage =
+                        FindStageForTarget(
+                            planForPosition,
+                            snapshot.TakeProfit);
+
+                    if ((int)observedStage >
+                        (int)context.ActiveTargetStage)
+                        context.ActiveTargetStage =
+                            observedStage;
+                }
+
                 double mark =
                     context.Direction ==
                         CFIPClean87Direction.Buy
@@ -10791,7 +10842,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                         context,
                         snapshot,
                         runtime,
-                        currentPlan,
+                        planForPosition,
                         configuration);
 
                 if (partial != null)
@@ -10805,7 +10856,7 @@ public sealed class CFIPClean87TradePlanBuilder :
                         context,
                         snapshot,
                         runtime,
-                        currentPlan,
+                        planForPosition,
                         market,
                         structure,
                         configuration,
@@ -11113,7 +11164,11 @@ public sealed class CFIPClean87TradePlanBuilder :
             CFIPClean87ConfigSnapshot configuration,
             double currentRR)
         {
+            if (context.ProtectionPending)
+                return null;
+
             double? desiredStop =
+
                 snapshot.StopLoss;
 
             double? desiredTarget =
@@ -11291,12 +11346,36 @@ public sealed class CFIPClean87TradePlanBuilder :
                         plan,
                         context.ActiveTargetStage);
 
-                if (active != null &&
+                bool targetRepriceAllowed =
+                    !configuration.Get(
+                        "StructuralTargetUpdatesOnly",
+                        true) ||
+                    structure != null &&
+                    structure.IsCoherent &&
+                    structure.IsPrimaryReady &&
+                    structure.ReferenceUtc !=
+                        context.LastTargetRepriceReferenceUtc &&
+                    HasCurrentDirectionalStructure(
+                        context.Direction,
+                        structure);
+
+                if (targetRepriceAllowed &&
+if (active != null &&
                     next != null &&
                     currentRR >=
                         configuration.Get(
                             "TargetUpdateTriggerRR",
                             1.20) &&
+                    atr > 0 &&
+                    Math.Abs(
+                        next.Level.Price -
+                        active.Level.Price) >=
+                        atr *
+                        Math.Max(
+                            0.05,
+                            configuration.Get(
+                                "TargetUpdateStepAtr",
+                                0.20)) &&
                     IsNearTarget(
                         context,
                         runtime,
@@ -11311,7 +11390,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                             desiredTarget,
                             next.Level.Price);
 
-                    context.ActiveTargetStage = next.Stage;
+                    context.PendingProtectionStage =
+                        next.Stage;
                 }
             }
 
@@ -11339,7 +11419,8 @@ public sealed class CFIPClean87TradePlanBuilder :
                             context.Direction,
                             desiredTarget,
                             tp2.Level.Price);
-                    context.ActiveTargetStage =
+
+                    context.PendingProtectionStage =
                         CFIPClean87TargetStage.TP2;
                 }
             }
@@ -11435,6 +11516,36 @@ public sealed class CFIPClean87TradePlanBuilder :
                     CFIPClean87Direction.Buy
                     ? best.Price - breathing * atr
                     : best.Price + breathing * atr;
+        }
+
+        private bool HasCurrentDirectionalStructure(
+            CFIPClean87Direction direction,
+            CFIPClean87StructureSnapshot structure)
+        {
+            if (structure == null ||
+                !structure.IsCoherent ||
+                !structure.IsPrimaryReady ||
+                structure.Events == null)
+                return false;
+
+            for (int i = 0; i < structure.Events.Count; i++)
+            {
+                CFIPClean87StructureEventRecord item =
+                    structure.Events[i];
+
+                if (item != null &&
+                    item.Direction == direction &&
+                    item.TimeUtc <= structure.ReferenceUtc &&
+                    (item.Kind ==
+                        CFIPClean87StructureEventKind.BreakOfStructure ||
+                     item.Kind ==
+                        CFIPClean87StructureEventKind.MarketStructureShift ||
+                     item.Kind ==
+                        CFIPClean87StructureEventKind.Displacement))
+                    return true;
+            }
+
+            return false;
         }
 
         private int CountOppositeEvidence(
@@ -11876,6 +11987,58 @@ public sealed class CFIPClean87TradePlanBuilder :
                         snapshot.VolumeInUnits *
                         0.0001)
                     : 0;
+        }
+
+        private bool ProtectionObserved(
+            CFIPClean87LivePositionContext context,
+            CFIPClean87BrokerPositionSnapshot snapshot)
+        {
+            if (context == null ||
+                snapshot == null ||
+                !context.ProtectionPending)
+                return false;
+
+            bool stopOk =
+                !context.PendingStopLoss.HasValue ||
+                snapshot.StopLoss.HasValue &&
+                Math.Abs(
+                    snapshot.StopLoss.Value -
+                    context.PendingStopLoss.Value) <=
+                    Math.Max(
+                        0.00000001,
+                        Math.Abs(
+                            context.PendingStopLoss.Value) *
+                        0.000001);
+
+            bool targetOk =
+                !context.PendingTakeProfit.HasValue ||
+                snapshot.TakeProfit.HasValue &&
+                Math.Abs(
+                    snapshot.TakeProfit.Value -
+                    context.PendingTakeProfit.Value) <=
+                    Math.Max(
+                        0.00000001,
+                        Math.Abs(
+                            context.PendingTakeProfit.Value) *
+                        0.000001);
+
+            return stopOk && targetOk;
+        }
+
+        private bool PlanMatches(
+            CFIPClean87LivePositionContext context,
+            CFIPClean87TradePlan plan)
+        {
+            if (context == null ||
+                plan == null ||
+                plan.Identity == null ||
+                string.IsNullOrWhiteSpace(context.PlanId))
+                return false;
+
+            return string.Equals(
+                context.PlanId,
+                plan.Identity.PlanId,
+                StringComparison.Ordinal);
         }
 
         private CFIPClean87LivePositionAction NewClose(
@@ -14549,12 +14712,19 @@ public sealed class CFIPClean87TradePlanBuilder :
                 if (action.Kind ==
                     CFIPClean87LivePositionActionKind.ProtectionUpdate)
                 {
-                    _positionLifecycle.RequestProtectionMutation(
-                        action.BrokerPositionId,
-                        action.StopLoss,
-                        action.TakeProfit,
-                        _state.Runtime.ServerUtc,
-                        action.Reason);
+                    bool protectionQueued =
+                        _positionLifecycle.RequestProtectionMutation(
+                            action.BrokerPositionId,
+                            action.StopLoss,
+                            action.TakeProfit,
+                            _state.Runtime.ServerUtc,
+                            action.Reason);
+
+                    if (protectionQueued)
+                        _livePositionManager.HandleProtectionRequested(
+                            action,
+                            _state.Runtime.ServerUtc);
+
                     continue;
                 }
 
