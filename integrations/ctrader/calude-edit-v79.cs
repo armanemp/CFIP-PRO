@@ -5640,9 +5640,13 @@ namespace cAlgo
 [Parameter("Use Advanced Confluence", Group = "01 · Decision", DefaultValue = true)]
         public bool UseAdvancedConfluence { get; set; }
 
+// Compatibility parameter retained for preset parity. The clean Decision
+        // engine does not interpret Trigger/Entry state; Phase 7 owns it.
 [Parameter("Allow Strong Trigger Override", Group = "01 · Decision", DefaultValue = true)]
         public bool AllowStrongTriggerOverride { get; set; }
 
+// Compatibility parameters retained for preset parity. M1 trigger and M5
+        // execution confirmation belong to the Phase 7 Entry/Trigger owner.
 [Parameter("M1 Trigger", Group = "02 · MTF", DefaultValue = false)]
         public bool UseM1Trigger { get; set; }
 
@@ -6612,6 +6616,9 @@ namespace cAlgo
 [Parameter("Smart Consensus Threshold", Group = "21 · Complete Intelligence", DefaultValue = 57, MinValue = 50, MaxValue = 95)]
         public int SmartConsensusThreshold { get; set; }
 
+// Compatibility parameter retained for preset parity. v79 replaces the old
+        // additive regime-weighting layer with deduplicated evidence plus
+        // regime-adaptive quality/share/edge policy.
 [Parameter("Adaptive Regime Weighting", Group = "21 · Complete Intelligence", DefaultValue = true)]
         public bool AdaptiveRegimeWeighting { get; set; }
 
