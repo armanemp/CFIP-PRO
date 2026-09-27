@@ -17796,11 +17796,14 @@ namespace cAlgo
             return false;
         }
 
-        private void CheckReversalProtection()
+                private void CheckReversalProtection()
         {
             if (!EnableReversalProtectionClose ||
                 _decision == null ||
-                _decision.Direction == 0)
+                _decision.Direction == 0 ||
+                (_plan != null &&
+                 _lifecycleState !=
+                    CFIPClean70LifecycleState.LivePosition))
                 return;
 
             foreach (Position position in Positions)
@@ -17821,56 +17824,54 @@ namespace cAlgo
                     _decision.TimeframeAgreement < Math.Max(50, ReversalCloseMinimumMtf))
                     continue;
 
-                if (!IsDecisiveOppositeDirection(positionDirection))
+                if (!IsDecisiveOppositeDirection(positionDirection) ||
+                    position.NetProfit <= 0)
                     continue;
 
-                if (position.NetProfit <= 0)
+                double protectedProfit =
+                    position.NetProfit;
+
+                if (_plan != null &&
+                    _plan.IsLivePosition)
+                {
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.ExitRequested,
+                        "REVERSAL PROTECTION");
+                }
+
+                if (!TryClosePosition(
+                        position,
+                        "REVERSAL PROTECTION"))
+                {
+                    if (_plan != null &&
+                        _plan.IsLivePosition)
+                    {
+                        SetLifecycleState(
+                            CFIPClean70LifecycleState.RecoveryRequired,
+                            "REVERSAL PROTECTION • EXIT REJECTED");
+                    }
+
                     continue;
-
-                double protectedProfit = position.NetProfit;
-
-                try
-                {
-                    TradeResult closeResult =
-                        ClosePosition(position);
-
-                    if (closeResult != null &&
-                        closeResult.IsSuccessful)
-                    {
-                        SendUnifiedAlert(
-                            "REVERSAL-CLOSE|" + position.Id,
-                            "CFIP CLEAN70 REVERSAL CLOSE | #" +
-                            position.Id +
-                            " | protected +" +
-                            protectedProfit.ToString("F2") +
-                            " | Q " +
-                            _decision.SmartQuality +
-                            " | MTF " +
-                            _decision.TimeframeAgreement +
-                            " | EVID " +
-                            _decision.IndependentEvidence,
-                            positionDirection,
-                            true);
-                    }
-                    else
-                    {
-                        Print(
-                            "CFIP CLEAN70 reversal close rejected: {0}",
-                            closeResult == null
-                                ? "NULL RESULT"
-                                : closeResult.Error.HasValue
-                                    ? closeResult.Error.Value.ToString()
-                                    : "UNKNOWN");
-                    }
                 }
-                catch (Exception ex)
-                {
-                    Print(
-                        "CFIP CLEAN70 reversal protection close failed: {0}",
-                        ex.Message);
-                }
+
+                SendUnifiedAlert(
+                    "REVERSAL-CLOSE|" +
+                    position.Id,
+                    "CFIP CLEAN70 REVERSAL EXIT REQUESTED | #" +
+                    position.Id +
+                    " | protected +" +
+                    protectedProfit.ToString("F2") +
+                    " | Q " +
+                    _decision.SmartQuality +
+                    " | MTF " +
+                    _decision.TimeframeAgreement +
+                    " | EVID " +
+                    _decision.IndependentEvidence,
+                    positionDirection,
+                    true);
             }
         }
+
 
         private bool IsDecisiveOppositeDirection(int positionDirection)
         {
@@ -21864,7 +21865,9 @@ private Color AutoTradingPanelColor()
                 return;
 
             if (_plan == null ||
-                !_plan.IsLivePosition)
+                !_plan.IsLivePosition ||
+                _lifecycleState ==
+                    CFIPClean70LifecycleState.ExitRequested)
                 return;
 
             if ((DateTime.UtcNow -
@@ -22027,6 +22030,8 @@ private Color AutoTradingPanelColor()
         {
             if (!AutoTradingEnabled ||
                 !EnableAggressiveAutoEntry ||
+                _lifecycleState ==
+                    CFIPClean70LifecycleState.ExitRequested ||
                 _plan != null ||
                 _reaction == null ||
                 !_reaction.EntryAllowed ||
@@ -23668,7 +23673,8 @@ private Color AutoTradingPanelColor()
             }
         }
 
-        private void CleanupPendingOrdersIfNeeded(int closedM5)
+                private void CleanupPendingOrdersIfNeeded(
+            int closedM5)
         {
             if (!PendingAutoCleanup ||
                 _lastPendingCleanupM5 == closedM5)
@@ -23692,9 +23698,6 @@ private Color AutoTradingPanelColor()
                         ? _decision.Direction
                         : 0;
 
-                // A reversal Limit is intentionally opposite the current
-                // decision, so its direction must be validated against the
-                // live reaction rather than the decision direction.
                 if (order.OrderType ==
                         PendingOrderType.Limit &&
                     ReversalSetupStrong())
@@ -23719,18 +23722,24 @@ private Color AutoTradingPanelColor()
                     !reversalSupersedesStop)
                     continue;
 
-                try
+                if (!TryCancelPendingOrder(
+                        order,
+                        stale
+                            ? "STALE PENDING ORDER"
+                            : wrongDirection
+                                ? "WRONG DIRECTION PENDING ORDER"
+                                : "REVERSAL SUPERSEDES STOP"))
                 {
-                    CancelPendingOrder(order);
-                }
-                catch (Exception ex)
-                {
-                    Print(
-                        "CFIP CLEAN70 pending cleanup failed: {0}",
-                        ex.Message);
+                    SetLifecycleState(
+                        CFIPClean70LifecycleState.RecoveryRequired,
+                        "PENDING CLEANUP CANCEL REJECTED");
+
+                    _autoOrdersBlockReason =
+                        "PENDING CLEANUP CANCEL REJECTED";
                 }
             }
         }
+
 
         private Position GetManagedPosition()
         {
@@ -23924,15 +23933,17 @@ private Color AutoTradingPanelColor()
                     ? 1
                     : -1;
 
-            if (EnableOutcomeTelemetry &&
-                !_outcomeRegistered)
+            if (!_outcomeRegistered)
             {
                 bool profitable =
                     args.Position.NetProfit > 0;
 
-                RegisterOutcome(
-                    direction,
-                    profitable);
+                if (EnableOutcomeTelemetry)
+                {
+                    RegisterOutcome(
+                        direction,
+                        profitable);
+                }
 
                 _outcomeRegistered = true;
 
