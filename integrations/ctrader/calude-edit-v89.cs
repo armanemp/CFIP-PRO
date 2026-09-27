@@ -8527,6 +8527,9 @@ public sealed class CFIPClean89TradePlanBuilder :
                 if (position == null)
                     return Failure("POSITION_NOT_FOUND");
 
+                if (!IsManagedPosition(position))
+                    return Failure("POSITION_NOT_MANAGED");
+
                 double? effectiveStop =
                     stopLoss.HasValue
                         ? stopLoss
@@ -8591,6 +8594,9 @@ public sealed class CFIPClean89TradePlanBuilder :
                 if (position == null)
                     return Failure("POSITION_NOT_FOUND");
 
+                if (!IsManagedPosition(position))
+                    return Failure("POSITION_NOT_MANAGED");
+
                 double volume =
                     _host.Symbol.NormalizeVolumeInUnits(
                         volumeInUnits,
@@ -8633,6 +8639,9 @@ public sealed class CFIPClean89TradePlanBuilder :
                 if (position == null)
                     return Failure("POSITION_NOT_FOUND");
 
+                if (!IsManagedPosition(position))
+                    return Failure("POSITION_NOT_MANAGED");
+
                 TradeResult result = _host.ClosePosition(position);
 
                 return result.IsSuccessful
@@ -8671,6 +8680,9 @@ public sealed class CFIPClean89TradePlanBuilder :
 
                 if (order == null)
                     return Failure("PENDING_ORDER_NOT_FOUND");
+
+                if (!IsManagedPendingOrder(order))
+                    return Failure("PENDING_ORDER_NOT_MANAGED");
 
                 double? effectiveStop =
                     stopLoss.HasValue
@@ -8744,6 +8756,9 @@ public sealed class CFIPClean89TradePlanBuilder :
                 if (found == null)
                     return Failure("PENDING_ORDER_NOT_FOUND");
 
+                if (!IsManagedPendingOrder(found))
+                    return Failure("PENDING_ORDER_NOT_MANAGED");
+
                 TradeResult result = _host.CancelPendingOrder(found);
 
                 return result.IsSuccessful
@@ -8757,6 +8772,58 @@ public sealed class CFIPClean89TradePlanBuilder :
             {
                 return Failure(ex.Message);
             }
+        }
+
+        private bool IsManagedPosition(Position position)
+        {
+            if (position == null ||
+                _host.Configuration == null)
+                return false;
+
+            string label =
+                _host.Configuration.Get(
+                    "AutoTradeLabel",
+                    "CFIP-SMART-CLEAN89");
+
+            return
+                string.Equals(
+                    position.Label,
+                    label,
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    position.SymbolName,
+                    _host.SymbolName,
+                    StringComparison.Ordinal) &&
+                position.Comment != null &&
+                position.Comment.IndexOf(
+                    "CFIP89|",
+                    StringComparison.Ordinal) >= 0;
+        }
+
+        private bool IsManagedPendingOrder(PendingOrder order)
+        {
+            if (order == null ||
+                _host.Configuration == null)
+                return false;
+
+            string label =
+                _host.Configuration.Get(
+                    "AutoTradeLabel",
+                    "CFIP-SMART-CLEAN89");
+
+            return
+                string.Equals(
+                    order.Label,
+                    label,
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    order.SymbolName,
+                    _host.SymbolName,
+                    StringComparison.Ordinal) &&
+                order.Comment != null &&
+                order.Comment.IndexOf(
+                    "CFIP89|",
+                    StringComparison.Ordinal) >= 0;
         }
 
         private bool ValidateLivePositionProtection(
