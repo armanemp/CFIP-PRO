@@ -222,3 +222,29 @@ Phase 0 — Baseline: COMPLETE
 Phase 1 — Static/API audit: IN PROGRESS
 Phase 2 — Architecture extraction: STARTED
 Code refactor: NOT STARTED
+
+
+## Phase 1 static scan results
+
+- Parameter declarations scanned: 513
+- Duplicate parameter display labels: 0
+- Parameters with no consumer found: ShowEarlyArrow
+- Trading side-effect call counts in v70:
+  - ExecuteMarketOrder: 2
+  - PlaceStopOrder: 1
+  - PlaceLimitOrder: 1
+  - ClosePosition: 6
+  - CancelPendingOrder: 2
+  - ModifyStopLossPrice: 4
+  - ModifyTakeProfitPrice: 3
+- Lifecycle subscriptions currently present:
+  - Positions.Opened: yes
+  - Positions.Closed: yes
+  - PendingOrders.Filled: yes
+- Lifecycle subscriptions currently absent:
+  - Positions.Modified
+  - PendingOrders.Created
+  - PendingOrders.Cancelled
+  - PendingOrders.Modified
+
+These missing events are not automatically defects by themselves, but they are a design gap for an authoritative broker-state machine. The final lifecycle layer must decide which broker events are required and why, rather than depending only on polling.
