@@ -358,3 +358,12 @@ def test_phase9_requested_tp_stage_is_not_silently_replaced():
     assert "AutoTpStage" in planner
     assert "if (target == null)" in planner
     assert "Requested execution target stage is unavailable." in planner
+
+
+def test_phase9_protection_recovery_failure_enters_recovery_state():
+    h = host(read(V82))
+    assert "result.ReconciliationRequired" in h
+    assert "CFIPClean82ExecutionResult protectionResult" in h
+    assert "BROKER_PROTECTION_RECOVERY_FAILED" in h
+    assert "CFIPClean82LifecycleState.RecoveryRequired" in h
+    assert "_state.Execution = protectionResult" in h
