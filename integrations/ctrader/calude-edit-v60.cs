@@ -912,6 +912,9 @@ namespace cAlgo
         [Parameter("Show Entry", Group = "14 · DISPLAY — CORE", DefaultValue = true)]
         public bool ShowEntry { get; set; }
 
+        [Parameter("Show Trigger", Group = "14 · DISPLAY — CORE", DefaultValue = true)]
+        public bool ShowTrigger { get; set; }
+
         [Parameter("Show SL", Group = "14 · DISPLAY — CORE", DefaultValue = true)]
         public bool ShowSL { get; set; }
 
@@ -1016,6 +1019,9 @@ namespace cAlgo
 
         [Parameter("Entry Line Color", Group = "14 · DISPLAY — CORE", DefaultValue = "White")]
         public Color EntryLineColor { get; set; }
+
+        [Parameter("Trigger Line Color", Group = "14 · DISPLAY — CORE", DefaultValue = "Orange")]
+        public Color TriggerLineColor { get; set; }
 
         [Parameter("SL Line Color", Group = "14 · DISPLAY — CORE", DefaultValue = "Red")]
         public Color SlLineColor { get; set; }
@@ -1383,6 +1389,9 @@ namespace cAlgo
 
         [Parameter("Show Trade Action Buttons", Group = "13 · AUTO TRADING", DefaultValue = true)]
         public bool ShowTradeActionButtons { get; set; }
+
+        [Parameter("Always Show Safety Buttons", Group = "13 · AUTO TRADING", DefaultValue = true)]
+        public bool AlwaysShowSafetyButtons { get; set; }
 
         [Parameter("Action Button Margin", Group = "13 · AUTO TRADING", DefaultValue = 2, MinValue = 0, MaxValue = 20)]
         public int ActionButtonMargin { get; set; }
@@ -12490,10 +12499,18 @@ namespace cAlgo
                 return;
             }
 
+            // A live/confirmed Plan is authoritative for execution visuals.
+            // Prediction and watch/reaction objects must not survive beside it,
+            // otherwise identical prices can render as apparently duplicated
+            // lines/arrows.
+            RemovePredictionObjects();
+            ClearWatchObjects();
+
             if (!ShowLevelLines)
             {
                 RemovePlanLine(P + "ENTRY");
                 RemovePlanLine(P + "IDEAL_ENTRY");
+                RemovePlanLine(P + "TRIGGER");
                 RemovePlanLine(P + "SL");
                 RemovePlanLine(P + "TP1");
                 RemovePlanLine(P + "TP2");
@@ -12508,13 +12525,35 @@ namespace cAlgo
                     EntryLineColor,
                     ShowEntry);
 
+                bool idealDistinct =
+                    IsFinitePositive(_plan.IdealEntry) &&
+                    !SamePrice(
+                        _plan.IdealEntry,
+                        _plan.Entry);
+
                 DrawPlanLine(
                     P + "IDEAL_ENTRY",
                     _plan.IdealEntry,
                     PanelAccentColor,
                     ShowEntry &&
-                    IsFinitePositive(
-                        _plan.IdealEntry));
+                    idealDistinct);
+
+                bool triggerDistinct =
+                    IsFinitePositive(_plan.EntryTrigger) &&
+                    !SamePrice(
+                        _plan.EntryTrigger,
+                        _plan.Entry) &&
+                    (!idealDistinct ||
+                     !SamePrice(
+                         _plan.EntryTrigger,
+                         _plan.IdealEntry));
+
+                DrawPlanLine(
+                    P + "TRIGGER",
+                    _plan.EntryTrigger,
+                    TriggerLineColor,
+                    ShowTrigger &&
+                    triggerDistinct);
 
                 DrawPlanLine(
                     P + "SL",
@@ -12522,29 +12561,59 @@ namespace cAlgo
                     SlLineColor,
                     ShowSL);
 
+                bool tp1Distinct =
+                    IsFinitePositive(_plan.Tp1) &&
+                    !SamePrice(_plan.Tp1, _plan.Entry) &&
+                    !SamePrice(_plan.Tp1, _plan.EntryTrigger);
+
                 DrawPlanLine(
                     P + "TP1",
                     _plan.Tp1,
                     TpLineColor,
-                    ShowTP1);
+                    ShowTP1 &&
+                    tp1Distinct);
+
+                bool tp2Distinct =
+                    IsFinitePositive(_plan.Tp2) &&
+                    (!tp1Distinct ||
+                     !SamePrice(_plan.Tp2, _plan.Tp1)) &&
+                    !SamePrice(_plan.Tp2, _plan.Entry) &&
+                    !SamePrice(_plan.Tp2, _plan.EntryTrigger);
 
                 DrawPlanLine(
                     P + "TP2",
                     _plan.Tp2,
                     Tp2LineColor,
-                    ShowTP2);
+                    ShowTP2 &&
+                    tp2Distinct);
+
+                bool tp3Distinct =
+                    IsFinitePositive(_plan.Tp3) &&
+                    (!tp2Distinct ||
+                     !SamePrice(_plan.Tp3, _plan.Tp2)) &&
+                    !SamePrice(_plan.Tp3, _plan.Entry) &&
+                    !SamePrice(_plan.Tp3, _plan.EntryTrigger);
 
                 DrawPlanLine(
                     P + "TP3",
                     _plan.Tp3,
                     Tp3LineColor,
-                    ShowTP3);
+                    ShowTP3 &&
+                    tp3Distinct);
+
+                bool tp4Distinct =
+                    IsFinitePositive(_plan.Tp4) &&
+                    (!tp3Distinct ||
+                     !SamePrice(_plan.Tp4, _plan.Tp3)) &&
+                    !SamePrice(_plan.Tp4, _plan.Entry) &&
+                    !SamePrice(_plan.Tp4, _plan.EntryTrigger);
 
                 DrawPlanLine(
                     P + "TP4",
                     _plan.Tp4,
                     Tp4LineColor,
-                    ShowTP4);
+                    ShowTP4 &&
+                    tp4Distinct);
             }
 
             if (ShowLevelPriceLabels ||
@@ -12633,8 +12702,13 @@ namespace cAlgo
                 _plan.Entry,
                 EntryLineColor);
 
-            if (IsFinitePositive(
-                    _plan.IdealEntry))
+            bool idealDistinct =
+                IsFinitePositive(_plan.IdealEntry) &&
+                !SamePrice(
+                    _plan.IdealEntry,
+                    _plan.Entry);
+
+            if (idealDistinct)
             {
                 DrawPlanLabel(
                     P + "IDEAL_ENTRY_LABEL",
@@ -12646,25 +12720,69 @@ namespace cAlgo
                     PanelAccentColor);
             }
 
-            DrawPlanLabel(
-                P + "SL_LABEL",
-                "SL " +
-                Price(
-                    _plan.Stop),
-                bar,
-                _plan.Stop,
-                SlLineColor);
+            bool triggerDistinct =
+                IsFinitePositive(_plan.EntryTrigger) &&
+                !SamePrice(
+                    _plan.EntryTrigger,
+                    _plan.Entry) &&
+                (!idealDistinct ||
+                 !SamePrice(
+                     _plan.EntryTrigger,
+                     _plan.IdealEntry));
 
-            DrawPlanLabel(
-                P + "TP1_LABEL",
-                "TP1 " +
-                Price(
-                    _plan.Tp1),
-                bar,
-                _plan.Tp1,
-                TpLineColor);
+            if (ShowTrigger &&
+                triggerDistinct)
+            {
+                DrawPlanLabel(
+                    P + "TRIGGER_LABEL",
+                    "TRIGGER " +
+                    Price(
+                        _plan.EntryTrigger),
+                    bar,
+                    _plan.EntryTrigger,
+                    TriggerLineColor);
+            }
 
-            if (_plan.Tp2 > 0)
+            if (IsFinitePositive(_plan.Stop))
+            {
+                DrawPlanLabel(
+                    P + "SL_LABEL",
+                    "SL " +
+                    Price(
+                        _plan.Stop),
+                    bar,
+                    _plan.Stop,
+                    SlLineColor);
+            }
+
+            bool tp1Distinct =
+                IsFinitePositive(_plan.Tp1) &&
+                !SamePrice(_plan.Tp1, _plan.Entry) &&
+                !SamePrice(_plan.Tp1, _plan.EntryTrigger);
+
+            if (ShowTP1 &&
+                tp1Distinct)
+            {
+                DrawPlanLabel(
+                    P + "TP1_LABEL",
+                    "TP1 " +
+                    Price(
+                        _plan.Tp1),
+                    bar,
+                    _plan.Tp1,
+                    TpLineColor);
+            }
+
+            bool tp2Distinct =
+                IsFinitePositive(_plan.Tp2) &&
+                (!tp1Distinct ||
+                 !SamePrice(_plan.Tp2, _plan.Tp1)) &&
+                !SamePrice(_plan.Tp2, _plan.Entry) &&
+                !SamePrice(_plan.Tp2, _plan.EntryTrigger);
+
+            if (ShowTP2 &&
+                tp2Distinct)
+            {
                 DrawPlanLabel(
                     P + "TP2_LABEL",
                     "TP2 " +
@@ -12673,8 +12791,18 @@ namespace cAlgo
                     bar,
                     _plan.Tp2,
                     Tp2LineColor);
+            }
 
-            if (_plan.Tp3 > 0)
+            bool tp3Distinct =
+                IsFinitePositive(_plan.Tp3) &&
+                (!tp2Distinct ||
+                 !SamePrice(_plan.Tp3, _plan.Tp2)) &&
+                !SamePrice(_plan.Tp3, _plan.Entry) &&
+                !SamePrice(_plan.Tp3, _plan.EntryTrigger);
+
+            if (ShowTP3 &&
+                tp3Distinct)
+            {
                 DrawPlanLabel(
                     P + "TP3_LABEL",
                     "TP3 " +
@@ -12683,8 +12811,18 @@ namespace cAlgo
                     bar,
                     _plan.Tp3,
                     Tp3LineColor);
+            }
 
-            if (_plan.Tp4 > 0)
+            bool tp4Distinct =
+                IsFinitePositive(_plan.Tp4) &&
+                (!tp3Distinct ||
+                 !SamePrice(_plan.Tp4, _plan.Tp3)) &&
+                !SamePrice(_plan.Tp4, _plan.Entry) &&
+                !SamePrice(_plan.Tp4, _plan.EntryTrigger);
+
+            if (ShowTP4 &&
+                tp4Distinct)
+            {
                 DrawPlanLabel(
                     P + "TP4_LABEL",
                     "TP4 " +
@@ -12693,6 +12831,7 @@ namespace cAlgo
                     bar,
                     _plan.Tp4,
                     Tp4LineColor);
+            }
         }
 
         private void DrawPlanLabel(
@@ -12746,6 +12885,8 @@ namespace cAlgo
                 P + "ENTRY_LABEL");
             Chart.RemoveObject(
                 P + "IDEAL_ENTRY_LABEL");
+            Chart.RemoveObject(
+                P + "TRIGGER_LABEL");
             Chart.RemoveObject(
                 P + "SL_LABEL");
             Chart.RemoveObject(
@@ -13191,12 +13332,16 @@ namespace cAlgo
         private void ClearPlanObjects()
         {
             ClearWatchObjects();
+            RemovePlanLabels();
 
             RemovePlanLine(
                 P + "ENTRY");
 
             RemovePlanLine(
                 P + "IDEAL_ENTRY");
+
+            RemovePlanLine(
+                P + "TRIGGER");
 
             RemovePlanLine(
                 P + "SL");
@@ -13215,6 +13360,25 @@ namespace cAlgo
 
             Chart.RemoveObject(
                 P + "ARROW");
+        }
+
+        private bool SamePrice(
+            double left,
+            double right)
+        {
+            if (!IsFinitePositive(left) ||
+                !IsFinitePositive(right))
+                return false;
+
+            double tolerance =
+                Math.Max(
+                    Symbol.TickSize,
+                    Symbol.PipSize * 0.05);
+
+            return Math.Abs(left - right) <=
+                   Math.Max(
+                       tolerance,
+                       Symbol.TickSize * 0.5);
         }
 
         private void RemovePlanLine(
@@ -14350,8 +14514,12 @@ namespace cAlgo
                     border * 2);
 
             bool buttons =
-                ShowTradeActionButtons;
+                ShowTradeActionButtons ||
+                AlwaysShowSafetyButtons;
 
+            // Close/Cancel are safety controls and remain available by default
+            // even when the optional "Show Trade Action Buttons" switch was
+            // previously turned off. The panel toggle is independent as well.
             // The hide/show toggle now lives in this same bottom row, so the
             // row (and the height reserved for it) must stay up as long as
             // EITHER the trade-action buttons OR the toggle is enabled —
@@ -18233,16 +18401,155 @@ private Color AutoTradingPanelColor()
                         P + "PRED_TARGET4",
                         prediction.Target4);
             }
+
+            RenderPredictionLabels(
+                prediction,
+                closedM5);
         }
 
-        private Color predictionColor()
+        private void RenderPredictionLabels(
+            Prediction prediction,
+            int closedM5)
         {
-            return
-                _prediction != null &&
-                _prediction.Direction == -1
-                    ? SellArrowColor
-                    : BuyArrowColor;
+            if (prediction == null ||
+                Bars == null ||
+                Bars.Count < 2)
+                return;
+
+            int bar =
+                MapM5ToChart(
+                    closedM5,
+                    Bars.Count - 1);
+
+            bar =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        Bars.Count - 1,
+                        bar));
+
+            DrawPlanLabel(
+                P + "PRED_ENTRY_LABEL",
+                "ENTRY " +
+                Price(prediction.Entry),
+                bar,
+                prediction.Entry,
+                EntryLineColor);
+
+            if (prediction.StopLoss > 0)
+                DrawPlanLabel(
+                    P + "PRED_STOP_LABEL",
+                    "SL " +
+                    Price(prediction.StopLoss),
+                    bar,
+                    prediction.StopLoss,
+                    SlLineColor);
+
+            if (prediction.Trigger > 0 &&
+                !SamePrice(
+                    prediction.Trigger,
+                    prediction.Entry))
+                DrawPlanLabel(
+                    P + "PRED_TRIGGER_LABEL",
+                    "TRIGGER " +
+                    Price(prediction.Trigger),
+                    bar,
+                    prediction.Trigger,
+                    TriggerLineColor);
+
+            if (ShowPredictionTargets)
+            {
+                if (prediction.Target1 > 0 &&
+                    !SamePrice(
+                        prediction.Target1,
+                        prediction.Entry))
+                    DrawPlanLabel(
+                        P + "PRED_TARGET1_LABEL",
+                        "TP1 " +
+                        Price(prediction.Target1),
+                        bar,
+                        prediction.Target1,
+                        TpLineColor);
+
+                if (prediction.Target2 > 0 &&
+                    !SamePrice(
+                        prediction.Target2,
+                        prediction.Target1))
+                    DrawPlanLabel(
+                        P + "PRED_TARGET2_LABEL",
+                        "TP2 " +
+                        Price(prediction.Target2),
+                        bar,
+                        prediction.Target2,
+                        Tp2LineColor);
+
+                if (prediction.Target3 > 0 &&
+                    !SamePrice(
+                        prediction.Target3,
+                        prediction.Target2))
+                    DrawPlanLabel(
+                        P + "PRED_TARGET3_LABEL",
+                        "TP3 " +
+                        Price(prediction.Target3),
+                        bar,
+                        prediction.Target3,
+                        Tp3LineColor);
+
+                if (prediction.Target4 > 0 &&
+                    !SamePrice(
+                        prediction.Target4,
+                        prediction.Target3))
+                    DrawPlanLabel(
+                        P + "PRED_TARGET4_LABEL",
+                        "TP4 " +
+                        Price(prediction.Target4),
+                        bar,
+                        prediction.Target4,
+                        Tp4LineColor);
+            }
         }
+
+        private Color PredictionLineColor(
+            string name)
+        {
+            if (name.IndexOf(
+                    "PRED_TRIGGER",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return TriggerLineColor;
+
+            if (name.IndexOf(
+                    "PRED_STOP",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return SlLineColor;
+
+            if (name.IndexOf(
+                    "PRED_TARGET1",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return TpLineColor;
+
+            if (name.IndexOf(
+                    "PRED_TARGET2",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return Tp2LineColor;
+
+            if (name.IndexOf(
+                    "PRED_TARGET3",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return Tp3LineColor;
+
+            if (name.IndexOf(
+                    "PRED_TARGET4",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return Tp4LineColor;
+
+            if (name.IndexOf(
+                    "PRED_ENTRY",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                return EntryLineColor;
+
+            return PredictionColor;
+        }
+
         private void DrawPredictionLine(
             string name,
             double price)
@@ -18343,7 +18650,7 @@ private Color AutoTradingPanelColor()
                             normalized,
                             right,
                             normalized,
-                            predictionColor(),
+                            PredictionLineColor(name),
                             Math.Max(
                                 1,
                                 LevelLineThickness),
@@ -18362,7 +18669,7 @@ private Color AutoTradingPanelColor()
                 line.Y2 =
                     normalized;
                 line.Color =
-                    predictionColor();
+                    PredictionLineColor(name);
                 line.Thickness =
                     Math.Max(
                         1,
@@ -18391,22 +18698,43 @@ private Color AutoTradingPanelColor()
                 P + "PRED_ENTRY");
 
             Chart.RemoveObject(
+                P + "PRED_ENTRY_LABEL");
+
+            Chart.RemoveObject(
                 P + "PRED_STOP");
+
+            Chart.RemoveObject(
+                P + "PRED_STOP_LABEL");
 
             Chart.RemoveObject(
                 P + "PRED_TRIGGER");
 
             Chart.RemoveObject(
+                P + "PRED_TRIGGER_LABEL");
+
+            Chart.RemoveObject(
                 P + "PRED_TARGET1");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET1_LABEL");
 
             Chart.RemoveObject(
                 P + "PRED_TARGET2");
 
             Chart.RemoveObject(
+                P + "PRED_TARGET2_LABEL");
+
+            Chart.RemoveObject(
                 P + "PRED_TARGET3");
 
             Chart.RemoveObject(
+                P + "PRED_TARGET3_LABEL");
+
+            Chart.RemoveObject(
                 P + "PRED_TARGET4");
+
+            Chart.RemoveObject(
+                P + "PRED_TARGET4_LABEL");
         }
 
         private void EmitContextAlerts(
@@ -19850,11 +20178,27 @@ private Color AutoTradingPanelColor()
             if (atr <= 0)
                 return false;
 
+            ExecutionModel reversalModel =
+                null;
+
+            try
+            {
+                reversalModel =
+                    BuildExecutionModel(
+                        closedM5,
+                        direction);
+            }
+            catch
+            {
+                reversalModel = null;
+            }
+
             double targetEntry =
-                _executionModel != null &&
+                reversalModel != null &&
+                reversalModel.Direction == direction &&
                 IsFinitePositive(
-                    _executionModel.IdealEntry)
-                    ? _executionModel.IdealEntry
+                    reversalModel.IdealEntry)
+                    ? reversalModel.IdealEntry
                     : direction == 1
                         ? Symbol.Bid -
                           atr * 0.25
@@ -20041,13 +20385,28 @@ private Color AutoTradingPanelColor()
                     order.ExpirationTime.Value <=
                     DateTime.UtcNow;
 
+                int expectedDirection =
+                    _decision != null
+                        ? _decision.Direction
+                        : 0;
+
+                // A reversal Limit is intentionally opposite the current
+                // decision, so its direction must be validated against the
+                // live reaction rather than the decision direction.
+                if (order.OrderType ==
+                        PendingOrderType.Limit &&
+                    ReversalSetupStrong())
+                {
+                    expectedDirection =
+                        _reaction.Direction;
+                }
+
                 bool wrongDirection =
-                    _decision != null &&
-                    _decision.Direction != 0 &&
+                    expectedDirection != 0 &&
                     ((order.TradeType == TradeType.Buy &&
-                      _decision.Direction != 1) ||
+                      expectedDirection != 1) ||
                      (order.TradeType == TradeType.Sell &&
-                      _decision.Direction != -1));
+                      expectedDirection != -1));
 
                 bool reversalSupersedesStop =
                     ReversalSetupStrong() &&
