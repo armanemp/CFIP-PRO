@@ -1794,7 +1794,7 @@ Source-level structural checks cover the Phase-10 lifecycle, event wiring, recov
 
 ## PHASE 11 — Position lifecycle and broker protection
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — v84 PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
 
 ### Objective
 
@@ -1819,7 +1819,38 @@ Make broker reality authoritative and recovery-safe.
 
 Never clear the internal live-plan owner while the broker still has a managed live position.
 
-### Acceptance
+### Phase 11 implementation record — 2026-09-27
+
+**Current implementation:** v84 (`integrations/ctrader/calude-edit-v84.cs`)
+
+**Phase document:** `docs/ctrader/CFIP-V84-PHASE-11-POSITION.md`
+
+**Static tests:** `tests/unit/test_ctrader_v84_phase11_position.py`
+
+**Implemented:**
+- first-class managed Position lifecycle record/state
+- startup adoption of managed live Positions
+- Position Opened / Modified / Closed event observation
+- actual broker entry rebasing after fill
+- pending -> Position protection handoff
+- protection drift detection
+- protection recovery through the unified broker gateway
+- restart-safe broker Position reconciliation
+- explicit orphan Position state
+- no automatic orphan close
+- invariant preserving live broker ownership during reconciliation
+
+**Current validation:** source-level checks are implemented; real cTrader compile/runtime remains mandatory.
+
+**Remaining before acceptance:**
+- close request/result/retry state machine
+- partial-fill / multiple-position ownership
+- protection retry/backoff policy
+- broker disconnect/recovery scenarios
+- controlled runtime validation
+- governed orphan remediation policy
+
+---### Acceptance
 
 Simulated and real broker event sequences cannot create impossible internal states.
 
