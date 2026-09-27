@@ -338,3 +338,19 @@ def test_phase6_deduplicates_liquidity_by_pool_family_and_direction():
     assert "aggregate.Quality = Math.Max" in s
     assert "aggregate.Quality * 0.06" in s
     assert "Liquidity sweeps are deduplicated by liquidity-pool family." in s
+
+
+def test_phase6_neutral_direction_does_not_accumulate_directional_gate_blocks():
+    s = read(V79)
+    start = s.index("if (direction == CFIPClean79Direction.Wait)")
+    end = s.index("blocks = Distinct(blocks);", start)
+    block = s[start:end]
+    assert "blocks.Add(CFIPClean79BlockReason.NoDirection)" in block
+    assert "else" in block
+    assert block.index("blocks.Add(CFIPClean79BlockReason.NoDirection)") < block.index("else")
+    else_body = block[block.index("else"):]
+    for token in [
+        "ConfidenceTooLow", "EvidenceInsufficient", "MtfDisagreement",
+        "StructureInvalid", "PolicyBlocked", "VolatilityBlocked"
+    ]:
+        assert token not in else_body
