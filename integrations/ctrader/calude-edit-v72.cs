@@ -10422,6 +10422,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    SwingStrength * 2 + 1))
+                return false;
+
             double swing =
                 FindSwingHigh(
                     bars,
@@ -10442,6 +10448,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    SwingStrength * 2 + 1))
+                return false;
+
             double swing =
                 FindSwingLow(
                     bars,
@@ -10462,6 +10474,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    SwingStrength * 2 + 2))
+                return false;
+
             double previous =
                 FindSwingHigh(
                     bars,
@@ -10483,6 +10501,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    SwingStrength * 2 + 2))
+                return false;
+
             double previous =
                 FindSwingLow(
                     bars,
@@ -10504,7 +10528,10 @@ namespace cAlgo
             int index)
         {
             if (!UseMssChoch ||
-                index < 12)
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    12))
                 return false;
 
             double level =
@@ -10527,7 +10554,10 @@ namespace cAlgo
             int index)
         {
             if (!UseMssChoch ||
-                index < 12)
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    12))
                 return false;
 
             double level =
@@ -10550,6 +10580,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    0))
+                return false;
+
             double body =
                 Math.Abs(
                     bars.ClosePrices[index] -
@@ -10569,6 +10605,12 @@ namespace cAlgo
             int index,
             double atr)
         {
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    0))
+                return false;
+
             double body =
                 Math.Abs(
                     bars.ClosePrices[index] -
@@ -10589,8 +10631,10 @@ namespace cAlgo
             double atr)
         {
             if (!UseLiquiditySweep ||
-                bars == null ||
-                index < 5 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    5) ||
                 atr <= 0)
                 return false;
 
@@ -10629,8 +10673,10 @@ namespace cAlgo
             double atr)
         {
             if (!UseLiquiditySweep ||
-                bars == null ||
-                index < 5 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    5) ||
                 atr <= 0)
                 return false;
 
@@ -10808,8 +10854,10 @@ namespace cAlgo
             double selectionPrice = double.NaN)
         {
             if (!UseFvg ||
-                bars == null ||
-                index < 2 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    2) ||
                 atr <= 0)
                 return null;
 
@@ -10984,7 +11032,9 @@ namespace cAlgo
             bool twoBarImbalance,
             double atr)
         {
-            if (bars == null ||
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    currentIndex) ||
                 createdIndex < 0 ||
                 currentIndex < createdIndex ||
                 low >= high)
@@ -11202,8 +11252,10 @@ namespace cAlgo
             bool requireHistoricalRetest = true)
         {
             if (!UseOrderBlock ||
-                bars == null ||
-                index < 8 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    8) ||
                 atr <= 0)
                 return null;
 
@@ -11314,7 +11366,9 @@ namespace cAlgo
             int direction,
             double atr)
         {
-            if (bars == null ||
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    currentIndex) ||
                 createdIndex < 2 ||
                 currentIndex <= createdIndex ||
                 atr <= 0)
@@ -11936,8 +11990,10 @@ namespace cAlgo
             int strength,
             int occurrence)
         {
-            if (bars == null ||
-                index < strength * 2 + 1)
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    strength * 2 + 1))
                 return 0;
 
             int first =
@@ -11997,8 +12053,10 @@ namespace cAlgo
             int strength,
             int occurrence)
         {
-            if (bars == null ||
-                index < strength * 2 + 1)
+            if (!IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    strength * 2 + 1))
                 return 0;
 
             int first =
@@ -12175,8 +12233,10 @@ namespace cAlgo
             double atr)
         {
             if (!UseEqualHighLow ||
-                bars == null ||
-                index < 10 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    10) ||
                 atr <= 0)
                 return 0;
 
@@ -12276,8 +12336,10 @@ namespace cAlgo
             double atr)
         {
             if (!UseEqualHighLow ||
-                bars == null ||
-                index < 10 ||
+                !IsClosedAnalysisIndex(
+                    bars,
+                    index,
+                    10) ||
                 atr <= 0)
                 return 0;
 
@@ -25177,6 +25239,19 @@ private Color AutoTradingPanelColor()
             return -1;
         }
 
+
+        private bool IsClosedAnalysisIndex(
+            Bars bars,
+            int index,
+            int minimumIndex = 0)
+        {
+            return
+                bars != null &&
+                index >= Math.Max(
+                    0,
+                    minimumIndex) &&
+                index < bars.Count - 1;
+        }
 
         private double Highest(
             Bars bars,
