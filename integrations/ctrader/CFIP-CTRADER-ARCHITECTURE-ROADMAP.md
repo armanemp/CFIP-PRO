@@ -1593,7 +1593,7 @@ Phase 8 is not accepted yet. Phase 7 runtime acceptance remains a prerequisite f
 
 ## PHASE 9 — Unified execution policy and broker gateway
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
 
 ### Objective
 
@@ -1642,9 +1642,67 @@ Execution Eligibility
 - broker min distances
 - volume constraints
 
-### Acceptance
+### Phase 9 implementation record — 2026-09-27
 
-No market/pending path duplicates the policy stack.
+**Current implementation:** v82 (`integrations/ctrader/calude-edit-v82.cs`)
+
+**Phase document:** `docs/ctrader/CFIP-V82-PHASE-09-EXECUTION.md`
+
+**Static tests:** `tests/unit/test_ctrader_v82_phase9_execution.py`
+
+**Workflow:** `.github/workflows/ctrader-static.yml`
+
+**Commits:**
+- 6014b117ee77d3db9d7f4e6973ca493d06db4791 — initial v82 unified execution implementation
+- 2b9efc84062455c9826e371dfe83f388b6173bbe — authoritative TradePlan execution anchor
+- 0d07d588f6bdab60360b42ab8308c999a22e85bf — execution safety/lifecycle hardening
+- bda9f2cd11e5df85424b8b125c7f8348838d065f — execution-anchor risk amount correction
+- 226717218d8c55386efced2a10cdfb8aa0d7b3d3 — broker distance/volume/history hardening
+- fc609c075b021c508200288ea6cf4cabd659f7c0 — session and Friday guards
+- 7da517949c30c5d956b924e01248bf51422535a2 — pending limit identity comment correction
+- b735c644349c9b757678278026e74c47c8317fbc — remove silent TP-stage fallback
+- bbeba5a3de82c7973077efc7fb4ff8581589f65f — include Phase 8/9 tests in CI
+- d02e31ed11b9d2822b3834c335210e43f6c41277 — initial Phase 9 tests
+- db6defda320aecf476c5c520721041efaec308bb — target-stage test correction
+- eca0533b9469617c2c4a140e283714f3947d816a — initial Phase 9 documentation
+- c37662e51cfd6a4766910ee0eeeadb9db6ef514c — Phase 9 documentation audit update
+
+**Implemented:**
+- one ExecutionPolicy owner for Market / Stop / Limit paths
+- exact DecisionSnapshot + EntrySnapshot + TradePlan coherence checks
+- explicit market auto-trading vs automatic pending-order enablement
+- risk sizing from TradePlan.ExecutionAnchor + structural stop
+- proportional-risk and fixed-lot volume handling with broker normalization
+- explicit risk-budget guard
+- cTrader estimated-margin guard using current account margin/free margin plus the estimated new order margin
+- broker minimum SL/TP distance checks
+- broker minimum/step volume checks
+- session-window and Friday cutoff guards
+- one ExecutionIntent planner
+- one cTrader broker-mutation gateway
+- pending-order expiry and persisted SignalId/PlanId broker comments
+- broker-confirmed ActualFill mapping for market execution
+- protection-state detection and recovery signaling
+- local + broker + history-backed idempotency checks
+- broker state reader and reconciliation
+- lifecycle advancement on accepted/rejected broker execution
+- explicit no-silent-fallback behavior for requested TP stage
+
+**Deep-audit corrections:**
+1. Plan now carries an explicit `ExecutionAnchor`; sizing and risk no longer default to `IdealEntry`.
+2. Pending proposals can become valid Plans without pretending a waiting trigger is a market fill.
+3. New-order margin is evaluated with cTrader's estimated-margin API instead of using current margin alone.
+4. Target stage selection no longer silently falls back to TP1.
+5. Pending Stop/Limit orders persist SignalId/PlanId in broker comments for durable duplicate detection.
+
+**Validation status:**
+Source-level structural checks currently confirm 513 parameters, balanced braces, version isolation, execution-interface alignment and the Phase-9 policy/gateway boundaries. The GitHub workflow was updated to include Phase 6, 7, 8 and 9 source tests, but an executed workflow result has not been exposed by the available connector. Real cTrader compilation and controlled broker scenarios remain mandatory.
+
+**Current limitations before Phase 9 acceptance:**
+- suitability, news/event and smart-volatility execution gates still need to be consolidated into the unified policy with authoritative input contracts; existing decision/entry layers already contain portions of these semantics, but Phase 9 has not yet claimed complete consolidation;
+- execution-envelope/fill-deviation policy and plan-rebase semantics still require the dedicated runtime contract before they can be marked complete;
+- pending-order lifecycle cleanup/fill ownership belongs to Phase 10 and is intentionally not claimed complete here;
+- real cTrader runtime validation is still pending.
 
 ---
 
