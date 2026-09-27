@@ -41,7 +41,7 @@ A fully consumed FVG becomes Consumed and its usable bounds are cleared. It cann
 
 ## Validation
 
-Repository/source checks confirm 512/512 parameter parity with v77, one canonical ledger, typed lifecycle/events, FVG non-resurrection, OB mitigation controls, explicit liquidity pools/sweeps, prior day/week/session/pivot levels, closed-MTF inputs, and absence of broker/chart authority.
+Repository/source checks confirm 513/513 parameter parity with v77, one canonical ledger, typed lifecycle/events, FVG non-resurrection, OB mitigation controls, explicit liquidity pools/sweeps, prior day/week/session/pivot levels, closed-MTF inputs, and absence of broker/chart authority.
 
 Current validation is source-level. Real cTrader compile/runtime remains a Phase 16 gate.
 
