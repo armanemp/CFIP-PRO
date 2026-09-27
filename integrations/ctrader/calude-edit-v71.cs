@@ -5451,16 +5451,122 @@ namespace cAlgo
                 // closed-bar structure trigger = signal confirmation.
 // Live price/zone eligibility is evaluated separately by BuildExecutionModel
 // and IsExecutableMarketEntry immediately before broker execution.
-        private bool ClosedBarTriggerReady(
+                private bool ClosedBarTriggerReady(
             Bars bars,
             int index,
             int direction)
         {
-            return
-                TriggerReadyWithoutPrecisionGate(
+            if (bars == null ||
+                index < 20 ||
+                index >= bars.Count - 1 ||
+                (direction != 1 &&
+                 direction != -1))
+                return false;
+
+            double atr =
+                Atr(
+                    bars,
+                    index);
+
+            if (atr <= 0)
+                return false;
+
+            double range =
+                bars.HighPrices[index] -
+                bars.LowPrices[index];
+
+            double body =
+                Math.Abs(
+                    bars.ClosePrices[index] -
+                    bars.OpenPrices[index]);
+
+            if (range <= 0 ||
+                body <
+                atr * MinimumTriggerBodyAtr ||
+                range >
+                atr * MaximumTriggerRangeAtr)
+                return false;
+
+            double location =
+                direction == 1
+                    ? (bars.ClosePrices[index] -
+                       bars.LowPrices[index]) /
+                      range
+                    : (bars.HighPrices[index] -
+                       bars.ClosePrices[index]) /
+                      range;
+
+            if (location < MinimumCloseLocation)
+                return false;
+
+            int trigger =
+                direction == 1
+                    ? BullTriggerScore(
+                        bars,
+                        index)
+                    : BearTriggerScore(
+                        bars,
+                        index);
+
+            int requiredTrigger =
+                UsePrecisionExecutionModel
+                    ? Math.Max(
+                        LiveTriggerScore,
+                        PrecisionTriggerScore)
+                    : LiveTriggerScore;
+
+            bool breakReady =
+                direction == 1
+                    ? bars.ClosePrices[index] >
+                      Highest(
+                          bars,
+                          Math.Max(
+                              0,
+                              index - 6),
+                          index - 1)
+                    : bars.ClosePrices[index] <
+                      Lowest(
+                          bars,
+                          Math.Max(
+                              0,
+                              index - 6),
+                          index - 1);
+
+            if (RequireFreshM5Trigger &&
+                FreshTriggerEvidence(
                     bars,
                     index,
-                    direction);
+                    direction) <
+                MinimumFreshTriggerEvidence)
+            {
+                bool overrideOk =
+                    AllowDirectDisplacementOverride &&
+                    UseDisplacement &&
+                    trigger >=
+                    ClampInt(
+                        DirectDisplacementOverrideScore,
+                        1,
+                        6) &&
+                    (direction == 1
+                        ? BullDisplacement(
+                            bars,
+                            index,
+                            atr)
+                        : BearDisplacement(
+                            bars,
+                            index,
+                            atr));
+
+                if (!overrideOk)
+                    return false;
+            }
+
+            return
+                trigger >=
+                Math.Max(
+                    4,
+                    requiredTrigger) &&
+                breakReady;
         }
 
         private bool EntryTriggerReady(
@@ -5468,7 +5574,10 @@ namespace cAlgo
             int index,
             int direction)
         {
-            if (RequirePrecisionEntry &&
+            if (bars != null &&
+                index >= 0 &&
+                index < bars.Count - 1 &&
+                RequirePrecisionEntry &&
                 ReferenceEquals(
                     bars,
                     _m5Bars))
