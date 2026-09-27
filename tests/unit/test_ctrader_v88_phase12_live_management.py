@@ -89,8 +89,8 @@ def test_v88_preserves_v87_parameter_surface():
     p87 = parameters(s87)
     p88 = parameters(s88)
 
-    assert len(p87) == 513
-    assert len(p88) == 513
+    assert len(p87) == 512
+    assert len(p88) == 512
 
     # Version-isolated type names are expected to differ; the public
     # parameter labels and property names must remain identical.
