@@ -114,6 +114,16 @@ Source-level checks performed on v89:
 - Initialization ordering: PASS.
 - Manual entry surface scan: PASS.
 
+### CI test-suite correction
+
+GitHub Actions run 36323227983 (run 133) executed the full cTrader architecture test suite and reported 213 passed / 4 failed.
+
+All four failures were ValueError exceptions from test-section boundaries in tests/unit/test_ctrader_v89_phase12_reaudit.py; they were not broker-code assertions or C# parser failures. The lifecycle tests used an endpoint class name that appears earlier in the file, and the main-dependency test relied on a closing-brace substring that is not stable under indentation.
+
+The test boundaries were corrected in commit 24c9478e957039bf1ce9bd2ce0c19fd53b14b99e.
+
+The corrected test suite has not yet produced a new GitHub Actions result at the time of this re-audit. Therefore CI is pending rerun, not claimed green.
+
 No claim of real cTrader compilation or live broker execution is made here.
 
 ## Remaining Phase 12 acceptance work
