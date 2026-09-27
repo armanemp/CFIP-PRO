@@ -235,3 +235,70 @@ def test_v70_restores_c_trader_indicator_initialize_lifecycle() -> None:
     )
     assert v70.count("protected override void Initialize()") == 1
     assert v70.count("public override void Calculate(int index)") == 1
+
+
+
+def test_v71_mtf_context_uses_one_closed_reference() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+
+    assert "class MtfClosedContext" in v71
+    assert "BuildMtfClosedContext(" in v71
+    assert "MapM5ToClosedChart(" in v71
+    assert "BuildDecision(" in v71
+    assert "MapM5ToClosedChart(\n                        closedM5,\n                        index)" in v71
+
+
+def test_v71_closed_frame_contract_rejects_forming_bar() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+    analyze = extract_method(v71, "AnalyzeFrame")
+
+    assert "index >= bars.Count - 1" in analyze
+
+
+def test_v71_closed_trigger_has_no_live_price_dependency() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+
+    closed_trigger = extract_method(v71, "ClosedBarTriggerReady")
+
+    assert "Symbol.Ask" not in closed_trigger
+    assert "Symbol.Bid" not in closed_trigger
+    assert "index >= bars.Count - 1" in closed_trigger
+
+    assert "EntryTriggerReady" not in v71
+    assert "TriggerReadyWithoutPrecisionGate" not in v71
+
+
+def test_v71_chart_confluence_cannot_use_forming_bar() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+    live_bias = extract_method(v71, "LiveBias")
+
+    assert "chartIndex >= Bars.Count - 1" in live_bias
+
+
+def test_v71_runtime_clock_uses_ctrader_server_time() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+
+    assert "DateTime.UtcNow" not in v71
+    assert "DateTime.Now" not in v71
+    assert "TimeInUtc" in v71
+
+
+def test_v71_d1_w1_frame_gates_match_analyze_contract() -> None:
+    v71 = read_source(
+        REPO_ROOT / "integrations" / "ctrader" / "calude-edit-v71.cs"
+    )
+
+    assert "d1Index >= 30" in v71
+    assert "w1Index >= 30" in v71
+    assert "d1Index >= 10" not in v71
+    assert "w1Index >= 10" not in v71
