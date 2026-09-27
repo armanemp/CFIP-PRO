@@ -50,11 +50,16 @@ def test_v77_has_one_normalized_market_model() -> None:
 def test_v77_market_model_contains_unique_feature_evidence_contracts() -> None:
     source = read(V77)
 
-    features = re.findall(
-        r"CFIPClean77MarketFeature\.(\w+)",
-        source,
+    build_start = source.index(
+        "private CFIPClean77MarketFrame BuildFrame("
     )
-    for feature in [
+    add_start = source.index(
+        "private static void AddFeature(",
+        build_start,
+    )
+    build_frame = source[build_start:add_start]
+
+    feature_names = [
         "Trend",
         "Momentum",
         "Rsi",
@@ -65,15 +70,20 @@ def test_v77_market_model_contains_unique_feature_evidence_contracts() -> None:
         "MacdBias",
         "VwapBias",
         "HealthyVolatility",
-    ]:
-        assert features.count(feature) >= 1
+    ]
 
-    add_calls = re.findall(
-        r"AddFeature\(\s*\n\s*features,\s*\n\s*CFIPClean77MarketFeature\.(\w+)",
-        source,
-    )
-    assert len(add_calls) == 10
-    assert len(set(add_calls)) == 10
+    for feature in feature_names:
+        assert (
+            "AddFeature(features, CFIPClean77MarketFeature."
+            + feature
+        ) in build_frame
+
+    assert sum(
+        build_frame.count(
+            "AddFeature(features, CFIPClean77MarketFeature."
+        )
+        for feature in feature_names
+    ) == 10
 
 
 def test_v77_market_model_consumes_closed_mtf_snapshot_indices() -> None:
