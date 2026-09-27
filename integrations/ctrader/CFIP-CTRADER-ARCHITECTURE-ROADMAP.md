@@ -1794,7 +1794,7 @@ Source-level structural checks cover the Phase-10 lifecycle, event wiring, recov
 
 ## PHASE 11 — Position lifecycle and broker protection
 
-**Status: IN PROGRESS — v84 PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
+**Status: IN PROGRESS — v85 HARDENED / RUNTIME VERIFICATION PENDING, 2026-09-27**
 
 ### Objective
 
@@ -1849,6 +1849,27 @@ Never clear the internal live-plan owner while the broker still has a managed li
 - broker disconnect/recovery scenarios
 - controlled runtime validation
 - governed orphan remediation policy
+
+### Phase 11 deep re-audit / hardening record — 2026-09-27
+
+**Current hardening:** v85 (`integrations/ctrader/calude-edit-v85.cs`)
+
+**Re-audit document:** `docs/ctrader/CFIP-V85-PHASE-11-REAUDIT.md`
+
+**Static tests:** `tests/unit/test_ctrader_v85_phase11_reaudit.py`
+
+**Release-blocking corrections made:**
+- aligned the host Position protection call with the actual `ICFIPClean85BrokerGateway.ModifyProtection` contract;
+- corrected pending-fill handling so the actual broker Position id is recorded;
+- moved expected Position protection mutation behind the Position record's own mutation method;
+- removed inherited `CFIP79|` structure identities and standardized v85 identity markers;
+- tightened broker Position/Pending adoption, exposure counts, duplicate detection and daily P/L reconstruction to the current v85 identity domain;
+- strengthened target-ladder validation against stage ordering and execution-anchor direction;
+- added pending-order expiry/live-side preflight gates;
+- added final broker-gateway Stop/Target directional validation;
+- retained the no-manual-trade-entry-control invariant.
+
+**Validation boundary:** v85 static re-audit coverage is source-level. Actual cTrader compilation, broker-event scenarios and runtime recovery tests remain mandatory.
 
 ---### Acceptance
 
@@ -2511,10 +2532,10 @@ The exact next filename/version will be chosen when Phase 1 implementation start
 | 5 | Structure/Zones/Liquidity | COMPLETE | 2026-09-27 | v78 | canonical structural ledger + lifecycle coverage |
 | 6 | Decision engine | SEMANTICALLY COMPLETE / VERIFICATION PENDING | 2026-09-27 | v79 | authoritative DecisionSnapshot; evidence de-duplication; v80 downstream snapshot contract enforced; runtime verification pending |
 | 7 | Entry/Trigger | PRE-ACCEPTANCE IMPLEMENTATION | 2026-09-27 | v80 | canonical EntrySnapshot; retest/breakout trigger engine; runtime acceptance pending |
-| 8 | Risk/SL/Targets | NOT STARTED | — | — | — |
-| 9 | Unified execution | NOT STARTED | — | — | — |
-| 10 | Pending orders | NOT STARTED | — | — | — |
-| 11 | Lifecycle/Broker | NOT STARTED | — | — | — |
+| 8 | Risk/SL/Targets | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v81 | TradePlan / structural stop / target ladder; runtime verification pending |
+| 9 | Unified execution | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v82 | ExecutionPolicy / Intent / BrokerGateway; runtime verification pending |
+| 10 | Pending orders | IMPLEMENTED / VERIFICATION PENDING | 2026-09-27 | v83 | pending lifecycle / reconciliation; runtime verification pending |
+| 11 | Lifecycle/Broker | IN PROGRESS / HARDENED IN v85 | 2026-09-27 | v84-v85 | Position lifecycle + deep re-audit; runtime verification and remaining lifecycle semantics pending |
 | 12 | Live management | NOT STARTED | — | — | — |
 | 13 | Outcome/Calibration | NOT STARTED | — | — | — |
 | 14 | Presentation | NOT STARTED | — | — | — |
@@ -2619,12 +2640,12 @@ Phase 2  ████████████████████  COMPLETE
 Phase 3  ████████████████████  COMPLETE
 Phase 4  ████████████████████  COMPLETE
 Phase 5  ████████████████████  COMPLETE
-Phase 6  ████████████████████  SEMANTICALLY COMPLETE / VERIFICATION PENDING
-Phase 7  ████░░░░░░░░░░░░░░░░  PRE-ACCEPTANCE IMPLEMENTATION
-Phase 8  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
-Phase 9  ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
-Phase 10 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
-Phase 11 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
+Phase 6  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
+Phase 7  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
+Phase 8  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
+Phase 9  ████████████████████  IMPLEMENTED / VERIFICATION PENDING
+Phase 10 ████████████████████  IMPLEMENTED / VERIFICATION PENDING
+Phase 11 ████████████████████  HARDENED IN v85 / VERIFICATION PENDING
 Phase 12 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 13 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
 Phase 14 ░░░░░░░░░░░░░░░░░░░░  NOT STARTED
