@@ -535,10 +535,12 @@ Contains:
 - structural confirmations
 - regime
 - regime quality
-- entry eligibility
+- **decision eligibility**
 - policy mode
 - exact block reasons
 - provenance
+
+DecisionSnapshot does **not** decide Entry/Trigger eligibility. Phase 7 owns Entry/Trigger state and must consume this snapshot rather than reconstructing direction/policy independently.
 
 ## 5.8 TradePlan
 
