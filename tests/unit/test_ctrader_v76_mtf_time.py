@@ -135,6 +135,7 @@ def test_v76_closed_bar_requires_next_open_at_or_before_reference() -> None:
     source = read(V76)
     helper = extract_method(source, "ResolveClosedBar")
 
+    assert "reference < bars.OpenTimes[0]" in helper
     assert "nextOpen > reference" in helper
     assert "IsFullyClosedAtReference" in source
 
@@ -214,10 +215,12 @@ def test_v76_mtf_coherence_is_explicit() -> None:
     source = read(V76)
     coherent = extract_method(source, "IsCoherent")
 
+    assert "snapshot.IsPrimaryDecisionReady" in coherent
     assert "item.NextBarOpenUtc" in coherent
     assert "item.BarOpenUtc >= snapshot.ReferenceUtc" in coherent
     assert "item.IsFullyClosedAtReference" in coherent
     assert "snapshot.IsReferenceFresh" in coherent
+    assert "optional data is not temporal leakage" in source
 
 
 def test_v76_preserves_version_isolation() -> None:
