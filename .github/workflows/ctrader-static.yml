@@ -21,6 +21,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Run cTrader architecture tests
         run: python -m pytest tests/unit/test_ctrader_v79_phase6_decision.py tests/unit/test_ctrader_v80_phase7_entry.py -q
