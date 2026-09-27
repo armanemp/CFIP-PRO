@@ -1264,6 +1264,8 @@ Build one authoritative decision pipeline.
 - aggressive policy
 - pending policy
 - exact block reasons
+- canonical decision eligibility distinct from Phase 7 Entry/Trigger eligibility
+- snapshot-level policy consistency invariants
 
 ### Critical redesign
 
@@ -1298,17 +1300,23 @@ Every execution path receives the same DecisionSnapshot.
 - 32617129ed375067b269f4048c352371c39bf7ae — validate cycle-state retention and decision reuse
 - 6912347a8e9a08c41fefabc26c6db9b37e0b7bde — preserve feature weights while deduplicating market evidence
 - 8321ce0f53d90e3762522428299deacc0b87a04a — validate weighted market-evidence deduplication
+- ae1d25b983f10ec2546a29efb6fc05bd188ba37d — harden DecisionSnapshot invariants and directional structural confirmations
+- c4a7807892a1e427bd75fce0e12b801dd65edfc6 — align Phase 6 source validation with canonical decision semantics
 
 **Implemented:**
 - authoritative CFIPClean79DecisionEngine
 - canonical CFIPClean79DecisionSnapshot
 - explicit Evidence → Score → Quality → Eligibility → Policy separation
+- decision-level eligibility is explicitly separated from Phase 7 entry/trigger eligibility
+- DecisionSnapshot rejects contradictory eligible/blocked and policy states
 - structural, zone, liquidity, retest, regime and MTF inputs
 - exact block-reason collection with de-duplication
 - Confirmed / Aggressive / Pending / Soft policy modes
 - Decision state setter so the authoritative snapshot is actually persisted in cycle state
 - market evidence de-duplication by CFIPClean79MarketFeature across timeframes; MTF agreement remains a separate domain
 - structure-event family de-duplication for BOS/MSS/CHOCH and Displacement
+- structural confirmation count is direction-specific and deduplicated by structural-break family per M5/M15/H1/H4 timeframe, with M5 displacement as a separate confirmation
+- opposing-direction structural evidence cannot satisfy the selected direction's structural gate
 - confluence retained as a quality modifier rather than a second directional evidence source
 - no broker mutation or UI execution authority introduced in Phase 6
 
@@ -1322,13 +1330,17 @@ Every execution path receives the same DecisionSnapshot.
 - structure-event family de-duplication checks
 - weighted quality-domain checks
 - brace/type/version isolation checks
+- stale market-evidence assertions replaced with weighted-deduplication assertions
+- decision policy consistency and single-evaluation authority checks
+
+**Latest findings/fixes:** a structural-gate semantic defect was found during deep audit: the prior deduplicated event counter could not reliably reach the default `MinimumStructuralConfirmations=4` for a single selected direction because it collapsed opposing and multi-timeframe confirmations into one global counter. v79 now preserves the v73 confirmation intent while deduplicating BOS/MSS/CHOCH within each timeframe and selecting only the chosen direction. `DecisionSnapshot` now also enforces policy/eligibility consistency at construction time.
 
 **Validation status:** source-level tests are committed. An execution attempt from the current environment could not download the GitHub test files because external DNS/network access is unavailable here; therefore no passing pytest result is claimed. Phase 6 remains **IN PROGRESS**.
 
 **Remaining before Phase 6 completion:**
-1. trace every existing signal/decision consumer and prove no parallel BUY/SELL authority remains — current v79 host has no downstream execution consumer yet
-2. prove every downstream execution path consumes the same DecisionSnapshot instance/value — must be enforced when Phase 7+ execution paths are attached
-3. reconcile remaining v73-v78 decision semantics against the new pipeline
+1. v79 source audit currently shows no downstream execution/UI consumer that creates a competing final direction; keep this invariant enforced as Phase 7+ consumers are attached
+2. prove every downstream execution path consumes the same DecisionSnapshot instance/value — this becomes a mandatory Phase 7 integration gate
+3. continue reconciling remaining v73-v78 decision semantics; structural-confirmation semantics are now aligned with the old behavioral intent without reintroducing duplicate evidence
 4. run the complete applicable test/compile suite
 5. only then mark Phase 6 COMPLETE
 
@@ -2286,7 +2298,7 @@ At minimum record:
 
 **Current implementation status:** v79 contains the Phase 6 authoritative Decision engine on top of the v78 StructureSnapshot, v77 MarketModel and v76 MTF contracts. v78 remains the Phase 5 line, v77 the Phase 4 line, v76 the Phase 3 line, v75 the Phase 2 configuration line, v74 the Phase 1 contract foundation, and v73 the behavioral/reference baseline.
 
-**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until downstream-consumer tracing, DecisionSnapshot single-source validation, full applicable tests/compile checks, and remaining v73-v78 semantic reconciliation are complete.
+**Current implementation target:** Phase 6 — Decision engine (v79); do not advance to Phase 7 until the source-level single-authority audit remains clean, downstream DecisionSnapshot consumption is contractually enforced, full applicable tests/compile checks are complete, and the remaining v73-v78 semantic reconciliation is complete.
 
 **Critical instruction for the next phase:** Start from the v78 StructureSnapshot, v77 MarketModel and v76 MTF snapshot. Build one authoritative Decision engine that consumes the existing evidence exactly once, separates Evidence -> Score -> Quality -> Eligibility -> Policy, and becomes the sole source for Signal, Auto Trade and Auto Order eligibility.
 
