@@ -1748,6 +1748,11 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - ba12020d5b07805ef65f4d6b51e75fbb6af7eb34 — restart reconciliation static tests
 - 96b6741f11aac1c91c689248f57f34e681eef33d — restart reconciliation documentation
 - 460c0115f9fc0e86a4033ca21ea649e4b00af20e — canonical execution-configuration key coverage test
+- f45a8f2c5bcf0230e41ce31f4e6fbd07fd52fb09 — v83 broker identity comment format
+- 6108881a97387fe98da77c1725149480537b79b5 — plan supersession / identity isolation tests
+- e27061da293e3dbaf45d128d5d1736f6eaa9ef7d — stale pending cancellation on plan supersession
+- 55a1b99bc017784e039409fb2400bf8406bf4769 — atomic pending protection gateway mutation
+- f181ee28d31eb30906ab2f5ef9f723032e9bcee8 — atomic protection static test
 
 **Implemented:**
 - first-class pending-order lifecycle record/state
@@ -1768,6 +1773,9 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - registration of accepted pending orders with expected plan protection/expiry
 - explicit distinction between lifecycle observation and broker mutation
 - canonical configuration-key coverage confirms all 101 execution/lifecycle configuration reads are present on the 513-parameter surface
+- v83 PlanId/SignalId persistence is now version-consistent end-to-end
+- known-plan pending orders are cancelled on authoritative plan supersession
+- pending SL/TP recovery uses one absolute-protection gateway mutation
 
 **Deep-audit rule:**
 A pending-order event never becomes an independent trading authority. Events only update/reconcile lifecycle state or enqueue an action. Broker-changing actions flow through the single Phase-9 gateway.
