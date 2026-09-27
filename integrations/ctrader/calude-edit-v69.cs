@@ -19070,6 +19070,19 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
+            PendingOrder existingPending =
+                GetManagedPendingOrder();
+
+            if (existingPending != null)
+            {
+                _autoExecutionBlockReason =
+                    "PENDING ORDER EXISTS";
+                SetAutoTradingState(
+                    "ARMED",
+                    "WAITING FOR PENDING ORDER");
+                return;
+            }
+
             if (DailyLossLimitHit(
                     DateTime.UtcNow))
             {
@@ -19273,6 +19286,21 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
+            string executableEntryReason;
+
+            if (!IsExecutableMarketEntry(
+                    _plan,
+                    entry,
+                    out executableEntryReason))
+            {
+                _autoExecutionBlockReason =
+                    executableEntryReason;
+                SetAutoTradingState(
+                    "ARMED",
+                    executableEntryReason);
+                return;
+            }
+
             double effectiveStopPips =
                 EffectiveRiskStopPips(stopPips);
 
@@ -19356,6 +19384,24 @@ private Color AutoTradingPanelColor()
                         result.Error.HasValue
                             ? result.Error.Value.ToString()
                             : "TRADE REJECTED");
+                    return;
+                }
+
+                string fillExecutionReason;
+
+                if (!IsExecutableFillPrice(
+                        _plan,
+                        result.Position.EntryPrice,
+                        out fillExecutionReason))
+                {
+                    _autoExecutionBlockReason =
+                        fillExecutionReason;
+                    SetAutoTradingState(
+                        "ERROR",
+                        fillExecutionReason);
+                    Print(
+                        "CFIP CLEAN69 fill/execution mismatch: {0}",
+                        fillExecutionReason);
                     return;
                 }
 
@@ -21381,6 +21427,13 @@ private Color AutoTradingPanelColor()
                 _reaction.Direction == 0)
                 return;
 
+            if (GetManagedPendingOrder() != null)
+            {
+                _autoExecutionBlockReason =
+                    "PENDING ORDER EXISTS";
+                return;
+            }
+
             if (DailyLossLimitHit(
                     DateTime.UtcNow))
                 return;
@@ -22181,6 +22234,31 @@ private Color AutoTradingPanelColor()
                 return;
             }
 
+            if (GetManagedPosition() != null)
+            {
+                _autoOrdersBlockReason =
+                    "MANAGED POSITION ACTIVE";
+                return;
+            }
+
+            if (_plan != null &&
+                !_plan.IsLivePosition)
+            {
+                _autoOrdersBlockReason =
+                    "MARKET PLAN ACTIVE";
+                return;
+            }
+
+            PendingOrder existingPending =
+                GetManagedPendingOrder();
+
+            if (existingPending != null)
+            {
+                _autoOrdersBlockReason =
+                    "PENDING ORDER EXISTS";
+                return;
+            }
+
             CleanupPendingOrdersIfNeeded(closedM5);
 
             if (ManagedPositionCount() >=
@@ -22319,7 +22397,23 @@ private Color AutoTradingPanelColor()
                     closedM5);
 
             if (atr <= 0)
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • ATR UNAVAILABLE";
                 return false;
+            }
+
+
+
+            if (_executionModel == null ||
+                _executionModel.Direction != direction ||
+                _executionModel.Mode !=
+                    CFIPClean69ExecutionMode.WaitingForTrigger)
+            {
+                _autoOrdersBlockReason =
+                    "CONTINUATION STOP NOT ARMED";
+                return false;
+            }
 
             double trigger =
                 _executionModel != null &&
@@ -22356,7 +22450,11 @@ private Color AutoTradingPanelColor()
                     direction,
                     trigger,
                     true))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • INVALID TRIGGER";
                 return false;
+            }
 
             string source;
             int quality;
@@ -22371,7 +22469,11 @@ private Color AutoTradingPanelColor()
                     out quality);
 
             if (!IsFinitePositive(stop))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • INVALID SL";
                 return false;
+            }
 
             double target =
                 SelectStructuralAutoTarget(
@@ -22387,7 +22489,11 @@ private Color AutoTradingPanelColor()
                     trigger,
                     stop,
                     target))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • INVALID SL/TP";
                 return false;
+            }
 
             double stopPips =
                 Math.Abs(
@@ -22415,7 +22521,11 @@ private Color AutoTradingPanelColor()
 
             if (volume <
                 Symbol.VolumeInUnitsMin)
+            {
+                _autoOrdersBlockReason =
+                    "PENDING STOP • VOLUME BELOW MINIMUM";
                 return false;
+            }
 
             string reason;
 
@@ -22435,7 +22545,7 @@ private Color AutoTradingPanelColor()
             try
             {
                 DateTime expiration =
-                    DateTime.UtcNow.AddMinutes(
+                    Server.Time.AddMinutes(
                         Math.Max(
                             15,
                             PendingOrderExpiryMinutes));
@@ -22521,7 +22631,11 @@ private Color AutoTradingPanelColor()
                     closedM5);
 
             if (atr <= 0)
+            {
+                _autoOrdersBlockReason =
+                    "PENDING LIMIT • ATR UNAVAILABLE";
                 return false;
+            }
 
             ExecutionModel reversalModel =
                 null;
@@ -22558,7 +22672,11 @@ private Color AutoTradingPanelColor()
                     direction,
                     targetEntry,
                     false))
+            {
+                _autoOrdersBlockReason =
+                    "PENDING LIMIT • INVALID ENTRY";
                 return false;
+            }
 
             string source;
             int quality;
