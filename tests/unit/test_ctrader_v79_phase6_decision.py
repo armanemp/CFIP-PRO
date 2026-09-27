@@ -318,3 +318,23 @@ def test_phase6_engine_has_no_final_entry_or_broker_authority():
     ]:
         assert token not in engine
     assert "actual Entry/Trigger eligibility" in engine
+
+
+def test_phase6_deduplicates_zones_by_family_and_direction():
+    s = read(V79)
+    assert "private sealed class ZoneAggregate" in s
+    assert "Dictionary<CFIPClean79ZoneKind, ZoneAggregate>" in s
+    assert "bullZones" in s and "bearZones" in s
+    assert "z.Quality > aggregate.Quality" in s
+    assert "aggregate.Quality * 0.08" in s
+    assert "Multiple timeframes or repeated instances of the same family" in s
+
+
+def test_phase6_deduplicates_liquidity_by_pool_family_and_direction():
+    s = read(V79)
+    assert "private sealed class LiquidityAggregate" in s
+    assert "Dictionary<CFIPClean79LiquidityKind, LiquidityAggregate>" in s
+    assert "bullLiquidity" in s and "bearLiquidity" in s
+    assert "aggregate.Quality = Math.Max" in s
+    assert "aggregate.Quality * 0.06" in s
+    assert "Liquidity sweeps are deduplicated by liquidity-pool family." in s
