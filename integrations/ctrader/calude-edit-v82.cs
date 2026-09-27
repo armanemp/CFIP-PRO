@@ -1,11 +1,13 @@
 // ============================================================================
 // CFIP-PRO cTrader — v82 Clean Architecture Foundation
-// Phase: 7 · Entry / Trigger / Retest / Breakout
+// Phase: 9 · Unified Execution Policy / Broker Gateway
 //
-// This version intentionally does NOT copy the v73 monolith.
+// v82 carries the clean Phase-7/8 contracts forward and adds the unified
+// pre-broker execution authority. It does NOT copy the v73 monolith.
 // v73 remains the frozen behavioral/reference baseline.
     // v82 parent/reference: v79 Phase-6 Decision engine.
-// v82 now extends the type/ownership boundaries with the first normalized market model.
+// v82 extends the type/ownership boundaries through the normalized execution
+// pipeline while preserving the Phase-6 Decision and Phase-7 Entry authorities.
 //
 // Architectural invariants:
 //   1. Analysis is side-effect free.
