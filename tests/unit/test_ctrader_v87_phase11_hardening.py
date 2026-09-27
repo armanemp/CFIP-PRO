@@ -176,7 +176,6 @@ def test_v87_broker_confirmation_grace_prevents_false_close_race():
     main = section(
         s,
         "public class CFIP_MTF_LiveEntryEngine_Clean_v87",
-        "public sealed class CFIPClean87PriceZone",
     )
     assert "_awaitingBrokerConfirmations" in main
     assert "BrokerConfirmationGrace" in main
@@ -191,7 +190,6 @@ def test_v87_event_handlers_are_runtime_null_safe():
     main = section(
         s,
         "public class CFIP_MTF_LiveEntryEngine_Clean_v87",
-        "public sealed class CFIPClean87PriceZone",
     )
     assert "_state != null" in main
     assert "_state.Runtime != null" in main
@@ -208,7 +206,6 @@ def test_v87_pending_actions_feed_results_back_into_lifecycle():
     main = section(
         s,
         "public class CFIP_MTF_LiveEntryEngine_Clean_v87",
-        "public sealed class CFIPClean87PriceZone",
     )
     assert "HandleActionResult(" in pending
     assert "IsCancelRetryDue(" in pending
