@@ -219,9 +219,9 @@ v71+:
 ## Progress
 
 Phase 0 — Baseline: COMPLETE
-Phase 1 — Static/API audit: IN PROGRESS
-Phase 2 — Architecture extraction: STARTED
-Code refactor: NOT STARTED
+Phase 1 — Static/API audit: COMPLETE (static scope)
+Phase 2 — Architecture extraction: IN PROGRESS
+Code refactor: STARTED in isolated v70
 
 
 ## Phase 1 static scan results
@@ -248,3 +248,39 @@ Code refactor: NOT STARTED
   - PendingOrders.Modified
 
 These missing events are not automatically defects by themselves, but they are a design gap for an authoritative broker-state machine. The final lifecycle layer must decide which broker events are required and why, rather than depending only on polling.
+
+
+## v70 hardening status — 2026-09-27
+
+The following lifecycle defects identified above are now corrected in the isolated v70 branch/file:
+
+- C01: telemetry timeout no longer clears a live plan.
+- C02: structural invalidation requests a broker exit and retains the plan until broker closure is confirmed.
+- C03: managed pending fills always reconstruct a managed plan; missing protection becomes an explicit recovery state.
+- C04: partial TP state is consumed only after a successful broker close result.
+- C05: runtime toggles are separated from public configuration parameters through explicit configuration snapshots.
+- C12: the automatic pending-order path now invokes the managed-order cancellation circuit breaker when the daily loss limit is reached.
+- Broker SL/TP mutations now pass through result-aware mutation gateways.
+- Live SL/TP/TP4/false-signal/exhaustion exits use the broker-authoritative exit lifecycle.
+- Active reversal closure no longer clears the plan before broker lifecycle confirmation.
+- Pending cleanup cancellation is result-aware.
+- cTrader broker lifecycle events are now wired for Positions.Opened/Modified/Closed and PendingOrders.Created/Modified/Filled/Cancelled.
+- Event handlers are observation/reconciliation only; they do not directly create, cancel or close broker orders.
+
+Current isolated v70 source inventory after these changes:
+
+- 24,981 lines
+- 787,196 characters
+- 513 public parameters
+- 302 method-like declarations detected by the static scanner
+- 0 direct Position SL mutation calls outside the mutation gateway
+- 0 direct Position TP mutation calls outside the mutation gateway
+- 4 direct ClosePosition API calls total, all concentrated in the partial-close/central-close mutation layer
+- 1 direct CancelPendingOrder API call, concentrated in the cancellation gateway
+- lifecycle event subscriptions: 7 broker event types, with matching unsubscribe paths
+
+Important validation boundary:
+
+- Static/source integrity checks passed during GitHub file generation.
+- The Python static-integrity test was extended accordingly.
+- A full cTrader compile/runtime validation has not yet been executed in a real cTrader build environment; therefore API correctness is verified against current official documentation, but compile/runtime success is not claimed.
