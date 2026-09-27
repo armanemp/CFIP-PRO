@@ -4,7 +4,7 @@
 //
 // v85 carries the clean Phase-6/7/8/9 contracts forward and adds the first-class
 // pending-order lifecycle. It does NOT copy the v73 monolith.
-// v73 remains the frozen behavioral/reference baseline; v84 remains historical and untouched.
+// v73 remains the frozen behavioral/reference baseline; previous numbered clean versions remain historical and untouched.
     // v85 parent/reference: v79 Phase-6 Decision engine.
 // v85 extends the type/ownership boundaries through the normalized execution
 // pipeline while preserving the Phase-6 Decision and Phase-7 Entry authorities.
@@ -8372,11 +8372,15 @@ public sealed class CFIPClean85TradePlanBuilder :
                 if (stopPips <= 0 || targetPips <= 0)
                     return Failure("PROTECTION_DISTANCE_INVALID");
 
-                if (!CFIPClean85DirectionRules.IsDirectional(intent.Direction) ||
-                    !CFIPClean85DirectionRules.IsProtectiveMove(
-                        intent.Direction,
-                        stop + (intent.Direction == CFIPClean85Direction.Buy ? pip : -pip),
-                        stop))
+                if (!CFIPClean85DirectionRules.IsDirectional(intent.Direction))
+                    return Failure("PROTECTION_DIRECTION_INVALID");
+
+                bool protectiveStop =
+                    intent.Direction == CFIPClean85Direction.Buy
+                        ? stop < requested
+                        : stop > requested;
+
+                if (!protectiveStop)
                     return Failure("PROTECTION_DIRECTION_INVALID");
 
                 bool validTargetDirection =
