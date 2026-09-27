@@ -1708,7 +1708,7 @@ Source-level structural checks currently confirm 513 parameters, balanced braces
 
 ## PHASE 10 — Pending orders
 
-**Status: NOT STARTED**
+**Status: IN PROGRESS — PRE-ACCEPTANCE IMPLEMENTATION, 2026-09-27**
 
 ### Objective
 
@@ -1727,11 +1727,53 @@ Make automatic order placement/removal a first-class lifecycle rather than an ex
 - duplicate prevention
 - fill event reconciliation
 
-### Acceptance
+### Phase 10 implementation record — 2026-09-27
 
-Pending Order -> Filled always results in managed Position ownership.
+**Current implementation:** v83 (`integrations/ctrader/calude-edit-v83.cs`)
 
-Pending Order -> Cancelled always results in deterministic lifecycle reconciliation.
+**Phase document:** `docs/ctrader/CFIP-V83-PHASE-10-PENDING.md`
+
+**Static tests:** `tests/unit/test_ctrader_v83_phase10_pending.py`
+
+**Workflow:** `.github/workflows/ctrader-static.yml`
+
+**Commits:**
+- ac50bf50f1b1684fa3d2ebe7eddff58581b86a3d — v83 first-class pending lifecycle
+- d83e404feb0e43e5cf6d48221295825bb1328656 — protection recovery / identity hardening
+- 2d8af2fb89e4fc28d02602e5f3e6e3f5839f384f — cancellation reconciliation hardening
+- ce5f643a1508bc3500aa91515451a46916c1df00 — Phase 10 static tests
+- dc8b9e4314f792a2477db66ac02e4b066ff9355b — Phase 10 documentation
+- ca93c91b8e44f524c7bbc2c905c1cf041f157420 — CI coverage for Phase 10 tests
+
+**Implemented:**
+- first-class pending-order lifecycle record/state
+- managed-label + CFIP identity scoping
+- startup adoption of existing managed pending orders
+- SignalId / PlanId parsing from persisted broker comment
+- Created / Modified / Filled / Cancelled event observation
+- Filled event ownership transition to LivePosition
+- pending protection recovery action
+- post-fill protection recovery action
+- expiry cancellation action
+- daily-loss cancellation action
+- broker mutation only through the unified gateway
+- pending protection mutation through price-based PendingOrder methods
+- deterministic cancellation reconciliation against actual broker state
+- registration of accepted pending orders with expected plan protection/expiry
+- explicit distinction between lifecycle observation and broker mutation
+
+**Deep-audit rule:**
+A pending-order event never becomes an independent trading authority. Events only update/reconcile lifecycle state or enqueue an action. Broker-changing actions flow through the single Phase-9 gateway.
+
+**Validation status:**
+Source-level structural checks cover the Phase-10 lifecycle, event wiring, recovery paths, startup adoption, identity parsing, gateway boundary and manual-entry safety. No passing pytest/workflow result is claimed. Current cTrader documentation confirms the event signatures and PendingOrder properties/mutation methods used by the design. citeturn835745view0turn557778view0
+
+**Current limitations before Phase 10 acceptance:**
+- stale-order invalidation based on setup supersession remains to be formalized;
+- partial-fill / multiple-position handling requires controlled runtime scenarios;
+- restart adoption and event ordering require real cTrader runtime validation;
+- Phase 9 execution-envelope / fill-deviation / plan-rebase policies remain pending;
+- real cTrader compilation/runtime remains mandatory.
 
 ---
 
