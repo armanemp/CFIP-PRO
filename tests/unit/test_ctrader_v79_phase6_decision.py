@@ -104,3 +104,31 @@ def test_phase6_weighted_quality_domains_sum_to_one():
     assert "retestQuality * 0.06" in s
     assert "regimeQuality * 0.06" in s
     assert "Weighted domains intentionally sum to 1.00" in s
+
+
+def test_phase6_state_exposes_authoritative_decision_setter():
+    s = read(V79)
+    assert "public void SetDecision(CFIPClean79DecisionSnapshot value)" in s
+    assert "Decision = value;" in s
+
+def test_phase6_deduplicates_market_evidence_across_timeframes():
+    s = read(V79)
+    assert "AddMarketEvidence(" in s
+    assert "Dictionary<CFIPClean79MarketFeature, FeatureAggregate>" in s
+    assert "aggregate.Bull = Math.Max(aggregate.Bull, feature.Value)" in s
+    assert "aggregate.Bear = Math.Max(aggregate.Bear, feature.Value)" in s
+    assert "MTF copies of the same" in s
+    assert "AddMarket(e, market.FindFrame" not in s
+
+def test_phase6_does_not_add_confluence_as_directional_evidence():
+    s = read(V79)
+    assert "Confluence is a quality modifier" in s
+    assert "e.Bull += e.BullConfluence * 0.04" not in s
+    assert "e.Bear += e.BearConfluence * 0.04" not in s
+
+def test_phase6_collapses_structure_event_families():
+    s = read(V79)
+    assert "bullStructureBreak" in s
+    assert "bearStructureBreak" in s
+    assert "bullDisplacement" in s
+    assert "bearDisplacement" in s
