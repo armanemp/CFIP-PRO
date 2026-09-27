@@ -3677,6 +3677,19 @@ namespace cAlgo
             public double BearScore;
         }
 
+        private sealed class ZoneAggregate
+        {
+            public int Quality;
+            public bool Retested;
+            public bool LiquidityConfluence;
+            public bool FvgConfluence;
+        }
+
+        private sealed class LiquidityAggregate
+        {
+            public int Quality;
+        }
+
         private sealed class Evidence
         {
             public double Bull;
@@ -4067,6 +4080,14 @@ namespace cAlgo
             if (bearDisplacement > 0)
                 e.Bear += bearDisplacement * 0.10;
 
+            // Zones are deduplicated by zone family (FVG/OB) per direction.
+            // Multiple timeframes or repeated instances of the same family cannot
+            // manufacture directional confidence through record count.
+            var bullZones =
+                new Dictionary<CFIPClean79ZoneKind, ZoneAggregate>();
+            var bearZones =
+                new Dictionary<CFIPClean79ZoneKind, ZoneAggregate>();
+
             for (int i = 0; i < structure.Zones.Count; i++)
             {
                 CFIPClean79ZoneRecord z = structure.Zones[i];
@@ -4074,25 +4095,77 @@ namespace cAlgo
                     z.Invalidated || z.Consumed || !z.ExecutionEligible)
                     continue;
 
-                if (z.Direction == CFIPClean79Direction.Buy)
+                Dictionary<CFIPClean79ZoneKind, ZoneAggregate> target =
+                    z.Direction == CFIPClean79Direction.Buy
+                        ? bullZones
+                        : bearZones;
+
+                ZoneAggregate aggregate;
+                if (!target.TryGetValue(z.Kind, out aggregate))
                 {
-                    e.Bull += z.Quality * 0.08;
-                    e.BullZone = Math.Max(e.BullZone, z.Quality);
-                    if (z.Retested)
-                        e.BullRetest = Math.Max(e.BullRetest, z.Quality);
-                    if (z.LiquidityConfluence || z.FvgConfluence)
-                        e.BullConfluence = Math.Max(e.BullConfluence, z.Quality);
+                    aggregate = new ZoneAggregate();
+                    target.Add(z.Kind, aggregate);
                 }
-                else
+
+                if (z.Quality > aggregate.Quality)
                 {
-                    e.Bear += z.Quality * 0.08;
-                    e.BearZone = Math.Max(e.BearZone, z.Quality);
-                    if (z.Retested)
-                        e.BearRetest = Math.Max(e.BearRetest, z.Quality);
-                    if (z.LiquidityConfluence || z.FvgConfluence)
-                        e.BearConfluence = Math.Max(e.BearConfluence, z.Quality);
+                    aggregate.Quality = z.Quality;
+                    aggregate.Retested = z.Retested;
+                    aggregate.LiquidityConfluence = z.LiquidityConfluence;
+                    aggregate.FvgConfluence = z.FvgConfluence;
+                }
+                else if (z.Quality == aggregate.Quality)
+                {
+                    aggregate.Retested =
+                        aggregate.Retested || z.Retested;
+                    aggregate.LiquidityConfluence =
+                        aggregate.LiquidityConfluence ||
+                        z.LiquidityConfluence;
+                    aggregate.FvgConfluence =
+                        aggregate.FvgConfluence ||
+                        z.FvgConfluence;
                 }
             }
+
+            foreach (KeyValuePair<CFIPClean79ZoneKind, ZoneAggregate> pair in bullZones)
+            {
+                ZoneAggregate aggregate = pair.Value;
+                if (aggregate == null || aggregate.Quality <= 0)
+                    continue;
+
+                e.Bull += aggregate.Quality * 0.08;
+                e.BullZone = Math.Max(e.BullZone, aggregate.Quality);
+                if (aggregate.Retested)
+                    e.BullRetest = Math.Max(e.BullRetest, aggregate.Quality);
+                if (aggregate.LiquidityConfluence || aggregate.FvgConfluence)
+                    e.BullConfluence = Math.Max(
+                        e.BullConfluence,
+                        aggregate.Quality);
+            }
+
+            foreach (KeyValuePair<CFIPClean79ZoneKind, ZoneAggregate> pair in bearZones)
+            {
+                ZoneAggregate aggregate = pair.Value;
+                if (aggregate == null || aggregate.Quality <= 0)
+                    continue;
+
+                e.Bear += aggregate.Quality * 0.08;
+                e.BearZone = Math.Max(e.BearZone, aggregate.Quality);
+                if (aggregate.Retested)
+                    e.BearRetest = Math.Max(e.BearRetest, aggregate.Quality);
+                if (aggregate.LiquidityConfluence || aggregate.FvgConfluence)
+                    e.BearConfluence = Math.Max(
+                        e.BearConfluence,
+                        aggregate.Quality);
+            }
+
+            // Liquidity sweeps are deduplicated by liquidity-pool family. This
+            // preserves distinct pools (PDH, PDL, equal highs, swings, etc.) while
+            // preventing repeated timeframe records from dominating the score.
+            var bullLiquidity =
+                new Dictionary<CFIPClean79LiquidityKind, LiquidityAggregate>();
+            var bearLiquidity =
+                new Dictionary<CFIPClean79LiquidityKind, LiquidityAggregate>();
 
             for (int i = 0; i < structure.Liquidity.Count; i++)
             {
@@ -4101,16 +4174,46 @@ namespace cAlgo
                     l.SweepDirection == CFIPClean79Direction.Wait)
                     continue;
 
-                if (l.SweepDirection == CFIPClean79Direction.Buy)
+                Dictionary<CFIPClean79LiquidityKind, LiquidityAggregate> target =
+                    l.SweepDirection == CFIPClean79Direction.Buy
+                        ? bullLiquidity
+                        : bearLiquidity;
+
+                LiquidityAggregate aggregate;
+                if (!target.TryGetValue(l.Kind, out aggregate))
                 {
-                    e.Bull += l.Quality * 0.06;
-                    e.BullLiquidity = Math.Max(e.BullLiquidity, l.Quality);
+                    aggregate = new LiquidityAggregate();
+                    target.Add(l.Kind, aggregate);
                 }
-                else
-                {
-                    e.Bear += l.Quality * 0.06;
-                    e.BearLiquidity = Math.Max(e.BearLiquidity, l.Quality);
-                }
+
+                aggregate.Quality =
+                    Math.Max(
+                        aggregate.Quality,
+                        l.Quality);
+            }
+
+            foreach (KeyValuePair<CFIPClean79LiquidityKind, LiquidityAggregate> pair in bullLiquidity)
+            {
+                LiquidityAggregate aggregate = pair.Value;
+                if (aggregate == null || aggregate.Quality <= 0)
+                    continue;
+
+                e.Bull += aggregate.Quality * 0.06;
+                e.BullLiquidity = Math.Max(
+                    e.BullLiquidity,
+                    aggregate.Quality);
+            }
+
+            foreach (KeyValuePair<CFIPClean79LiquidityKind, LiquidityAggregate> pair in bearLiquidity)
+            {
+                LiquidityAggregate aggregate = pair.Value;
+                if (aggregate == null || aggregate.Quality <= 0)
+                    continue;
+
+                e.Bear += aggregate.Quality * 0.06;
+                e.BearLiquidity = Math.Max(
+                    e.BearLiquidity,
+                    aggregate.Quality);
             }
 
             if (configuration.Get("UsePremiumDiscount", true) &&
