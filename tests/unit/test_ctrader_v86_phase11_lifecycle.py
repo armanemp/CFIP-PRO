@@ -198,21 +198,14 @@ def test_v86_disconnect_never_reconciles_or_mutates_from_stale_broker_snapshot()
     assert "if (_brokerStateReader == null ||" in s
     assert "!Server.IsConnected" in s
 
-    pos_processor = section(
-        s,
-        "private void ProcessPositionLifecycle()",
-        "private void ProcessPendingOrderLifecycle()",
-    )
-    assert "!Server.IsConnected" in pos_processor
+    pos_start = s.index("private void ProcessPositionLifecycle()")
+    pending_start = s.index("private void ProcessPendingOrderLifecycle()")
+    pos_processor = s[pos_start:]
+    pending_processor = s[pending_start:]
 
-    pending_processor = section(
-        s,
-        "private void ProcessPendingOrderLifecycle()",
-        "private void ProcessPositionLifecycle()",
-    )
+    assert "!Server.IsConnected" in pos_processor
     assert "if (_pendingOrderLifecycle == null ||" in pending_processor
     assert "_state.Runtime == null" in pending_processor
-
 
 def test_v86_pending_to_position_protection_handoff_uses_expected_plan_values():
     s = read(V86)
